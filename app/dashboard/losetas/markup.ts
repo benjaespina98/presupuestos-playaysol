@@ -142,7 +142,7 @@ export function buildCalculatorHtml(): string {
   <button class="client" onclick="exportarCliente()">Descargar para cliente (plano + medidas)</button>
   <button class="secondary" id="btnGuardarNube" onclick="guardarEnNubeClick()">Guardar en la nube</button>
   <a class="secondary" href="/dashboard/historial?tipo=losetas">Historial</a>
-  <button class="secondary" onclick="window.print()">Imprimir / Guardar PDF</button>
+  <button class="secondary" onclick="imprimirVistaLimpia()">Imprimir / Guardar PDF</button>
   <button class="secondary" onclick="resetAll()">Limpiar / empezar de cero</button>
 </div>
 <div class="helptext" style="max-width:940px;margin:8px auto 0;">

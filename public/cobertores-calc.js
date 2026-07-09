@@ -891,6 +891,24 @@ function renderItemPhotosBlock(fotos, photoSrc, forExport){
   return `<table style="width:100%;border-collapse:collapse;margin:6px 0 10px;">${rows}</table>`;
 }
 
+// Texto libre como lista de renglones cortos en vez de un párrafo corrido — se divide
+// por saltos de línea y por oración (". "), sin reordenar ni inventar contenido.
+// Se reusa igual en el export a Word (docxDimensionCard más abajo).
+function splitDimensionLines(text){
+  return String(text||'')
+    .split(/\n+/)
+    .flatMap(line => line.split(/(?<=\.)\s+(?=[A-ZÁÉÍÓÚÑ0-9])/))
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+function renderDimensionCard(text){
+  const lineas = splitDimensionLines(text);
+  if(!lineas.length) return '';
+  const items = lineas.map(l => `<li>${escHtml(l)}</li>`).join('');
+  return `<div class="dim-card"><ul class="dim-list">${items}</ul></div>`;
+}
+
 // Galería general (tab "Fotos", no atada a un opcional puntual)
 function renderPhotosHtml(photoSrc, forExport){
   if(!state.fotos.length) return '';
@@ -942,22 +960,23 @@ function buildDocumentBody({ forExport=false, photoSrc } = {}){
   const totalCon = baseSin + Number(state.precioInstalacion||0) + extras;
   const incluidosOpt = state.opcionales.filter(o=>o.included===true);
 
-  let html = `<div class="doc-title">PRESUPUESTO DE COBERTOR PARA PISCINA</div><div class="doc-title-rule"></div>`;
-  html += `<div class="meta-line"><u><b>FECHA:</b></u> ${escHtml(state.fecha)}</div>`;
-  html += `<div class="meta-line"><u><b>SEÑOR/SRA:</b></u> ${escHtml(state.cliente)||(forExport?'':'<span class="empty-note">(sin datos)</span>')}</div>`;
-  html += `<div class="meta-line"><u><b>DOMICILIO:</b></u> ${escHtml(state.domicilio)}</div>`;
-  html += `<div class="meta-line"><u><b>LOCALIDAD:</b></u> ${escHtml(state.localidad)}</div>`;
-  html += `<div class="meta-line"><u><b>TEL:</b></u> ${escHtml(state.tel)}</div>`;
-  html += `<div class="meta-line"><u><b>EMAIL:</b></u> ${escHtml(state.email)}</div>`;
-
-  html += `<hr class="divider">`;
-  if(state.dimension && state.dimension.trim()){
-    html += `<div class="meta-line"><u><b>NOTAS DE LA PILETA:</b></u></div>`;
-    html += `<div class="dim-text">${textToBrHtml(state.dimension)}</div>`;
-  }
+  let html = `<div class="doc-title">Presupuesto de cobertor para piscina</div>`;
   const medidasParts = [`${largo.toLocaleString('es-AR')} m largo × ${ancho.toLocaleString('es-AR')} m ancho = ${espejoM2.toLocaleString('es-AR',{maximumFractionDigits:2})} m²`];
   if(adicionalM2){ medidasParts.push(`Adicional: ${adicionalM2.toLocaleString('es-AR',{maximumFractionDigits:2})} m²`); }
-  html += `<div class="meta-line"><u><b>MEDIDAS:</b></u> ${medidasParts.join(' + ')} = ${m2.toLocaleString('es-AR',{maximumFractionDigits:2})} m² a cubrir</div>`;
+  html += `<div class="meta-grid">`;
+  html += `<div class="meta-line"><b>Fecha:</b> ${escHtml(state.fecha)}</div>`;
+  html += `<div class="meta-line"><b>Señor/Sra:</b> ${escHtml(state.cliente)||(forExport?'':'<span class="empty-note">(sin datos)</span>')}</div>`;
+  html += `<div class="meta-line"><b>Domicilio:</b> ${escHtml(state.domicilio)}</div>`;
+  html += `<div class="meta-line"><b>Localidad:</b> ${escHtml(state.localidad)}</div>`;
+  html += `<div class="meta-line"><b>Tel:</b> ${escHtml(state.tel)}</div>`;
+  html += `<div class="meta-line"><b>Email:</b> ${escHtml(state.email)}</div>`;
+  html += `<div class="meta-line" style="grid-column:1/-1;"><b>Medidas:</b> ${medidasParts.join(' + ')} = ${m2.toLocaleString('es-AR',{maximumFractionDigits:2})} m² a cubrir</div>`;
+  html += `</div>`;
+
+  if(state.dimension && state.dimension.trim()){
+    html += `<div class="section-heading">Notas de la pileta</div>`;
+    html += renderDimensionCard(state.dimension);
+  }
 
   if(state.items.length){
     html += `<div class="opt-title">Adicionales</div>`;
@@ -980,10 +999,12 @@ function buildDocumentBody({ forExport=false, photoSrc } = {}){
     html += `<div class="opt-title">Opcionales</div>`;
     incluidosOpt.forEach(op=>{
       const priceHtml = (op.price===null||op.price===undefined) ? 'No incluye' : fmt(op.price);
-      html += buildPriceRows([{ descHtml: escHtml(op.desc), priceHtml }], forExport);
+      const rowHtml = buildPriceRows([{ descHtml: escHtml(op.desc), priceHtml }], forExport);
       const fotosOp = state.fotosPorOpcional[op.id];
       if(fotosOp && fotosOp.length){
-        html += renderItemPhotosBlock(fotosOp, photoSrc, forExport);
+        html += `<div class="opt-card">${rowHtml}${renderItemPhotosBlock(fotosOp, photoSrc, forExport)}</div>`;
+      } else {
+        html += rowHtml;
       }
     });
   }
@@ -1307,9 +1328,11 @@ const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
 
 const DOCX_PAGE_WIDTH_MM = 160; // ancho útil de página (A4 con márgenes ~2.5cm)
 const DOCX_CONTENT_WIDTH_TWIP = convertMillimetersToTwip(DOCX_PAGE_WIDTH_MM);
-const DOCX_NAVY = "00566A";
+const DOCX_NAVY = "1B3A5C"; // navy de marca — antes usaba un teal oscuro (00566A) distinto al del resto del portal
 const DOCX_TEAL = "00829C";
 const DOCX_TEXT = "1C2B33";
+const DOCX_NAVY_SOFT = "EEF2F6";
+const DOCX_BORDER_SOFT = "E1E7EC";
 
 async function blobToUint8Array(blob){
   const buf = await blob.arrayBuffer();
@@ -1365,6 +1388,53 @@ function docxMetaLine(label, value){
       new TextRun({ text: label + ' ', bold:true, underline:{}, size:22, color:DOCX_TEXT }),
       new TextRun({ text: value || '', size:22, color:DOCX_TEXT }),
     ]
+  });
+}
+
+// Ficha de datos del cliente: agrupa las líneas de meta en una sola celda con fondo
+// suave, en vez de líneas sueltas.
+function docxMetaCard(pares){
+  const paras = pares
+    .filter(p => p.value)
+    .map(p => new Paragraph({
+      spacing: { after: 40 },
+      children: [
+        new TextRun({ text: p.label + ' ', bold:true, size:20, color:DOCX_NAVY }),
+        new TextRun({ text: p.value, size:20, color:DOCX_TEXT }),
+      ]
+    }));
+  return new Table({
+    width:{ size:DOCX_CONTENT_WIDTH_TWIP, type:WidthType.DXA },
+    columnWidths:[DOCX_CONTENT_WIDTH_TWIP],
+    rows:[ new TableRow({ children:[ new TableCell({
+      width:{ size:DOCX_CONTENT_WIDTH_TWIP, type:WidthType.DXA },
+      shading:{ fill: DOCX_NAVY_SOFT, type: ShadingType.CLEAR },
+      margins:{ top:180, bottom:140, left:220, right:220 },
+      children: paras
+    }) ] }) ]
+  });
+}
+
+// Texto libre como lista de renglones cortos (mismo criterio que splitDimensionLines).
+function docxDimensionCard(text){
+  const lineas = splitDimensionLines(text);
+  if(!lineas.length) return null;
+  const paras = lineas.map(l => new Paragraph({
+    spacing: { after: 60 },
+    indent: { left: 160 },
+    bullet: { level: 0 },
+    children: [ new TextRun({ text: l, size:21, color:DOCX_TEXT }) ]
+  }));
+  return new Table({
+    width:{ size:DOCX_CONTENT_WIDTH_TWIP, type:WidthType.DXA },
+    columnWidths:[DOCX_CONTENT_WIDTH_TWIP],
+    rows:[ new TableRow({ children:[ new TableCell({
+      width:{ size:DOCX_CONTENT_WIDTH_TWIP, type:WidthType.DXA },
+      borders: { top:NO_BORDER, bottom:NO_BORDER, right:NO_BORDER,
+        left:{ style:BorderStyle.SINGLE, size:18, color:DOCX_NAVY } },
+      margins:{ top:140, bottom:140, left:220, right:160 },
+      children: paras
+    }) ] }) ]
   });
 }
 
@@ -1464,6 +1534,40 @@ function docxPhotoGallery(fotos, imgBytesById){
   return nodes;
 }
 
+// Ficha de producto para un opcional (con o sin fotos): descripción + precio y, si tiene,
+// sus fotos, todo dentro de una sola celda con borde y fondo suave.
+function docxOptCard(desc, priceTxt, fotosOp, imgBytesById){
+  const sinPrecio = priceTxt === 'No incluye';
+  const cellChildren = [
+    new Paragraph({
+      spacing: { after: (fotosOp && fotosOp.length) ? 120 : 0 },
+      children: [
+        new TextRun({ text: desc, bold:true, size:21, color:DOCX_TEXT }),
+        new TextRun({ bold:true, size:21, color: sinPrecio ? '8B98A3' : DOCX_NAVY, children: [
+          new PositionalTab({ alignment: PositionalTabAlignment.RIGHT, relativeTo: PositionalTabRelativeTo.MARGIN, leader: PositionalTabLeader.NONE }),
+          priceTxt,
+        ] }),
+      ]
+    })
+  ];
+  if(fotosOp && fotosOp.length){
+    const gallery = docxPhotoGallery(fotosOp, imgBytesById);
+    if(gallery[1]) cellChildren.push(gallery[1]);
+  }
+  const softBorder = { style:BorderStyle.SINGLE, size:4, color:DOCX_BORDER_SOFT };
+  return new Table({
+    width:{ size:DOCX_CONTENT_WIDTH_TWIP, type:WidthType.DXA },
+    columnWidths:[DOCX_CONTENT_WIDTH_TWIP],
+    rows:[ new TableRow({ children:[ new TableCell({
+      width:{ size:DOCX_CONTENT_WIDTH_TWIP, type:WidthType.DXA },
+      borders: { top:softBorder, bottom:softBorder, left:softBorder, right:softBorder },
+      shading:{ fill:'FAFBFC', type: ShadingType.CLEAR },
+      margins:{ top:160, bottom:160, left:200, right:200 },
+      children: cellChildren
+    }) ] }) ]
+  });
+}
+
 function docxHyperlinkLine(label, displayText, url){
   return new Paragraph({
     spacing:{ after:40 },
@@ -1551,22 +1655,25 @@ async function buildDocxSections(){
   children.push(new Paragraph({ spacing:{after:200}, children:[] }));
 
   children.push(...docxTitle('Presupuesto de cobertor para piscina'));
-  children.push(docxMetaLine('FECHA:', state.fecha));
-  children.push(docxMetaLine('SEÑOR/SRA:', state.cliente));
-  children.push(docxMetaLine('DOMICILIO:', state.domicilio));
-  children.push(docxMetaLine('LOCALIDAD:', state.localidad));
-  children.push(docxMetaLine('TEL:', state.tel));
-  children.push(docxMetaLine('EMAIL:', state.email));
-  children.push(docxDivider());
-
-  if(state.dimension && state.dimension.trim()){
-    children.push(docxMetaLine('NOTAS DE LA PILETA:', ''));
-    children.push(...docxBodyText(state.dimension));
-  }
-
   const medidasParts = [`${largo.toLocaleString('es-AR')} m largo × ${ancho.toLocaleString('es-AR')} m ancho = ${espejoM2.toLocaleString('es-AR',{maximumFractionDigits:2})} m²`];
   if(adicionalM2){ medidasParts.push(`Adicional: ${adicionalM2.toLocaleString('es-AR',{maximumFractionDigits:2})} m²`); }
-  children.push(docxMetaLine('MEDIDAS:', medidasParts.join(' + ') + ` = ${m2.toLocaleString('es-AR',{maximumFractionDigits:2})} m² a cubrir`));
+  children.push(docxMetaCard([
+    { label:'Fecha:', value: state.fecha },
+    { label:'Señor/Sra:', value: state.cliente },
+    { label:'Domicilio:', value: state.domicilio },
+    { label:'Localidad:', value: state.localidad },
+    { label:'Tel:', value: state.tel },
+    { label:'Email:', value: state.email },
+    { label:'Medidas:', value: medidasParts.join(' + ') + ` = ${m2.toLocaleString('es-AR',{maximumFractionDigits:2})} m² a cubrir` },
+  ]));
+  children.push(new Paragraph({ spacing:{after:220}, children:[] }));
+
+  if(state.dimension && state.dimension.trim()){
+    children.push(docxSectionTitle('Notas de la pileta'));
+    const dimCard = docxDimensionCard(state.dimension);
+    if(dimCard) children.push(dimCard);
+    children.push(new Paragraph({ spacing:{after:120}, children:[] }));
+  }
 
   if(state.items.length){
     children.push(docxSectionTitle('Adicionales'));
@@ -1587,11 +1694,9 @@ async function buildDocxSections(){
     children.push(docxSectionTitle('Opcionales'));
     incluidosOpt.forEach(op=>{
       const priceTxt = (op.price===null||op.price===undefined) ? 'No incluye' : fmt(op.price);
-      children.push(docxPriceLine(op.desc, priceTxt));
       const fotosOp = state.fotosPorOpcional[op.id];
-      if(fotosOp && fotosOp.length){
-        children.push(...docxPhotoGallery(fotosOp, imgBytesById).slice(1)); // sin repetir título de sección
-      }
+      children.push(docxOptCard(op.desc, priceTxt, fotosOp, imgBytesById));
+      children.push(new Paragraph({ spacing:{after:80}, children:[] }));
     });
   }
 

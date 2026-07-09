@@ -24,3 +24,20 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* El header/nav del portal (logo, email del usuario, "Cerrar sesión") y la marca de
+   agua de fondo (app/dashboard/layout.tsx) nunca deben aparecer en un PDF exportado
+   con window.print() desde ninguna de las 5 calculadoras — son cromo del portal, no
+   parte del documento que se le entrega al cliente. Los estilos de impresión de cada
+   -calc.js/-calc.css solo conocen su propio DOM (no pueden alcanzar el <header>, que
+   vive afuera), así que esto se resuelve acá, a nivel de layout, no por calculadora. */
+@media print {
+  [data-print-hide] {
+    display: none !important;
+  }
+  #dashboard-main {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+}

@@ -296,6 +296,18 @@ function exportarCliente(){
   });
 }
 
+// Vista limpia para imprimir/exportar a PDF: reusa el mismo contenedor #client-capture
+// que ya arma "Descargar para cliente" (plano + medidas, sin precios), en vez de crear
+// un tercer contenedor — mismo patrón que el resto de las calculadoras (form editable
+// oculto, solo se ve la "hoja" limpia). Los estilos de impresión que sacan #client-capture
+// de su posición off-screen y ocultan .wrap están en styles.ts (@media print).
+function imprimirVistaLimpia(){
+  const s = getState();
+  document.getElementById('clientRef').textContent = s.nombre || '';
+  drawSvg('svgClient', 1000, 650, s, true);
+  window.print();
+}
+
 function resetAll(){
   if(!confirm('\\u00bfLimpiar todos los campos y empezar un presupuesto nuevo?')) return;
   document.getElementById('largo').value = '';
