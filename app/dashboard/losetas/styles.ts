@@ -27,9 +27,9 @@ export const CALCULATOR_STYLES = `
 .pys-calc .brand { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
 .pys-calc .brand span { font-size: 12px; color: #999; }
 .pys-calc .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
-.pys-calc .card { background: #F5F3EC; border-radius: 10px; padding: 14px 16px; }
-.pys-calc .card .label { font-size: 12px; color: #777; }
-.pys-calc .card .value { font-size: 22px; font-weight: 600; color: #1B3A5C; margin-top: 2px;}
+.pys-calc .card { background: #F5F3EC; border: 1px solid #EAE6DA; border-radius: 10px; padding: 16px 18px; }
+.pys-calc .card .label { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #8A8371; }
+.pys-calc .card .value { font-size: 23px; font-weight: 700; color: #1B3A5C; margin-top: 4px;}
 .pys-calc .card.accent .value { color: #C0522D; }
 .pys-calc .precio-section { border-top: 1px solid #eee; padding-top: 18px; margin-top: 8px; }
 .pys-calc .checkrow { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
@@ -74,36 +74,43 @@ export const CALCULATOR_STYLES = `
 .pys-calc .material-row { display: grid; grid-template-columns: 1fr 140px auto; gap: 10px; align-items: center; margin-bottom: 8px; }
 .pys-calc .material-cost-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-top: 14px; }
 
+/* Vista limpia (plano + medidas, sin precios) — mismo lenguaje visual "documento de
+   estudio" que el resto de las calculadoras: acento navy arriba, tipografía con
+   jerarquía clara, espaciado generoso, sin las líneas punteadas de planilla. */
 .pys-calc #client-capture {
   position: fixed;
   top: -99999px;
   left: -99999px;
   width: 1100px;
   background: #fff;
-  padding: 44px;
+  border-top: 5px solid #1B3A5C;
+  padding: 48px;
   font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
 .pys-calc #client-capture .chdr {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  border-bottom: 2px solid #1B3A5C;
-  padding-bottom: 16px;
+  margin-bottom: 28px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #E1E7EC;
 }
 .pys-calc #client-capture .chdr img { height: 56px; }
-.pys-calc #client-capture .chdr .ctitle { font-size: 20px; color: #1B3A5C; font-weight: 600; }
-.pys-calc #client-capture .chdr .csub { font-size: 13px; color: #888; margin-top: 2px; }
+.pys-calc #client-capture .chdr .ctitle { font-size: 21px; color: #1B3A5C; font-weight: 700; letter-spacing: .01em; }
+.pys-calc #client-capture .chdr .csub { font-size: 13px; color: #6B7680; margin-top: 3px; }
 .pys-calc #client-capture .cplano {
-  border: 1px solid #eee;
-  border-radius: 10px;
-  padding: 24px;
-  background: #fcfcfa;
+  border: 1px solid #E1E7EC;
+  border-left: 3px solid #1B3A5C;
+  border-radius: 8px;
+  padding: 28px;
+  background: #FAFBFC;
 }
 .pys-calc #client-capture .cfooter {
-  margin-top: 20px;
+  margin-top: 24px;
+  padding-top: 14px;
+  border-top: 1px solid #E1E7EC;
   font-size: 11px;
-  color: #aaa;
+  color: #99A3AC;
   text-align: center;
 }
 
@@ -124,5 +131,23 @@ export const CALCULATOR_STYLES = `
 
 @media (max-width: 420px) {
   .pys-calc .row, .pys-calc .row4 { grid-template-columns: 1fr; }
+}
+
+/* ---------- IMPRESIÓN / PDF ---------- */
+/* Mismo patrón que las otras 4 calculadoras: ocultar el form editable, mostrar solo
+   una "hoja" limpia. Acá reusamos #client-capture (la misma vista que ya arma
+   "Descargar para cliente" — plano + medidas, sin precios) en vez de crear un tercer
+   contenedor: imprimirVistaLimpia() la puebla antes de llamar a window.print(). */
+@media print {
+  .pys-calc { background: #fff; padding: 0; }
+  .pys-calc .wrap { display: none !important; }
+  .pys-calc #client-capture {
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    max-width: 100%;
+    padding: 24px !important;
+  }
 }
 `;

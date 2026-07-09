@@ -21,11 +21,12 @@ export default async function DashboardLayout({
     <div className="relative min-h-screen bg-gray-50">
       <div
         aria-hidden="true"
+        data-print-hide=""
         className="pointer-events-none fixed inset-0 z-0 bg-center bg-no-repeat opacity-[0.04]"
         style={{ backgroundImage: `url(${LOGO_DATA_URI})`, backgroundSize: "480px" }}
       />
       <div className="relative z-10">
-        <header className="border-b border-[#1B3A5C]/15 bg-white">
+        <header data-print-hide="" className="border-b border-[#1B3A5C]/15 bg-white">
           <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
             <div className="flex items-center gap-3">
               <img src={LOGO_DATA_URI} alt="Playa y Sol" className="h-9 w-9 rounded" />
@@ -39,7 +40,7 @@ export default async function DashboardLayout({
             </div>
           </div>
         </header>
-        <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+        <main id="dashboard-main" className="mx-auto max-w-5xl px-4 py-8">{children}</main>
       </div>
     </div>
   );
