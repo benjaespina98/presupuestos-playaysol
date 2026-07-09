@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase-server";
 import { LOGO_DATA_URI } from "@/lib/brand";
+import { Wordmark } from "@/components/Wordmark";
 import LogoutButton from "./logout-button";
 
 export default async function DashboardLayout({
@@ -27,17 +29,29 @@ export default async function DashboardLayout({
       />
       <div className="relative z-10">
         <header data-print-hide="" className="border-b border-[#1B3A5C]/15 bg-white">
-          <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-            <div className="flex items-center gap-3">
-              <img src={LOGO_DATA_URI} alt="Playa y Sol" className="h-9 w-9 rounded" />
-              <span className="font-semibold text-[#1B3A5C]">
-                Playa y Sol — Presupuestos
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+            <Link href="/dashboard" className="flex items-center gap-3">
+              <Wordmark className="text-base" />
+              <span className="hidden text-sm font-medium text-gray-400 sm:inline">
+                Presupuestos
               </span>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-500">{user.email}</span>
+            </Link>
+            <nav className="flex items-center gap-4 text-sm">
+              <Link
+                href="/dashboard"
+                className="font-medium text-gray-600 hover:text-[#1B3A5C]"
+              >
+                Calculadoras
+              </Link>
+              <Link
+                href="/dashboard/historial"
+                className="font-medium text-gray-600 hover:text-[#1B3A5C]"
+              >
+                Historial
+              </Link>
+              <span className="hidden text-gray-500 sm:inline">{user.email}</span>
               <LogoutButton />
-            </div>
+            </nav>
           </div>
         </header>
         <main id="dashboard-main" className="mx-auto max-w-5xl px-4 py-8">{children}</main>
