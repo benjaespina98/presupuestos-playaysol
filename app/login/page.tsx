@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import { LOGO_DATA_URI } from "@/lib/brand";
 
 function LoginForm() {
   const router = useRouter();
@@ -37,9 +38,12 @@ function LoginForm() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
-        <h1 className="mb-6 text-center text-xl font-semibold text-gray-900">
-          Playa y Sol — Portal de presupuestos
-        </h1>
+        <div className="mb-6 flex flex-col items-center text-center">
+          <img src={LOGO_DATA_URI} alt="Playa y Sol" className="mb-3 h-16 w-16 rounded" />
+          <h1 className="text-xl font-semibold text-[#1B3A5C]">
+            Playa y Sol — Portal de presupuestos
+          </h1>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -51,7 +55,7 @@ function LoginForm() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#1B3A5C] focus:outline-none focus:ring-1 focus:ring-[#1B3A5C]"
               placeholder="tu@email.com"
             />
           </div>
@@ -65,7 +69,7 @@ function LoginForm() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#1B3A5C] focus:outline-none focus:ring-1 focus:ring-[#1B3A5C]"
               placeholder="••••••••"
             />
           </div>
@@ -79,7 +83,7 @@ function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="w-full rounded-md bg-[#1B3A5C] px-4 py-2 text-sm font-medium text-white hover:bg-[#142c46] disabled:opacity-50"
           >
             {loading ? "Ingresando..." : "Ingresar"}
           </button>
