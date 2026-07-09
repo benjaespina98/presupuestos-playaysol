@@ -508,6 +508,14 @@
     .app{display:block;}
     .preview-panel{padding:0; display:block;}
     .sheet{box-shadow:none; max-width:100%; border-radius:0;}
-    .sheet-body{padding:20px 30px;}
+    .sheet-body{padding:20px 30px !important;}
+    /* Fuerza el layout de escritorio del documento aunque se imprima desde un celular:
+       @media (max-width:600px) y @media print pueden matchear los dos a la vez (imprimir
+       desde el navegador del celu), y sin !important acá el PDF salía con el layout
+       angosto de mobile (1 columna, títulos chicos) en vez del documento prolijo. */
+    .meta-grid{grid-template-columns:1fr 1fr !important; padding:16px 20px !important; gap:5px 22px !important;}
+    .doc-title{font-size:19px !important; margin-bottom:20px !important;}
+    .dim-card{padding:14px 18px !important;}
+    .opt-card{padding:14px 16px 16px !important;}
     * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
   }

@@ -7,107 +7,123 @@ export function buildCalculatorHtml(): string {
 
   <div class="brand">
     <div>
-      <h1>Plano de pileta</h1>
+      <h1>Plano de Piscina</h1>
       <div class="subtitle">Playa y Sol S.A.S. &mdash; uso interno, plano y presupuesto de borde perimetral</div>
     </div>
   </div>
 
-  <h3>Medidas de la pileta</h3>
-  <div class="row">
-    <div>
-      <label>Largo pileta (m)</label>
-      <input type="number" id="largo" value="8.45" step="0.01">
-    </div>
-    <div>
-      <label>Ancho pileta (m)</label>
-      <input type="number" id="ancho" value="3.75" step="0.01">
+  <div class="field-section">
+    <h3>Datos del presupuesto</h3>
+    <div class="row">
+      <div>
+        <label>Nombre / referencia del presupuesto</label>
+        <input type="text" id="nombre" placeholder="Ej: Presupuesto Gomez">
+      </div>
     </div>
   </div>
 
-  <div class="row">
-    <div>
-      <label>Loseta incluida por defecto (m, perimetral)</label>
-      <input type="number" id="incluido" value="0.5" step="0.05">
-    </div>
-    <div>
-      <label>Nombre / referencia del presupuesto</label>
-      <input type="text" id="nombre" placeholder="Ej: Presupuesto Gomez">
+  <div class="field-section">
+    <h3>Medidas de la pileta</h3>
+    <div class="row3">
+      <div>
+        <label>Largo pileta (m)</label>
+        <input type="number" id="largo" value="8.45" step="0.01">
+      </div>
+      <div>
+        <label>Ancho pileta (m)</label>
+        <input type="number" id="ancho" value="3.75" step="0.01">
+      </div>
+      <div>
+        <label>Loseta incluida por defecto (m, perimetral)</label>
+        <input type="number" id="incluido" value="0.5" step="0.05">
+      </div>
     </div>
   </div>
 
-  <h3>Ancho final de loseta por lado (incluye lo que ya viene de f&aacute;brica)</h3>
-  <div class="row4">
-    <div><label>Solar (izquierda)</label><input type="number" id="solar" value="2.0" step="0.05"></div>
-    <div><label>Lado opuesto al solar</label><input type="number" id="opuesto" value="1.0" step="0.05"></div>
-    <div><label>Lateral 1</label><input type="number" id="lateral1" value="1.0" step="0.05"></div>
-    <div><label>Lateral 2</label><input type="number" id="lateral2" value="1.0" step="0.05"></div>
+  <div class="field-section">
+    <h3>Ancho final de loseta por lado <span class="section-hint">(incluye lo que ya viene de f&aacute;brica)</span></h3>
+    <div class="row4">
+      <div><label>Solar (izquierda)</label><input type="number" id="solar" value="2.0" step="0.05"></div>
+      <div><label>Lado opuesto al solar</label><input type="number" id="opuesto" value="1.0" step="0.05"></div>
+      <div><label>Lateral 1</label><input type="number" id="lateral1" value="1.0" step="0.05"></div>
+      <div><label>Lateral 2</label><input type="number" id="lateral2" value="1.0" step="0.05"></div>
+    </div>
   </div>
 
-  <h3>Otras variables</h3>
-  <div class="row">
-    <div>
-      <div class="checkrow">
-        <input type="checkbox" id="chkSolarHumedo" onchange="toggleSubfield('subSolarHumedo', this.checked)">
-        <label for="chkSolarHumedo">Incluye solar h&uacute;medo (dentro de la pileta)</label>
+  <div class="field-section">
+    <h3>Solar h&uacute;medo y escalera</h3>
+    <div class="row">
+      <div>
+        <div class="checkrow">
+          <input type="checkbox" id="chkSolarHumedo" onchange="toggleSubfield('subSolarHumedo', this.checked)">
+          <label for="chkSolarHumedo">Incluye solar h&uacute;medo (dentro de la pileta)</label>
+        </div>
+        <div class="subfield" id="subSolarHumedo" style="display:none;">
+          <label>Ancho del solar h&uacute;medo (m)</label>
+          <input type="number" id="solarHumedoAncho" value="1.0" step="0.05">
+        </div>
       </div>
-      <div class="subfield" id="subSolarHumedo" style="display:none;">
-        <label>Ancho del solar h&uacute;medo (m)</label>
-        <input type="number" id="solarHumedoAncho" value="1.0" step="0.05">
+      <div>
+        <div class="checkrow">
+          <input type="checkbox" id="chkEscalera" onchange="toggleSubfield('subEscalera', this.checked)">
+          <label for="chkEscalera">Incluye escalera</label>
+        </div>
+        <div class="subfield" id="subEscalera" style="display:none;">
+          <label>Ubicaci&oacute;n de la escalera</label>
+          <select id="escaleraPos">
+            <option value="solar">Lado del solar</option>
+            <option value="opuesto">Lado opuesto</option>
+            <option value="lateral1">Lateral 1</option>
+            <option value="lateral2">Lateral 2</option>
+          </select>
+        </div>
       </div>
     </div>
-    <div>
-      <div class="checkrow">
-        <input type="checkbox" id="chkEscalera" onchange="toggleSubfield('subEscalera', this.checked)">
-        <label for="chkEscalera">Incluye escalera</label>
-      </div>
-      <div class="subfield" id="subEscalera" style="display:none;">
-        <label>Ubicaci&oacute;n de la escalera</label>
-        <select id="escaleraPos">
-          <option value="solar">Lado del solar</option>
-          <option value="opuesto">Lado opuesto</option>
-          <option value="lateral1">Lateral 1</option>
-          <option value="lateral2">Lateral 2</option>
+  </div>
+
+  <div class="field-section">
+    <h3>Pileta e iluminaci&oacute;n</h3>
+    <div class="row">
+      <div>
+        <label>Tipo de pileta</label>
+        <select id="tipoPileta" onchange="toggleSubfield('subLabios', this.value === 'fibra')">
+          <option value="hormigon">Hormig&oacute;n</option>
+          <option value="fibra">Fibra</option>
         </select>
+        <div class="subfield" id="subLabios" style="display:none;">
+          <label>Ancho de labios (m) &mdash; medida ya incluida en el largo x ancho cargado arriba</label>
+          <input type="number" id="labios" value="0.20" step="0.01">
+          <div class="helptext">No modifica el c&aacute;lculo de m&sup2; extra. Solo muestra el espejo de agua real dentro de la medida exterior de la pileta.</div>
+        </div>
+      </div>
+      <div>
+        <div class="checkrow">
+          <input type="checkbox" id="chkLuces" onchange="toggleSubfield('subLuces', this.checked)">
+          <label for="chkLuces">Incluye luces</label>
+        </div>
+        <div class="subfield" id="subLuces" style="display:none;">
+          <label>Cantidad de luces</label>
+          <input type="number" id="cantLuces" value="2" min="1" step="1">
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="row">
-    <div>
-      <label>Tipo de pileta</label>
-      <select id="tipoPileta" onchange="toggleSubfield('subLabios', this.value === 'fibra')">
-        <option value="hormigon">Hormig&oacute;n</option>
-        <option value="fibra">Fibra</option>
-      </select>
-      <div class="subfield" id="subLabios" style="display:none;">
-        <label>Ancho de labios (m) &mdash; medida ya incluida en el largo x ancho cargado arriba</label>
-        <input type="number" id="labios" value="0.20" step="0.01">
-        <div class="helptext" style="margin-top:6px;">No modifica el c&aacute;lculo de m&sup2; extra. Solo muestra el espejo de agua real dentro de la medida exterior de la pileta.</div>
-      </div>
-    </div>
-  <div class="row">
-    <div>
-      <div class="checkrow">
-        <input type="checkbox" id="chkLuces" onchange="toggleSubfield('subLuces', this.checked)">
-        <label for="chkLuces">Incluye luces</label>
-      </div>
-      <div class="subfield" id="subLuces" style="display:none;">
-        <label>Cantidad de luces</label>
-        <input type="number" id="cantLuces" value="2" min="1" step="1">
-      </div>
-    </div>
-    <div>
-      <label>Revestimiento interior</label>
-      <select id="revestimiento" onchange="toggleSubfield('subRevestOtro', this.value === 'otro')">
-        <option value="">Sin especificar</option>
-        <option value="ceramicos">Cer&aacute;micos</option>
-        <option value="travertino">Travertino</option>
-        <option value="pintura">Pintura</option>
-        <option value="otro">Otro</option>
-      </select>
-      <div class="subfield" id="subRevestOtro" style="display:none;">
-        <label>Especificar</label>
-        <input type="text" id="revestimientoOtro" placeholder="Ej: Liner, gresite...">
+  <div class="field-section">
+    <h3>Revestimiento interior</h3>
+    <div class="row">
+      <div>
+        <select id="revestimiento" onchange="toggleSubfield('subRevestOtro', this.value === 'otro')">
+          <option value="">Sin especificar</option>
+          <option value="ceramicos">Cer&aacute;micos</option>
+          <option value="travertino">Travertino</option>
+          <option value="pintura">Pintura</option>
+          <option value="otro">Otro</option>
+        </select>
+        <div class="subfield" id="subRevestOtro" style="display:none;">
+          <label>Especificar</label>
+          <input type="text" id="revestimientoOtro" placeholder="Ej: Liner, gresite...">
+        </div>
       </div>
     </div>
   </div>
@@ -127,8 +143,8 @@ export function buildCalculatorHtml(): string {
     </div>
   </div>
 
-  <div class="precio-section">
-    <h3 style="margin-top:0;">Materiales y precios (solo uso interno)</h3>
+  <div class="field-section field-section-muted">
+    <h3>Materiales y precios <span class="section-hint">(solo uso interno, no se muestra al cliente)</span></h3>
     <div id="materialsContainer"></div>
     <button type="button" class="add-material" onclick="addMaterial()">+ Agregar material</button>
 
@@ -137,23 +153,33 @@ export function buildCalculatorHtml(): string {
 
 </div>
 
-<div class="btns" style="max-width:940px;margin:16px auto 0;">
-  <button onclick="exportarInterno()">Descargar interno (con costos)</button>
-  <button class="client" onclick="exportarCliente()">Descargar para cliente (plano + medidas)</button>
-  <button class="secondary" id="btnGuardarNube" onclick="guardarEnNubeClick()">Guardar en la nube</button>
-  <a class="secondary" href="/dashboard/historial?tipo=losetas">Historial</a>
-  <button class="secondary" onclick="imprimirVistaLimpia()">Imprimir / Guardar PDF</button>
-  <button class="secondary" onclick="resetAll()">Limpiar / empezar de cero</button>
+<div class="btns-wrap">
+  <div class="btns-group">
+    <div class="btns-label">Exportar</div>
+    <div class="btns">
+      <button onclick="exportarInterno()">Descargar interno (con costos)</button>
+      <button class="client" onclick="exportarCliente()">Descargar para cliente (plano + medidas)</button>
+      <button class="secondary" onclick="imprimirVistaLimpia()">Imprimir / Guardar PDF</button>
+    </div>
+    <div class="helptext">
+      "Descargar para cliente" genera una imagen limpia solo con el plano a escala, la barra de escala gr&aacute;fica y las medidas &mdash; sin precios ni costos.
+    </div>
+  </div>
+  <div class="btns-group">
+    <div class="btns-label">Presupuesto</div>
+    <div class="btns">
+      <button class="secondary" id="btnGuardarNube" onclick="guardarEnNubeClick()">Guardar en la nube</button>
+      <a class="secondary" href="/dashboard/historial?tipo=losetas">Historial</a>
+      <button class="secondary" onclick="resetAll()">Limpiar / empezar de cero</button>
+    </div>
+    <div class="helptext" id="cloudMsg"></div>
+  </div>
 </div>
-<div class="helptext" style="max-width:940px;margin:8px auto 0;">
-  "Descargar para cliente" genera una imagen limpia solo con el plano a escala, la barra de escala gr&aacute;fica y las medidas &mdash; sin precios ni costos.
-</div>
-<div class="helptext" id="cloudMsg" style="max-width:940px;margin:8px auto 0;"></div>
 
 <div id="client-capture">
   <div class="chdr">
     <div>
-      <div class="ctitle">Plano de pileta</div>
+      <div class="ctitle">Plano de Piscina</div>
       <div class="csub" id="clientRef"></div>
     </div>
     <img src="${CALCULATOR_LOGO_DATA_URI}" alt="Playa y Sol">

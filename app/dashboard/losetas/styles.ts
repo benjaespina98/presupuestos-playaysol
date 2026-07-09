@@ -16,27 +16,45 @@ export const CALCULATOR_STYLES = `
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
 .pys-calc h1 { font-size: 22px; margin: 0 0 4px; color: #1B3A5C; }
-.pys-calc .subtitle { font-size: 14px; color: #666; margin-bottom: 24px; }
-.pys-calc .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
-.pys-calc .row4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+.pys-calc .subtitle { font-size: 14px; color: #666; margin-bottom: 28px; }
+.pys-calc .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.pys-calc .row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.pys-calc .row4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
 .pys-calc label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; }
 .pys-calc input, .pys-calc select { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; background: #fff; }
 .pys-calc input:focus, .pys-calc select:focus { outline: 2px solid #1B3A5C; border-color: #1B3A5C; }
-.pys-calc h3 { font-size: 14px; font-weight: 600; margin: 24px 0 10px; color: #1B3A5C; }
-.pys-calc .plano-container { background: #fafafa; border: 1px solid #eee; border-radius: 10px; padding: 24px; margin: 20px 0; overflow: visible; }
-.pys-calc .brand { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.pys-calc h3 { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin: 0 0 16px; padding-bottom: 10px; color: #1B3A5C; border-bottom: 1px solid #EDEAE0; }
+.pys-calc .section-hint { font-size: 11px; font-weight: 400; letter-spacing: normal; text-transform: none; color: #999; }
+/* Cada bloque de campos relacionados vive en su propia "ficha" — mismo lenguaje visual
+   (borde suave, radio, encabezado navy en mayúsculas) que las cards del documento
+   exportado, para que el formulario se sienta tan prolijo como el resultado. */
+.pys-calc .field-section {
+  background: #fff;
+  border: 1px solid #EDEAE0;
+  border-radius: 10px;
+  padding: 20px 22px 22px;
+  margin-bottom: 16px;
+}
+.pys-calc .field-section-muted { background: #FAFAF7; }
+.pys-calc .plano-container { background: #fafafa; border: 1px solid #eee; border-radius: 10px; padding: 24px; margin: 8px 0 16px; overflow: visible; }
+.pys-calc .brand { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
 .pys-calc .brand span { font-size: 12px; color: #999; }
 .pys-calc .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
 .pys-calc .card { background: #F5F3EC; border: 1px solid #EAE6DA; border-radius: 10px; padding: 16px 18px; }
 .pys-calc .card .label { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #8A8371; }
 .pys-calc .card .value { font-size: 23px; font-weight: 700; color: #1B3A5C; margin-top: 4px;}
 .pys-calc .card.accent .value { color: #C0522D; }
-.pys-calc .precio-section { border-top: 1px solid #eee; padding-top: 18px; margin-top: 8px; }
 .pys-calc .checkrow { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .pys-calc .checkrow input[type="checkbox"] { width: auto; }
 .pys-calc .checkrow label { margin-bottom: 0; font-size: 13px; color: #333; }
 .pys-calc .subfield { margin-top: 8px; }
-.pys-calc .btns { display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
+/* Botones agrupados por función (Exportar vs. Presupuesto) en vez de 6 acciones
+   sueltas en una sola fila — cada grupo con su etiqueta chica arriba. */
+.pys-calc .btns-wrap { display: flex; flex-wrap: wrap; gap: 28px; margin-top: 24px; }
+.pys-calc .btns-group { flex: 1 1 260px; min-width: 240px; }
+.pys-calc .btns-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #8A8371; margin: 0 0 10px; }
+.pys-calc .btns-group .helptext { margin-top: 10px; }
+.pys-calc .btns { display: flex; gap: 10px; flex-wrap: wrap; }
 .pys-calc button { background: #1B3A5C; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-size: 14px; cursor: pointer; }
 .pys-calc button:hover { background: #14304c; }
 .pys-calc button.secondary { background: #fff; color: #1B3A5C; border: 1px solid #1B3A5C; }
@@ -118,19 +136,21 @@ export const CALCULATOR_STYLES = `
 @media (max-width: 600px) {
   .pys-calc { padding: 10px; }
   .pys-calc .wrap { padding: 14px; border-radius: 10px; }
+  .pys-calc .field-section { padding: 14px 14px 16px; }
   .pys-calc .plano-container { padding: 10px; }
-  .pys-calc .row, .pys-calc .row4 { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .pys-calc .row, .pys-calc .row3, .pys-calc .row4 { grid-template-columns: 1fr 1fr; gap: 10px; }
   .pys-calc .cards { grid-template-columns: 1fr; }
   .pys-calc .material-row { grid-template-columns: 1fr 80px auto; gap: 6px; }
   /* font-size 16px evita que iOS Safari haga zoom automático al enfocar el campo */
   .pys-calc input, .pys-calc select { font-size: 16px; }
+  .pys-calc .btns-wrap { gap: 20px; }
   .pys-calc .btns { flex-direction: column; }
   .pys-calc button { width: 100%; min-height: 44px; padding: 12px 18px; }
   .pys-calc button.add-material { width: 100%; }
 }
 
 @media (max-width: 420px) {
-  .pys-calc .row, .pys-calc .row4 { grid-template-columns: 1fr; }
+  .pys-calc .row, .pys-calc .row3, .pys-calc .row4 { grid-template-columns: 1fr; }
 }
 
 /* ---------- IMPRESIÓN / PDF ---------- */

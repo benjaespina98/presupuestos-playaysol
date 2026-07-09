@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
-import { LOGO_DATA_URI } from "@/lib/brand";
+import { Wordmark } from "@/components/Wordmark";
 
 function LoginForm() {
   const router = useRouter();
@@ -39,10 +39,8 @@ function LoginForm() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
         <div className="mb-6 flex flex-col items-center text-center">
-          <img src={LOGO_DATA_URI} alt="Playa y Sol" className="mb-3 h-16 w-16 rounded" />
-          <h1 className="text-xl font-semibold text-[#1B3A5C]">
-            Playa y Sol — Portal de presupuestos
-          </h1>
+          <Wordmark className="mb-2 text-xl" />
+          <p className="text-sm text-gray-500">Portal de presupuestos</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
