@@ -12,7 +12,7 @@ function renderMaterials(){
   c.innerHTML = materials.map((m, i) => \`
     <div class="material-row">
       <input type="text" value="\${m.name.replace(/"/g,'&quot;')}" placeholder="Nombre del material" oninput="updateMaterial(\${i}, 'name', this.value)">
-      <input type="number" value="\${m.price}" min="0" placeholder="$/m\\u00b2" oninput="updateMaterial(\${i}, 'price', this.value)">
+      <input type="number" value="\${m.price}" min="0" placeholder="$/m\\u00b2" data-valor-inicial="\${m.price}" oninput="updateMaterial(\${i}, 'price', this.value)" onblur="confirmarPrecioMaterial(\${i}, this)">
       <button type="button" class="danger-ghost" onclick="removeMaterial(\${i})" \${materials.length <= 1 ? 'disabled style="opacity:.35;cursor:not-allowed;"' : ''}>Quitar</button>
     </div>
   \`).join('');
@@ -22,6 +22,33 @@ function updateMaterial(i, field, value){
   if(field === 'price'){ materials[i].price = parseFloat(value) || 0; }
   else { materials[i].name = value; }
   calc();
+}
+
+// Losetas no tenía ningún tipo de persistencia de catálogo antes (ni local): "Cancelar"
+// acá es exactamente el comportamiento de siempre (el precio queda solo en este
+// presupuesto). Por eso una sola pregunta alcanza, a diferencia de las otras 4
+// calculadoras donde ya existe un valor previo persistido que se está sobrescribiendo.
+// La clave es el nombre del material (no hay slug/id estable como en las otras 4).
+async function confirmarPrecioMaterial(i, inputEl){
+  const valorInicial = inputEl.dataset.valorInicial ?? '';
+  const valorNuevo = inputEl.value;
+  inputEl.dataset.valorInicial = valorNuevo;
+  if(valorNuevo === valorInicial) return;
+  if(!window.actualizarCatalogoItem || !window.mostrarModalCatalogo) return;
+  const nombre = (materials[i].name || '').trim();
+  if(!nombre) return; // sin nombre no hay clave estable para guardarlo en el catálogo
+  const resultado = await window.mostrarModalCatalogo({
+    titulo: 'Guardar precio de catálogo',
+    mensaje: '¿Guardar $' + materials[i].price + ' como precio permanente de "' + nombre + '"?',
+    botonPrimario: {
+      texto: 'Guardar como precio permanente',
+      aclaracion: 'Este precio va a verse en todos los presupuestos nuevos de losetas a partir de ahora'
+    },
+    botonSecundario: null
+  });
+  if(resultado !== 'primario') return;
+  const { error } = await window.actualizarCatalogoItem(nombre, materials[i].price);
+  if(error) console.error('No se pudo actualizar el catálogo compartido', error);
 }
 
 function addMaterial(){
@@ -305,6 +332,35 @@ renderMaterials();
 document.querySelectorAll('#capture-area input, #capture-area select').forEach(el => el.addEventListener('input', calc));
 calc();
 
+function cargarPresupuestoExterno(datos){
+  if(!datos) return;
+  document.getElementById('largo').value = datos.largo ?? '';
+  document.getElementById('ancho').value = datos.ancho ?? '';
+  document.getElementById('incluido').value = datos.inc ?? '0.5';
+  document.getElementById('nombre').value = datos.nombre ?? '';
+  document.getElementById('solar').value = datos.solar ?? '0.5';
+  document.getElementById('opuesto').value = datos.opuesto ?? '0.5';
+  document.getElementById('lateral1').value = datos.lateral1 ?? '0.5';
+  document.getElementById('lateral2').value = datos.lateral2 ?? '0.5';
+  document.getElementById('chkSolarHumedo').checked = !!datos.solarHumedo;
+  document.getElementById('solarHumedoAncho').value = datos.solarHumedoAncho ?? '1.0';
+  document.getElementById('subSolarHumedo').style.display = datos.solarHumedo ? 'block' : 'none';
+  document.getElementById('chkEscalera').checked = !!datos.escalera;
+  document.getElementById('escaleraPos').value = datos.escaleraPos ?? 'solar';
+  document.getElementById('subEscalera').style.display = datos.escalera ? 'block' : 'none';
+  document.getElementById('tipoPileta').value = datos.tipoPileta ?? 'hormigon';
+  document.getElementById('labios').value = datos.labios ?? '0.20';
+  document.getElementById('subLabios').style.display = datos.tipoPileta === 'fibra' ? 'block' : 'none';
+  document.getElementById('chkLuces').checked = !!datos.luces;
+  document.getElementById('cantLuces').value = datos.cantLuces ?? '2';
+  document.getElementById('subLuces').style.display = datos.luces ? 'block' : 'none';
+  document.getElementById('revestimiento').value = datos.revestimiento ?? '';
+  document.getElementById('revestimientoOtro').value = datos.revestimientoOtro ?? '';
+  document.getElementById('subRevestOtro').style.display = datos.revestimiento === 'otro' ? 'block' : 'none';
+  calc();
+}
+window.cargarPresupuestoExterno = cargarPresupuestoExterno;
+
 async function guardarEnNubeClick(){
   const btn = document.getElementById('btnGuardarNube');
   const msg = document.getElementById('cloudMsg');
@@ -312,7 +368,9 @@ async function guardarEnNubeClick(){
   if(btn){ btn.disabled = true; }
   if(msg){ msg.textContent = 'Guardando...'; msg.style.color = '#666'; }
   try{
-    const result = await window.guardarPresupuesto(s, s.nombre);
+    const result = window.presupuestoEnEdicionId
+      ? await window.actualizarPresupuesto(window.presupuestoEnEdicionId, s, s.nombre)
+      : await window.guardarPresupuesto(s, s.nombre);
     if(msg){
       if(result && result.error){
         msg.textContent = 'Error al guardar: ' + result.error.message;

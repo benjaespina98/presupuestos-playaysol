@@ -197,6 +197,34 @@
     cursor:pointer;
     margin-top:8px;
   }
+  .btn-secondary:hover{
+    background:var(--primary-light);
+    border-color:var(--primary);
+    color:var(--primary-dark);
+  }
+
+  /* Inputs de tipo file (Fotos generales, fotos por opcional): reskin del botón nativo
+     con ::file-selector-button en vez de ocultar+label, para no tener que tocar el
+     -calc.js que genera .opt-foto-input dinámicamente. */
+  input[type=file]{
+    font-size:12px;
+    color:var(--muted);
+  }
+  input[type=file]::file-selector-button{
+    background:var(--primary);
+    color:#fff;
+    border:none;
+    border-radius:6px;
+    padding:7px 12px;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    margin-right:10px;
+  }
+  input[type=file]::file-selector-button:hover{
+    background:var(--primary-dark);
+  }
+
   .hint{
     font-size:11px;
     color:var(--muted);
@@ -398,6 +426,24 @@
   .sheet-header{
     -webkit-print-color-adjust:exact;
     print-color-adjust:exact;
+  }
+
+  .action-row{display:flex; gap:8px;}
+
+  /* ---------- MOBILE (<600px) ---------- */
+  @media (max-width:600px){
+    .form-panel{padding:14px;}
+    .preview-panel{padding:14px;}
+    .sheet-body{padding:18px 16px 24px;}
+    .row2{grid-template-columns:1fr; gap:8px;}
+    .item-row{grid-template-columns:1fr 72px 26px; gap:5px;}
+    .opt-row{grid-template-columns:18px 1fr 72px 26px; gap:5px;}
+    .photo-grid{grid-template-columns:1fr;}
+    /* font-size 16px evita que iOS Safari haga zoom automático al enfocar el campo */
+    .field input, .field textarea, .quote-search{font-size:16px;}
+    .btn-primary, .btn-secondary{min-height:44px; font-size:14px;}
+    .tab-btn{padding:10px 3px; font-size:11px;}
+    .action-row{flex-direction:column;}
   }
 
   @media print{

@@ -9,12 +9,12 @@ let currentQuoteId = null; // null = presupuesto nuevo, sin guardar todavía
 /* ---------------- DEFAULTS ---------------- */
 const defaultOptionales = [
   {id:cid(), desc:'Cerámico Bali Brasil (por m² instalado)', price:112000, included:false, perM2:true, slug:'revestimiento_ceramico_bali'},
-  {id:cid(), desc:'Venecitas Premium España (por m² instalado)', price:140000, included:false, perM2:true},
+  {id:cid(), slug:'venecitas_premium_espana', desc:'Venecitas Premium España (por m² instalado)', price:140000, included:false, perM2:true},
   {id:cid(), desc:'Piedra Bali Indonesia (por m² instalado)', price:195000, included:false, perM2:true, slug:'revestimiento_piedra_bali'},
   {id:cid(), desc:'Mármol Travertino Turquía (por m² instalado)', price:200000, included:false, perM2:true, slug:'travertino'},
-  {id:cid(), desc:'Solar seco — losetas atérmicas (por m² terminado)', price:229000, included:false, perM2:true},
-  {id:cid(), desc:'Solar seco — deck 1×0.12m (por m² terminado)', price:269000, included:false, perM2:true},
-  {id:cid(), desc:'Disqueado / remoción de revestimiento previo (por obra, solo si tiene revestimiento viejo)', price:800000, included:false, perM2:false},
+  {id:cid(), slug:'solar_seco_losetas', desc:'Solar seco — losetas atérmicas (por m² terminado)', price:229000, included:false, perM2:true},
+  {id:cid(), slug:'solar_seco_deck', desc:'Solar seco — deck 1×0.12m (por m² terminado)', price:269000, included:false, perM2:true},
+  {id:cid(), slug:'disqueado_revestimiento_previo', desc:'Disqueado / remoción de revestimiento previo (por obra, solo si tiene revestimiento viejo)', price:800000, included:false, perM2:false},
 ];
 
 const defaultLegal = `REVESTIMIENTOS PARA PISCINA:
@@ -319,6 +319,41 @@ function saveCatalog(){
     flashSaved();
   }catch(e){ console.error('No se pudo guardar el catálogo', e); }
 }
+
+// Popup "actualizar para todos vs. solo este presupuesto" al editar precio/descripción
+// de un opcional del catálogo. Se dispara en blur, solo si el valor cambió respecto al
+// que tenía cuando se renderizó (data-valor-inicial). "Cancelar" = el cambio ya quedó
+// aplicado a este presupuesto nomás (vía el listener 'input', que no se toca acá).
+// No aplica al checkbox "Precio por m²" (opt-perm2): es un flag estructural, no un
+// precio/descripción, y queda fuera de alcance.
+async function confirmarCambioCatalogoOpcional(inputEl, campo){
+  const valorInicial = inputEl.dataset.valorInicial ?? '';
+  const valorNuevo = inputEl.value;
+  inputEl.dataset.valorInicial = valorNuevo; // no volver a preguntar por este mismo cambio
+  if(valorNuevo === valorInicial) return;
+  const op = state.opcionales.find(o=>o.id===inputEl.dataset.id);
+  if(!op || !op.slug || !window.actualizarCatalogoItem || !window.mostrarModalCatalogo) return; // opcionales agregados a mano no tienen clave estable
+  const etiqueta = op.desc.length > 60 ? op.desc.slice(0,60)+'…' : op.desc;
+  const mensaje = campo==='price'
+    ? `Vas a cambiar el precio de "${etiqueta}" de ${valorInicial===''?'sin precio':'$'+valorInicial} a ${valorNuevo===''?'sin precio':'$'+valorNuevo}.`
+    : `Vas a cambiar la descripción de "${etiqueta}".`;
+  const resultado = await window.mostrarModalCatalogo({
+    titulo: campo==='price' ? 'Actualizar precio de catálogo' : 'Actualizar descripción de catálogo',
+    mensaje,
+    botonPrimario: {
+      texto: 'Actualizar para todas las calculadoras',
+      aclaracion: 'Este valor va a verse en todos los presupuestos nuevos de revestimientos a partir de ahora'
+    },
+    botonSecundario: {
+      texto: 'Solo para este presupuesto',
+      aclaracion: 'El catálogo general no cambia'
+    }
+  });
+  if(resultado !== 'primario') return;
+  const { error } = await window.actualizarCatalogoItem(op.slug, op.price, op.desc);
+  if(error) console.error('No se pudo actualizar el catálogo compartido', error);
+}
+
 function saveLegal(){
   try{ localStorage.setItem(K_LEGAL, state.legal); }
   catch(e){ console.error('No se pudo guardar el texto legal', e); }
@@ -346,10 +381,23 @@ function quoteToPlainState(){
     items: state.items,
     // Solo se guarda la excepción (lo destildado); por defecto todo el catálogo va tildado.
     opcionalesIncluidos: state.opcionales.filter(o=>o.included===true).map(o=>o.id),
-    // Solo metadata liviana acá: los bytes de cada foto ya están guardados en IndexedDB (idbPutFoto).
-    fotos: state.fotos.map(f=>({ id:f.id, caption:f.caption, width:f.width, height:f.height })),
+    // Los bytes de cada foto viven en IndexedDB (idbPutFoto) para esta copia del navegador,
+    // y además en Supabase Storage (storageUrl) para poder restaurarlas en otro dispositivo.
+    fotos: state.fotos.map(f=>({ id:f.id, caption:f.caption, width:f.width, height:f.height, storageUrl: f.storageUrl||null })),
     headerVariant: state.headerVariant
   };
+}
+
+// Sube a Supabase Storage las fotos que todavía no tengan storageUrl (evita resubir en cada guardado).
+async function ensureFotosSubidasANube(){
+  if(!window.subirFotoPresupuesto) return;
+  for(const f of state.fotos){
+    if(f.storageUrl || !f.blob) continue;
+    try{
+      const result = await window.subirFotoPresupuesto(f.blob);
+      if(result && result.url) f.storageUrl = result.url;
+    }catch(e){ console.error('No se pudo subir una foto a la nube', e); }
+  }
 }
 
 function saveQuote(){
@@ -449,13 +497,20 @@ async function loadQuote(id){
     const incluidos = q.opcionalesIncluidos || [];
     state.opcionales.forEach(o=>{ o.included = incluidos.includes(o.id); });
 
-    // Traer los bytes reales de cada foto desde IndexedDB (en localStorage solo viajaba id+caption)
+    // Traer los bytes reales de cada foto: primero IndexedDB (rápido, esta copia del navegador);
+    // si no está (otro dispositivo, o se limpió), caer a la copia en Supabase Storage y cachearla.
     const fotosMeta = q.fotos || [];
     state.fotos = [];
     for(const fm of fotosMeta){
-      const blob = await idbGetFoto(fm.id).catch(()=>null);
+      let blob = await idbGetFoto(fm.id).catch(()=>null);
+      if(!blob && fm.storageUrl){
+        try{
+          const resp = await fetch(fm.storageUrl);
+          if(resp.ok){ blob = await resp.blob(); await idbPutFoto(fm.id, blob).catch(()=>{}); }
+        }catch(e){ /* sin conexión o foto inexistente: se salteará abajo */ }
+      }
       if(!blob) continue; // si por algo se perdió, la salteamos en vez de romper todo
-      state.fotos.push({ id: fm.id, caption: fm.caption||'', width: fm.width, height: fm.height, blob, url: URL.createObjectURL(blob) });
+      state.fotos.push({ id: fm.id, caption: fm.caption||'', width: fm.width, height: fm.height, blob, url: URL.createObjectURL(blob), storageUrl: fm.storageUrl||null });
     }
     // Nota: las fotos por opcional NO se tocan acá — son del catálogo compartido
     // (state.fotosPorOpcional), no cambian según qué presupuesto estés viendo.
@@ -470,6 +525,25 @@ async function loadQuote(id){
     console.error('No se pudo cargar el presupuesto', e);
   }
 }
+
+// Reusa loadQuote() para reconstruir el state completo desde un objeto que viene de la nube
+// (en vez de reimplementar la asignación campo por campo, que es lo que se desactualizaba
+// cada vez que se agregaba un campo nuevo). Espera a que termine el arranque de la calculadora
+// (initPromise) para no correr en paralelo con seedFotosGeneralesDefaults() y perder las fotos.
+async function cargarPresupuestoExterno(datos){
+  if(!datos) return;
+  try{
+    await initPromise;
+    const tmpId = '__cloud_tmp__';
+    localStorage.setItem('quote:'+tmpId, JSON.stringify(datos));
+    await loadQuote(tmpId);
+    currentQuoteId = null; // no lo atamos a ningún presupuesto local
+    localStorage.removeItem('quote:'+tmpId);
+  }catch(e){
+    console.error('No se pudo cargar el presupuesto desde la nube', e);
+  }
+}
+window.cargarPresupuestoExterno = cargarPresupuestoExterno;
 
 async function newQuote(){
   currentQuoteId = null;
@@ -631,8 +705,8 @@ function renderOptList(){
     block.innerHTML = `
       <div class="opt-row">
         <input type="checkbox" ${op.included===true?'checked':''} data-id="${op.id}" class="opt-check" title="Tildado = aparece en este presupuesto">
-        <textarea data-id="${op.id}" data-field="desc" class="opt-desc" rows="3">${escAttr(op.desc)}</textarea>
-        <input type="text" value="${op.price===null||op.price===undefined?'':op.price}" placeholder="No incluye" data-id="${op.id}" data-field="price" class="opt-price">
+        <textarea data-id="${op.id}" data-field="desc" class="opt-desc" data-valor-inicial="${escAttr(op.desc)}" rows="3">${escAttr(op.desc)}</textarea>
+        <input type="text" value="${op.price===null||op.price===undefined?'':op.price}" placeholder="No incluye" data-id="${op.id}" data-field="price" class="opt-price" data-valor-inicial="${op.price===null||op.price===undefined?'':op.price}">
         <button class="btn-mini" data-id="${op.id}" title="Quitar este tipo del catálogo">✕</button>
       </div>
       <div style="display:flex; align-items:center; gap:8px; margin:2px 0 4px 26px; font-size:11px; color:var(--muted);">
@@ -658,12 +732,18 @@ function renderOptList(){
   wrap.querySelectorAll('.opt-desc').forEach(inp=>inp.addEventListener('input', e=>{
     updateOpt(e.target.dataset.id,'desc', e.target.value); renderPreview();
   }));
-  wrap.querySelectorAll('.opt-desc').forEach(inp=>inp.addEventListener('blur', saveCatalog));
+  wrap.querySelectorAll('.opt-desc').forEach(inp=>inp.addEventListener('blur', e=>{
+    saveCatalog();
+    confirmarCambioCatalogoOpcional(e.target, 'desc');
+  }));
   wrap.querySelectorAll('.opt-price').forEach(inp=>inp.addEventListener('input', e=>{
     const v = e.target.value.trim();
     updateOpt(e.target.dataset.id,'price', v===''?null:parseNum(v)); updateOptComputedSpans(); renderPreview();
   }));
-  wrap.querySelectorAll('.opt-price').forEach(inp=>inp.addEventListener('blur', saveCatalog));
+  wrap.querySelectorAll('.opt-price').forEach(inp=>inp.addEventListener('blur', e=>{
+    saveCatalog();
+    confirmarCambioCatalogoOpcional(e.target, 'price');
+  }));
   wrap.querySelectorAll('.opt-row .btn-mini').forEach(btn=>btn.addEventListener('click', async ()=>{
     if(!confirm('¿Quitar este tipo del catálogo? Se borra para todas las cotizaciones futuras (esta compu).')) return;
     const opId = btn.dataset.id;
@@ -1555,7 +1635,10 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 });
 
 /* ---------------- INIT ---------------- */
-(async function init(){
+// Se guarda la promesa (en vez de dejar la IIFE anónima) para que cargarPresupuestoExterno
+// pueda esperar a que termine todo el arranque asincrónico antes de tocar el state — si no,
+// seedFotosGeneralesDefaults() puede terminar después y pisar las fotos recién restauradas.
+let initPromise = (async function init(){
   await loadCatalog();
   await loadFotosPorOpcional();
   await seedFotosGeneralesDefaults(); // así ya arranca con las fotos ilustrativas cargadas, sin necesidad de tocar "Nuevo presupuesto"
@@ -1573,7 +1656,11 @@ async function guardarPresupuestoNube(){
   if(btn) btn.disabled = true;
   if(flash){ flash.textContent = 'Guardando...'; flash.style.color = 'var(--primary-dark)'; }
   try{
-    const { error } = await window.guardarPresupuesto(quoteToPlainState(), state.cliente);
+    await ensureFotosSubidasANube();
+    const datos = quoteToPlainState();
+    const { error } = window.presupuestoEnEdicionId
+      ? await window.actualizarPresupuesto(window.presupuestoEnEdicionId, datos, state.cliente)
+      : await window.guardarPresupuesto(datos, state.cliente);
     if(error) throw error;
     if(flash){ flash.textContent = 'Guardado en la nube ✓'; flash.style.color = 'var(--primary-dark)'; }
   }catch(err){

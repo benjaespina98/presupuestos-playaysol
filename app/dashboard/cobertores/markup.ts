@@ -83,7 +83,7 @@ const CALCULATOR_MARKUP = `
       <div class="save-flash" id="save-flash"></div>
 
       <div class="section-label">Catálogo</div>
-      <div style="display:flex; gap:8px;">
+      <div class="action-row">
         <button class="btn-secondary" id="btn-export-catalog" style="margin-top:0;" title="Descarga precios, textos y fotos en un archivo para llevar a otra compu">⬇️ Exportar</button>
         <button class="btn-secondary" id="btn-import-catalog" style="margin-top:0;" title="Carga un archivo exportado desde otra compu">⬆️ Importar</button>
       </div>
@@ -127,10 +127,11 @@ const CALCULATOR_MARKUP = `
 
     <button class="btn-primary" id="btn-save-quote">💾 Guardar presupuesto</button>
     <div class="save-flash" id="save-quote-flash"></div>
-    <div style="display:flex; gap:8px;">
+    <div class="action-row">
       <button class="btn-secondary" onclick="window.print()" style="margin-top:0;" title='Antes de imprimir: en "Más ajustes" desmarcá "Encabezados y pies" y tildá "Gráficos de fondo"'>🖨️ PDF</button>
       <button class="btn-secondary" id="btn-download-word" style="margin-top:0;">📄 Word</button>
       <button class="btn-secondary" id="btn-save-cloud" onclick="guardarPresupuestoNube()" style="margin-top:0;">☁️ Guardar en la nube</button>
+      <a class="btn-secondary" href="/dashboard/historial?tipo=cobertores" style="margin-top:0;text-decoration:none;text-align:center;">📋 Historial</a>
     </div>
     <div class="save-flash" id="save-cloud-flash"></div>
   </div>

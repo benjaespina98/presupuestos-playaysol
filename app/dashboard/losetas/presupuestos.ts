@@ -1,29 +1,28 @@
-import { createClient } from "@/lib/supabase";
+import {
+  guardarPresupuesto as guardar,
+  listarPresupuestos as listar,
+  obtenerPresupuesto as obtener,
+  actualizarPresupuesto as actualizar,
+  eliminarPresupuesto as eliminar,
+} from "@/lib/presupuestos";
+import { actualizarCatalogoItem as actualizarCatalogo } from "@/lib/catalogo";
 
-export async function guardarPresupuesto(datos: unknown, clienteNombre: string) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+const TIPO = "losetas" as const;
 
-  const { error } = await supabase.from("presupuestos").insert({
-    tipo: "losetas",
-    cliente_nombre: clienteNombre || "Sin nombre",
-    datos,
-    created_by: user?.id,
-  });
+export const guardarPresupuesto = (datos: unknown, clienteNombre: string) =>
+  guardar(TIPO, datos, clienteNombre);
 
-  return { error };
-}
+export const listarPresupuestos = () => listar(TIPO);
 
-export async function listarPresupuestos() {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("presupuestos")
-    .select("*")
-    .eq("tipo", "losetas")
-    .order("created_at", { ascending: false });
+export const obtenerPresupuesto = (id: string) => obtener(id);
 
-  if (error) throw error;
-  return data;
-}
+export const actualizarPresupuesto = (id: string, datos: unknown, clienteNombre: string) =>
+  actualizar(id, datos, clienteNombre);
+
+export const eliminarPresupuesto = (id: string) => eliminar(id);
+
+export const actualizarCatalogoItem = (
+  clave: string,
+  precio: number | null,
+  descripcion?: string
+) => actualizarCatalogo(TIPO, clave, precio, descripcion);

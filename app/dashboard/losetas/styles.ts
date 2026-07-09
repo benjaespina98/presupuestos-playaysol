@@ -45,8 +45,28 @@ export const CALCULATOR_STYLES = `
 .pys-calc button.client:hover { background: #a3441f; }
 .pys-calc button.danger-ghost { background: #fff; color: #a3441f; border: 1px solid #e2c4b8; padding: 6px 12px; font-size: 13px; }
 .pys-calc button.danger-ghost:hover { background: #fbf0ec; }
-.pys-calc button.reset { background: #fff; color: #666; border: 1px solid #ccc; }
-.pys-calc button.reset:hover { background: #f5f5f5; }
+/* Jerarquía de acciones dentro de .btns: 2 primarias sólidas (base + .client, ya
+   cubiertas arriba) y el resto con el mismo tratamiento secundario (borde navy,
+   mismo hover) sin importar si el elemento es <button> o <a> — antes ".secondary"
+   solo estaba definido para "button.secondary", así que el <a> de Historial no
+   tomaba ningún estilo y quedaba como texto plano suelto. */
+.pys-calc .btns > a,
+.pys-calc .btns > a.secondary {
+  background: #fff;
+  color: #1B3A5C;
+  border: 1px solid #1B3A5C;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+.pys-calc .btns > a:hover,
+.pys-calc .btns > a.secondary:hover {
+  background: #f2f6fa;
+}
 .pys-calc button.add-material { background: #fff; color: #1B3A5C; border: 1px dashed #1B3A5C; padding: 8px 14px; font-size: 13px; width: 100%; margin-top: 6px; }
 .pys-calc button.add-material:hover { background: #f2f6fa; }
 .pys-calc button:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -85,5 +105,24 @@ export const CALCULATOR_STYLES = `
   font-size: 11px;
   color: #aaa;
   text-align: center;
+}
+
+/* ---------- MOBILE (<600px) ---------- */
+@media (max-width: 600px) {
+  .pys-calc { padding: 10px; }
+  .pys-calc .wrap { padding: 14px; border-radius: 10px; }
+  .pys-calc .plano-container { padding: 10px; }
+  .pys-calc .row, .pys-calc .row4 { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .pys-calc .cards { grid-template-columns: 1fr; }
+  .pys-calc .material-row { grid-template-columns: 1fr 80px auto; gap: 6px; }
+  /* font-size 16px evita que iOS Safari haga zoom automático al enfocar el campo */
+  .pys-calc input, .pys-calc select { font-size: 16px; }
+  .pys-calc .btns { flex-direction: column; }
+  .pys-calc button { width: 100%; min-height: 44px; padding: 12px 18px; }
+  .pys-calc button.add-material { width: 100%; }
+}
+
+@media (max-width: 420px) {
+  .pys-calc .row, .pys-calc .row4 { grid-template-columns: 1fr; }
 }
 `;
