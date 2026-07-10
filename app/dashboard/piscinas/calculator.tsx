@@ -31,6 +31,7 @@ declare global {
 
 export default function PiscinasCalculator() {
   const [docxReady, setDocxReady] = useState(false);
+  const [cssReady, setCssReady] = useState(false);
   const searchParams = useSearchParams();
   const presupuestoId = searchParams.get("id");
   const duplicarId = searchParams.get("duplicar");
@@ -79,13 +80,37 @@ export default function PiscinasCalculator() {
 
   return (
     <div>
-      <link rel="stylesheet" href="/piscinas-calc.css" />
+      <link
+        rel="stylesheet"
+        href="/piscinas-calc.css"
+        onLoad={() => setCssReady(true)}
+      />
       <Script
         src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"
         strategy="afterInteractive"
-        onLoad={() => setDocxReady(true)}
+        onReady={() => setDocxReady(true)}
       />
-      <div dangerouslySetInnerHTML={{ __html: buildCalculatorHtml() }} />
+      {/* Para el PDF que se comparte por WhatsApp: window.print() abre el diálogo
+          nativo del navegador, que no expone el archivo resultante a JS de ninguna
+          forma — no hay API para "capturar" ese PDF. Por eso btn-whatsapp arma su
+          propio PDF client-side (captura el "sheet" a imagen con html2canvas y lo
+          mete en un PDF con jsPDF), en vez de depender del diálogo de impresión. */}
+      <Script
+        src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+        strategy="afterInteractive"
+      />
+      <Script
+        src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+        strategy="afterInteractive"
+      />
+      {/* Oculto hasta que el CSS legacy termine de cargar: sin esto, el HTML
+          del formulario aparece un instante sin estilos (FOUC) en cada
+          navegación entre calculadoras, porque el <link> se vuelve a pedir
+          de cero cada vez que este componente se monta. */}
+      <div
+        style={{ visibility: cssReady ? "visible" : "hidden" }}
+        dangerouslySetInnerHTML={{ __html: buildCalculatorHtml() }}
+      />
     </div>
   );
 }

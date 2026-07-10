@@ -31,6 +31,11 @@
   }
   @media (max-width:900px){
     .app{grid-template-columns:1fr;}
+    /* En una columna, el form-panel no puede quedar con su propio scroll interno
+       atrapado en 100vh — eso obligaba a scrollear "dentro de una cajita" para ver
+       el formulario y aparte scrollear la página para llegar a la vista previa.
+       Acá todo fluye en el único scroll natural de la página. */
+    .form-panel{max-height:none; overflow-y:visible;}
   }
 
   /* ---------- FORM PANEL ---------- */
@@ -131,12 +136,16 @@
   }
   .opt-row{
     display:grid;
-    grid-template-columns:20px 1fr 100px 26px;
+    grid-template-columns:32px 1fr 100px 26px;
     gap:6px;
     margin-bottom:6px;
     align-items:start;
   }
-  .opt-row input[type=checkbox]{width:16px; height:16px; margin-top:8px; accent-color:var(--primary);}
+  /* El checkbox nativo (opt-check) mide 20px, pero el "label" que lo envuelve
+     (opt-check-wrap) da un área táctil real de 32x40 — tocar en cualquier
+     parte de esa zona tilda/destilda el checkbox nativamente, sin JS extra. */
+  .opt-check-wrap{display:flex; align-items:flex-start; justify-content:center; width:32px; min-height:40px; padding-top:6px; cursor:pointer;}
+  .opt-row input[type=checkbox]{width:20px; height:20px; margin:0; accent-color:var(--primary);}
   .opt-desc{
     width:100%;
     padding:6px 8px;
@@ -496,7 +505,8 @@
     .sheet-body{padding:18px 16px 24px;}
     .row2{grid-template-columns:1fr; gap:8px;}
     .item-row{grid-template-columns:1fr 72px 26px; gap:5px;}
-    .opt-row{grid-template-columns:18px 1fr 72px 26px; gap:5px;}
+    .opt-row{grid-template-columns:36px 1fr 72px 26px; gap:5px;}
+    .opt-check-wrap{width:36px; min-height:44px;}
     .photo-grid{grid-template-columns:1fr;}
     /* font-size 16px evita que iOS Safari haga zoom automático al enfocar el campo */
     .field input, .field textarea, .quote-search{font-size:16px;}
@@ -526,4 +536,13 @@
     .dim-card{padding:14px 18px !important;}
     .opt-card{padding:14px 16px 16px !important;}
     * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+
+    /* Evita que el salto de página del navegador corte una tarjeta o una foto
+       por la mitad (lo que se veía como imágenes "cortadas" en el PDF exportado).
+       Sin esto, el navegador corta donde justo termina la hoja, sin mirar el
+       contenido — con esto, empuja la tarjeta/foto entera a la página siguiente. */
+    .opt-card, .dim-card, .photo-grid figure, .footer-block, .sheet-header{
+      break-inside:avoid;
+      page-break-inside:avoid;
+    }
   }

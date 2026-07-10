@@ -666,7 +666,7 @@ function renderItemsList(){
     row.className = 'item-row';
     row.innerHTML = `
       <input type="text" value="${escAttr(it.desc)}" data-id="${it.id}" data-field="desc" class="item-desc">
-      <input type="text" value="${it.price||0}" data-id="${it.id}" data-field="price" class="item-price">
+      <input type="text" value="${it.price||0}" data-id="${it.id}" data-field="price" class="item-price" inputmode="decimal">
       <button class="btn-mini" data-id="${it.id}" title="Quitar">✕</button>`;
     wrap.appendChild(row);
   });
@@ -690,9 +690,9 @@ function renderOptList(){
     block.className = 'opt-block';
     block.innerHTML = `
       <div class="opt-row">
-        <input type="checkbox" ${op.included===true?'checked':''} data-id="${op.id}" class="opt-check" title="Tildado = aparece en este presupuesto">
+        <label class="opt-check-wrap"><input type="checkbox" ${op.included===true?'checked':''} data-id="${op.id}" class="opt-check" title="Tildado = aparece en este presupuesto"></label>
         <textarea data-id="${op.id}" data-field="desc" class="opt-desc" data-valor-inicial="${escAttr(op.desc)}" rows="3">${escAttr(op.desc)}</textarea>
-        <input type="text" value="${op.price===null||op.price===undefined?'':op.price}" placeholder="No incluye" data-id="${op.id}" data-field="price" class="opt-price" data-valor-inicial="${op.price===null||op.price===undefined?'':op.price}">
+        <input type="text" value="${op.price===null||op.price===undefined?'':op.price}" placeholder="No incluye" data-id="${op.id}" data-field="price" class="opt-price" inputmode="decimal" data-valor-inicial="${op.price===null||op.price===undefined?'':op.price}">
         <button class="btn-mini" data-id="${op.id}" title="Quitar este opcional del catálogo">✕</button>
       </div>
       <div class="opt-fotos">

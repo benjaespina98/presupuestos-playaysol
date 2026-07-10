@@ -80,7 +80,7 @@ export default function LosetasCalculator() {
       <Script
         src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
         strategy="afterInteractive"
-        onLoad={() => setHtml2canvasReady(true)}
+        onReady={() => setHtml2canvasReady(true)}
       />
       <div
         className="pys-calc"

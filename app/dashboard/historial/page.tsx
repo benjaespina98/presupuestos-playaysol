@@ -184,7 +184,7 @@ function HistorialTabla() {
         </p>
       )}
 
-      {!error && presupuestos === null && <p className="text-sm text-gray-500">Cargando...</p>}
+      {!error && presupuestos === null && <HistorialSkeleton />}
 
       {presupuestosFiltrados && presupuestosFiltrados.length === 0 && (
         <p className="text-sm text-gray-500">
@@ -336,6 +336,62 @@ function HistorialTabla() {
         onConfirm={confirmarEliminar}
         onCancel={() => setPorEliminar(null)}
       />
+    </div>
+  );
+}
+
+// Reemplaza el antiguo texto "Cargando..." — con la data llegando en dos
+// pasos (presupuestos + perfiles de los creadores), un simple texto se sentía
+// como un salto brusco al aparecer toda la tabla de golpe. Esto imita la
+// forma real de la tabla/tarjetas para que la transición sea más prolija.
+function HistorialSkeleton() {
+  return (
+    <div>
+      <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm sm:block">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-gray-200 bg-gray-50 text-gray-700">
+              <th className="px-4 py-3 font-medium">Tipo</th>
+              <th className="px-4 py-3 font-medium">Cliente</th>
+              <th className="px-4 py-3 font-medium">Detalle</th>
+              <th className="px-4 py-3 font-medium">Creado por</th>
+              <th className="px-4 py-3 font-medium">Fecha</th>
+              <th className="px-4 py-3 font-medium"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <tr key={i} className="animate-pulse border-b border-gray-100 last:border-0">
+                <td className="px-4 py-3"><div className="h-3.5 w-16 rounded bg-gray-200" /></td>
+                <td className="px-4 py-3"><div className="h-3.5 w-28 rounded bg-gray-200" /></td>
+                <td className="px-4 py-3"><div className="h-3.5 w-24 rounded bg-gray-200" /></td>
+                <td className="px-4 py-3"><div className="h-3.5 w-20 rounded bg-gray-200" /></td>
+                <td className="px-4 py-3"><div className="h-3.5 w-16 rounded bg-gray-200" /></td>
+                <td className="px-4 py-3"><div className="h-3.5 w-20 rounded bg-gray-200" /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex flex-col gap-3 sm:hidden">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="animate-pulse rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-2">
+              <div className="space-y-2">
+                <div className="h-4 w-32 rounded bg-gray-200" />
+                <div className="h-3 w-24 rounded bg-gray-200" />
+              </div>
+              <div className="h-3 w-12 rounded bg-gray-200" />
+            </div>
+            <div className="mt-3 flex gap-2 border-t border-gray-100 pt-3">
+              <div className="h-9 flex-1 rounded-md bg-gray-100" />
+              <div className="h-9 flex-1 rounded-md bg-gray-100" />
+              <div className="h-9 w-9 rounded-md bg-gray-100" />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
