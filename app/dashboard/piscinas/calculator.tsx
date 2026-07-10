@@ -58,12 +58,23 @@ export default function PiscinasCalculator() {
   useEffect(() => {
     if (!docxReady) return;
 
+    // async=false en los tres para garantizar que se ejecuten en el orden en que se
+    // agregan (nombre-archivo.js antes que piscinas-calc.js, que lo usa al descargar) —
+    // los <script> creados con createElement son async por defecto, así que sin esto
+    // el orden de ejecución no está garantizado.
+    const nombreArchivoScript = document.createElement("script");
+    nombreArchivoScript.src = "/nombre-archivo.js";
+    nombreArchivoScript.async = false;
+    document.body.appendChild(nombreArchivoScript);
+
     const modalScript = document.createElement("script");
     modalScript.src = "/catalogo-modal.js";
+    modalScript.async = false;
     document.body.appendChild(modalScript);
 
     const script = document.createElement("script");
     script.src = "/piscinas-calc.js";
+    script.async = false;
     script.onload = async () => {
       const idACargar = presupuestoId || duplicarId;
       if (!idACargar) return;
@@ -73,6 +84,7 @@ export default function PiscinasCalculator() {
     document.body.appendChild(script);
 
     return () => {
+      document.body.removeChild(nombreArchivoScript);
       document.body.removeChild(modalScript);
       document.body.removeChild(script);
     };
@@ -89,19 +101,6 @@ export default function PiscinasCalculator() {
         src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"
         strategy="afterInteractive"
         onReady={() => setDocxReady(true)}
-      />
-      {/* Para el PDF que se comparte por WhatsApp: window.print() abre el diálogo
-          nativo del navegador, que no expone el archivo resultante a JS de ninguna
-          forma — no hay API para "capturar" ese PDF. Por eso btn-whatsapp arma su
-          propio PDF client-side (captura el "sheet" a imagen con html2canvas y lo
-          mete en un PDF con jsPDF), en vez de depender del diálogo de impresión. */}
-      <Script
-        src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
-        strategy="afterInteractive"
-      />
-      <Script
-        src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
-        strategy="afterInteractive"
       />
       {/* Oculto hasta que el CSS legacy termine de cargar: sin esto, el HTML
           del formulario aparece un instante sin estilos (FOUC) en cada

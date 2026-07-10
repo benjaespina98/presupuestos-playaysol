@@ -2,9 +2,7 @@
 const K_CATALOG = 'presupuesto-catalogo-opcionales';
 const K_LEGAL   = 'presupuesto-texto-legal';
 const K_FOOTER  = 'presupuesto-footer-empresa';
-const K_INDEX   = 'presupuestos-index';
 const K_FOTOS_OPC = 'presupuesto-fotos-por-opcional'; // metadata liviana; los bytes van en IndexedDB
-let currentQuoteId = null; // null = presupuesto nuevo, sin guardar todavía
 
 /* ---------------- DEFAULTS ---------------- */
 const defaultOptionales = [
@@ -422,7 +420,7 @@ function flashSaved(){
   flashTimeout = setTimeout(()=>{ el.textContent=''; }, 1500);
 }
 
-/* ---------------- PRESUPUESTOS GUARDADOS (locales, esta copia del archivo) ---------------- */
+/* ---------------- SERIALIZACIÓN DEL PRESUPUESTO (para Guardar en la nube) ---------------- */
 function quoteToPlainState(){
   return {
     fecha: state.fecha, cliente: state.cliente, domicilio: state.domicilio,
@@ -450,142 +448,52 @@ async function ensureFotosSubidasANube(){
   }
 }
 
-function saveQuote(){
-  const flash = document.getElementById('save-quote-flash');
-  if(!state.cliente.trim()){
-    flash.textContent = 'Poné al menos el nombre del cliente antes de guardar.';
-    flash.style.color = 'var(--danger)';
-    setTimeout(()=>{flash.textContent='';flash.style.color='var(--primary-dark)';}, 2500);
-    return;
-  }
-  try{
-    if(!currentQuoteId){ currentQuoteId = 'q'+Date.now()+Math.random().toString(36).slice(2,6); }
-    const total = Number(state.subtotal||0) + state.items.reduce((s,i)=>s+Number(i.price||0),0);
-    localStorage.setItem('quote:'+currentQuoteId, JSON.stringify(quoteToPlainState()));
+// Aplica al state un objeto de presupuesto (viene de la nube, vía cargarPresupuestoExterno) y
+// refresca la UI. Antes esto vivía en loadQuote(id), que primero escribía el objeto en
+// localStorage bajo una key temporal y lo releía — un rodeo que existía solo porque loadQuote()
+// también servía para el ahora-eliminado tab "Guardados" (localStorage). Al sacar ese tab, esta
+// función pasa a recibir los datos directo, sin el paso intermedio por localStorage.
+async function aplicarPresupuestoAlState(q){
+  state.fecha=q.fecha; state.cliente=q.cliente; state.domicilio=q.domicilio;
+  state.localidad=q.localidad; state.tel=q.tel; state.email=q.email;
+  state.dimension=q.dimension; state.validez=q.validez; state.subtotal=q.subtotal;
+  state.items = (q.items||[]).map(it=>({...it, id: it.id||cid()}));
+  state.headerVariant = q.headerVariant || 'teal';
+  const incluidos = q.opcionalesIncluidos || [];
+  state.opcionales.forEach(o=>{ o.included = incluidos.includes(o.id); });
 
-    let index = getIndex();
-    index = index.filter(q=>q.id!==currentQuoteId);
-    index.unshift({ id: currentQuoteId, cliente: state.cliente, localidad: state.localidad, total, updatedAt: Date.now() });
-    localStorage.setItem(K_INDEX, JSON.stringify(index));
-
-    flash.textContent = 'Guardado ✓ (en esta compu)';
-    renderQuoteList();
-  }catch(e){
-    console.error('No se pudo guardar el presupuesto', e);
-    flash.textContent = 'Error al guardar, reintentá.';
-    flash.style.color = 'var(--danger)';
-  }
-  setTimeout(()=>{flash.textContent='';}, 2200);
-}
-
-function getIndex(){
-  try{
-    const raw = localStorage.getItem(K_INDEX);
-    return raw ? JSON.parse(raw) : [];
-  }catch(e){ return []; }
-}
-
-function renderQuoteList(){
-  const wrap = document.getElementById('quote-list');
-  const filterText = (document.getElementById('quote-search').value||'').toLowerCase();
-  const index = getIndex();
-  const filtered = index
-    .filter(q => q.cliente.toLowerCase().includes(filterText))
-    .sort((a,b)=>b.updatedAt-a.updatedAt);
-
-  wrap.innerHTML = '';
-  if(filtered.length===0){
-    wrap.innerHTML = '<div class="quote-empty">No hay presupuestos guardados en esta compu todavía. Completá los datos y guardá.</div>';
-    return;
-  }
-  filtered.forEach(q=>{
-    const row = document.createElement('div');
-    row.className = 'quote-row' + (q.id===currentQuoteId ? ' current' : '');
-    const fecha = new Date(q.updatedAt).toLocaleDateString('es-AR');
-    row.innerHTML = `
-      <div class="quote-info">
-        <div class="quote-name">${escHtml(q.cliente)}</div>
-        <div class="quote-meta">${escHtml(q.localidad||'')} · ${fmt(q.total)} · ${fecha}</div>
-      </div>
-      <button class="quote-del" data-id="${q.id}" title="Eliminar">✕</button>`;
-    row.querySelector('.quote-info').addEventListener('click', ()=>loadQuote(q.id));
-    row.querySelector('.quote-del').addEventListener('click', async (e)=>{
-      e.stopPropagation();
-      if(!confirm('¿Eliminar el presupuesto de '+q.cliente+'? No se puede deshacer.')) return;
+  // Traer los bytes reales de cada foto: primero IndexedDB (rápido, esta copia del navegador);
+  // si no está (otro dispositivo, o se limpió), caer a la copia en Supabase Storage y cachearla.
+  const fotosMeta = q.fotos || [];
+  state.fotos = [];
+  for(const fm of fotosMeta){
+    let blob = await idbGetFoto(fm.id).catch(()=>null);
+    if(!blob && fm.storageUrl){
       try{
-        const raw = localStorage.getItem('quote:'+q.id);
-        const full = raw ? JSON.parse(raw) : null;
-        const fotoIds = (full && full.fotos) ? full.fotos.map(f=>f.id) : [];
-        const fotosPorOpMeta = (full && full.fotosPorOpcional) ? full.fotosPorOpcional : {};
-        Object.values(fotosPorOpMeta).forEach(arr=>arr.forEach(f=>fotoIds.push(f.id)));
-        for(const fid of fotoIds){ await idbDeleteFoto(fid).catch(()=>{}); }
-      }catch(err){ console.error('No se pudieron limpiar las fotos del presupuesto eliminado', err); }
-      localStorage.removeItem('quote:'+q.id);
-      const idx = getIndex().filter(x=>x.id!==q.id);
-      localStorage.setItem(K_INDEX, JSON.stringify(idx));
-      if(currentQuoteId===q.id) newQuote();
-      renderQuoteList();
-    });
-    wrap.appendChild(row);
-  });
-}
-
-async function loadQuote(id){
-  try{
-    const raw = localStorage.getItem('quote:'+id);
-    if(!raw) return;
-    const q = JSON.parse(raw);
-    currentQuoteId = id;
-    state.fecha=q.fecha; state.cliente=q.cliente; state.domicilio=q.domicilio;
-    state.localidad=q.localidad; state.tel=q.tel; state.email=q.email;
-    state.dimension=q.dimension; state.validez=q.validez; state.subtotal=q.subtotal;
-    state.items = (q.items||[]).map(it=>({...it, id: it.id||cid()}));
-    state.headerVariant = q.headerVariant || 'teal';
-    const incluidos = q.opcionalesIncluidos || [];
-    state.opcionales.forEach(o=>{ o.included = incluidos.includes(o.id); });
-
-    // Traer los bytes reales de cada foto: primero IndexedDB (rápido, esta copia del navegador);
-    // si no está (otro dispositivo, o se limpió), caer a la copia en Supabase Storage y cachearla.
-    const fotosMeta = q.fotos || [];
-    state.fotos = [];
-    for(const fm of fotosMeta){
-      let blob = await idbGetFoto(fm.id).catch(()=>null);
-      if(!blob && fm.storageUrl){
-        try{
-          const resp = await fetch(fm.storageUrl);
-          if(resp.ok){ blob = await resp.blob(); await idbPutFoto(fm.id, blob).catch(()=>{}); }
-        }catch(e){ /* sin conexión o foto inexistente: se salteará abajo */ }
-      }
-      if(!blob) continue; // si por algo se perdió, la salteamos en vez de romper todo
-      state.fotos.push({ id: fm.id, caption: fm.caption||'', width: fm.width, height: fm.height, blob, url: URL.createObjectURL(blob), storageUrl: fm.storageUrl||null });
+        const resp = await fetch(fm.storageUrl);
+        if(resp.ok){ blob = await resp.blob(); await idbPutFoto(fm.id, blob).catch(()=>{}); }
+      }catch(e){ /* sin conexión o foto inexistente: se salteará abajo */ }
     }
-    // Nota: las fotos por opcional NO se tocan acá — son del catálogo compartido
-    // (state.fotosPorOpcional), no cambian según qué presupuesto estés viendo.
-
-    renderForm();
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-    document.querySelector('.tab-btn[data-tab="datos"]').classList.add('active');
-    document.getElementById('tab-datos').classList.add('active');
-    renderQuoteList();
-  }catch(e){
-    console.error('No se pudo cargar el presupuesto', e);
+    if(!blob) continue; // si por algo se perdió, la salteamos en vez de romper todo
+    state.fotos.push({ id: fm.id, caption: fm.caption||'', width: fm.width, height: fm.height, blob, url: URL.createObjectURL(blob), storageUrl: fm.storageUrl||null });
   }
+  // Nota: las fotos por opcional NO se tocan acá — son del catálogo compartido
+  // (state.fotosPorOpcional), no cambian según qué presupuesto estés viendo.
+
+  renderForm();
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.querySelector('.tab-btn[data-tab="datos"]').classList.add('active');
+  document.getElementById('tab-datos').classList.add('active');
 }
 
-// Reusa loadQuote() para reconstruir el state completo desde un objeto que viene de la nube
-// (en vez de reimplementar la asignación campo por campo, que es lo que se desactualizaba
-// cada vez que se agregaba un campo nuevo). Espera a que termine el arranque de la calculadora
-// (initPromise) para no correr en paralelo con seedFotosGeneralesDefaults() y perder las fotos.
+// Espera a que termine el arranque de la calculadora (initPromise) para no correr en paralelo
+// con seedFotosGeneralesDefaults() y perder las fotos.
 async function cargarPresupuestoExterno(datos){
   if(!datos) return;
   try{
     await initPromise;
-    const tmpId = '__cloud_tmp__';
-    localStorage.setItem('quote:'+tmpId, JSON.stringify(datos));
-    await loadQuote(tmpId);
-    currentQuoteId = null; // no lo atamos a ningún presupuesto local
-    localStorage.removeItem('quote:'+tmpId);
+    await aplicarPresupuestoAlState(datos);
   }catch(e){
     console.error('No se pudo cargar el presupuesto desde la nube', e);
   }
@@ -593,7 +501,6 @@ async function cargarPresupuestoExterno(datos){
 window.cargarPresupuestoExterno = cargarPresupuestoExterno;
 
 async function newQuote(){
-  currentQuoteId = null;
   state.fecha = todayStr();
   state.cliente=''; state.domicilio=''; state.localidad=''; state.tel=''; state.email='';
   state.dimension = defaultDimension;
@@ -604,7 +511,6 @@ async function newQuote(){
   // no algo que se reinicie en cada presupuesto nuevo.
   await seedFotosGeneralesDefaults();
   renderForm();
-  renderQuoteList();
 }
 
 
@@ -1112,12 +1018,10 @@ document.getElementById('btn-add-opt').addEventListener('click', ()=>{
   renderOptList(); renderPreview(); saveCatalog();
 });
 
-document.getElementById('btn-save-quote').addEventListener('click', saveQuote);
 document.getElementById('btn-new-quote').addEventListener('click', ()=>{
   if(state.cliente.trim() && !confirm('¿Empezar un presupuesto nuevo? Si no guardaste el actual, se pierde lo tipeado.')) return;
   newQuote();
 });
-document.getElementById('quote-search').addEventListener('input', renderQuoteList);
 
 
 /* ================================================================
@@ -1519,13 +1423,9 @@ async function buildDocxSections(){
   return children;
 }
 
-// Arma el .docx en memoria (sin descargarlo) — lo comparten downloadWord() y
-// compartirWhatsApp(), así el documento que se descarga y el que se comparte
-// por WhatsApp son exactamente el mismo, generado una sola vez cada vez.
+// Arma el .docx en memoria (sin descargarlo) — lo usa downloadWord().
 async function buildWordBlob(){
-  const clienteParaArchivo = (state.cliente||'Sin nombre').replace(/[\\/:*?"<>|]+/g,'-').trim();
-  const fechaParaArchivo = (state.fecha||todayStr()).replace(/\//g,'-');
-  const nombreArchivo = `${clienteParaArchivo} - Piscina - ${fechaParaArchivo}`;
+  const nombreArchivo = window.armarNombreArchivo('Piscina', state.cliente, state.fecha);
 
   const children = await buildDocxSections();
   const doc = new Document({
@@ -1566,105 +1466,6 @@ async function downloadWord(){
 }
 document.getElementById('btn-download-word').addEventListener('click', downloadWord);
 
-// Espera a que una condición se cumpla, reintentando cada intervalMs — se usa acá
-// para esperar a que terminen de cargar html2canvas/jsPDF (llegan por <Script
-// strategy="afterInteractive"> en paralelo al resto de la página, así que pueden
-// no estar listos en el instante exacto en que el usuario toca "WhatsApp").
-function esperarCondicion(cond, timeoutMs=8000, intervalMs=150){
-  return new Promise((resolve, reject)=>{
-    const inicio = Date.now();
-    (function poll(){
-      if(cond()) return resolve();
-      if(Date.now() - inicio > timeoutMs) return reject(new Error('Timeout esperando las librerías de PDF (html2canvas/jsPDF)'));
-      setTimeout(poll, intervalMs);
-    })();
-  });
-}
-
-// Arma el PDF en memoria a partir de la MISMA hoja de vista previa (#sheet) que ve
-// el usuario — no hay forma de generar un PDF a partir de window.print() (el
-// diálogo nativo del navegador no expone el archivo resultante a JS de ninguna
-// forma), así que en vez de eso se captura #sheet como imagen con html2canvas y
-// se arma un PDF paginado a mano con jsPDF, recortando la imagen en franjas de
-// una hoja A4 cada una.
-async function buildPdfBlob(){
-  await esperarCondicion(() => typeof window.html2canvas === 'function' && window.jspdf && window.jspdf.jsPDF);
-
-  const sheet = document.getElementById('sheet');
-  const canvas = await window.html2canvas(sheet, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-  const imgData = canvas.toDataURL('image/jpeg', 0.92);
-
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
-  const pageWidthMm = pdf.internal.pageSize.getWidth();
-  const pageHeightMm = pdf.internal.pageSize.getHeight();
-  const imgWidthMm = pageWidthMm;
-  const imgHeightMm = (canvas.height * imgWidthMm) / canvas.width;
-
-  let alturaRestanteMm = imgHeightMm;
-  let posicionMm = 0;
-  pdf.addImage(imgData, 'JPEG', 0, posicionMm, imgWidthMm, imgHeightMm);
-  alturaRestanteMm -= pageHeightMm;
-  while(alturaRestanteMm > 0){
-    posicionMm = alturaRestanteMm - imgHeightMm; // corre la imagen hacia arriba para mostrar la franja que sigue
-    pdf.addPage();
-    pdf.addImage(imgData, 'JPEG', 0, posicionMm, imgWidthMm, imgHeightMm);
-    alturaRestanteMm -= pageHeightMm;
-  }
-
-  const blob = pdf.output('blob');
-  const clienteParaArchivo = (state.cliente||'Sin nombre').replace(/[\\/:*?"<>|]+/g,'-').trim();
-  const fechaParaArchivo = (state.fecha||todayStr()).replace(/\//g,'-');
-  const nombreArchivo = `${clienteParaArchivo} - Piscina - ${fechaParaArchivo}`;
-  return { blob, nombreArchivo };
-}
-
-// Compartir por WhatsApp: en mobile con soporte de Web Share con archivos, abre
-// directo el selector nativo de "compartir" con el PDF ya adjunto (el usuario
-// elige WhatsApp ahí, cero pasos manuales). En desktop (o cualquier navegador
-// sin ese soporte) no hay forma de adjuntar un archivo a WhatsApp Web por API —
-// es una limitación real de WhatsApp, no del código — así que se descarga el
-// mismo PDF y se abre WhatsApp Web con el mensaje ya redactado, para que el
-// usuario solo tenga que arrastrar el archivo ya descargado al chat.
-async function compartirWhatsApp(){
-  const btn = document.getElementById('btn-whatsapp');
-  const originalText = btn.textContent;
-  btn.textContent = 'Generando...';
-  btn.disabled = true;
-  try{
-    const { blob, nombreArchivo } = await buildPdfBlob();
-    const mensaje = `Hola${state.cliente ? ' ' + state.cliente : ''}! Te paso el presupuesto de piscina de Playa y Sol.`;
-
-    let file = null;
-    try{ file = new File([blob], `${nombreArchivo}.pdf`, { type: 'application/pdf' }); }catch(e){ file = null; }
-    const puedeCompartirArchivo = !!(file && navigator.canShare && navigator.share && navigator.canShare({ files: [file] }));
-
-    if(puedeCompartirArchivo){
-      await navigator.share({ files: [file], title: nombreArchivo, text: mensaje });
-    } else {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${nombreArchivo}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(()=>URL.revokeObjectURL(url), 2000);
-
-      const textoWa = encodeURIComponent(mensaje + ' Te adjunto el archivo que se acaba de descargar.');
-      window.open(`https://wa.me/?text=${textoWa}`, '_blank');
-    }
-  }catch(e){
-    if(e && e.name === 'AbortError') return; // el usuario cerró el selector de compartir
-    console.error('No se pudo compartir por WhatsApp', e);
-    alert('Hubo un problema generando el PDF para compartir. Revisá la consola (F12) para más detalle.');
-  }finally{
-    btn.textContent = originalText;
-    btn.disabled = false;
-  }
-}
-document.getElementById('btn-whatsapp').addEventListener('click', compartirWhatsApp);
-
 /* ---------------- TABS ---------------- */
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -1684,7 +1485,6 @@ let initPromise = (async function init(){
   await loadFotosPorOpcional();
   await seedFotosGeneralesDefaults(); // así ya arranca con las fotos ilustrativas cargadas, sin necesidad de tocar "Nuevo presupuesto"
   renderForm();
-  renderQuoteList();
 })();
 
 /* ---------------- GUARDAR EN LA NUBE (Supabase) ---------------- */
