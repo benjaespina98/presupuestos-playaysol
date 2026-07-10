@@ -35,7 +35,12 @@
        atrapado en 100vh — eso obligaba a scrollear "dentro de una cajita" para ver
        el formulario y aparte scrollear la página para llegar a la vista previa.
        Acá todo fluye en el único scroll natural de la página. */
-    .form-panel{max-height:none; overflow-y:visible;}
+    /* Acá el sticky de .action-bar pasa a anclarse al viewport en vez de al
+       form-panel (que ya no es su propio contenedor de scroll) -- sin este
+       padding-bottom, el último ítem de una lista larga queda tapado por la
+       barra sin forma de revelarlo con scroll normal. --action-bar-h la fija
+       el JS del calculador (ResizeObserver sobre .action-bar, altura real). */
+    .form-panel{max-height:none; overflow-y:visible; padding-bottom:var(--action-bar-h, 0px);}
   }
 
   /* ---------- FORM PANEL ---------- */
@@ -73,13 +78,22 @@
     color:var(--muted);
     cursor:pointer;
     font-weight:600;
+    transition:color 180ms ease, border-bottom-color 180ms ease;
   }
   .tab-btn.active{
     color:var(--primary-dark);
     border-bottom-color:var(--primary);
   }
+  .tab-btn:active{color:var(--primary-dark);}
   .tab-content{display:none;}
-  .tab-content.active{display:block;}
+  .tab-content.active{
+    display:block;
+    animation:tabFadeIn 180ms ease;
+  }
+  @keyframes tabFadeIn{
+    from{opacity:0; transform:translateY(4px);}
+    to{opacity:1; transform:translateY(0);}
+  }
 
   .field{margin-bottom:12px;}
   .field label{
@@ -203,8 +217,10 @@
     cursor:pointer;
     margin-top:20px;
     box-sizing:border-box;
+    transition:background 150ms ease, transform 150ms ease;
   }
   .btn-primary:hover{background:var(--primary-dark);}
+  .btn-primary:active{background:var(--primary-dark); transform:scale(.98);}
   .btn-secondary{
     display:block;
     width:100%;
@@ -219,7 +235,9 @@
     cursor:pointer;
     margin-top:8px;
     box-sizing:border-box;
+    transition:background 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease;
   }
+  .btn-secondary:active{transform:scale(.98);}
   .btn-secondary:hover{
     background:var(--primary-light);
     border-color:var(--primary);

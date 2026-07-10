@@ -6,6 +6,12 @@ export const CALCULATOR_STYLES = `
   margin: 0;
   padding: 24px;
   color: #222;
+  /* .btns-wrap es fixed al fondo del viewport (ver más abajo) -- sin este espacio
+     reservado, el último field-section de la página queda tapado por la barra sin
+     forma de revelarlo con scroll normal (mismo bug que se corrigió en mobile para
+     piscinas/cercos/cobertores/revestimientos). --action-bar-h la fija el JS
+     (ResizeObserver sobre .btns-wrap, altura real, ver script.ts). */
+  padding-bottom: calc(24px + var(--action-bar-h, 0px));
 }
 .pys-calc .wrap {
   max-width: 940px;
@@ -49,14 +55,37 @@ export const CALCULATOR_STYLES = `
 .pys-calc .checkrow label { margin-bottom: 0; font-size: 13px; color: #333; }
 .pys-calc .subfield { margin-top: 8px; }
 /* Botones agrupados por función (Exportar vs. Presupuesto) en vez de 6 acciones
-   sueltas en una sola fila — cada grupo con su etiqueta chica arriba. */
-.pys-calc .btns-wrap { display: flex; flex-wrap: wrap; gap: 28px; margin-top: 24px; }
+   sueltas en una sola fila — cada grupo con su etiqueta chica arriba. Fija al fondo
+   del viewport (mismo tratamiento visual que .action-bar de las otras 4 calculadoras:
+   fondo blanco, borde superior sutil, sombra hacia arriba) en vez de quedar en flujo
+   normal al final de una página larga — losetas es de una sola columna sin panel
+   dividido, así que "fixed" (no "sticky") es lo que la mantiene siempre visible sin
+   necesidad de scrollear hasta el final. El padding-bottom que la compensa (para que
+   no tape el último field-section) se calcula en JS con su altura real — ver
+   ajustarEspacioBarraAcciones() en script.ts. */
+.pys-calc .btns-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  margin: 0 auto;
+  max-width: 940px;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  background: #fff;
+  border-top: 1px solid #EDEAE0;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+  padding: 14px 32px;
+}
 .pys-calc .btns-group { flex: 1 1 260px; min-width: 240px; }
 .pys-calc .btns-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #8A8371; margin: 0 0 10px; }
 .pys-calc .btns-group .helptext { margin-top: 10px; }
 .pys-calc .btns { display: flex; gap: 10px; flex-wrap: wrap; }
-.pys-calc button { background: #1B3A5C; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+.pys-calc button { background: #1B3A5C; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-size: 14px; cursor: pointer; transition: background 150ms ease, transform 150ms ease; }
 .pys-calc button:hover { background: #14304c; }
+.pys-calc button:active { transform: scale(.97); }
 .pys-calc button.secondary { background: #fff; color: #1B3A5C; border: 1px solid #1B3A5C; }
 .pys-calc button.secondary:hover { background: #f2f6fa; }
 .pys-calc button.client { background: #C0522D; }

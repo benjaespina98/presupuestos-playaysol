@@ -92,7 +92,7 @@ export default function CercosCalculator() {
         onLoad={() => setCssReady(true)}
       />
       <Script
-        src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"
+        src="https://cdn.jsdelivr.net/npm/docx@8.6.0/build/index.umd.min.js"
         strategy="afterInteractive"
         onReady={() => setDocxReady(true)}
       />
