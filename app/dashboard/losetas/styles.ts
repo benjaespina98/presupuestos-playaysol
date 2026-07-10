@@ -4,7 +4,7 @@ export const CALCULATOR_STYLES = `
   font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   background: #f2f1ec;
   margin: 0;
-  padding: 24px;
+  padding: clamp(12px, 2vw, 24px);
   color: #222;
   /* .btns-wrap es fixed al fondo del viewport (ver más abajo) -- sin este espacio
      reservado, el último field-section de la página queda tapado por la barra sin
@@ -14,11 +14,11 @@ export const CALCULATOR_STYLES = `
   padding-bottom: calc(24px + var(--action-bar-h, 0px));
 }
 .pys-calc .wrap {
-  max-width: 940px;
+  max-width: 1100px;
   margin: 0 auto;
   background: #fff;
   border-radius: 14px;
-  padding: 32px;
+  padding: clamp(18px, 2.5vw, 32px);
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
 .pys-calc h1 { font-size: 22px; margin: 0 0 4px; color: #1B3A5C; }
@@ -68,7 +68,7 @@ export const CALCULATOR_STYLES = `
   flex-wrap: wrap;
   gap: 28px;
   margin: 0 auto;
-  max-width: 940px;
+  max-width: 1100px;
   position: fixed;
   left: 0;
   right: 0;
@@ -80,6 +80,10 @@ export const CALCULATOR_STYLES = `
   padding: 14px 32px;
 }
 .pys-calc .btns-group { flex: 1 1 260px; min-width: 240px; }
+/* El disparador del bottom sheet y su overlay solo existen en mobile (ver @media
+   600px); en desktop las acciones se muestran inline en la barra fija de arriba. */
+.pys-calc .losetas-sheet-trigger { display: none; }
+.pys-calc .losetas-sheet-overlay { display: none; }
 .pys-calc .btns-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #8A8371; margin: 0 0 10px; }
 .pys-calc .btns-group .helptext { margin-top: 10px; }
 .pys-calc .btns { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -157,13 +161,16 @@ export const CALCULATOR_STYLES = `
   padding-top: 14px;
   border-top: 1px solid #E1E7EC;
   font-size: 11px;
-  color: #99A3AC;
-  text-align: center;
+  color: #1B3A5C;
+  text-align: left;
 }
 
 /* ---------- MOBILE (<600px) ---------- */
 @media (max-width: 600px) {
-  .pys-calc { padding: 10px; }
+  /* padding-bottom fijo = alto de la barra disparadora fija de abajo, para que el
+     último field-section no quede tapado (en mobile la barra visible es el trigger,
+     no la .btns-wrap, que acá es la hoja off-screen). */
+  .pys-calc { padding: 10px 10px 76px; }
   .pys-calc .wrap { padding: 14px; border-radius: 10px; }
   .pys-calc .field-section { padding: 14px 14px 16px; }
   /* El plano tiene un viewBox fijo (680x420): con width:100% se achica
@@ -184,30 +191,81 @@ export const CALCULATOR_STYLES = `
   .pys-calc .material-row { grid-template-columns: 1fr 80px auto; gap: 6px; }
   /* font-size 16px evita que iOS Safari haga zoom automático al enfocar el campo */
   .pys-calc input, .pys-calc select { font-size: 16px; }
-  /* .btns-wrap es fixed al fondo del viewport (ver más arriba) -- apilar sus 6
-     botones a ancho completo (como en pantallas grandes) la haría ocupar la mitad
-     de la pantalla acá. En vez de reescribir la lógica de los botones, cada grupo
-     pasa a ser una fila horizontal angosta con scroll propio (mismo patrón de
-     "franja compacta" que la barra de acciones de las otras 4 calculadoras, pero
-     con scroll en vez de solo-ícono porque acá los botones no tienen un ícono
-     propio que los identifique sin el texto). */
-  .pys-calc .btns-wrap { flex-direction: column; gap: 6px; padding: 10px 14px; }
-  .pys-calc .btns-label { display: none; }
-  .pys-calc .btns-group .helptext { display: none; }
-  .pys-calc .btns {
+  /* --- Barra de acciones como BOTTOM SHEET en mobile ---
+     Mismo patrón que las otras 4 calculadoras. La barra fija de escritorio no cabe
+     con 6 botones en el ancho de un celular; acá se reemplaza por un disparador
+     "Acciones ▾" fijo al fondo y una hoja inferior con todas las acciones como
+     filas de ícono + TEXTO COMPLETO legible, agrupadas (Exportar / Presupuesto).
+     No se toca la lógica de ningún botón: son los mismos <button>/<a>. */
+  .pys-calc .losetas-sheet-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 30;
+    width: 100%;
+    background: #1B3A5C;
+    color: #fff;
+    border: none;
+    padding: 15px 16px calc(15px + env(safe-area-inset-bottom, 0px));
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .pys-calc .btns-wrap {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    top: auto;
+    max-width: none;
+    flex-direction: column;
     flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    gap: 8px;
-    padding-bottom: 2px;
+    gap: 4px;
+    margin: 0;
+    padding: 8px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    box-shadow: 0 -6px 28px rgba(27,58,92,.22);
+    transform: translateY(115%);
+    transition: transform .28s cubic-bezier(.4,0,.2,1);
+    z-index: 50;
   }
-  .pys-calc button, .pys-calc .btns > a {
-    flex: 0 0 auto;
-    white-space: nowrap;
-    min-height: 40px;
-    padding: 9px 14px;
-    font-size: 12.5px;
+  .pys-calc .btns-wrap::before {
+    content: '';
+    display: block;
+    width: 40px; height: 4px;
+    background: #D8DEE3;
+    border-radius: 3px;
+    margin: 2px auto 6px;
   }
+  .pys-calc.sheet-open .btns-wrap { transform: translateY(0); }
+  .pys-calc .btns-group { flex: none; min-width: 0; }
+  .pys-calc .btns-label { display: block; margin: 8px 0 2px; }
+  .pys-calc .btns-group .helptext { display: none; }
+  /* ...menos el estado de guardado en la nube, que sí debe verse dentro de la hoja
+     (por eso "Guardar en la nube" no la cierra — ver initActionSheet en script.ts). */
+  .pys-calc #cloudMsg { display: block; margin-top: 6px; }
+  .pys-calc .btns { flex-direction: column; flex-wrap: nowrap; gap: 6px; }
+  .pys-calc .btns > button, .pys-calc .btns > a {
+    width: 100%;
+    justify-content: flex-start;
+    min-height: 50px;
+    font-size: 15px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .pys-calc .losetas-sheet-overlay {
+    display: block;
+    position: fixed; inset: 0;
+    background: rgba(20,30,40,.42);
+    opacity: 0; pointer-events: none;
+    transition: opacity .28s ease;
+    z-index: 40;
+  }
+  .pys-calc.sheet-open .losetas-sheet-overlay { opacity: 1; pointer-events: auto; }
   .pys-calc button.add-material { width: 100%; }
 }
 

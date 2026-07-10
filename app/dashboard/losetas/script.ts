@@ -432,4 +432,28 @@ async function guardarEnNubeClick(){
   new ResizeObserver(actualizar).observe(barra);
   actualizar();
 })();
+
+/* ---------------- BOTTOM SHEET DE ACCIONES (mobile) ---------------- */
+// Abre/cierra la hoja inferior de acciones en mobile. Mismo patrón que las otras 4
+// calculadoras (acá la clase 'sheet-open' va sobre .pys-calc). No toca la lógica de
+// ningún botón. Se cierra al elegir una acción EXCEPTO "Guardar en la nube": su
+// mensaje de estado (#cloudMsg) vive dentro de la hoja, así que hay que dejarla
+// abierta para que se vea. En desktop el trigger no existe (return).
+(function initActionSheet(){
+  const root = document.querySelector('.pys-calc');
+  const trigger = document.getElementById('losetas-action-trigger');
+  const overlay = document.getElementById('losetas-action-overlay');
+  const wrap = document.getElementById('btns-wrap');
+  if(!root || !trigger || !wrap) return;
+  const cerrar = () => { root.classList.remove('sheet-open'); trigger.setAttribute('aria-expanded','false'); };
+  trigger.addEventListener('click', () => {
+    const abierto = root.classList.toggle('sheet-open');
+    trigger.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+  });
+  if(overlay) overlay.addEventListener('click', cerrar);
+  wrap.querySelectorAll('button, a').forEach(el => {
+    if(el.id === 'btnGuardarNube') return;
+    el.addEventListener('click', cerrar);
+  });
+})();
 `;

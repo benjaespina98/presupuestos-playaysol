@@ -26,8 +26,14 @@
   }
   .app{
     display:grid;
-    grid-template-columns:400px 1fr;
+    /* Columna del formulario fluida (no un ancho fijo de 400px que se sentía
+       apretado y desperdiciaba pantalla): crece con el viewport entre 360 y 480px.
+       El contenedor entero se topa a 1600px centrado para que en monitores muy
+       anchos no quede el documento perdido entre márgenes gigantes ni estirado. */
+    grid-template-columns:clamp(360px, 30%, 480px) 1fr;
     min-height:100vh;
+    max-width:1600px;
+    margin:0 auto;
   }
   @media (max-width:900px){
     .app{grid-template-columns:1fr;}
@@ -41,13 +47,66 @@
        barra sin forma de revelarlo con scroll normal. --action-bar-h la fija
        el JS del calculador (ResizeObserver sobre .action-bar, altura real). */
     .form-panel{max-height:none; overflow-y:visible; padding-bottom:var(--action-bar-h, 0px);}
+
+    /* --- Barra de acciones como BOTTOM SHEET en una sola columna ---
+       La versión anterior (botones apilados a ancho completo, y después solo-íconos)
+       ocupaba media pantalla o era ambigua. Acá la barra sticky muestra solo dos
+       botones claros -- "+ Nuevo presupuesto" y "Acciones ▾" -- y el resto (PDF,
+       Word, Guardar, Historial) vive en una hoja inferior que sube al tocar
+       "Acciones", cada uno como fila de ícono + TEXTO COMPLETO legible. No se toca
+       la lógica de ningún botón: son los mismos <button>/<a>, solo reubicados. */
+    .action-trigger{ display:flex; }
+    .action-row{
+      position:fixed;
+      left:0; right:0; bottom:0;
+      flex-direction:column;
+      gap:6px;
+      background:var(--surface);
+      padding:8px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+      border-top-left-radius:18px;
+      border-top-right-radius:18px;
+      box-shadow:0 -6px 28px rgba(27,58,92,.22);
+      transform:translateY(115%);
+      transition:transform .28s cubic-bezier(.4,0,.2,1);
+      z-index:60;
+    }
+    /* barrita/handle del sheet */
+    .action-row::before{
+      content:'';
+      display:block;
+      width:40px; height:4px;
+      background:var(--border);
+      border-radius:3px;
+      margin:2px auto 8px;
+    }
+    .action-bar.sheet-open .action-row{ transform:translateY(0); }
+    .action-row .btn-secondary{
+      margin-top:0;
+      min-height:52px;
+      font-size:15px;
+      text-align:left;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:0 16px;
+    }
+    .action-row .btn-label{ font-weight:600; }
+    .action-overlay{
+      display:block;
+      position:fixed; inset:0;
+      background:rgba(20,30,40,.42);
+      opacity:0; pointer-events:none;
+      transition:opacity .28s ease;
+      z-index:59;
+    }
+    .action-bar.sheet-open .action-overlay{ opacity:1; pointer-events:auto; }
   }
 
   /* ---------- FORM PANEL ---------- */
   .form-panel{
     background:var(--surface);
     border-right:1px solid var(--border);
-    padding:20px;
+    padding:clamp(16px, 1.8vw, 28px);
     overflow-y:auto;
     max-height:100vh;
   }
@@ -314,6 +373,11 @@
     gap:12px;
     margin:16px 0;
   }
+  /* 1 sola foto en una sección: no la estires a media grilla dejando la otra
+     mitad vacía — la acotamos a ~60% del ancho, alineada a la izquierda, para
+     que ocupe un espacio proporcional. 2 fotos llenan las 2 columnas; 3+ siguen
+     en 2 columnas (el sobrante cae en su fila, aceptado). */
+  .photo-grid:has(figure:only-child){grid-template-columns:minmax(0, 60%);}
   .photo-grid figure{margin:0;}
   .photo-grid img{width:100%; height:150px; object-fit:contain; background:var(--doc-card-bg); border-radius:6px; display:block; border:1px solid var(--doc-border-soft);}
   .photo-grid figcaption{font-size:10.5px; color:var(--muted); margin-top:5px; text-align:center;}
@@ -331,7 +395,7 @@
 
   /* ---------- PREVIEW PANEL ---------- */
   .preview-panel{
-    padding:32px;
+    padding:clamp(20px, 3vw, 40px);
     overflow-y:auto;
     display:flex;
     justify-content:center;
@@ -339,7 +403,7 @@
   .sheet{
     background:#fff;
     width:100%;
-    max-width:780px;
+    max-width:920px;
     box-shadow:0 2px 20px rgba(27,58,92,.10);
     border-radius:6px;
     border-top:4px solid var(--doc-navy);
@@ -464,24 +528,25 @@
     color:var(--doc-navy);
     margin-top:20px;
   }
-  /* Cierre formal del documento: centrado, tipografía más chica y discreta que el
-     cuerpo (10.5px vs ~12.5px), separado del contenido con aire de sobra y un
-     divisor sutil (no la línea gruesa de color primario que llevaba antes, que
-     competía visualmente con los títulos de sección en vez de leerse como cierre). */
+  /* Pie de documento tradicional: alineado a la izquierda (no centrado como
+     bloque), en el navy de marca, tipografía discreta. Se conserva el margen y el
+     divisor generosos para que no quede flotando pegado al contenido de arriba,
+     pero el color y la alineación vuelven al formato de pie clásico. Los links van
+     en navy subrayado sutil para distinguirse del texto plano sin cantar. */
   .footer-block{
-    margin-top:36px;
-    padding-top:18px;
+    margin-top:34px;
+    padding-top:16px;
     border-top:1px solid var(--doc-border-soft);
-    font-size:10.5px;
-    line-height:1.9;
-    color:var(--muted);
-    text-align:center;
+    font-size:11px;
+    line-height:1.75;
+    color:var(--doc-navy);
+    text-align:left;
   }
-  .footer-block a{ color:var(--muted); text-decoration:none; }
-  .footer-block a:hover{ text-decoration:underline; color:var(--doc-navy); }
+  .footer-block a{ color:var(--doc-navy); text-decoration:underline; text-underline-offset:2px; text-decoration-color:rgba(27,58,92,.4); }
+  .footer-block a:hover{ text-decoration-color:var(--doc-navy); }
   .footer-block b{
     color:var(--doc-navy);
-    font-size:12px;
+    font-size:12.5px;
     letter-spacing:.02em;
   }
 
@@ -494,12 +559,40 @@
 
   .action-row{display:flex; gap:8px;}
 
+  /* En desktop (2 columnas) las acciones se muestran inline en .action-row y el
+     disparador del bottom sheet / su overlay no existen. En una sola columna
+     (mobile, ver @media 900px) se invierte: .action-row pasa a ser una hoja
+     inferior y estos dos aparecen. */
+  .action-trigger{
+    display:none;
+    width:100%;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    background:var(--primary);
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    padding:12px;
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+    margin-top:8px;
+    transition:background 150ms ease, transform 150ms ease;
+  }
+  .action-trigger:active{ transform:scale(.98); background:var(--primary-dark); }
+  .action-overlay{ display:none; }
+
   /* Barra de acciones (Nuevo / PDF / Word / Guardar en la nube / Historial): un solo
      lugar, siempre visible sin importar qué tab esté activo, en vez de tener que
      scrollear hasta el final del tab actual para encontrarla. */
   .action-bar{
     position:sticky;
     bottom:0;
+    /* Eleva el contexto de apilamiento de la barra por encima del preview-panel,
+       para que el bottom sheet + overlay (fixed, descendientes) no queden tapados
+       por el documento en mobile. */
+    z-index:40;
     background:var(--surface);
     padding-top:10px;
     margin-top:14px;
@@ -521,31 +614,8 @@
     .field input, .field textarea, .quote-search{font-size:16px;}
     .btn-primary, .btn-secondary{min-height:44px; font-size:14px;}
     .tab-btn{padding:10px 3px; font-size:11px;}
-    /* La barra de acciones apilada (4 botones a ancho completo) ocupaba más de la
-       mitad de la pantalla en mobile. En vez de reescribir la lógica de los botones,
-       los mismos <button>/<a> pasan a mostrarse como una fila compacta de solo
-       ícono (el texto sigue en el DOM en .btn-label -- queda disponible para
-       lectores de pantalla vía title/aria-label, solo se oculta visualmente),
-       con "+ Nuevo presupuesto" arriba como acción principal a ancho completo. */
-    .action-row{flex-direction:row; gap:6px;}
-    .action-row .btn-secondary{
-      flex:1;
-      min-height:44px;
-      padding:0;
-      font-size:19px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-    }
-    .action-row .btn-label{
-      position:absolute;
-      width:1px; height:1px;
-      padding:0; margin:-1px;
-      overflow:hidden;
-      clip:rect(0,0,0,0);
-      white-space:nowrap;
-      border:0;
-    }
+    /* (La barra de acciones en mobile se maneja como bottom sheet en el bloque
+       @media 900px de más arriba — acá solo quedan los ajustes del documento.) */
     /* Documento exportado: la ficha de datos y las de opcionales pierden aire de sobra
        en pantallas chicas si mantienen el padding de desktop. */
     .meta-grid{grid-template-columns:1fr; padding:12px 14px; gap:4px;}
@@ -585,6 +655,7 @@
     .dim-card{padding:14px 18px !important;}
     .opt-card{padding:14px 16px 16px !important;}
     .photo-grid{grid-template-columns:1fr 1fr !important; gap:12px !important;}
+    .photo-grid:has(figure:only-child){grid-template-columns:minmax(0, 60%) !important;}
     * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
 
     /* Evita que el salto de página del navegador corte una tarjeta o una foto
