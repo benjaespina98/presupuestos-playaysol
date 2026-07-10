@@ -32,24 +32,24 @@ export default async function DashboardLayout({
           <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
             <Link href="/dashboard" className="flex items-center gap-3">
               <Wordmark className="text-base" />
-              <span className="hidden text-sm font-medium text-gray-400 sm:inline">
+              <span className="hidden text-sm text-gray-400 sm:inline">
                 Presupuestos
               </span>
             </Link>
             <nav className="flex items-center gap-4 text-sm">
               <Link
                 href="/dashboard"
-                className="font-medium text-gray-600 hover:text-[#1B3A5C]"
+                className="font-medium text-[#1B3A5C] hover:underline"
               >
                 Calculadoras
               </Link>
               <Link
                 href="/dashboard/historial"
-                className="font-medium text-gray-600 hover:text-[#1B3A5C]"
+                className="font-medium text-[#1B3A5C] hover:underline"
               >
                 Historial
               </Link>
-              <span className="hidden text-gray-500 sm:inline">{user.email}</span>
+              <span className="hidden text-gray-400 sm:inline">{user.email}</span>
               <LogoutButton />
             </nav>
           </div>

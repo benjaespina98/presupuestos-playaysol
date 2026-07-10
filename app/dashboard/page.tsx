@@ -33,7 +33,7 @@ const CATEGORIAS = [
     tipo: "losetas",
     nombre: "Plano de Piscina",
     icon: (
-      <path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18" />
+      <path d="M3 3h18v18H3zM3 8h4M3 13h4M17 8h4M17 13h4M8 3v4M13 3v4M8 17v4M13 17v4" />
     ),
   },
 ] as const;

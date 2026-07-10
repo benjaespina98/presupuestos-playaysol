@@ -4,7 +4,7 @@
 // (nítido a cualquier tamaño, sin riesgo de corrupción) + un trazo de ola en SVG.
 export function Wordmark({ className = "" }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-[2px] font-extrabold uppercase tracking-[0.08em] text-[#1B3A5C] ${className}`}>
+    <span className={`inline-flex items-center gap-[2px] font-normal uppercase tracking-[0.08em] text-[#1B3A5C] ${className}`}>
       <span>Playa &amp; S</span>
       <span className="relative inline-flex flex-col items-center">
         <span className="text-[#F0B400]">O</span>
