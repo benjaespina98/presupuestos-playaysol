@@ -270,8 +270,8 @@ function tickH(x,y,color){ return \`<line x1="\${x}" y1="\${y-4}" x2="\${x}" y2=
 function exportarInterno(){
   html2canvas(document.getElementById('capture-area'), {backgroundColor: '#ffffff', scale: 3}).then(canvas => {
     const link = document.createElement('a');
-    const nombre = document.getElementById('nombre').value.trim() || 'presupuesto_losetas';
-    link.download = nombre.replace(/\\s+/g,'_') + '_interno.png';
+    const nombre = document.getElementById('nombre').value.trim();
+    link.download = window.armarNombreArchivo('Loseta', nombre, null) + '_interno.png';
     link.href = canvas.toDataURL('image/png');
     link.click();
   }).catch(err => alert('Error generando la imagen: ' + err.message));
@@ -288,8 +288,7 @@ function exportarCliente(){
   requestAnimationFrame(() => {
     html2canvas(target, {backgroundColor: '#ffffff', scale: 3, useCORS: true}).then(canvas => {
       const link = document.createElement('a');
-      const nombre = s.nombre || 'plano_pileta';
-      link.download = nombre.replace(/\\s+/g,'_') + '_cliente.png';
+      link.download = window.armarNombreArchivo('Loseta', s.nombre, null) + '_cliente.png';
       link.href = canvas.toDataURL('image/png');
       link.click();
     }).catch(err => alert('Error generando la imagen: ' + err.message));

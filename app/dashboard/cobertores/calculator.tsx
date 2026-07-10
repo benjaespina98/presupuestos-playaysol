@@ -56,12 +56,19 @@ export default function CobertoresCalculator() {
   useEffect(() => {
     if (!docxReady) return;
 
+    const nombreArchivoScript = document.createElement("script");
+    nombreArchivoScript.src = "/nombre-archivo.js";
+    nombreArchivoScript.async = false;
+    document.body.appendChild(nombreArchivoScript);
+
     const modalScript = document.createElement("script");
     modalScript.src = "/catalogo-modal.js";
+    modalScript.async = false;
     document.body.appendChild(modalScript);
 
     const script = document.createElement("script");
     script.src = "/cobertores-calc.js";
+    script.async = false;
     script.onload = async () => {
       const idACargar = presupuestoId || duplicarId;
       if (!idACargar) return;
@@ -71,6 +78,7 @@ export default function CobertoresCalculator() {
     document.body.appendChild(script);
 
     return () => {
+      document.body.removeChild(nombreArchivoScript);
       document.body.removeChild(modalScript);
       document.body.removeChild(script);
     };

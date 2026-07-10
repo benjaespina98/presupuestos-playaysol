@@ -12,23 +12,15 @@ const CALCULATOR_MARKUP = `
     </div>
 
     <div class="tabs">
-      <button class="tab-btn active" data-tab="guardados">Guardados</button>
-      <button class="tab-btn" data-tab="datos">Datos</button>
+      <button class="tab-btn active" data-tab="datos">Datos</button>
       <button class="tab-btn" data-tab="items">Cálculo</button>
       <button class="tab-btn" data-tab="opcionales">Opcionales</button>
       <button class="tab-btn" data-tab="fotos">Fotos</button>
       <button class="tab-btn" data-tab="textos">Textos fijos</button>
     </div>
 
-    <!-- GUARDADOS -->
-    <div class="tab-content active" id="tab-guardados">
-      <input type="text" class="quote-search" id="quote-search" placeholder="Buscar por cliente...">
-      <div id="quote-list"></div>
-      <button class="btn-add" id="btn-new-quote">+ Nuevo presupuesto</button>
-    </div>
-
     <!-- DATOS -->
-    <div class="tab-content" id="tab-datos">
+    <div class="tab-content active" id="tab-datos">
       <div class="field"><label>Fecha</label><input type="text" id="f-fecha"></div>
       <div class="field"><label>Señor/Sra</label><input type="text" id="f-cliente" placeholder="Apellido, Nombre"></div>
       <div class="field"><label>Domicilio</label><input type="text" id="f-domicilio"></div>
@@ -117,15 +109,16 @@ const CALCULATOR_MARKUP = `
       </div>
     </div>
 
-    <button class="btn-primary" id="btn-save-quote">💾 Guardar presupuesto</button>
-    <div class="save-flash" id="save-quote-flash"></div>
-    <div class="action-row">
-      <button class="btn-secondary" onclick="window.print()" style="margin-top:0;" title='Antes de imprimir: en "Más ajustes" desmarcá "Encabezados y pies" y tildá "Gráficos de fondo"'>🖨️ PDF</button>
-      <button class="btn-secondary" id="btn-download-word" style="margin-top:0;">📄 Word</button>
-      <button class="btn-secondary" id="btn-save-cloud" onclick="guardarPresupuestoNube()" style="margin-top:0;">☁️ Guardar en la nube</button>
-      <a class="btn-secondary" href="/dashboard/historial?tipo=cobertores" style="margin-top:0;text-decoration:none;text-align:center;">📋 Historial</a>
+    <div class="action-bar">
+      <button class="btn-add" id="btn-new-quote" style="width:100%; justify-content:center;">+ Nuevo presupuesto</button>
+      <div class="action-row">
+        <button class="btn-secondary" onclick="window.print()" style="margin-top:0;" title='Antes de imprimir: en "Más ajustes" desmarcá "Encabezados y pies" y tildá "Gráficos de fondo"'>🖨️ PDF</button>
+        <button class="btn-secondary" id="btn-download-word" style="margin-top:0;">📄 Word</button>
+        <button class="btn-secondary" id="btn-save-cloud" onclick="guardarPresupuestoNube()" style="margin-top:0;">☁️ Guardar en la nube</button>
+        <a class="btn-secondary" href="/dashboard/historial?tipo=cobertores" style="margin-top:0;text-decoration:none;text-align:center;">📋 Historial</a>
+      </div>
+      <div class="save-flash" id="save-cloud-flash"></div>
     </div>
-    <div class="save-flash" id="save-cloud-flash"></div>
   </div>
 
   <!-- ===================== PREVIEW PANEL ===================== -->

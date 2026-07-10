@@ -263,38 +263,6 @@
     height:14px;
     margin-top:4px;
   }
-  .quote-search{
-    width:100%;
-    padding:8px 9px;
-    font-size:13px;
-    border:1px solid var(--border);
-    border-radius:6px;
-    margin-bottom:10px;
-  }
-  .quote-row{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:8px;
-    padding:9px 8px;
-    border-radius:6px;
-    cursor:pointer;
-    border:1px solid transparent;
-  }
-  .quote-row:hover{
-    background:var(--primary-light);
-    border-color:var(--border);
-  }
-  .quote-row.current{
-    background:var(--primary-light);
-    border-color:var(--primary);
-  }
-  .quote-row .quote-info{flex:1; min-width:0;}
-  .quote-row .quote-name{font-size:13px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .quote-row .quote-meta{font-size:11px; color:var(--muted);}
-  .quote-row .quote-del{
-    background:none; border:none; color:var(--danger); cursor:pointer; font-size:13px; padding:4px;
-  }
   .quote-empty{font-size:12px; color:var(--muted); font-style:italic; padding:10px 4px;}
 
   .opt-block{border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:6px;}
@@ -329,7 +297,7 @@
     margin:16px 0;
   }
   .photo-grid figure{margin:0;}
-  .photo-grid img{width:100%; height:150px; object-fit:cover; border-radius:6px; display:block; border:1px solid var(--doc-border-soft);}
+  .photo-grid img{width:100%; height:150px; object-fit:contain; background:var(--doc-card-bg); border-radius:6px; display:block; border:1px solid var(--doc-border-soft);}
   .photo-grid figcaption{font-size:10.5px; color:var(--muted); margin-top:5px; text-align:center;}
   .photos-title{
     font-size:11px;
@@ -497,6 +465,19 @@
   }
 
   .action-row{display:flex; gap:8px;}
+
+  /* Barra de acciones (Nuevo / PDF / Word / Guardar en la nube / Historial): un solo
+     lugar, siempre visible sin importar qué tab esté activo, en vez de tener que
+     scrollear hasta el final del tab actual para encontrarla. */
+  .action-bar{
+    position:sticky;
+    bottom:0;
+    background:var(--surface);
+    padding-top:10px;
+    margin-top:14px;
+    border-top:1px solid var(--border);
+    box-shadow:0 -2px 8px rgba(0,0,0,.05);
+  }
 
   /* ---------- MOBILE (<600px) ---------- */
   @media (max-width:600px){

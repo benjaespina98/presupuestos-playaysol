@@ -2,9 +2,7 @@
 const K_CATALOG = 'presupuesto-revestimiento-catalogo-opcionales';
 const K_LEGAL   = 'presupuesto-revestimiento-texto-legal';
 const K_FOOTER  = 'presupuesto-revestimiento-footer-empresa';
-const K_INDEX   = 'presupuestos-revestimiento-index';
 const K_FOTOS_OPC = 'presupuesto-revestimiento-fotos-por-opcional'; // metadata liviana; los bytes van en IndexedDB
-let currentQuoteId = null; // null = presupuesto nuevo, sin guardar todavía
 
 /* ---------------- DEFAULTS ---------------- */
 const defaultOptionales = [
@@ -370,7 +368,7 @@ function flashSaved(){
   flashTimeout = setTimeout(()=>{ el.textContent=''; }, 1500);
 }
 
-/* ---------------- PRESUPUESTOS GUARDADOS (locales, esta copia del archivo) ---------------- */
+/* ---------------- SERIALIZACIÓN DEL PRESUPUESTO (para Guardar en la nube) ---------------- */
 function quoteToPlainState(){
   return {
     fecha: state.fecha, cliente: state.cliente, domicilio: state.domicilio,
@@ -400,145 +398,55 @@ async function ensureFotosSubidasANube(){
   }
 }
 
-function saveQuote(){
-  const flash = document.getElementById('save-quote-flash');
-  if(!state.cliente.trim()){
-    flash.textContent = 'Poné al menos el nombre del cliente antes de guardar.';
-    flash.style.color = 'var(--danger)';
-    setTimeout(()=>{flash.textContent='';flash.style.color='var(--primary-dark)';}, 2500);
-    return;
-  }
-  try{
-    if(!currentQuoteId){ currentQuoteId = 'q'+Date.now()+Math.random().toString(36).slice(2,6); }
-    const total = computeRevestimientoTotal();
-    localStorage.setItem('quote:'+currentQuoteId, JSON.stringify(quoteToPlainState()));
+// Aplica al state un objeto de presupuesto (viene de la nube, vía cargarPresupuestoExterno) y
+// refresca la UI. Antes esto vivía en loadQuote(id), que primero escribía el objeto en
+// localStorage bajo una key temporal y lo releía — un rodeo que existía solo porque loadQuote()
+// también servía para el ahora-eliminado tab "Guardados" (localStorage). Al sacar ese tab, esta
+// función pasa a recibir los datos directo, sin el paso intermedio por localStorage.
+async function aplicarPresupuestoAlState(q){
+  state.fecha=q.fecha; state.cliente=q.cliente; state.domicilio=q.domicilio;
+  state.localidad=q.localidad; state.tel=q.tel; state.email=q.email;
+  state.dimension=q.dimension; state.validez=q.validez; state.subtotal=q.subtotal;
+  state.largo=q.largo||0; state.ancho=q.ancho||0; state.profundidad=(q.profundidad!==undefined?q.profundidad:1.30);
+  state.escalera = q.escalera||0; state.desperdicio = q.desperdicio||0;
+  state.m2Items = (q.m2Items||[]).map(it=>({...it, id: it.id||cid()}));
+  state.items = (q.items||[]).map(it=>({...it, id: it.id||cid()}));
+  state.headerVariant = q.headerVariant || 'teal';
+  const incluidos = q.opcionalesIncluidos || [];
+  state.opcionales.forEach(o=>{ o.included = incluidos.includes(o.id); });
 
-    let index = getIndex();
-    index = index.filter(q=>q.id!==currentQuoteId);
-    index.unshift({ id: currentQuoteId, cliente: state.cliente, localidad: state.localidad, total, updatedAt: Date.now() });
-    localStorage.setItem(K_INDEX, JSON.stringify(index));
-
-    flash.textContent = 'Guardado ✓ (en esta compu)';
-    renderQuoteList();
-  }catch(e){
-    console.error('No se pudo guardar el presupuesto', e);
-    flash.textContent = 'Error al guardar, reintentá.';
-    flash.style.color = 'var(--danger)';
-  }
-  setTimeout(()=>{flash.textContent='';}, 2200);
-}
-
-function getIndex(){
-  try{
-    const raw = localStorage.getItem(K_INDEX);
-    return raw ? JSON.parse(raw) : [];
-  }catch(e){ return []; }
-}
-
-function renderQuoteList(){
-  const wrap = document.getElementById('quote-list');
-  const filterText = (document.getElementById('quote-search').value||'').toLowerCase();
-  const index = getIndex();
-  const filtered = index
-    .filter(q => q.cliente.toLowerCase().includes(filterText))
-    .sort((a,b)=>b.updatedAt-a.updatedAt);
-
-  wrap.innerHTML = '';
-  if(filtered.length===0){
-    wrap.innerHTML = '<div class="quote-empty">No hay presupuestos guardados en esta compu todavía. Completá los datos y guardá.</div>';
-    return;
-  }
-  filtered.forEach(q=>{
-    const row = document.createElement('div');
-    row.className = 'quote-row' + (q.id===currentQuoteId ? ' current' : '');
-    const fecha = new Date(q.updatedAt).toLocaleDateString('es-AR');
-    row.innerHTML = `
-      <div class="quote-info">
-        <div class="quote-name">${escHtml(q.cliente)}</div>
-        <div class="quote-meta">${escHtml(q.localidad||'')} · ${fmt(q.total)} · ${fecha}</div>
-      </div>
-      <button class="quote-del" data-id="${q.id}" title="Eliminar">✕</button>`;
-    row.querySelector('.quote-info').addEventListener('click', ()=>loadQuote(q.id));
-    row.querySelector('.quote-del').addEventListener('click', async (e)=>{
-      e.stopPropagation();
-      if(!confirm('¿Eliminar el presupuesto de '+q.cliente+'? No se puede deshacer.')) return;
+  // Traer los bytes reales de cada foto: primero IndexedDB (rápido, esta copia del navegador);
+  // si no está (otro dispositivo, o se limpió), caer a la copia en Supabase Storage y cachearla.
+  const fotosMeta = q.fotos || [];
+  state.fotos = [];
+  for(const fm of fotosMeta){
+    let blob = await idbGetFoto(fm.id).catch(()=>null);
+    if(!blob && fm.storageUrl){
       try{
-        const raw = localStorage.getItem('quote:'+q.id);
-        const full = raw ? JSON.parse(raw) : null;
-        const fotoIds = (full && full.fotos) ? full.fotos.map(f=>f.id) : [];
-        const fotosPorOpMeta = (full && full.fotosPorOpcional) ? full.fotosPorOpcional : {};
-        Object.values(fotosPorOpMeta).forEach(arr=>arr.forEach(f=>fotoIds.push(f.id)));
-        for(const fid of fotoIds){ await idbDeleteFoto(fid).catch(()=>{}); }
-      }catch(err){ console.error('No se pudieron limpiar las fotos del presupuesto eliminado', err); }
-      localStorage.removeItem('quote:'+q.id);
-      const idx = getIndex().filter(x=>x.id!==q.id);
-      localStorage.setItem(K_INDEX, JSON.stringify(idx));
-      if(currentQuoteId===q.id) newQuote();
-      renderQuoteList();
-    });
-    wrap.appendChild(row);
-  });
-}
-
-async function loadQuote(id){
-  try{
-    const raw = localStorage.getItem('quote:'+id);
-    if(!raw) return;
-    const q = JSON.parse(raw);
-    currentQuoteId = id;
-    state.fecha=q.fecha; state.cliente=q.cliente; state.domicilio=q.domicilio;
-    state.localidad=q.localidad; state.tel=q.tel; state.email=q.email;
-    state.dimension=q.dimension; state.validez=q.validez; state.subtotal=q.subtotal;
-    state.largo=q.largo||0; state.ancho=q.ancho||0; state.profundidad=(q.profundidad!==undefined?q.profundidad:1.30);
-    state.escalera = q.escalera||0; state.desperdicio = q.desperdicio||0;
-    state.m2Items = (q.m2Items||[]).map(it=>({...it, id: it.id||cid()}));
-    state.items = (q.items||[]).map(it=>({...it, id: it.id||cid()}));
-    state.headerVariant = q.headerVariant || 'teal';
-    const incluidos = q.opcionalesIncluidos || [];
-    state.opcionales.forEach(o=>{ o.included = incluidos.includes(o.id); });
-
-    // Traer los bytes reales de cada foto: primero IndexedDB (rápido, esta copia del navegador);
-    // si no está (otro dispositivo, o se limpió), caer a la copia en Supabase Storage y cachearla.
-    const fotosMeta = q.fotos || [];
-    state.fotos = [];
-    for(const fm of fotosMeta){
-      let blob = await idbGetFoto(fm.id).catch(()=>null);
-      if(!blob && fm.storageUrl){
-        try{
-          const resp = await fetch(fm.storageUrl);
-          if(resp.ok){ blob = await resp.blob(); await idbPutFoto(fm.id, blob).catch(()=>{}); }
-        }catch(e){ /* sin conexión o foto inexistente: se salteará abajo */ }
-      }
-      if(!blob) continue; // si por algo se perdió, la salteamos en vez de romper todo
-      state.fotos.push({ id: fm.id, caption: fm.caption||'', width: fm.width, height: fm.height, blob, url: URL.createObjectURL(blob), storageUrl: fm.storageUrl||null });
+        const resp = await fetch(fm.storageUrl);
+        if(resp.ok){ blob = await resp.blob(); await idbPutFoto(fm.id, blob).catch(()=>{}); }
+      }catch(e){ /* sin conexión o foto inexistente: se salteará abajo */ }
     }
-    // Nota: las fotos por opcional NO se tocan acá — son del catálogo compartido
-    // (state.fotosPorOpcional), no cambian según qué presupuesto estés viendo.
-
-    renderForm();
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-    document.querySelector('.tab-btn[data-tab="datos"]').classList.add('active');
-    document.getElementById('tab-datos').classList.add('active');
-    renderQuoteList();
-  }catch(e){
-    console.error('No se pudo cargar el presupuesto', e);
+    if(!blob) continue; // si por algo se perdió, la salteamos en vez de romper todo
+    state.fotos.push({ id: fm.id, caption: fm.caption||'', width: fm.width, height: fm.height, blob, url: URL.createObjectURL(blob), storageUrl: fm.storageUrl||null });
   }
+  // Nota: las fotos por opcional NO se tocan acá — son del catálogo compartido
+  // (state.fotosPorOpcional), no cambian según qué presupuesto estés viendo.
+
+  renderForm();
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.querySelector('.tab-btn[data-tab="datos"]').classList.add('active');
+  document.getElementById('tab-datos').classList.add('active');
 }
 
-// Reusa loadQuote() para reconstruir el state completo desde un objeto que viene de la nube
-// (en vez de reimplementar la asignación campo por campo, que es lo que se desactualizaba
-// cada vez que se agregaba un campo nuevo). Espera a que termine el arranque de la calculadora
-// (initPromise) para no correr en paralelo con seedFotosGeneralesDefaults() y perder las fotos.
+// Espera a que termine el arranque de la calculadora (initPromise) para no correr en paralelo
+// con seedFotosGeneralesDefaults() y perder las fotos.
 async function cargarPresupuestoExterno(datos){
   if(!datos) return;
   try{
     await initPromise;
-    const tmpId = '__cloud_tmp__';
-    localStorage.setItem('quote:'+tmpId, JSON.stringify(datos));
-    await loadQuote(tmpId);
-    currentQuoteId = null; // no lo atamos a ningún presupuesto local
-    localStorage.removeItem('quote:'+tmpId);
+    await aplicarPresupuestoAlState(datos);
   }catch(e){
     console.error('No se pudo cargar el presupuesto desde la nube', e);
   }
@@ -546,7 +454,6 @@ async function cargarPresupuestoExterno(datos){
 window.cargarPresupuestoExterno = cargarPresupuestoExterno;
 
 async function newQuote(){
-  currentQuoteId = null;
   state.fecha = todayStr();
   state.cliente=''; state.domicilio=''; state.localidad=''; state.tel=''; state.email='';
   state.dimension = defaultDimension;
@@ -559,7 +466,6 @@ async function newQuote(){
   // no algo que se reinicie en cada presupuesto nuevo.
   await seedFotosGeneralesDefaults();
   renderForm();
-  renderQuoteList();
 }
 
 
@@ -1167,12 +1073,10 @@ document.getElementById('btn-add-opt').addEventListener('click', ()=>{
   renderOptList(); renderPreview(); saveCatalog();
 });
 
-document.getElementById('btn-save-quote').addEventListener('click', saveQuote);
 document.getElementById('btn-new-quote').addEventListener('click', ()=>{
   if(state.cliente.trim() && !confirm('¿Empezar un presupuesto nuevo? Si no guardaste el actual, se pierde lo tipeado.')) return;
   newQuote();
 });
-document.getElementById('quote-search').addEventListener('input', renderQuoteList);
 
 
 /* ================================================================
@@ -1579,9 +1483,7 @@ async function downloadWord(){
   btn.textContent = 'Generando...';
   btn.disabled = true;
   try{
-    const clienteParaArchivo = (state.cliente||'Sin nombre').replace(/[\\/:*?"<>|]+/g,'-').trim();
-    const fechaParaArchivo = (state.fecha||todayStr()).replace(/\//g,'-');
-    const nombreArchivo = `${clienteParaArchivo} - Revestimiento - ${fechaParaArchivo}`;
+    const nombreArchivo = window.armarNombreArchivo('Revestimiento', state.cliente, state.fecha);
 
     const children = await buildDocxSections();
     const doc = new Document({
@@ -1631,7 +1533,6 @@ let initPromise = (async function init(){
   await loadFotosPorOpcional();
   await seedFotosGeneralesDefaults(); // así ya arranca con las fotos ilustrativas cargadas, sin necesidad de tocar "Nuevo presupuesto"
   renderForm();
-  renderQuoteList();
 })();
 
 async function guardarPresupuestoNube(){
