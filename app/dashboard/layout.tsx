@@ -32,9 +32,6 @@ export default async function DashboardLayout({
           <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
             <Link href="/dashboard" className="flex items-center gap-3">
               <Wordmark className="h-7" />
-              <span className="hidden text-sm text-gray-400 sm:inline">
-                Presupuestos
-              </span>
             </Link>
             <nav className="flex items-center gap-4 text-sm">
               <Link
