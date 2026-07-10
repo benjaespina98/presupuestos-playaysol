@@ -1072,6 +1072,7 @@ const DOCX_CONTENT_WIDTH_TWIP = convertMillimetersToTwip(DOCX_PAGE_WIDTH_MM);
 const DOCX_NAVY = "1B3A5C"; // navy de marca — antes usaba un teal oscuro (00566A) distinto al del resto del portal
 const DOCX_TEAL = "00829C";
 const DOCX_TEXT = "1C2B33";
+const DOCX_MUTED = "5C7480"; // mismo gris que --muted en -calc.css, para el pie del documento
 const DOCX_NAVY_SOFT = "EEF2F6";
 const DOCX_BORDER_SOFT = "E1E7EC";
 
@@ -1312,18 +1313,24 @@ function docxOptCard(desc, priceTxt, fotosOp, imgBytesById){
 
 function docxHyperlinkLine(label, displayText, url){
   return new Paragraph({
+    alignment: AlignmentType.CENTER,
     spacing:{ after:40 },
     children:[
-      new TextRun({ text: label, size:20, color:DOCX_TEXT }),
-      new ExternalHyperlink({ link:url, children:[ new TextRun({ text:displayText, size:20, color:"0563C1", underline:{} }) ] })
+      new TextRun({ text: label, size:18, color:DOCX_MUTED }),
+      new ExternalHyperlink({ link:url, children:[ new TextRun({ text:displayText, size:18, color:DOCX_MUTED, underline:{} }) ] })
     ]
   });
 }
 
+// Cierre formal del documento: centrado, tipografía más chica y discreta que el
+// cuerpo (18=9pt vs los 20-22=10-11pt del resto), separado con aire de sobra y un
+// divisor sutil en gris (no la línea gruesa de color de marca que llevaba antes,
+// que competía con los títulos de sección en vez de leerse como cierre) — mismo
+// tratamiento visual que .footer-block en pantalla/PDF (ver -calc.css).
 function docxFooter(f, footerColor){
   const paras = [];
-  paras.push(new Paragraph({ spacing:{before:200, after:80}, border:{ top:{color:footerColor, space:6, style:BorderStyle.SINGLE, size:10} },
-    children:[ new TextRun({ text:f.empresa||'', bold:true, size:20, color:DOCX_NAVY }) ] }));
+  paras.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing:{before:280, after:80}, border:{ top:{color:"E1E7EC", space:10, style:BorderStyle.SINGLE, size:6} },
+    children:[ new TextRun({ text:f.empresa||'', bold:true, size:20, color:DOCX_NAVY, characterSpacing:10 }) ] }));
   if(f.direccion){
     const mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('Playa y Sol S.A.S.') + '&query_place_id=ChIJd1F4COdCzJURn7QoGKCkKXA';
     paras.push(docxHyperlinkLine('Dirección: ', f.direccion, mapsUrl));
@@ -1333,7 +1340,7 @@ function docxFooter(f, footerColor){
   }
   if(f.contactoNombre || f.contactoCel){
     const txt = 'Contacto: ' + (f.contactoNombre||'') + (f.contactoCel ? ' - Cel. '+f.contactoCel : '');
-    paras.push(new Paragraph({ spacing:{after:40}, children:[ new TextRun({ text:txt, size:20, color:DOCX_TEXT }) ] }));
+    paras.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing:{after:40}, children:[ new TextRun({ text:txt, size:18, color:DOCX_MUTED }) ] }));
   }
   if(f.whatsapp){
     paras.push(docxHyperlinkLine('WhatsApp: ', f.whatsapp, 'https://wa.me/549'+f.whatsapp.replace(/\D/g,'')));
@@ -1347,11 +1354,11 @@ function docxFooter(f, footerColor){
   }
   if(f.facebook){
     paras.push(f.facebookUrl ? docxHyperlinkLine('Facebook: ', f.facebook, f.facebookUrl)
-      : new Paragraph({ children:[ new TextRun({ text:'Facebook: '+f.facebook, size:20 }) ] }));
+      : new Paragraph({ alignment: AlignmentType.CENTER, children:[ new TextRun({ text:'Facebook: '+f.facebook, size:18, color:DOCX_MUTED }) ] }));
   }
   if(f.instagram){
     paras.push(f.instagramUrl ? docxHyperlinkLine('Instagram: ', f.instagram, f.instagramUrl)
-      : new Paragraph({ children:[ new TextRun({ text:'Instagram: '+f.instagram, size:20 }) ] }));
+      : new Paragraph({ alignment: AlignmentType.CENTER, children:[ new TextRun({ text:'Instagram: '+f.instagram, size:18, color:DOCX_MUTED }) ] }));
   }
   return paras;
 }
@@ -1491,9 +1498,16 @@ document.getElementById('btn-download-word').addEventListener('click', downloadW
 function imprimirConNombre(){
   const tituloOriginal = document.title;
   document.title = window.armarNombreArchivo('Cerco', state.cliente, state.fecha);
+  // iOS no tiene un diálogo de impresión real: window.print() dispara la hoja
+  // compartir/imprimir del sistema operativo, que sigue abierta después de que
+  // 'afterprint' ya disparó adentro de la página -- si restauramos el título
+  // enseguida, iOS puede terminar leyendo el título genérico (ya restaurado) en
+  // vez del que pusimos, porque lee el nombre sugerido en un momento propio del
+  // sistema que no está sincronizado con ese evento. El delay le da margen a esa
+  // lectura antes de revertir.
   const restaurarTitulo = () => {
-    document.title = tituloOriginal;
     window.removeEventListener('afterprint', restaurarTitulo);
+    setTimeout(() => { document.title = tituloOriginal; }, 3000);
   };
   window.addEventListener('afterprint', restaurarTitulo);
   window.print();

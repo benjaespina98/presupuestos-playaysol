@@ -464,16 +464,26 @@
     color:var(--doc-navy);
     margin-top:20px;
   }
+  /* Cierre formal del documento: centrado, tipografía más chica y discreta que el
+     cuerpo (10.5px vs ~12.5px), separado del contenido con aire de sobra y un
+     divisor sutil (no la línea gruesa de color primario que llevaba antes, que
+     competía visualmente con los títulos de sección en vez de leerse como cierre). */
   .footer-block{
-    margin-top:24px;
-    padding-top:16px;
-    border-top:2px solid var(--primary);
-    font-size:11.5px;
-    line-height:1.7;
+    margin-top:36px;
+    padding-top:18px;
+    border-top:1px solid var(--doc-border-soft);
+    font-size:10.5px;
+    line-height:1.9;
+    color:var(--muted);
+    text-align:center;
   }
-  .footer-block a{ color:var(--primary-dark); text-decoration:none; }
-  .footer-block a:hover{ text-decoration:underline; }
-  .footer-block b{color:var(--primary-dark);}
+  .footer-block a{ color:var(--muted); text-decoration:none; }
+  .footer-block a:hover{ text-decoration:underline; color:var(--doc-navy); }
+  .footer-block b{
+    color:var(--doc-navy);
+    font-size:12px;
+    letter-spacing:.02em;
+  }
 
   .empty-note{color:var(--muted); font-style:italic; font-size:12px;}
 
@@ -511,27 +521,68 @@
     .field input, .field textarea{font-size:16px;}
     .btn-primary, .btn-secondary{min-height:44px; font-size:14px;}
     .tab-btn{padding:10px 3px; font-size:11px;}
-    .action-row{flex-direction:column;}
+    /* La barra de acciones apilada (4 botones a ancho completo) ocupaba más de la
+       mitad de la pantalla en mobile. En vez de reescribir la lógica de los botones,
+       los mismos <button>/<a> pasan a mostrarse como una fila compacta de solo
+       ícono (el texto sigue en el DOM en .btn-label -- queda disponible para
+       lectores de pantalla vía title/aria-label, solo se oculta visualmente),
+       con "+ Nuevo presupuesto" arriba como acción principal a ancho completo. */
+    .action-row{flex-direction:row; gap:6px;}
+    .action-row .btn-secondary{
+      flex:1;
+      min-height:44px;
+      padding:0;
+      font-size:19px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .action-row .btn-label{
+      position:absolute;
+      width:1px; height:1px;
+      padding:0; margin:-1px;
+      overflow:hidden;
+      clip:rect(0,0,0,0);
+      white-space:nowrap;
+      border:0;
+    }
     .meta-grid{grid-template-columns:1fr; padding:12px 14px; gap:4px;}
     .doc-title{font-size:16px; margin-bottom:14px;}
     .dim-card, .opt-card{padding:12px 14px;}
   }
 
+  /* Márgenes de página consistentes entre navegadores/dispositivos -- sin esto, el
+     margen que agrega el diálogo de impresión por default puede variar bastante
+     entre Chrome desktop y Safari mobile, además de sumarse al padding del propio
+     .sheet-body de abajo. */
+  @page{ margin:14mm; }
+
   @media print{
+    /* Reset de ancho: en mobile, .app/.preview-panel/.sheet arrastran restricciones
+       pensadas para el viewport angosto de pantalla (columna de 400px del form-panel,
+       max-width:780px del .sheet para que no se estire de más en desktop, etc.).
+       Safari mobile en particular puede heredar el ancho del viewport de pantalla al
+       renderizar la vista de impresión en vez de usar el ancho real de la página
+       (A4/Carta), lo que dejaba el documento angosto con márgenes enormes a los
+       costados en el PDF final. Forzamos que todo use el 100% del ancho de página
+       disponible, sin capas de por medio. */
+    html, body{ width:auto !important; }
     body{background:#fff;}
     .form-panel{display:none;}
-    .app{display:block;}
-    .preview-panel{padding:0; display:block;}
-    .sheet{box-shadow:none; max-width:100%; border-radius:0;}
+    .app{display:block; width:auto !important;}
+    .preview-panel{padding:0; display:block; width:auto !important;}
+    .sheet{box-shadow:none; width:100% !important; max-width:none !important; margin:0 !important; border-radius:0;}
     .sheet-body{padding:20px 30px !important;}
     /* Fuerza el layout de escritorio del documento aunque se imprima desde un celular:
-       @media (max-width:600px) y @media print pueden matchear los dos a la vez (imprimir
-       desde el navegador del celu), y sin !important acá el PDF salía con el layout
-       angosto de mobile (1 columna, títulos chicos) en vez del documento prolijo. */
+       @media (max-width:900px)/(max-width:600px) y @media print pueden matchear los
+       dos a la vez (imprimir desde el navegador del celu), y sin !important acá el
+       PDF salía con el layout angosto de mobile (1 columna, títulos chicos, fotos
+       apiladas) en vez del documento prolijo de 2 columnas. */
     .meta-grid{grid-template-columns:1fr 1fr !important; padding:16px 20px !important; gap:5px 22px !important;}
     .doc-title{font-size:19px !important; margin-bottom:20px !important;}
     .dim-card{padding:14px 18px !important;}
     .opt-card{padding:14px 16px 16px !important;}
+    .photo-grid{grid-template-columns:1fr 1fr !important; gap:12px !important;}
     * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
 
     /* Evita que el salto de página del navegador corte una tarjeta o una foto

@@ -109,10 +109,10 @@ const CALCULATOR_MARKUP = `
     <div class="action-bar">
       <button class="btn-add" id="btn-new-quote" style="width:100%; justify-content:center;">+ Nuevo presupuesto</button>
       <div class="action-row">
-        <button class="btn-secondary" onclick="imprimirConNombre()" style="margin-top:0;" title='Antes de imprimir: en "Más ajustes" desmarcá "Encabezados y pies" y tildá "Gráficos de fondo"'>🖨️ PDF</button>
-        <button class="btn-secondary" id="btn-download-word" style="margin-top:0;">📄 Word</button>
-        <button class="btn-secondary" id="btn-save-cloud" onclick="guardarPresupuestoNube()" style="margin-top:0;">☁️ Guardar en la nube</button>
-        <a class="btn-secondary" href="/dashboard/historial?tipo=revestimientos" style="margin-top:0;text-decoration:none;text-align:center;">📋 Historial</a>
+        <button class="btn-secondary" onclick="imprimirConNombre()" style="margin-top:0;" title='PDF — antes de imprimir: en "Más ajustes" desmarcá "Encabezados y pies" y tildá "Gráficos de fondo"'>🖨️<span class="btn-label"> PDF</span></button>
+        <button class="btn-secondary" id="btn-download-word" style="margin-top:0;" title="Word">📄<span class="btn-label"> Word</span></button>
+        <button class="btn-secondary" id="btn-save-cloud" onclick="guardarPresupuestoNube()" style="margin-top:0;" title="Guardar en la nube">☁️<span class="btn-label"> Guardar en la nube</span></button>
+        <a class="btn-secondary" href="/dashboard/historial?tipo=revestimientos" style="margin-top:0;text-decoration:none;text-align:center;" title="Historial">📋<span class="btn-label"> Historial</span></a>
       </div>
       <div class="save-flash" id="save-cloud-flash"></div>
     </div>
