@@ -184,9 +184,30 @@ export const CALCULATOR_STYLES = `
   .pys-calc .material-row { grid-template-columns: 1fr 80px auto; gap: 6px; }
   /* font-size 16px evita que iOS Safari haga zoom automático al enfocar el campo */
   .pys-calc input, .pys-calc select { font-size: 16px; }
-  .pys-calc .btns-wrap { gap: 20px; }
-  .pys-calc .btns { flex-direction: column; }
-  .pys-calc button { width: 100%; min-height: 44px; padding: 12px 18px; }
+  /* .btns-wrap es fixed al fondo del viewport (ver más arriba) -- apilar sus 6
+     botones a ancho completo (como en pantallas grandes) la haría ocupar la mitad
+     de la pantalla acá. En vez de reescribir la lógica de los botones, cada grupo
+     pasa a ser una fila horizontal angosta con scroll propio (mismo patrón de
+     "franja compacta" que la barra de acciones de las otras 4 calculadoras, pero
+     con scroll en vez de solo-ícono porque acá los botones no tienen un ícono
+     propio que los identifique sin el texto). */
+  .pys-calc .btns-wrap { flex-direction: column; gap: 6px; padding: 10px 14px; }
+  .pys-calc .btns-label { display: none; }
+  .pys-calc .btns-group .helptext { display: none; }
+  .pys-calc .btns {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 8px;
+    padding-bottom: 2px;
+  }
+  .pys-calc button, .pys-calc .btns > a {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    min-height: 40px;
+    padding: 9px 14px;
+    font-size: 12.5px;
+  }
   .pys-calc button.add-material { width: 100%; }
 }
 
@@ -195,8 +216,14 @@ export const CALCULATOR_STYLES = `
    una "hoja" limpia. Acá reusamos #client-capture (la misma vista que ya arma
    "Descargar para cliente" — plano + medidas, sin precios) en vez de crear un tercer
    contenedor: imprimirVistaLimpia() la puebla antes de llamar a window.print(). */
+/* Márgenes de página consistentes entre navegadores/dispositivos -- sin esto, el
+   margen que agrega el diálogo de impresión por default puede variar bastante entre
+   Chrome desktop y Safari mobile, además de sumarse al padding de acá abajo. */
+@page{ margin: 14mm; }
+
 @media print {
-  .pys-calc { background: #fff; padding: 0; }
+  html, body { width: auto !important; }
+  .pys-calc { background: #fff; padding: 0; width: auto !important; }
   .pys-calc .wrap { display: none !important; }
   .pys-calc #client-capture {
     position: static !important;

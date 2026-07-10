@@ -311,9 +311,16 @@ function imprimirVistaLimpia(){
   // después, para no dejar el título pisado si el usuario navega sin imprimir.
   const tituloOriginal = document.title;
   document.title = window.armarNombreArchivo('Loseta', s.nombre, null);
+  // iOS no tiene un diálogo de impresión real: window.print() dispara la hoja
+  // compartir/imprimir del sistema operativo, que sigue abierta después de que
+  // 'afterprint' ya disparó adentro de la página -- si restauramos el título
+  // enseguida, iOS puede terminar leyendo el título genérico (ya restaurado) en
+  // vez del que pusimos, porque lee el nombre sugerido en un momento propio del
+  // sistema que no está sincronizado con ese evento. El delay le da margen a esa
+  // lectura antes de revertir.
   const restaurarTitulo = () => {
-    document.title = tituloOriginal;
     window.removeEventListener('afterprint', restaurarTitulo);
+    setTimeout(() => { document.title = tituloOriginal; }, 3000);
   };
   window.addEventListener('afterprint', restaurarTitulo);
   window.print();
