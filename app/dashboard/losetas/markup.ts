@@ -27,11 +27,11 @@ export function buildCalculatorHtml(): string {
     <div class="row3">
       <div>
         <label>Largo pileta (m)</label>
-        <input type="number" id="largo" value="8.45" step="0.01">
+        <input type="number" id="largo" value="0" step="0.01">
       </div>
       <div>
         <label>Ancho pileta (m)</label>
-        <input type="number" id="ancho" value="3.75" step="0.01">
+        <input type="number" id="ancho" value="0" step="0.01">
       </div>
       <div>
         <label>Loseta incluida por defecto (m, perimetral)</label>
@@ -43,10 +43,10 @@ export function buildCalculatorHtml(): string {
   <div class="field-section">
     <h3>Ancho final de loseta por lado <span class="section-hint">(incluye lo que ya viene de f&aacute;brica)</span></h3>
     <div class="row4">
-      <div><label>Solar (izquierda)</label><input type="number" id="solar" value="2.0" step="0.05"></div>
-      <div><label>Lado opuesto al solar</label><input type="number" id="opuesto" value="1.0" step="0.05"></div>
-      <div><label>Lateral 1</label><input type="number" id="lateral1" value="1.0" step="0.05"></div>
-      <div><label>Lateral 2</label><input type="number" id="lateral2" value="1.0" step="0.05"></div>
+      <div><label>Solar (izquierda)</label><input type="number" id="solar" value="0" step="0.05"></div>
+      <div><label>Lado opuesto al solar</label><input type="number" id="opuesto" value="0" step="0.05"></div>
+      <div><label>Lateral 1</label><input type="number" id="lateral1" value="0" step="0.05"></div>
+      <div><label>Lateral 2</label><input type="number" id="lateral2" value="0" step="0.05"></div>
     </div>
   </div>
 
@@ -60,7 +60,7 @@ export function buildCalculatorHtml(): string {
         </div>
         <div class="subfield" id="subSolarHumedo" style="display:none;">
           <label>Ancho del solar h&uacute;medo (m)</label>
-          <input type="number" id="solarHumedoAncho" value="1.0" step="0.05">
+          <input type="number" id="solarHumedoAncho" value="0" step="0.05">
         </div>
       </div>
       <div>
@@ -103,7 +103,7 @@ export function buildCalculatorHtml(): string {
         </div>
         <div class="subfield" id="subLuces" style="display:none;">
           <label>Cantidad de luces</label>
-          <input type="number" id="cantLuces" value="2" min="1" step="1">
+          <input type="number" id="cantLuces" value="0" min="1" step="1">
         </div>
       </div>
     </div>

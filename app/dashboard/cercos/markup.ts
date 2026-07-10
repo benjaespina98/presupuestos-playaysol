@@ -52,7 +52,7 @@ const CALCULATOR_MARKUP = `
         <div class="field"><label>Precio /ml con instalación</label><input type="text" id="f-precio-con"></div>
       </div>
       <div class="save-flash" id="precios-base-flash" style="margin-bottom:6px;"></div>
-      <div style="font-size:10.5px;color:var(--muted);margin:-6px 0 10px;">Estos dos precios son la base compartida por todo el equipo (se guardan solos y viajan en el Exportar/Importar catálogo). No son por presupuesto.</div>
+      <div style="font-size:10.5px;color:var(--muted);margin:-6px 0 10px;">Estos dos precios son la base compartida por todo el equipo (se guardan solos en la nube). No son por presupuesto.</div>
       <div class="field"><label>¿Qué mostrar en el presupuesto?</label>
         <select id="f-modo-precio" style="width:100%; padding:8px 9px; font-size:13px; border:1px solid var(--border); border-radius:6px;">
           <option value="sin">Solo SIN instalación</option>
@@ -74,14 +74,6 @@ const CALCULATOR_MARKUP = `
       <div id="opt-list"></div>
       <button class="btn-add" id="btn-add-opt">+ Agregar opcional</button>
       <div class="save-flash" id="save-flash"></div>
-
-      <div class="section-label">Catálogo</div>
-      <div class="action-row">
-        <button class="btn-secondary" id="btn-export-catalog" style="margin-top:0;" title="Descarga precios, textos y fotos en un archivo para llevar a otra compu">⬇️ Exportar</button>
-        <button class="btn-secondary" id="btn-import-catalog" style="margin-top:0;" title="Carga un archivo exportado desde otra compu">⬆️ Importar</button>
-      </div>
-      <input type="file" id="import-catalog-input" accept="application/json" style="display:none;">
-      <button class="btn-secondary" id="btn-restore-catalog" title="Reemplaza precios, orden y fotos por el modelo estándar">🔄 Restaurar al modelo estándar</button>
     </div>
 
     <!-- FOTOS -->
