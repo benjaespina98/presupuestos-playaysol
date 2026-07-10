@@ -1313,24 +1313,23 @@ function docxOptCard(desc, priceTxt, fotosOp, imgBytesById){
 
 function docxHyperlinkLine(label, displayText, url){
   return new Paragraph({
-    alignment: AlignmentType.CENTER,
     spacing:{ after:40 },
     children:[
-      new TextRun({ text: label, size:18, color:DOCX_MUTED }),
-      new ExternalHyperlink({ link:url, children:[ new TextRun({ text:displayText, size:18, color:DOCX_MUTED, underline:{} }) ] })
+      new TextRun({ text: label, size:19, color:DOCX_NAVY }),
+      new ExternalHyperlink({ link:url, children:[ new TextRun({ text:displayText, size:19, color:DOCX_NAVY, underline:{} }) ] })
     ]
   });
 }
 
-// Cierre formal del documento: centrado, tipografía más chica y discreta que el
-// cuerpo (18=9pt vs los 20-22=10-11pt del resto), separado con aire de sobra y un
-// divisor sutil en gris (no la línea gruesa de color de marca que llevaba antes,
-// que competía con los títulos de sección en vez de leerse como cierre) — mismo
-// tratamiento visual que .footer-block en pantalla/PDF (ver -calc.css).
+// Pie de documento tradicional: alineado a la izquierda (no centrado), en el navy
+// de marca, tipografía discreta (19=9.5pt vs los 20-22 del cuerpo). Se conserva el
+// aire de sobra arriba y el divisor sutil para que no quede flotando pegado al
+// contenido, pero color y alineación vuelven al formato de pie clásico. Links en
+// navy subrayado para distinguirse del texto plano. Igual que .footer-block (CSS).
 function docxFooter(f, footerColor){
   const paras = [];
-  paras.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing:{before:280, after:80}, border:{ top:{color:"E1E7EC", space:10, style:BorderStyle.SINGLE, size:6} },
-    children:[ new TextRun({ text:f.empresa||'', bold:true, size:20, color:DOCX_NAVY, characterSpacing:10 }) ] }));
+  paras.push(new Paragraph({ spacing:{before:280, after:80}, border:{ top:{color:"E1E7EC", space:10, style:BorderStyle.SINGLE, size:6} },
+    children:[ new TextRun({ text:f.empresa||'', bold:true, size:21, color:DOCX_NAVY, characterSpacing:6 }) ] }));
   if(f.direccion){
     const mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('Playa y Sol S.A.S.') + '&query_place_id=ChIJd1F4COdCzJURn7QoGKCkKXA';
     paras.push(docxHyperlinkLine('Dirección: ', f.direccion, mapsUrl));
@@ -1340,7 +1339,7 @@ function docxFooter(f, footerColor){
   }
   if(f.contactoNombre || f.contactoCel){
     const txt = 'Contacto: ' + (f.contactoNombre||'') + (f.contactoCel ? ' - Cel. '+f.contactoCel : '');
-    paras.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing:{after:40}, children:[ new TextRun({ text:txt, size:18, color:DOCX_MUTED }) ] }));
+    paras.push(new Paragraph({ spacing:{after:40}, children:[ new TextRun({ text:txt, size:19, color:DOCX_NAVY }) ] }));
   }
   if(f.whatsapp){
     paras.push(docxHyperlinkLine('WhatsApp: ', f.whatsapp, 'https://wa.me/549'+f.whatsapp.replace(/\D/g,'')));
@@ -1354,11 +1353,11 @@ function docxFooter(f, footerColor){
   }
   if(f.facebook){
     paras.push(f.facebookUrl ? docxHyperlinkLine('Facebook: ', f.facebook, f.facebookUrl)
-      : new Paragraph({ alignment: AlignmentType.CENTER, children:[ new TextRun({ text:'Facebook: '+f.facebook, size:18, color:DOCX_MUTED }) ] }));
+      : new Paragraph({ children:[ new TextRun({ text:'Facebook: '+f.facebook, size:19, color:DOCX_NAVY }) ] }));
   }
   if(f.instagram){
     paras.push(f.instagramUrl ? docxHyperlinkLine('Instagram: ', f.instagram, f.instagramUrl)
-      : new Paragraph({ alignment: AlignmentType.CENTER, children:[ new TextRun({ text:'Instagram: '+f.instagram, size:18, color:DOCX_MUTED }) ] }));
+      : new Paragraph({ children:[ new TextRun({ text:'Instagram: '+f.instagram, size:19, color:DOCX_NAVY }) ] }));
   }
   return paras;
 }
@@ -1538,6 +1537,26 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   const actualizar = () => panel.style.setProperty('--action-bar-h', barra.offsetHeight + 'px');
   new ResizeObserver(actualizar).observe(barra);
   actualizar();
+})();
+
+/* ---------------- BOTTOM SHEET DE ACCIONES (mobile) ---------------- */
+// Abre/cierra la hoja inferior de acciones en mobile. Mismo patrón en las 5
+// calculadoras. No toca la lógica de ningún botón -- solo alterna la clase y
+// cierra la hoja al elegir una acción (para que quede visible el flash de
+// guardado / se vea la vista limpia). En desktop el trigger no existe (return).
+(function initActionSheet(){
+  const bar = document.querySelector('.action-bar');
+  const trigger = document.getElementById('btn-action-sheet');
+  const overlay = document.getElementById('action-overlay');
+  const row = document.getElementById('action-row');
+  if(!bar || !trigger || !row) return;
+  const cerrar = () => { bar.classList.remove('sheet-open'); trigger.setAttribute('aria-expanded','false'); };
+  trigger.addEventListener('click', () => {
+    const abierto = bar.classList.toggle('sheet-open');
+    trigger.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+  });
+  if(overlay) overlay.addEventListener('click', cerrar);
+  row.querySelectorAll('.btn-secondary').forEach(b => b.addEventListener('click', cerrar));
 })();
 
 /* ---------------- INIT ---------------- */

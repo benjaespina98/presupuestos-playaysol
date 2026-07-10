@@ -153,28 +153,30 @@ export function buildCalculatorHtml(): string {
 
 </div>
 
-<div class="btns-wrap">
+<button type="button" class="losetas-sheet-trigger" id="losetas-action-trigger" aria-expanded="false" aria-controls="btns-wrap">Acciones <span aria-hidden="true">&#9662;</span></button>
+<div class="btns-wrap" id="btns-wrap">
   <div class="btns-group">
     <div class="btns-label">Exportar</div>
     <div class="btns">
-      <button onclick="exportarInterno()">Descargar interno (con costos)</button>
-      <button class="client" onclick="exportarCliente()">Descargar para cliente (plano + medidas)</button>
-      <button class="secondary" onclick="imprimirVistaLimpia()">Imprimir / Guardar PDF</button>
+      <button onclick="exportarInterno()">&#128202; Imagen interna (con costos)</button>
+      <button class="client" onclick="exportarCliente()">&#128444;&#65039; Imagen para cliente</button>
+      <button class="secondary" onclick="imprimirVistaLimpia()">&#128424;&#65039; PDF para cliente</button>
     </div>
     <div class="helptext">
-      "Descargar para cliente" genera una imagen limpia solo con el plano a escala, la barra de escala gr&aacute;fica y las medidas &mdash; sin precios ni costos.
+      "Imagen para cliente" y "PDF para cliente" generan la vista limpia (plano a escala, barra de escala gr&aacute;fica y medidas &mdash; sin precios ni costos): la primera como imagen para mandar por chat, el segundo como archivo imprimible. "Imagen interna" es la vista con costos, solo para uso interno.
     </div>
   </div>
   <div class="btns-group">
     <div class="btns-label">Presupuesto</div>
     <div class="btns">
-      <button class="secondary" id="btnGuardarNube" onclick="guardarEnNubeClick()">Guardar en la nube</button>
-      <a class="secondary" href="/dashboard/historial?tipo=losetas">Historial</a>
-      <button class="secondary" onclick="resetAll()">Limpiar / empezar de cero</button>
+      <button class="secondary" id="btnGuardarNube" onclick="guardarEnNubeClick()">&#9729;&#65039; Guardar en la nube</button>
+      <a class="secondary" href="/dashboard/historial?tipo=losetas">&#128203; Historial</a>
+      <button class="secondary" onclick="resetAll()">&#128465;&#65039; Limpiar</button>
     </div>
     <div class="helptext" id="cloudMsg"></div>
   </div>
 </div>
+<div class="losetas-sheet-overlay" id="losetas-action-overlay"></div>
 
 <div id="client-capture">
   <div class="chdr">
