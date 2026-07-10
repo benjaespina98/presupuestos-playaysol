@@ -78,14 +78,6 @@ const CALCULATOR_MARKUP = `
       <div id="opt-list"></div>
       <button class="btn-add" id="btn-add-opt">+ Agregar tipo</button>
       <div class="save-flash" id="save-flash"></div>
-
-      <div class="section-label">Catálogo</div>
-      <div class="action-row">
-        <button class="btn-secondary" id="btn-export-catalog" style="margin-top:0;" title="Descarga precios, textos y fotos en un archivo para llevar a otra compu">⬇️ Exportar</button>
-        <button class="btn-secondary" id="btn-import-catalog" style="margin-top:0;" title="Carga un archivo exportado desde otra compu">⬆️ Importar</button>
-      </div>
-      <input type="file" id="import-catalog-input" accept="application/json" style="display:none;">
-      <button class="btn-secondary" id="btn-restore-catalog" title="Reemplaza precios, orden y fotos por el modelo estándar">🔄 Restaurar al modelo estándar</button>
     </div>
 
     <!-- FOTOS -->

@@ -39,7 +39,7 @@ function LoginForm() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
         <div className="mb-6 flex flex-col items-center text-center">
-          <Wordmark className="mb-2 text-xl" />
+          <Wordmark className="mb-2 h-10" />
           <p className="text-sm text-gray-500">Portal de presupuestos</p>
         </div>
 

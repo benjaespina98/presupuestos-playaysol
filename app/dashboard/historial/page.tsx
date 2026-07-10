@@ -3,10 +3,12 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { createClient } from "@/lib/supabase";
 import {
   listarTodosLosPresupuestos,
   eliminarPresupuesto,
   resumenPresupuesto,
+  nombreCreador,
   type Presupuesto,
   type TipoCalculadora,
 } from "@/lib/presupuestos";
@@ -60,9 +62,15 @@ function HistorialTabla() {
   const [busqueda, setBusqueda] = useState("");
   const [eliminandoId, setEliminandoId] = useState<string | null>(null);
   const [porEliminar, setPorEliminar] = useState<Presupuesto | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const usuarioParam = searchParams.get("usuario");
 
   useEffect(() => {
     let cancelado = false;
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (!cancelado) setUserId(data.user?.id ?? null);
+    });
     listarTodosLosPresupuestos()
       .then((data) => {
         if (!cancelado) setPresupuestos(data);
@@ -82,15 +90,32 @@ function HistorialTabla() {
     router.push(`/dashboard/historial${params.toString() ? `?${params}` : ""}`);
   }
 
+  function cambiarUsuario(usuario: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (usuario) params.set("usuario", usuario);
+    else params.delete("usuario");
+    router.push(`/dashboard/historial${params.toString() ? `?${params}` : ""}`);
+  }
+
+  const usuarios = useMemo(() => {
+    if (!presupuestos) return [];
+    const porId = new Map<string, string>();
+    for (const p of presupuestos) {
+      if (p.created_by) porId.set(p.created_by, nombreCreador(p.creador));
+    }
+    return Array.from(porId.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [presupuestos]);
+
   const presupuestosFiltrados = useMemo(() => {
     if (!presupuestos) return null;
     const q = busqueda.trim().toLowerCase();
     return presupuestos.filter((p) => {
       if (tipoFiltro && p.tipo !== tipoFiltro) return false;
+      if (usuarioParam && p.created_by !== usuarioParam) return false;
       if (q && !p.cliente_nombre.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [presupuestos, busqueda, tipoFiltro]);
+  }, [presupuestos, busqueda, tipoFiltro, usuarioParam]);
 
   async function confirmarEliminar() {
     if (!porEliminar) return;
@@ -128,6 +153,19 @@ function HistorialTabla() {
           ))}
         </select>
 
+        <select
+          value={usuarioParam ?? ""}
+          onChange={(e) => cambiarUsuario(e.target.value)}
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#1B3A5C] focus:outline-none sm:w-auto"
+        >
+          <option value="">Todos los usuarios</option>
+          {usuarios.map(([id, nombre]) => (
+            <option key={id} value={id}>
+              {nombre}
+            </option>
+          ))}
+        </select>
+
         <div className="relative w-full sm:max-w-sm">
           <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
@@ -150,7 +188,7 @@ function HistorialTabla() {
 
       {presupuestosFiltrados && presupuestosFiltrados.length === 0 && (
         <p className="text-sm text-gray-500">
-          {busqueda || tipoFiltro
+          {busqueda || tipoFiltro || usuarioParam
             ? "Ningún presupuesto coincide con el filtro."
             : "Todavía no hay presupuestos guardados en la nube."}
         </p>
@@ -166,49 +204,58 @@ function HistorialTabla() {
                   <th className="px-4 py-3 font-medium">Tipo</th>
                   <th className="px-4 py-3 font-medium">Cliente</th>
                   <th className="px-4 py-3 font-medium">Detalle</th>
+                  <th className="px-4 py-3 font-medium">Creado por</th>
                   <th className="px-4 py-3 font-medium">Fecha</th>
                   <th className="px-4 py-3 font-medium"></th>
                 </tr>
               </thead>
               <tbody>
-                {presupuestosFiltrados.map((p) => (
-                  <tr key={p.id} className="border-b border-gray-100 last:border-0">
-                    <td className="px-4 py-3 text-gray-700">{TITULOS[p.tipo]}</td>
-                    <td className="px-4 py-3 text-gray-900">{p.cliente_nombre}</td>
-                    <td className="px-4 py-3 text-gray-700">
-                      {resumenPresupuesto(p.tipo, p.datos)}
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">{formatFecha(p.created_at)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <Link
-                          href={`/dashboard/${p.tipo}?id=${p.id}`}
-                          title="Editar"
-                          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
-                        >
-                          <IconEdit className="h-4 w-4" />
-                          Editar
-                        </Link>
-                        <Link
-                          href={`/dashboard/${p.tipo}?duplicar=${p.id}`}
-                          title="Duplicar"
-                          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
-                        >
-                          <IconCopy className="h-4 w-4" />
-                          Duplicar
-                        </Link>
-                        <button
-                          onClick={() => setPorEliminar(p)}
-                          title="Eliminar"
-                          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
-                        >
-                          <IconTrash className="h-4 w-4" />
-                          Eliminar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {presupuestosFiltrados.map((p) => {
+                  const esDueño = !!userId && p.created_by === userId;
+                  return (
+                    <tr key={p.id} className="border-b border-gray-100 last:border-0">
+                      <td className="px-4 py-3 text-gray-700">{TITULOS[p.tipo]}</td>
+                      <td className="px-4 py-3 text-gray-900">{p.cliente_nombre}</td>
+                      <td className="px-4 py-3 text-gray-700">
+                        {resumenPresupuesto(p.tipo, p.datos)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">{nombreCreador(p.creador)}</td>
+                      <td className="px-4 py-3 text-gray-700">{formatFecha(p.created_at)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          {esDueño && (
+                            <Link
+                              href={`/dashboard/${p.tipo}?id=${p.id}`}
+                              title="Editar"
+                              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                            >
+                              <IconEdit className="h-4 w-4" />
+                              Editar
+                            </Link>
+                          )}
+                          <Link
+                            href={`/dashboard/${p.tipo}?duplicar=${p.id}`}
+                            title="Duplicar"
+                            className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                          >
+                            <IconCopy className="h-4 w-4" />
+                            Duplicar
+                          </Link>
+                          {esDueño && (
+                            <button
+                              onClick={() => setPorEliminar(p)}
+                              title="Eliminar"
+                              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+                            >
+                              <IconTrash className="h-4 w-4" />
+                              Eliminar
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -218,6 +265,7 @@ function HistorialTabla() {
           <div className="flex flex-col gap-3 sm:hidden">
             {presupuestosFiltrados.map((p) => {
               const detalle = resumenPresupuesto(p.tipo, p.datos);
+              const esDueño = !!userId && p.created_by === userId;
               return (
                 <div
                   key={p.id}
@@ -230,33 +278,42 @@ function HistorialTabla() {
                         {TITULOS[p.tipo]}
                         {detalle ? ` · ${detalle}` : ""}
                       </p>
+                      <p className="text-xs text-gray-400">{nombreCreador(p.creador)}</p>
                     </div>
                     <span className="shrink-0 text-xs text-gray-400">
                       {formatFecha(p.created_at)}
                     </span>
                   </div>
                   <div className="mt-3 flex gap-2 border-t border-gray-100 pt-3">
-                    <Link
-                      href={`/dashboard/${p.tipo}?id=${p.id}`}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-[#1B3A5C] px-3 py-2 text-sm font-medium text-white"
-                    >
-                      <IconEdit className="h-4 w-4" />
-                      Editar
-                    </Link>
+                    {esDueño && (
+                      <Link
+                        href={`/dashboard/${p.tipo}?id=${p.id}`}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-[#1B3A5C] px-3 py-2 text-sm font-medium text-white"
+                      >
+                        <IconEdit className="h-4 w-4" />
+                        Editar
+                      </Link>
+                    )}
                     <Link
                       href={`/dashboard/${p.tipo}?duplicar=${p.id}`}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-[#1B3A5C] px-3 py-2 text-sm font-medium text-[#1B3A5C]"
+                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium ${
+                        esDueño
+                          ? "border-[#1B3A5C] text-[#1B3A5C]"
+                          : "bg-[#1B3A5C] text-white"
+                      }`}
                     >
                       <IconCopy className="h-4 w-4" />
                       Duplicar
                     </Link>
-                    <button
-                      onClick={() => setPorEliminar(p)}
-                      title="Eliminar"
-                      className="flex items-center justify-center rounded-md border border-red-200 px-3 py-2 text-red-600"
-                    >
-                      <IconTrash className="h-4 w-4" />
-                    </button>
+                    {esDueño && (
+                      <button
+                        onClick={() => setPorEliminar(p)}
+                        title="Eliminar"
+                        className="flex items-center justify-center rounded-md border border-red-200 px-3 py-2 text-red-600"
+                      >
+                        <IconTrash className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               );

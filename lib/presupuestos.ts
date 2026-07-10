@@ -7,6 +7,12 @@ export type TipoCalculadora =
   | "losetas"
   | "revestimientos";
 
+export interface Perfil {
+  id: string;
+  email: string | null;
+  nombre: string | null;
+}
+
 export interface Presupuesto {
   id: string;
   tipo: TipoCalculadora;
@@ -14,6 +20,11 @@ export interface Presupuesto {
   datos: unknown;
   created_by: string | null;
   created_at: string;
+  creador?: Perfil | null;
+}
+
+export function nombreCreador(creador: Perfil | null | undefined): string {
+  return creador?.nombre || creador?.email || "—";
 }
 
 export async function guardarPresupuesto(
@@ -48,7 +59,11 @@ export async function listarPresupuestos(tipo: TipoCalculadora) {
   return data as Presupuesto[];
 }
 
-// Sin filtro de tipo, para el historial centralizado.
+// Sin filtro de tipo, para el historial centralizado. Trae además el perfil
+// de quien creó cada presupuesto (nombre para mostrar + filtrar por usuario).
+// Se pide por separado en vez de con un embed de PostgREST porque
+// `presupuestos.created_by` referencia auth.users, no perfiles directamente
+// — no hay una relación declarada entre las tablas que el embed pueda usar.
 export async function listarTodosLosPresupuestos() {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -57,7 +72,25 @@ export async function listarTodosLosPresupuestos() {
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return data as Presupuesto[];
+  const presupuestos = data as Presupuesto[];
+
+  const ids = Array.from(
+    new Set(presupuestos.map((p) => p.created_by).filter((id): id is string => !!id))
+  );
+  if (ids.length === 0) return presupuestos;
+
+  const { data: perfiles, error: perfilesError } = await supabase
+    .from("perfiles")
+    .select("id, email, nombre")
+    .in("id", ids);
+
+  if (perfilesError) throw perfilesError;
+
+  const porId = new Map((perfiles as Perfil[]).map((p) => [p.id, p]));
+  return presupuestos.map((p) => ({
+    ...p,
+    creador: p.created_by ? porId.get(p.created_by) ?? null : null,
+  }));
 }
 
 // Dato identificador clave para reconocer un presupuesto en el historial sin abrirlo,
