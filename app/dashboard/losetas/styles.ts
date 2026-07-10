@@ -137,8 +137,20 @@ export const CALCULATOR_STYLES = `
   .pys-calc { padding: 10px; }
   .pys-calc .wrap { padding: 14px; border-radius: 10px; }
   .pys-calc .field-section { padding: 14px 14px 16px; }
-  .pys-calc .plano-container { padding: 10px; }
-  .pys-calc .row, .pys-calc .row3, .pys-calc .row4 { grid-template-columns: 1fr 1fr; gap: 10px; }
+  /* El plano tiene un viewBox fijo (680x420): con width:100% se achica
+     proporcionalmente hasta volver ilegibles las medidas dibujadas adentro.
+     En vez de forzarlo a entrar achicado, acá se mantiene a su tamaño real
+     (legible) y el contenedor scrollea horizontalmente — el usuario recorre
+     el plano con scroll/pellizco nativo en vez de entrecerrar los ojos. */
+  .pys-calc .plano-container { padding: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .pys-calc .plano-container svg { width: 680px; max-width: none; }
+  /* .row (2 campos) se mantiene en 2 columnas balanceadas; row3/row4 (3 y 4
+     campos) pasan directo a 1 columna acá — antes recién colapsaban por
+     debajo de 420px, y entre 420-600px (el rango de la mayoría de los
+     celulares) quedaban en 2 columnas con un campo suelto solo en la
+     última fila, desprolijo. */
+  .pys-calc .row { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .pys-calc .row3, .pys-calc .row4 { grid-template-columns: 1fr; gap: 10px; }
   .pys-calc .cards { grid-template-columns: 1fr; }
   .pys-calc .material-row { grid-template-columns: 1fr 80px auto; gap: 6px; }
   /* font-size 16px evita que iOS Safari haga zoom automático al enfocar el campo */
@@ -147,10 +159,6 @@ export const CALCULATOR_STYLES = `
   .pys-calc .btns { flex-direction: column; }
   .pys-calc button { width: 100%; min-height: 44px; padding: 12px 18px; }
   .pys-calc button.add-material { width: 100%; }
-}
-
-@media (max-width: 420px) {
-  .pys-calc .row, .pys-calc .row3, .pys-calc .row4 { grid-template-columns: 1fr; }
 }
 
 /* ---------- IMPRESIÓN / PDF ---------- */

@@ -34,30 +34,30 @@ const CALCULATOR_MARKUP = `
       <div class="field"><label>Domicilio</label><input type="text" id="f-domicilio"></div>
       <div class="row2">
         <div class="field"><label>Localidad</label><input type="text" id="f-localidad"></div>
-        <div class="field"><label>Teléfono</label><input type="text" id="f-tel"></div>
+        <div class="field"><label>Teléfono</label><input type="text" id="f-tel" inputmode="tel"></div>
       </div>
-      <div class="field"><label>Email</label><input type="text" id="f-email"></div>
+      <div class="field"><label>Email</label><input type="text" id="f-email" inputmode="email"></div>
       <div class="field"><label>Notas de la pileta (forma, detalles)</label>
         <textarea id="f-dimension" rows="4" placeholder="Ej: pileta rectangular, esquinas rectas, sin escalera romana."></textarea>
       </div>
-      <div class="field"><label>Validez (días)</label><input type="text" id="f-validez" style="max-width:90px"></div>
+      <div class="field"><label>Validez (días)</label><input type="text" id="f-validez" inputmode="decimal" style="max-width:90px"></div>
     </div>
 
     <!-- CÁLCULO -->
     <div class="tab-content" id="tab-items">
       <div class="hint">Cobertor de lona microperforada a medida, con ojales para pasar la soga. El precio por m² varía según la superficie total a cubrir (más de 15 m² o hasta 15 m²). Cargá el largo y ancho de la pileta.</div>
       <div class="row2">
-        <div class="field"><label>Largo pileta (m)</label><input type="text" id="f-largo"></div>
-        <div class="field"><label>Ancho pileta (m)</label><input type="text" id="f-ancho"></div>
+        <div class="field"><label>Largo pileta (m)</label><input type="text" id="f-largo" inputmode="decimal"></div>
+        <div class="field"><label>Ancho pileta (m)</label><input type="text" id="f-ancho" inputmode="decimal"></div>
       </div>
-      <div class="field"><label>Adicional (m²)</label><input type="text" id="f-adicional-m2"></div>
+      <div class="field"><label>Adicional (m²)</label><input type="text" id="f-adicional-m2" inputmode="decimal"></div>
       <div style="font-size:10.5px;color:var(--muted);margin:-6px 0 8px;">Para cubrir más allá del espejo de agua (ej: 0.5 m de borde alrededor de toda la pileta). Se suma directo a los m² a cubrir.</div>
-      <div class="field"><label>m² a cubrir (total)</label><input type="text" id="f-m2" readonly style="background:var(--bg);font-weight:700;"></div>
+      <div class="field"><label>m² a cubrir (total)</label><input type="text" id="f-m2" inputmode="decimal" readonly style="background:var(--bg);font-weight:700;"></div>
       <div class="row2">
-        <div class="field"><label>Precio /m² (≤15 m²)</label><input type="text" id="f-precio-menos15"></div>
-        <div class="field"><label>Precio /m² (&gt;15 m²)</label><input type="text" id="f-precio-mas15"></div>
+        <div class="field"><label>Precio /m² (≤15 m²)</label><input type="text" id="f-precio-menos15" inputmode="decimal"></div>
+        <div class="field"><label>Precio /m² (&gt;15 m²)</label><input type="text" id="f-precio-mas15" inputmode="decimal"></div>
       </div>
-      <div class="field"><label>Precio instalación (fijo)</label><input type="text" id="f-precio-instalacion"></div>
+      <div class="field"><label>Precio instalación (fijo)</label><input type="text" id="f-precio-instalacion" inputmode="decimal"></div>
       <div class="save-flash" id="precios-base-flash" style="margin-bottom:6px;"></div>
       <div style="font-size:10.5px;color:var(--muted);margin:-6px 0 10px;">Estos tres precios son la base compartida por todo el equipo (se guardan solos en la nube). No son por presupuesto.</div>
       <div class="field"><label>¿Qué mostrar en el presupuesto?</label>
@@ -98,14 +98,14 @@ const CALCULATOR_MARKUP = `
       <div class="field"><label>Empresa</label><input type="text" id="f-empresa"></div>
       <div class="field"><label>Dirección</label><input type="text" id="f-direccion"></div>
       <div class="row2">
-        <div class="field"><label>Tel. fijo</label><input type="text" id="f-telFijo"></div>
-        <div class="field"><label>WhatsApp</label><input type="text" id="f-whatsapp"></div>
+        <div class="field"><label>Tel. fijo</label><input type="text" id="f-telFijo" inputmode="tel"></div>
+        <div class="field"><label>WhatsApp</label><input type="text" id="f-whatsapp" inputmode="tel"></div>
       </div>
       <div class="row2">
         <div class="field"><label>Contacto</label><input type="text" id="f-contactoNombre"></div>
-        <div class="field"><label>Cel. contacto</label><input type="text" id="f-contactoCel"></div>
+        <div class="field"><label>Cel. contacto</label><input type="text" id="f-contactoCel" inputmode="tel"></div>
       </div>
-      <div class="field"><label>Email</label><input type="text" id="f-email2"></div>
+      <div class="field"><label>Email</label><input type="text" id="f-email2" inputmode="email"></div>
       <div class="field"><label>Web</label><input type="text" id="f-web"></div>
       <div class="row2">
         <div class="field"><label>Facebook</label><input type="text" id="f-facebook"></div>

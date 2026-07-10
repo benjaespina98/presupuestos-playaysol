@@ -675,7 +675,7 @@ function renderItemsList(){
     row.className = 'item-row';
     row.innerHTML = `
       <input type="text" value="${escAttr(it.desc)}" data-id="${it.id}" data-field="desc" class="item-desc">
-      <input type="text" value="${it.price||0}" data-id="${it.id}" data-field="price" class="item-price">
+      <input type="text" value="${it.price||0}" data-id="${it.id}" data-field="price" class="item-price" inputmode="decimal">
       <button class="btn-mini" data-id="${it.id}" title="Quitar">✕</button>`;
     wrap.appendChild(row);
   });
@@ -699,9 +699,9 @@ function renderOptList(){
     block.className = 'opt-block';
     block.innerHTML = `
       <div class="opt-row">
-        <input type="checkbox" ${op.included===true?'checked':''} data-id="${op.id}" class="opt-check" title="Tildado = se muestra el precio en este presupuesto. Destildado = se muestra igual, pero como 'No incluye'.">
+        <label class="opt-check-wrap"><input type="checkbox" ${op.included===true?'checked':''} data-id="${op.id}" class="opt-check" title="Tildado = se muestra el precio en este presupuesto. Destildado = se muestra igual, pero como 'No incluye'."></label>
         <textarea data-id="${op.id}" data-field="desc" class="opt-desc" data-valor-inicial="${escAttr(op.desc)}" rows="3">${escAttr(op.desc)}</textarea>
-        <input type="text" value="${op.price===null||op.price===undefined?'':op.price}" placeholder="Sin precio" data-id="${op.id}" data-field="price" class="opt-price" data-valor-inicial="${op.price===null||op.price===undefined?'':op.price}">
+        <input type="text" value="${op.price===null||op.price===undefined?'':op.price}" placeholder="Sin precio" data-id="${op.id}" data-field="price" class="opt-price" inputmode="decimal" data-valor-inicial="${op.price===null||op.price===undefined?'':op.price}">
         <button class="btn-mini" data-id="${op.id}" title="Quitar este opcional del catálogo">✕</button>
       </div>
       <div class="opt-fotos">
@@ -1519,27 +1519,35 @@ async function buildDocxSections(){
   return children;
 }
 
+// Arma el .docx en memoria (sin descargarlo) — lo comparten downloadWord() y
+// compartirWhatsApp(), así el documento que se descarga y el que se comparte
+// por WhatsApp son exactamente el mismo, generado una sola vez cada vez.
+async function buildWordBlob(){
+  const clienteParaArchivo = (state.cliente||'Sin nombre').replace(/[\\/:*?"<>|]+/g,'-').trim();
+  const fechaParaArchivo = (state.fecha||todayStr()).replace(/\//g,'-');
+  const nombreArchivo = `${clienteParaArchivo} - Piscina - ${fechaParaArchivo}`;
+
+  const children = await buildDocxSections();
+  const doc = new Document({
+    sections: [{
+      properties: {
+        page: { size: { width: convertMillimetersToTwip(210), height: convertMillimetersToTwip(297) },
+                margin: { top: convertMillimetersToTwip(20), bottom: convertMillimetersToTwip(20), left: convertMillimetersToTwip(25), right: convertMillimetersToTwip(25) } }
+      },
+      children
+    }]
+  });
+  const blob = await Packer.toBlob(doc);
+  return { blob, nombreArchivo };
+}
+
 async function downloadWord(){
   const btn = document.getElementById('btn-download-word');
   const originalText = btn.textContent;
   btn.textContent = 'Generando...';
   btn.disabled = true;
   try{
-    const clienteParaArchivo = (state.cliente||'Sin nombre').replace(/[\\/:*?"<>|]+/g,'-').trim();
-    const fechaParaArchivo = (state.fecha||todayStr()).replace(/\//g,'-');
-    const nombreArchivo = `${clienteParaArchivo} - Piscina - ${fechaParaArchivo}`;
-
-    const children = await buildDocxSections();
-    const doc = new Document({
-      sections: [{
-        properties: {
-          page: { size: { width: convertMillimetersToTwip(210), height: convertMillimetersToTwip(297) },
-                  margin: { top: convertMillimetersToTwip(20), bottom: convertMillimetersToTwip(20), left: convertMillimetersToTwip(25), right: convertMillimetersToTwip(25) } }
-        },
-        children
-      }]
-    });
-    const blob = await Packer.toBlob(doc);
+    const { blob, nombreArchivo } = await buildWordBlob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1557,6 +1565,105 @@ async function downloadWord(){
   }
 }
 document.getElementById('btn-download-word').addEventListener('click', downloadWord);
+
+// Espera a que una condición se cumpla, reintentando cada intervalMs — se usa acá
+// para esperar a que terminen de cargar html2canvas/jsPDF (llegan por <Script
+// strategy="afterInteractive"> en paralelo al resto de la página, así que pueden
+// no estar listos en el instante exacto en que el usuario toca "WhatsApp").
+function esperarCondicion(cond, timeoutMs=8000, intervalMs=150){
+  return new Promise((resolve, reject)=>{
+    const inicio = Date.now();
+    (function poll(){
+      if(cond()) return resolve();
+      if(Date.now() - inicio > timeoutMs) return reject(new Error('Timeout esperando las librerías de PDF (html2canvas/jsPDF)'));
+      setTimeout(poll, intervalMs);
+    })();
+  });
+}
+
+// Arma el PDF en memoria a partir de la MISMA hoja de vista previa (#sheet) que ve
+// el usuario — no hay forma de generar un PDF a partir de window.print() (el
+// diálogo nativo del navegador no expone el archivo resultante a JS de ninguna
+// forma), así que en vez de eso se captura #sheet como imagen con html2canvas y
+// se arma un PDF paginado a mano con jsPDF, recortando la imagen en franjas de
+// una hoja A4 cada una.
+async function buildPdfBlob(){
+  await esperarCondicion(() => typeof window.html2canvas === 'function' && window.jspdf && window.jspdf.jsPDF);
+
+  const sheet = document.getElementById('sheet');
+  const canvas = await window.html2canvas(sheet, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+  const imgData = canvas.toDataURL('image/jpeg', 0.92);
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageWidthMm = pdf.internal.pageSize.getWidth();
+  const pageHeightMm = pdf.internal.pageSize.getHeight();
+  const imgWidthMm = pageWidthMm;
+  const imgHeightMm = (canvas.height * imgWidthMm) / canvas.width;
+
+  let alturaRestanteMm = imgHeightMm;
+  let posicionMm = 0;
+  pdf.addImage(imgData, 'JPEG', 0, posicionMm, imgWidthMm, imgHeightMm);
+  alturaRestanteMm -= pageHeightMm;
+  while(alturaRestanteMm > 0){
+    posicionMm = alturaRestanteMm - imgHeightMm; // corre la imagen hacia arriba para mostrar la franja que sigue
+    pdf.addPage();
+    pdf.addImage(imgData, 'JPEG', 0, posicionMm, imgWidthMm, imgHeightMm);
+    alturaRestanteMm -= pageHeightMm;
+  }
+
+  const blob = pdf.output('blob');
+  const clienteParaArchivo = (state.cliente||'Sin nombre').replace(/[\\/:*?"<>|]+/g,'-').trim();
+  const fechaParaArchivo = (state.fecha||todayStr()).replace(/\//g,'-');
+  const nombreArchivo = `${clienteParaArchivo} - Piscina - ${fechaParaArchivo}`;
+  return { blob, nombreArchivo };
+}
+
+// Compartir por WhatsApp: en mobile con soporte de Web Share con archivos, abre
+// directo el selector nativo de "compartir" con el PDF ya adjunto (el usuario
+// elige WhatsApp ahí, cero pasos manuales). En desktop (o cualquier navegador
+// sin ese soporte) no hay forma de adjuntar un archivo a WhatsApp Web por API —
+// es una limitación real de WhatsApp, no del código — así que se descarga el
+// mismo PDF y se abre WhatsApp Web con el mensaje ya redactado, para que el
+// usuario solo tenga que arrastrar el archivo ya descargado al chat.
+async function compartirWhatsApp(){
+  const btn = document.getElementById('btn-whatsapp');
+  const originalText = btn.textContent;
+  btn.textContent = 'Generando...';
+  btn.disabled = true;
+  try{
+    const { blob, nombreArchivo } = await buildPdfBlob();
+    const mensaje = `Hola${state.cliente ? ' ' + state.cliente : ''}! Te paso el presupuesto de piscina de Playa y Sol.`;
+
+    let file = null;
+    try{ file = new File([blob], `${nombreArchivo}.pdf`, { type: 'application/pdf' }); }catch(e){ file = null; }
+    const puedeCompartirArchivo = !!(file && navigator.canShare && navigator.share && navigator.canShare({ files: [file] }));
+
+    if(puedeCompartirArchivo){
+      await navigator.share({ files: [file], title: nombreArchivo, text: mensaje });
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${nombreArchivo}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url), 2000);
+
+      const textoWa = encodeURIComponent(mensaje + ' Te adjunto el archivo que se acaba de descargar.');
+      window.open(`https://wa.me/?text=${textoWa}`, '_blank');
+    }
+  }catch(e){
+    if(e && e.name === 'AbortError') return; // el usuario cerró el selector de compartir
+    console.error('No se pudo compartir por WhatsApp', e);
+    alert('Hubo un problema generando el PDF para compartir. Revisá la consola (F12) para más detalle.');
+  }finally{
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
+}
+document.getElementById('btn-whatsapp').addEventListener('click', compartirWhatsApp);
 
 /* ---------------- TABS ---------------- */
 document.querySelectorAll('.tab-btn').forEach(btn=>{

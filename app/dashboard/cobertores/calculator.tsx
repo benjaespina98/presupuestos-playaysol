@@ -31,6 +31,7 @@ declare global {
 
 export default function CobertoresCalculator() {
   const [docxReady, setDocxReady] = useState(false);
+  const [cssReady, setCssReady] = useState(false);
   const searchParams = useSearchParams();
   const presupuestoId = searchParams.get("id");
   const duplicarId = searchParams.get("duplicar");
@@ -77,13 +78,23 @@ export default function CobertoresCalculator() {
 
   return (
     <div>
-      <link rel="stylesheet" href="/cobertores-calc.css" />
+      <link
+        rel="stylesheet"
+        href="/cobertores-calc.css"
+        onLoad={() => setCssReady(true)}
+      />
       <Script
         src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"
         strategy="afterInteractive"
-        onLoad={() => setDocxReady(true)}
+        onReady={() => setDocxReady(true)}
       />
-      <div dangerouslySetInnerHTML={{ __html: buildCalculatorHtml() }} />
+      {/* Oculto hasta que el CSS legacy termine de cargar: evita el FOUC al
+          navegar entre calculadoras (el <link> se pide de cero en cada
+          montaje). */}
+      <div
+        style={{ visibility: cssReady ? "visible" : "hidden" }}
+        dangerouslySetInnerHTML={{ __html: buildCalculatorHtml() }}
+      />
     </div>
   );
 }

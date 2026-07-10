@@ -34,18 +34,18 @@ const CALCULATOR_MARKUP = `
       <div class="field"><label>Domicilio</label><input type="text" id="f-domicilio"></div>
       <div class="row2">
         <div class="field"><label>Localidad</label><input type="text" id="f-localidad"></div>
-        <div class="field"><label>Teléfono</label><input type="text" id="f-tel"></div>
+        <div class="field"><label>Teléfono</label><input type="text" id="f-tel" inputmode="tel"></div>
       </div>
-      <div class="field"><label>Email</label><input type="text" id="f-email"></div>
+      <div class="field"><label>Email</label><input type="text" id="f-email" inputmode="email"></div>
       <div class="field"><label>Dimensión piscina</label>
         <textarea id="f-dimension" rows="5"></textarea>
       </div>
-      <div class="field"><label>Validez (días)</label><input type="text" id="f-validez" style="max-width:90px"></div>
+      <div class="field"><label>Validez (días)</label><input type="text" id="f-validez" inputmode="decimal" style="max-width:90px"></div>
     </div>
 
     <!-- ITEMS INCLUIDOS -->
     <div class="tab-content" id="tab-items">
-      <div class="field"><label>Subtotal construcción piscina</label><input type="text" id="f-subtotal" placeholder="0"></div>
+      <div class="field"><label>Subtotal construcción piscina</label><input type="text" id="f-subtotal" inputmode="decimal" placeholder="0"></div>
       <div class="section-label" title="Solo si algo va sumado al total; lo demás va en Opcionales">Adicionales incluidos en el TOTAL</div>
       <div id="items-list"></div>
       <button class="btn-add" id="btn-add-item">+ Agregar ítem</button>
@@ -77,14 +77,14 @@ const CALCULATOR_MARKUP = `
       <div class="field"><label>Empresa</label><input type="text" id="f-empresa"></div>
       <div class="field"><label>Dirección</label><input type="text" id="f-direccion"></div>
       <div class="row2">
-        <div class="field"><label>Tel. fijo</label><input type="text" id="f-telFijo"></div>
-        <div class="field"><label>WhatsApp</label><input type="text" id="f-whatsapp"></div>
+        <div class="field"><label>Tel. fijo</label><input type="text" id="f-telFijo" inputmode="tel"></div>
+        <div class="field"><label>WhatsApp</label><input type="text" id="f-whatsapp" inputmode="tel"></div>
       </div>
       <div class="row2">
         <div class="field"><label>Contacto</label><input type="text" id="f-contactoNombre"></div>
-        <div class="field"><label>Cel. contacto</label><input type="text" id="f-contactoCel"></div>
+        <div class="field"><label>Cel. contacto</label><input type="text" id="f-contactoCel" inputmode="tel"></div>
       </div>
-      <div class="field"><label>Email</label><input type="text" id="f-email2"></div>
+      <div class="field"><label>Email</label><input type="text" id="f-email2" inputmode="email"></div>
       <div class="field"><label>Web</label><input type="text" id="f-web"></div>
       <div class="row2">
         <div class="field"><label>Facebook</label><input type="text" id="f-facebook"></div>
@@ -101,6 +101,7 @@ const CALCULATOR_MARKUP = `
     <div class="action-row">
       <button class="btn-secondary" onclick="window.print()" style="margin-top:0;" title='Antes de imprimir: en "Más ajustes" desmarcá "Encabezados y pies" y tildá "Gráficos de fondo"'>🖨️ PDF</button>
       <button class="btn-secondary" id="btn-download-word" style="margin-top:0;">📄 Word</button>
+      <button class="btn-secondary" id="btn-whatsapp" style="margin-top:0;" title="En el celular abre el selector de compartir con el archivo ya adjunto. En la compu descarga el Word y abre WhatsApp Web con el mensaje listo.">💬 WhatsApp</button>
       <button class="btn-secondary" id="btn-save-cloud" onclick="guardarPresupuestoNube()" style="margin-top:0;">☁️ Guardar en la nube</button>
       <a class="btn-secondary" href="/dashboard/historial?tipo=piscinas" style="margin-top:0;text-decoration:none;text-align:center;">📋 Historial</a>
     </div>
