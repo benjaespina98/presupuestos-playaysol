@@ -73,12 +73,23 @@ for (const { tipo, nombreEsperado } of CALCULADORAS) {
     await login(page);
     await page.goto(`/dashboard/${tipo}`);
 
-    // Esperar a que el HTML legacy de la calculadora termine de montarse (el
-    // form-panel queda oculto con visibility:hidden hasta que carga el CSS).
-    await expect(page.locator(".form-panel")).toBeVisible({ timeout: 15_000 });
-    // Además del CSS, hay que esperar a que el script principal (-calc.js)
-    // termine de correr — recién ahí existen los botones de acción.
-    await expect(page.locator("#btn-download-word")).toBeVisible({ timeout: 15_000 });
+    if (tipo !== "losetas") {
+      // Esperar a que el HTML legacy de la calculadora termine de montarse (el
+      // form-panel queda oculto con visibility:hidden hasta que carga el CSS).
+      await expect(page.locator(".form-panel")).toBeVisible({ timeout: 15_000 });
+    } else {
+      // Losetas no usa .form-panel ni el patrón de ocultar-hasta-que-cargue-CSS de
+      // las otras 4 (no hay <link> externo, los estilos van inline vía <style>) —
+      // su contenedor real es #capture-area (ver app/dashboard/losetas/markup.ts).
+      await expect(page.locator("#capture-area")).toBeVisible({ timeout: 15_000 });
+    }
+    // Además del CSS/mount, hay que esperar a que el script principal termine de
+    // correr — recién ahí existen los botones de acción.
+    const botonListo =
+      tipo !== "losetas"
+        ? page.locator("#btn-download-word")
+        : page.locator('button:has-text("Descargar para cliente")');
+    await expect(botonListo).toBeVisible({ timeout: 15_000 });
 
     // --- Punto 1: sin botón de WhatsApp remanente ---
     await expect(page.locator("#btn-whatsapp")).toHaveCount(0);
@@ -91,6 +102,15 @@ for (const { tipo, nombreEsperado } of CALCULADORAS) {
     // Cargar un nombre de cliente con tilde y espacios para probar el sanitizado
     // del punto 4 (naming) en un caso real, no solo el default "Sin_nombre".
     if (tipo !== "losetas") {
+      // El botón visible NO garantiza que -calc.js ya terminó su init asincrónico
+      // (loadCatalog/loadFotosPorOpcional/seedFotosGeneralesDefaults contra Supabase),
+      // que recién al final llama renderForm() y pisa #f-cliente con el state actual.
+      // Si se llena el campo antes de eso, renderForm() sobreescribe lo tipeado y el
+      // archivo sale con "Sin_nombre" — se vio pasar en cercos por timing. #f-fecha
+      // arranca vacío en el markup y solo se puebla en renderForm(), así que esperar
+      // a que tenga valor es la señal real de que el init terminó.
+      await expect(page.locator("#f-fecha")).not.toHaveValue("", { timeout: 15_000 });
+
       const datosTab = page.locator('.tab-btn[data-tab="datos"]');
       if (await datosTab.count()) await datosTab.click();
       const clienteInput = page.locator("#f-cliente");

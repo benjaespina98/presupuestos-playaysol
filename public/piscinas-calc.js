@@ -1466,6 +1466,25 @@ async function downloadWord(){
 }
 document.getElementById('btn-download-word').addEventListener('click', downloadWord);
 
+/* ---------------- PDF (window.print) ---------------- */
+// El navegador no deja forzar el nombre de archivo del PDF generado por window.print()
+// ("Guardar como PDF") -- solo puede sugerirlo, y lo hace a partir del <title> del
+// documento en el momento de imprimir. Lo cambiamos acá al mismo formato que ya usa
+// el Word (armarNombreArchivo) y lo restauramos después, para no dejar el título
+// pisado si el usuario navega sin imprimir. El usuario todavía puede editar el
+// nombre a mano en el diálogo antes de confirmar -- eso no se puede evitar, solo
+// se asegura que el nombre sugerido por defecto sea el correcto.
+function imprimirConNombre(){
+  const tituloOriginal = document.title;
+  document.title = window.armarNombreArchivo('Piscina', state.cliente, state.fecha);
+  const restaurarTitulo = () => {
+    document.title = tituloOriginal;
+    window.removeEventListener('afterprint', restaurarTitulo);
+  };
+  window.addEventListener('afterprint', restaurarTitulo);
+  window.print();
+}
+
 /* ---------------- TABS ---------------- */
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -1475,6 +1494,23 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
   });
 });
+
+/* ---------------- ACTION BAR: espacio reservado en mobile ---------------- */
+// En mobile (<=900px, ver -calc.css) el form-panel deja de tener su propio
+// scroll interno y pasa a scrollear con la página entera -- ahí el sticky de
+// .action-bar se ancla al viewport en vez de al form-panel, y sin espacio de
+// sobra al final el último ítem de una lista larga (ej. Opcionales) queda
+// tapado sin forma de revelarlo con scroll normal. Reservamos ese espacio con
+// un padding-bottom == altura REAL de la barra (medida, no estimada, porque
+// varía según cuántos botones entran por fila y el wrap de texto).
+(function ajustarEspacioBarraAcciones(){
+  const barra = document.querySelector('.action-bar');
+  const panel = document.querySelector('.form-panel');
+  if(!barra || !panel) return;
+  const actualizar = () => panel.style.setProperty('--action-bar-h', barra.offsetHeight + 'px');
+  new ResizeObserver(actualizar).observe(barra);
+  actualizar();
+})();
 
 /* ---------------- INIT ---------------- */
 // Se guarda la promesa (en vez de dejar la IIFE anónima) para que cargarPresupuestoExterno

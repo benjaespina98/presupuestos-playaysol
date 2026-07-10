@@ -304,6 +304,18 @@ function imprimirVistaLimpia(){
   const s = getState();
   document.getElementById('clientRef').textContent = s.nombre || '';
   drawSvg('svgClient', 1000, 650, s, true);
+  // El navegador no deja forzar el nombre de archivo del PDF generado por
+  // window.print() ("Guardar como PDF") -- solo puede sugerirlo, y lo hace a
+  // partir del <title> del documento en el momento de imprimir. Lo cambiamos acá
+  // al mismo formato que ya usa el Word/PNG (armarNombreArchivo) y lo restauramos
+  // después, para no dejar el título pisado si el usuario navega sin imprimir.
+  const tituloOriginal = document.title;
+  document.title = window.armarNombreArchivo('Loseta', s.nombre, null);
+  const restaurarTitulo = () => {
+    document.title = tituloOriginal;
+    window.removeEventListener('afterprint', restaurarTitulo);
+  };
+  window.addEventListener('afterprint', restaurarTitulo);
   window.print();
 }
 
@@ -397,4 +409,20 @@ async function guardarEnNubeClick(){
     if(btn){ btn.disabled = false; }
   }
 }
+
+/* ---------------- BARRA DE ACCIONES: espacio reservado ---------------- */
+// .btns-wrap es fixed al fondo del viewport (ver styles.ts) -- sin este espacio, el
+// último field-section de la página queda tapado por la barra sin forma de revelarlo
+// con scroll normal (mismo bug que se corrigió en mobile para piscinas/cercos/
+// cobertores/revestimientos). Reservamos ese espacio con un padding-bottom == altura
+// REAL de la barra (medida, no estimada, porque varía según cuántos botones entran
+// por fila y el wrap de texto en pantallas angostas).
+(function ajustarEspacioBarraAcciones(){
+  const barra = document.querySelector('.btns-wrap');
+  const pagina = document.querySelector('.pys-calc');
+  if(!barra || !pagina) return;
+  const actualizar = () => pagina.style.setProperty('--action-bar-h', barra.offsetHeight + 'px');
+  new ResizeObserver(actualizar).observe(barra);
+  actualizar();
+})();
 `;

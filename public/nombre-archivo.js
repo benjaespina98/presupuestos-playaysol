@@ -12,10 +12,11 @@ function armarNombreArchivo(tipo, cliente, fechaStr) {
 
   // Saca tildes, cualquier caracter que rompa un nombre de archivo en Windows/Mac
   // (barra invertida, barra, dos puntos, asterisco, signo de pregunta, comillas,
-  // los signos < >, y la barra vertical), y colapsa espacios en un solo guion bajo.
+  // los signos < >, y la barra vertical), la coma del formato "Apellido, Nombre"
+  // del campo cliente, y colapsa espacios en un solo guion bajo.
   function limpiar(s) {
     return sinTildes(s)
-      .replace(/[\\/:*?"<>|]/g, '')
+      .replace(/[\\/:*?"<>|,]/g, '')
       .trim()
       .replace(/\s+/g, '_');
   }
