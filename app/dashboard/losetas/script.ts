@@ -1,4 +1,11 @@
 export const CALCULATOR_SCRIPT = `
+// Envuelto en IIFE para que las declaraciones top-level (let materials, funciones)
+// NO queden en el scope global: al navegar entre calculadoras (SPA, sin recargar) el
+// realm es el mismo, y un segundo script que redeclare un let/const en el scope global
+// tira "Identifier already declared" y muere entero. Las funciones que usan los
+// handlers inline del markup (onclick/oninput/onblur) y las que llama React se exponen
+// explícitamente en window al final.
+(function(){
 function fmt(n){ return new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(n); }
 function money(n){ return new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(n); }
 
@@ -296,7 +303,7 @@ function exportarCliente(){
 }
 
 // Vista limpia para imprimir/exportar a PDF: reusa el mismo contenedor #client-capture
-// que ya arma "Descargar para cliente" (plano + medidas, sin precios), en vez de crear
+// que ya arma "Imagen para cliente" (plano + medidas, sin precios), en vez de crear
 // un tercer contenedor — mismo patrón que el resto de las calculadoras (form editable
 // oculto, solo se ve la "hoja" limpia). Los estilos de impresión que sacan #client-capture
 // de su posición off-screen y ocultan .wrap están en styles.ts (@media print).
@@ -418,18 +425,18 @@ async function guardarEnNubeClick(){
 }
 
 /* ---------------- BARRA DE ACCIONES: espacio reservado ---------------- */
-// .btns-wrap es fixed al fondo del viewport (ver styles.ts) -- sin este espacio, el
-// último field-section de la página queda tapado por la barra sin forma de revelarlo
-// con scroll normal (mismo bug que se corrigió en mobile para piscinas/cercos/
-// cobertores/revestimientos). Reservamos ese espacio con un padding-bottom == altura
-// REAL de la barra (medida, no estimada, porque varía según cuántos botones entran
-// por fila y el wrap de texto en pantallas angostas).
+// En desktop la barra (.btns-wrap) va en flujo normal, así que no tapa nada y no hace
+// falta reservar espacio. En mobile lo que flota fijo al fondo es el disparador
+// "Acciones ▾" (.losetas-sheet-trigger): reservamos un padding-bottom == su altura
+// REAL para que no tape el último field-section. Cuando el disparador está oculto
+// (desktop, display:none) su offsetHeight es 0 y el padding-bottom queda solo en 24px.
 (function ajustarEspacioBarraAcciones(){
-  const barra = document.querySelector('.btns-wrap');
+  const disparador = document.querySelector('.losetas-sheet-trigger');
   const pagina = document.querySelector('.pys-calc');
-  if(!barra || !pagina) return;
-  const actualizar = () => pagina.style.setProperty('--action-bar-h', barra.offsetHeight + 'px');
-  new ResizeObserver(actualizar).observe(barra);
+  if(!pagina) return;
+  const actualizar = () => pagina.style.setProperty('--action-bar-h', (disparador ? disparador.offsetHeight : 0) + 'px');
+  if(disparador) new ResizeObserver(actualizar).observe(disparador);
+  window.addEventListener('resize', actualizar);
   actualizar();
 })();
 
@@ -455,5 +462,21 @@ async function guardarEnNubeClick(){
     if(el.id === 'btnGuardarNube') return;
     el.addEventListener('click', cerrar);
   });
+})();
+
+// Handlers inline del markup (onclick/oninput/onblur) + funciones que llama React:
+// tienen que vivir en window porque los atributos inline se evalúan en scope global,
+// fuera de esta IIFE.
+window.toggleSubfield = toggleSubfield;
+window.addMaterial = addMaterial;
+window.removeMaterial = removeMaterial;
+window.updateMaterial = updateMaterial;
+window.confirmarPrecioMaterial = confirmarPrecioMaterial;
+window.exportarInterno = exportarInterno;
+window.exportarCliente = exportarCliente;
+window.imprimirVistaLimpia = imprimirVistaLimpia;
+window.guardarEnNubeClick = guardarEnNubeClick;
+window.resetAll = resetAll;
+window.cargarPresupuestoExterno = cargarPresupuestoExterno;
 })();
 `;

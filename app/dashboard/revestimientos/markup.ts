@@ -11,16 +11,12 @@ const CALCULATOR_MARKUP = `
       </select>
     </div>
 
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="datos">Datos</button>
-      <button class="tab-btn" data-tab="items">Cálculo</button>
-      <button class="tab-btn" data-tab="opcionales">Tipos</button>
-      <button class="tab-btn" data-tab="fotos">Fotos</button>
-      <button class="tab-btn" data-tab="textos">Textos fijos</button>
-    </div>
+    <div class="accordion">
 
     <!-- DATOS -->
-    <div class="tab-content active" id="tab-datos">
+    <section class="acc-item open">
+    <button type="button" class="acc-head" data-acc="datos" aria-expanded="true">Datos<span class="acc-caret" aria-hidden="true">▾</span></button>
+    <div class="tab-content" id="tab-datos">
       <div class="field"><label>Fecha</label><input type="text" id="f-fecha"></div>
       <div class="field"><label>Señor/Sra</label><input type="text" id="f-cliente" placeholder="Apellido, Nombre"></div>
       <div class="field"><label>Domicilio</label><input type="text" id="f-domicilio"></div>
@@ -36,6 +32,10 @@ const CALCULATOR_MARKUP = `
     </div>
 
     <!-- CÁLCULO -->
+    </section>
+
+    <section class="acc-item open">
+    <button type="button" class="acc-head" data-acc="items" aria-expanded="true">Cálculo<span class="acc-caret" aria-hidden="true">▾</span></button>
     <div class="tab-content" id="tab-items">
       <div class="hint">Calculá los m² totales a revestir (fondo + paredes) según las medidas de la pileta. Fórmula: m² = (largo × ancho) + 2 × profundidad × (largo + ancho).</div>
       <div class="row2">
@@ -61,6 +61,10 @@ const CALCULATOR_MARKUP = `
     </div>
 
     <!-- OPCIONALES -->
+    </section>
+
+    <section class="acc-item open">
+    <button type="button" class="acc-head" data-acc="opcionales" aria-expanded="true">Tipos<span class="acc-caret" aria-hidden="true">▾</span></button>
     <div class="tab-content" id="tab-opcionales">
       <div class="hint">Tildá los tipos de revestimiento que van en este presupuesto (podés tildar más de uno, ej. interior + borde solar). El total de cada tipo se calcula multiplicando el precio /m² por el TOTAL m² de la pestaña Cálculo — salvo los ítems marcados "por obra" (precio fijo, no se multiplica).</div>
       <div style="display:flex; gap:8px; margin-bottom:10px;">
@@ -73,6 +77,10 @@ const CALCULATOR_MARKUP = `
     </div>
 
     <!-- FOTOS -->
+    </section>
+
+    <section class="acc-item open">
+    <button type="button" class="acc-head" data-acc="fotos" aria-expanded="true">Fotos<span class="acc-caret" aria-hidden="true">▾</span></button>
     <div class="tab-content" id="tab-fotos">
       <div class="section-label" title="Fotos generales al final del documento. Para fotos de un ítem puntual, subilas en Opcionales">Fotos generales</div>
       <input type="file" id="foto-input" accept="image/*" multiple style="margin-bottom:10px; font-size:12px;">
@@ -80,6 +88,10 @@ const CALCULATOR_MARKUP = `
     </div>
 
     <!-- TEXTOS FIJOS -->
+    </section>
+
+    <section class="acc-item open">
+    <button type="button" class="acc-head" data-acc="textos" aria-expanded="true">Textos fijos<span class="acc-caret" aria-hidden="true">▾</span></button>
     <div class="tab-content" id="tab-textos">
       <div class="field"><label>Texto legal / técnico</label><textarea id="f-legal" rows="12"></textarea></div>
 
@@ -106,8 +118,12 @@ const CALCULATOR_MARKUP = `
       </div>
     </div>
 
+    </section>
+
+    </div><!-- /.accordion -->
+
     <div class="action-bar">
-      <button class="btn-add" id="btn-new-quote" style="width:100%; justify-content:center;">+ Nuevo presupuesto</button>
+      <button class="btn-add" id="btn-new-quote" style="width:100%; justify-content:center;">Limpiar formulario</button>
       <button type="button" class="action-trigger" id="btn-action-sheet" aria-expanded="false" aria-controls="action-row">Acciones <span aria-hidden="true">▾</span></button>
       <div class="action-row" id="action-row">
         <button class="btn-secondary" onclick="imprimirConNombre()" style="margin-top:0;" title='PDF — antes de imprimir: en "Más ajustes" desmarcá "Encabezados y pies" y tildá "Gráficos de fondo"'>🖨️<span class="btn-label"> PDF</span></button>

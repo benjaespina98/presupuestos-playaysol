@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Script from "next/script";
 import { buildCalculatorHtml } from "./markup";
+import { CalculatorSkeleton } from "@/components/CalculatorSkeleton";
 import {
   guardarPresupuesto,
   listarPresupuestos,
@@ -106,10 +107,22 @@ export default function PiscinasCalculator() {
           del formulario aparece un instante sin estilos (FOUC) en cada
           navegación entre calculadoras, porque el <link> se vuelve a pedir
           de cero cada vez que este componente se monta. */}
-      <div
-        style={{ visibility: cssReady ? "visible" : "hidden" }}
-        dangerouslySetInnerHTML={{ __html: buildCalculatorHtml() }}
-      />
+      <div style={{ position: "relative" }}>
+        {/* Mientras el CSS legacy no cargó, el form quedaría en blanco (visibility
+            hidden). Mostramos el skeleton por encima para que la transición sea
+            continua desde el CalculatorSkeleton del dynamic(loading), sin parpadeo a
+            blanco. El div del markup SIEMPRE está montado (el script legacy consulta
+            sus #ids); solo se revela cuando el CSS está listo. */}
+        {!cssReady && (
+          <div style={{ position: "absolute", inset: 0, zIndex: 1 }}>
+            <CalculatorSkeleton />
+          </div>
+        )}
+        <div
+          style={{ visibility: cssReady ? "visible" : "hidden" }}
+          dangerouslySetInnerHTML={{ __html: buildCalculatorHtml() }}
+        />
+      </div>
     </div>
   );
 }

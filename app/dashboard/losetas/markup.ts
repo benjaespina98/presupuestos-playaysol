@@ -171,7 +171,7 @@ export function buildCalculatorHtml(): string {
     <div class="btns">
       <button class="secondary" id="btnGuardarNube" onclick="guardarEnNubeClick()">&#9729;&#65039; Guardar en la nube</button>
       <a class="secondary" href="/dashboard/historial?tipo=losetas">&#128203; Historial</a>
-      <button class="secondary" onclick="resetAll()">&#128465;&#65039; Limpiar</button>
+      <button class="secondary" onclick="resetAll()">&#128465;&#65039; Limpiar formulario</button>
     </div>
     <div class="helptext" id="cloudMsg"></div>
   </div>
