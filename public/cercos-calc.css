@@ -37,6 +37,10 @@
   }
   @media (max-width:900px){
     .app{grid-template-columns:1fr;}
+    /* font-size 16px en TODO el rango de una sola columna (no solo <600px): entre
+       600 y 900px (tablets, celulares grandes en horizontal) iOS igual hacía zoom al
+       enfocar un input porque la regla anti-zoom vivía solo en el bloque de 600px. */
+    .form-panel .field input, .form-panel .field textarea, .form-panel .quote-search, .form-panel select{font-size:16px;}
     /* En una columna, el form-panel no puede quedar con su propio scroll interno
        atrapado en 100vh — eso obligaba a scrollear "dentro de una cajita" para ver
        el formulario y aparte scrollear la página para llegar a la vista previa.
@@ -55,8 +59,8 @@
        Word, Guardar, Historial) vive en una hoja inferior que sube al tocar
        "Acciones", cada uno como fila de ícono + TEXTO COMPLETO legible. No se toca
        la lógica de ningún botón: son los mismos <button>/<a>, solo reubicados. */
-    .action-trigger{ display:flex; }
-    .action-row{
+    .action-bar .action-trigger{ display:flex; }
+    .action-bar .action-row{
       position:fixed;
       left:0; right:0; bottom:0;
       flex-direction:column;
@@ -91,7 +95,7 @@
       padding:0 16px;
     }
     .action-row .btn-label{ font-weight:600; }
-    .action-overlay{
+    .action-bar .action-overlay{
       display:block;
       position:fixed; inset:0;
       background:rgba(20,30,40,.42);
@@ -121,36 +125,45 @@
     margin:0 0 18px;
     line-height:1.4;
   }
-  .tabs{
+  /* ---------- ACORDEÓN ----------
+     Reemplaza las pestañas (una sección visible a la vez, que dejaba el panel casi
+     vacío en desktop). Ahora las secciones son plegables e independientes; arrancan
+     todas abiertas para aprovechar el alto de la pantalla y el usuario pliega las que
+     no usa. */
+  .accordion{margin-bottom:6px;}
+  .acc-item{
+    border:1px solid var(--border);
+    border-radius:8px;
+    margin-bottom:8px;
+    overflow:hidden;
+    background:var(--surface);
+  }
+  .acc-head{
+    width:100%;
     display:flex;
-    gap:4px;
-    margin-bottom:16px;
-    border-bottom:1px solid var(--border);
-  }
-  .tab-btn{
-    flex:1;
-    padding:8px 4px;
-    font-size:11.5px;
-    background:none;
+    align-items:center;
+    justify-content:space-between;
+    padding:11px 14px;
+    background:var(--primary-light);
     border:none;
-    border-bottom:2px solid transparent;
-    color:var(--muted);
-    cursor:pointer;
-    font-weight:600;
-    transition:color 180ms ease, border-bottom-color 180ms ease;
-  }
-  .tab-btn.active{
     color:var(--primary-dark);
-    border-bottom-color:var(--primary);
+    font-size:12.5px;
+    font-weight:700;
+    letter-spacing:.02em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:background 150ms ease;
   }
-  .tab-btn:active{color:var(--primary-dark);}
-  .tab-content{display:none;}
-  .tab-content.active{
+  .acc-head:hover{background:#D5E7EC;}
+  .acc-caret{font-size:11px; transition:transform 200ms ease;}
+  .acc-item:not(.open) .acc-caret{transform:rotate(-90deg);}
+  .tab-content{display:none; padding:14px;}
+  .acc-item.open > .tab-content{
     display:block;
     animation:tabFadeIn 180ms ease;
   }
   @keyframes tabFadeIn{
-    from{opacity:0; transform:translateY(4px);}
+    from{opacity:0; transform:translateY(-4px);}
     to{opacity:1; transform:translateY(0);}
   }
 
@@ -276,7 +289,8 @@
     cursor:pointer;
     margin-top:20px;
     box-sizing:border-box;
-    transition:background 150ms ease, transform 150ms ease;
+    transition:background 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+    box-shadow:0 2px 6px rgba(27,58,92,.18);
   }
   .btn-primary:hover{background:var(--primary-dark);}
   .btn-primary:active{background:var(--primary-dark); transform:scale(.98);}
@@ -580,7 +594,8 @@
     margin-top:8px;
     transition:background 150ms ease, transform 150ms ease;
   }
-  .action-trigger:active{ transform:scale(.98); background:var(--primary-dark); }
+  .action-trigger:hover{ background:var(--primary-dark); box-shadow:0 4px 12px rgba(27,58,92,.28); }
+  .action-trigger:active{ transform:scale(.98); background:var(--primary-dark); box-shadow:0 2px 6px rgba(27,58,92,.2); }
   .action-overlay{ display:none; }
 
   /* Barra de acciones (Nuevo / PDF / Word / Guardar en la nube / Historial): un solo
@@ -613,7 +628,7 @@
     /* font-size 16px evita que iOS Safari haga zoom automático al enfocar el campo */
     .field input, .field textarea{font-size:16px;}
     .btn-primary, .btn-secondary{min-height:44px; font-size:14px;}
-    .tab-btn{padding:10px 3px; font-size:11px;}
+    .acc-head{padding:13px 14px; font-size:12px;}
     /* (La barra de acciones en mobile se maneja como bottom sheet en el bloque
        @media 900px de más arriba — acá solo quedan los ajustes del documento.) */
     .meta-grid{grid-template-columns:1fr; padding:12px 14px; gap:4px;}

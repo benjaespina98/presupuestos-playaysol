@@ -88,7 +88,7 @@ for (const { tipo, nombreEsperado } of CALCULADORAS) {
     const botonListo =
       tipo !== "losetas"
         ? page.locator("#btn-download-word")
-        : page.locator('button:has-text("Descargar para cliente")');
+        : page.locator('button:has-text("Imagen para cliente")');
     await expect(botonListo).toBeVisible({ timeout: 15_000 });
 
     // --- Punto 1: sin botón de WhatsApp remanente ---
@@ -111,8 +111,9 @@ for (const { tipo, nombreEsperado } of CALCULADORAS) {
       // a que tenga valor es la señal real de que el init terminó.
       await expect(page.locator("#f-fecha")).not.toHaveValue("", { timeout: 15_000 });
 
-      const datosTab = page.locator('.tab-btn[data-tab="datos"]');
-      if (await datosTab.count()) await datosTab.click();
+      // La sección "Datos" del acordeón arranca abierta por defecto (acc-item open),
+      // así que #f-cliente ya está visible — no hace falta clickear ningún encabezado
+      // (clickear el .acc-head lo plegaría y ocultaría el input).
       const clienteInput = page.locator("#f-cliente");
       if (await clienteInput.count()) await clienteInput.fill("Pérez, María José");
     } else {
@@ -134,10 +135,10 @@ for (const { tipo, nombreEsperado } of CALCULADORAS) {
       await download.saveAs(destino);
       expect(fs.existsSync(destino)).toBe(true);
     } else {
-      // Losetas no tiene botón Word — su descarga real es el PNG "Descargar para cliente".
+      // Losetas no tiene botón Word — su descarga real es el PNG "Imagen para cliente".
       const [download] = await Promise.all([
         page.waitForEvent("download", { timeout: 20_000 }),
-        page.click('button:has-text("Descargar para cliente")'),
+        page.click('button:has-text("Imagen para cliente")'),
       ]);
       const nombreArchivo = download.suggestedFilename();
       expect(nombreArchivo).toMatch(

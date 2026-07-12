@@ -6,11 +6,10 @@ export const CALCULATOR_STYLES = `
   margin: 0;
   padding: clamp(12px, 2vw, 24px);
   color: #222;
-  /* .btns-wrap es fixed al fondo del viewport (ver más abajo) -- sin este espacio
-     reservado, el último field-section de la página queda tapado por la barra sin
-     forma de revelarlo con scroll normal (mismo bug que se corrigió en mobile para
-     piscinas/cercos/cobertores/revestimientos). --action-bar-h la fija el JS
-     (ResizeObserver sobre .btns-wrap, altura real, ver script.ts). */
+  /* En mobile el disparador "Acciones ▾" es fixed al fondo del viewport -- sin este
+     espacio reservado, el último field-section queda tapado por él. En desktop la
+     barra está en flujo normal, así que --action-bar-h vale 0 y esto es solo 24px.
+     El valor lo fija el JS midiendo la altura real del disparador (ver script.ts). */
   padding-bottom: calc(24px + var(--action-bar-h, 0px));
 }
 .pys-calc .wrap {
@@ -55,29 +54,22 @@ export const CALCULATOR_STYLES = `
 .pys-calc .checkrow label { margin-bottom: 0; font-size: 13px; color: #333; }
 .pys-calc .subfield { margin-top: 8px; }
 /* Botones agrupados por función (Exportar vs. Presupuesto) en vez de 6 acciones
-   sueltas en una sola fila — cada grupo con su etiqueta chica arriba. Fija al fondo
-   del viewport (mismo tratamiento visual que .action-bar de las otras 4 calculadoras:
-   fondo blanco, borde superior sutil, sombra hacia arriba) en vez de quedar en flujo
-   normal al final de una página larga — losetas es de una sola columna sin panel
-   dividido, así que "fixed" (no "sticky") es lo que la mantiene siempre visible sin
-   necesidad de scrollear hasta el final. El padding-bottom que la compensa (para que
-   no tape el último field-section) se calcula en JS con su altura real — ver
-   ajustarEspacioBarraAcciones() en script.ts. */
+   sueltas en una sola fila — cada grupo con su etiqueta chica arriba. En desktop va
+   en FLUJO NORMAL al final del formulario, como una ficha más (mismo lenguaje visual
+   que .field-section: fondo blanco, borde suave, radio) — no fija al viewport, que
+   tapaba un tercio de la pantalla y resultaba incómoda. En mobile se convierte en
+   bottom sheet (ver @media más abajo). */
 .pys-calc .btns-wrap {
   display: flex;
   flex-wrap: wrap;
   gap: 28px;
-  margin: 0 auto;
+  margin: 24px auto 0;
   max-width: 1100px;
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 20;
   background: #fff;
-  border-top: 1px solid #EDEAE0;
-  box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
-  padding: 14px 32px;
+  border: 1px solid #EDEAE0;
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  padding: 22px 32px;
 }
 .pys-calc .btns-group { flex: 1 1 260px; min-width: 240px; }
 /* El disparador del bottom sheet y su overlay solo existen en mobile (ver @media
@@ -165,6 +157,13 @@ export const CALCULATOR_STYLES = `
   text-align: left;
 }
 
+/* font-size 16px en inputs hasta 900px (tablets, celulares grandes en horizontal):
+   con menos de 16px iOS hace zoom al enfocar el campo. Mismo criterio que las otras
+   4 calculadoras, para que el flujo de llenado se sienta parejo en cualquier dispositivo. */
+@media (max-width: 900px) {
+  .pys-calc input, .pys-calc select, .pys-calc textarea { font-size: 16px; }
+}
+
 /* ---------- MOBILE (<600px) ---------- */
 @media (max-width: 600px) {
   /* padding-bottom fijo = alto de la barra disparadora fija de abajo, para que el
@@ -213,7 +212,11 @@ export const CALCULATOR_STYLES = `
     font-size: 15px;
     font-weight: 700;
     cursor: pointer;
+    box-shadow: 0 -4px 16px rgba(27,58,92,.22);
+    transition: background 150ms ease, box-shadow 150ms ease;
   }
+  .pys-calc .losetas-sheet-trigger:hover { background: #142c46; }
+  .pys-calc .losetas-sheet-trigger:active { background: #0f2136; box-shadow: 0 -2px 10px rgba(27,58,92,.28); }
   .pys-calc .btns-wrap {
     position: fixed;
     left: 0; right: 0; bottom: 0;
@@ -272,7 +275,7 @@ export const CALCULATOR_STYLES = `
 /* ---------- IMPRESIÓN / PDF ---------- */
 /* Mismo patrón que las otras 4 calculadoras: ocultar el form editable, mostrar solo
    una "hoja" limpia. Acá reusamos #client-capture (la misma vista que ya arma
-   "Descargar para cliente" — plano + medidas, sin precios) en vez de crear un tercer
+   "Imagen para cliente" — plano + medidas, sin precios) en vez de crear un tercer
    contenedor: imprimirVistaLimpia() la puebla antes de llamar a window.print(). */
 /* Márgenes de página consistentes entre navegadores/dispositivos -- sin esto, el
    margen que agrega el diálogo de impresión por default puede variar bastante entre
@@ -283,6 +286,12 @@ export const CALCULATOR_STYLES = `
   html, body { width: auto !important; }
   .pys-calc { background: #fff; padding: 0; width: auto !important; }
   .pys-calc .wrap { display: none !important; }
+  /* La barra de acciones (y el disparador/overlay de mobile) es hermana de .wrap, así
+     que ocultar .wrap no la saca — la ocultamos aparte para que no aparezca en el PDF
+     del cliente. */
+  .pys-calc .btns-wrap,
+  .pys-calc .losetas-sheet-trigger,
+  .pys-calc .losetas-sheet-overlay { display: none !important; }
   .pys-calc #client-capture {
     position: static !important;
     top: auto !important;
