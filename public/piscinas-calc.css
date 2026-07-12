@@ -493,11 +493,17 @@
   .price-line{
     display:flex;
     justify-content:space-between;
+    align-items:flex-start;
     gap:10px;
     font-size:12.5px;
     padding:6px 0;
     border-bottom:1px dotted var(--doc-border-soft);
   }
+  /* Columna de descripción: ocupa el ancho disponible y se justifica (bordes parejos).
+     Columna de precio/estado: no se parte ("No incluye" en una sola línea) y pegada a
+     la derecha — antes se desalineaba y "No incluye" caía en dos renglones. */
+  .price-line > span:first-child{flex:1; text-align:justify;}
+  .price-line > span:last-child{flex-shrink:0; white-space:nowrap; text-align:right;}
   .price-line.subtotal{font-weight:700;}
   .price-line.total{
     font-weight:800;
@@ -534,6 +540,7 @@
     line-height:1.6;
     color:#4A5560;
     white-space:pre-wrap;
+    text-align:justify;
     margin-top:22px;
   }
   .validity{
