@@ -75,8 +75,8 @@ const defaultFooterFields = {
   web: 'www.playaysol.com.ar',
   facebook: 'Playa y Sol Piscinas',
   facebookUrl: '',
-  instagram: '@playaysol.ar',
-  instagramUrl: 'https://www.instagram.com/playaysol.ar/'
+  instagram: '@playaysol.piscinas',
+  instagramUrl: 'https://www.instagram.com/playaysol.piscinas/'
 };
 
 const defaultDimension = `7.00 mts largo por 3.00 mts ancho y de 1.00 mts a 1.45 mts de profundidad, incluye cama de agua de 1.50 mts largo por 3.00 mts de ancho, con escalera de tres escalones de 0.30 mts huella y 3.00 mts de ancho para ingreso a piscina.
