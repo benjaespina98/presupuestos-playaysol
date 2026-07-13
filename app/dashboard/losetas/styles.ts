@@ -42,6 +42,10 @@ export const CALCULATOR_STYLES = `
 }
 .pys-calc .field-section-muted { background: #FAFAF7; }
 .pys-calc .plano-container { background: #fafafa; border: 1px solid #eee; border-radius: 10px; padding: 24px; margin: 8px 0 16px; overflow: visible; }
+/* Área de agarre de cada luz en el plano del editor: se arrastra para reubicarla.
+   touch-action:none evita que el navegador interprete el arrastre como scroll/zoom. */
+.pys-calc #svg .luz-drag { cursor: grab; touch-action: none; }
+.pys-calc #svg .luz-drag:active { cursor: grabbing; }
 .pys-calc .brand { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
 .pys-calc .brand span { font-size: 12px; color: #999; }
 .pys-calc .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
