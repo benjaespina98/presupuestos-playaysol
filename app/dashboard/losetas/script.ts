@@ -14,6 +14,21 @@ let materials = [
   { name: 'Decks', price: 0 }
 ];
 
+// Posición de cada luz, normalizada dentro del rectángulo de la pileta:
+// {x:0..1, y:0..1} con (0,0)=esquina sup-izq y (1,1)=inf-der. Se guarda normalizada
+// (independiente de la escala) para que la MISMA posición valga en el plano chico del
+// editor (680x420) y en la imagen del cliente (1000x650), y se persista tal cual en la
+// nube. El usuario las arrastra en el plano del editor (ver initLuzDrag más abajo).
+let lucesPos = [];
+function defaultLuzPos(i, n){ return { x: 0.06, y: n <= 1 ? 0.5 : (i + 0.5) / n }; }
+// Ajusta el array al alto (cantidad) actual: mantiene las posiciones ya elegidas,
+// crea las nuevas contra la pared del solar (punto de partida) y descarta las sobrantes.
+function ensureLucesPos(on, n){
+  if(!on || n <= 0) return;
+  for(let i = 0; i < n; i++){ if(!lucesPos[i]) lucesPos[i] = defaultLuzPos(i, n); }
+  if(lucesPos.length > n) lucesPos.length = n;
+}
+
 function renderMaterials(){
   const c = document.getElementById('materialsContainer');
   c.innerHTML = materials.map((m, i) => \`
@@ -103,6 +118,7 @@ function getState(){
     labios: parseFloat(document.getElementById('labios').value)||0,
     luces: document.getElementById('chkLuces').checked,
     cantLuces: parseInt(document.getElementById('cantLuces').value)||0,
+    lucesPos: lucesPos.map(p => ({ x: +(+p.x).toFixed(4), y: +(+p.y).toFixed(4) })),
     revestimiento: document.getElementById('revestimiento').value,
     revestimientoOtro: document.getElementById('revestimientoOtro').value.trim(),
     nombre: document.getElementById('nombre').value.trim()
@@ -119,10 +135,14 @@ function calc(){
   document.getElementById('m2extra').textContent = fmt(extra) + ' m\\u00b2';
 
   renderMaterialCostCards(extra);
+  ensureLucesPos(s.luces, s.cantLuces);
   drawSvg('svg', 680, 420, s, false);
 }
 
 function drawSvg(svgId, viewW, viewHmax, s, showDims){
+  // Solo el plano del editor (#svg) es interactivo: ahí se arrastran las luces.
+  // El de la imagen del cliente (#svgClient) es de solo lectura.
+  const interactive = (svgId === 'svg');
   const padTop = showDims ? 90 : 46;
   const padSide = showDims ? 130 : 90;
   const padBottom = showDims ? 110 : 60;
@@ -139,6 +159,9 @@ function drawSvg(svgId, viewW, viewHmax, s, showDims){
   const poolH = s.ancho*pxPerM;
 
   const svg = document.getElementById(svgId);
+  // Geometría del último dibujo -- la usa initLuzDrag para convertir coordenadas de
+  // pantalla a posición normalizada dentro de la pileta al arrastrar una luz.
+  svg.__pool = { poolX, poolY, poolW, poolH };
 
   let extras = '';
   let dims = '';
@@ -159,7 +182,7 @@ function drawSvg(svgId, viewW, viewHmax, s, showDims){
     const shW = Math.min(s.solarHumedoAncho, s.largo) * pxPerM;
     extras += \`<rect x="\${poolX}" y="\${poolY}" width="\${shW}" height="\${poolH}" fill="#BFE0EF" opacity="0.8"/>\`;
     if(shW > 60){
-      extras += \`<text x="\${poolX+shW/2}" y="\${poolY+poolH/2}" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#0C447C" font-family="Arial">Solar h\\u00famedo\${showDims ? ' ('+fmt(s.solarHumedoAncho)+'m)' : ''}</text>\`;
+      extras += \`<text x="\${poolX+shW/2}" y="\${poolY+poolH/2}" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#0C447C" font-family="Arial">Solar h\\u00famedo\${showDims ? ' ('+fmt(s.solarHumedoAncho)+'m)' : ''}</text>\`;
     }
   }
 
@@ -181,20 +204,30 @@ function drawSvg(svgId, viewW, viewHmax, s, showDims){
     espejoH = Math.max(0, s.ancho - 2*s.labios);
     extras += \`<rect x="\${poolX+labiosPx}" y="\${poolY+labiosPx}" width="\${Math.max(0,poolW-2*labiosPx)}" height="\${Math.max(0,poolH-2*labiosPx)}" rx="3" fill="none" stroke="#1B3A5C" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>\`;
     if(showDims && poolW-2*labiosPx > 90){
-      extras += \`<text x="\${poolX+poolW/2}" y="\${poolY+labiosPx+14}" text-anchor="middle" font-size="10" fill="#1B3A5C" font-family="Arial" opacity="0.75">Espejo de agua \${fmt(espejoW)} x \${fmt(espejoH)} m</text>\`;
+      extras += \`<text x="\${poolX+poolW/2}" y="\${poolY+labiosPx+14}" text-anchor="middle" font-size="11" fill="#1B3A5C" font-family="Arial" opacity="0.75">Espejo de agua \${fmt(espejoW)} x \${fmt(espejoH)} m</text>\`;
     }
   }
 
   if(s.luces && s.cantLuces > 0){
     const n = s.cantLuces;
+    // Escala del glow/foco según el tamaño del plano (más grande en la imagen del cliente).
+    const glowR = showDims ? 16 : 13;
+    const bulbR = showDims ? 6 : 5;
     for(let i=0; i<n; i++){
-      const t = n === 1 ? 0.5 : (i+0.5)/n;
-      const lx = poolX + 6;
-      const ly = poolY + t*poolH;
-      extras += \`<circle cx="\${lx}" cy="\${ly}" r="4" fill="#FCDE5A" stroke="#B98A1E" stroke-width="0.75"/>\`;
+      const p = lucesPos[i] || defaultLuzPos(i, n);
+      const cx = poolX + Math.max(0, Math.min(1, p.x)) * poolW;
+      const cy = poolY + Math.max(0, Math.min(1, p.y)) * poolH;
+      extras += \`<circle cx="\${cx}" cy="\${cy}" r="\${glowR}" fill="url(#luzGlow)"/>\`;
+      extras += \`<circle cx="\${cx}" cy="\${cy}" r="\${bulbR}" fill="#FFEFA8" stroke="#C99A2E" stroke-width="1.2"/>\`;
+      extras += \`<circle cx="\${cx - bulbR*0.32}" cy="\${cy - bulbR*0.32}" r="\${bulbR*0.32}" fill="#FFFDF3"/>\`;
+      // Círculo de agarre transparente (área táctil generosa) solo en el editor.
+      if(interactive){
+        extras += \`<circle class="luz-drag" data-luz="\${i}" cx="\${cx}" cy="\${cy}" r="16" fill="transparent"/>\`;
+      }
     }
-    if(showDims){
-      extras += \`<text x="\${poolX+18}" y="\${poolY-14 > 20 ? poolY - 4 : poolY+poolH+18}" font-size="10" fill="#B98A1E" font-family="Arial">\${n} \${n===1 ? 'luz' : 'luces'}</text>\`;
+    // Pista de uso: solo en el editor, no en la imagen del cliente.
+    if(interactive){
+      extras += \`<text x="\${ox+totalW*pxPerM/2}" y="\${oy+totalH*pxPerM+34}" text-anchor="middle" font-size="11" fill="#B98A1E" font-family="Arial">Arrastr\\u00e1 las luces para ubicarlas donde quieras</text>\`;
     }
   }
 
@@ -205,29 +238,48 @@ function drawSvg(svgId, viewW, viewHmax, s, showDims){
   const revestText = s.revestimiento ? revestLabels[s.revestimiento] : '';
 
   if(showDims){
-    dims += \`<text x="\${poolX+poolW/2}" y="\${poolY-14}" text-anchor="middle" font-size="13" fill="\${dimColor}" font-family="Arial" font-weight="bold">Pileta \${fmt(s.largo)} x \${fmt(s.ancho)} m</text>\`;
-    if(revestText){
-      dims += \`<text x="\${poolX+poolW/2}" y="\${poolY-14-16}" text-anchor="middle" font-size="11" fill="#555" font-family="Arial">Revestimiento interior: \${revestText}</text>\`;
+    // Título arriba de TODA la loseta (no pegado al borde de la pileta): cuando el
+    // lateral es angosto, la etiqueta "Lateral 1" cae sobre el borde superior de la
+    // pileta y antes se encimaba con este título. Lo subimos al espacio libre que hay
+    // entre la cota "Borde total" (oy-34) y el borde de la loseta (oy).
+    dims += \`<text x="\${poolX+poolW/2}" y="\${oy-13}" text-anchor="middle" font-size="15" fill="\${dimColor}" font-family="Arial" font-weight="bold">Pileta \${fmt(s.largo)} x \${fmt(s.ancho)} m</text>\`;
+    // Revestimiento como "pastilla" dentro del tercio inferior de la pileta -- así no se
+    // encima con el título ni con la cota "Borde total" de arriba (antes iban las tres
+    // líneas apiladas sobre el borde superior y se pisaban cuando el lateral era chico).
+    if(revestText && poolH > 90 && poolW > 150){
+      const chipLabel = 'Revestimiento: ' + revestText;
+      const chipW = Math.min(poolW - 16, chipLabel.length * 7.0 + 28);
+      const chipH = 26;
+      const chipX = poolX + poolW/2 - chipW/2;
+      const chipY = poolY + poolH - chipH - 16;
+      dims += \`<rect x="\${chipX}" y="\${chipY}" width="\${chipW}" height="\${chipH}" rx="13" fill="#ffffff" stroke="#1B3A5C" stroke-width="0.75" opacity="0.94"/>\`;
+      dims += \`<text x="\${poolX+poolW/2}" y="\${chipY+chipH/2}" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#1B3A5C" font-family="Arial">\${chipLabel}</text>\`;
     }
 
     const topY = oy - 34;
     dims += \`<line x1="\${ox}" y1="\${topY}" x2="\${ox+totalW*pxPerM}" y2="\${topY}" stroke="\${dimColor}" stroke-width="0.75"/>\`;
     dims += tickH(ox, topY, dimColor); dims += tickH(ox+totalW*pxPerM, topY, dimColor);
-    dims += \`<text x="\${ox+totalW*pxPerM/2}" y="\${topY-10}" text-anchor="middle" font-size="11" fill="\${dimColor}" font-family="Arial">Borde total: \${fmt(totalW)} m</text>\`;
+    dims += \`<text x="\${ox+totalW*pxPerM/2}" y="\${topY-10}" text-anchor="middle" font-size="12" fill="\${dimColor}" font-family="Arial">Borde total: \${fmt(totalW)} m</text>\`;
 
     const leftX = Math.max(40, ox - 60);
     dims += \`<line x1="\${leftX}" y1="\${oy}" x2="\${leftX}" y2="\${oy+totalH*pxPerM}" stroke="\${dimColor}" stroke-width="0.75"/>\`;
     dims += tick(leftX, oy, dimColor); dims += tick(leftX, oy+totalH*pxPerM, dimColor);
-    dims += \`<text x="\${leftX-16}" y="\${oy+totalH*pxPerM/2}" text-anchor="middle" dominant-baseline="central" font-size="11" fill="\${dimColor}" font-family="Arial" transform="rotate(-90 \${leftX-16} \${oy+totalH*pxPerM/2})">Borde total: \${fmt(totalH)} m</text>\`;
+    dims += \`<text x="\${leftX-16}" y="\${oy+totalH*pxPerM/2}" text-anchor="middle" dominant-baseline="central" font-size="12" fill="\${dimColor}" font-family="Arial" transform="rotate(-90 \${leftX-16} \${oy+totalH*pxPerM/2})">Borde total: \${fmt(totalH)} m</text>\`;
 
-    dims += \`<text x="\${poolX+poolW/2}" y="\${oy+(s.lateral1*pxPerM)/2}" text-anchor="middle" dominant-baseline="central" font-size="11" fill="\${labelColor}" font-family="Arial">Lateral 1: \${fmt(s.lateral1)} m</text>\`;
-    dims += \`<text x="\${poolX+poolW/2}" y="\${oy+s.lateral1*pxPerM+poolH+(s.lateral2*pxPerM)/2}" text-anchor="middle" dominant-baseline="central" font-size="11" fill="\${labelColor}" font-family="Arial">Lateral 2: \${fmt(s.lateral2)} m</text>\`;
+    // Solo si la franja del lateral es lo bastante alta para contener el texto sin
+    // pisar el borde de la pileta (mismo criterio que Solar/Opuesto más abajo).
+    if(s.lateral1*pxPerM > 16){
+      dims += \`<text x="\${poolX+poolW/2}" y="\${oy+(s.lateral1*pxPerM)/2}" text-anchor="middle" dominant-baseline="central" font-size="12" fill="\${labelColor}" font-family="Arial">Lateral 1: \${fmt(s.lateral1)} m</text>\`;
+    }
+    if(s.lateral2*pxPerM > 16){
+      dims += \`<text x="\${poolX+poolW/2}" y="\${oy+s.lateral1*pxPerM+poolH+(s.lateral2*pxPerM)/2}" text-anchor="middle" dominant-baseline="central" font-size="12" fill="\${labelColor}" font-family="Arial">Lateral 2: \${fmt(s.lateral2)} m</text>\`;
+    }
 
     if(s.solar*pxPerM > 22){
-      dims += \`<text x="\${ox+(s.solar*pxPerM)/2}" y="\${poolY+poolH/2}" text-anchor="middle" dominant-baseline="central" font-size="11" fill="\${labelColor}" font-family="Arial" transform="rotate(-90 \${ox+(s.solar*pxPerM)/2} \${poolY+poolH/2})">Solar: \${fmt(s.solar)} m</text>\`;
+      dims += \`<text x="\${ox+(s.solar*pxPerM)/2}" y="\${poolY+poolH/2}" text-anchor="middle" dominant-baseline="central" font-size="12" fill="\${labelColor}" font-family="Arial" transform="rotate(-90 \${ox+(s.solar*pxPerM)/2} \${poolY+poolH/2})">Solar: \${fmt(s.solar)} m</text>\`;
     }
     if(s.opuesto*pxPerM > 22){
-      dims += \`<text x="\${ox+s.solar*pxPerM+poolW+(s.opuesto*pxPerM)/2}" y="\${poolY+poolH/2}" text-anchor="middle" dominant-baseline="central" font-size="11" fill="\${labelColor}" font-family="Arial" transform="rotate(-90 \${ox+s.solar*pxPerM+poolW+(s.opuesto*pxPerM)/2} \${poolY+poolH/2})">Opuesto: \${fmt(s.opuesto)} m</text>\`;
+      dims += \`<text x="\${ox+s.solar*pxPerM+poolW+(s.opuesto*pxPerM)/2}" y="\${poolY+poolH/2}" text-anchor="middle" dominant-baseline="central" font-size="12" fill="\${labelColor}" font-family="Arial" transform="rotate(-90 \${ox+s.solar*pxPerM+poolW+(s.opuesto*pxPerM)/2} \${poolY+poolH/2})">Opuesto: \${fmt(s.opuesto)} m</text>\`;
     }
   } else {
     dims += \`<text x="\${ox+totalW*pxPerM/2}" y="\${oy-14}" text-anchor="middle" font-size="12" fill="#555" font-family="Arial">Lateral 1: \${fmt(s.lateral1)} m</text>\`;
@@ -246,7 +298,7 @@ function drawSvg(svgId, viewW, viewHmax, s, showDims){
     const barY = oy + totalH*pxPerM + 46;
     const segments = Math.min(5, Math.max(1, Math.floor(totalW)));
     const barX0 = ox;
-    scaleBar += \`<text x="\${barX0}" y="\${barY-12}" font-size="11" fill="\${dimColor}" font-family="Arial">Escala gr\\u00e1fica</text>\`;
+    scaleBar += \`<text x="\${barX0}" y="\${barY-12}" font-size="12" fill="\${dimColor}" font-family="Arial">Escala gr\\u00e1fica</text>\`;
     for(let i=0; i<segments; i++){
       const x = barX0 + i*pxPerM;
       const fill = i % 2 === 0 ? '#1B3A5C' : '#ffffff';
@@ -254,17 +306,70 @@ function drawSvg(svgId, viewW, viewHmax, s, showDims){
     }
     for(let i=0; i<=segments; i++){
       const x = barX0 + i*pxPerM;
-      scaleBar += \`<text x="\${x}" y="\${barY+24}" text-anchor="middle" font-size="10" fill="\${dimColor}" font-family="Arial">\${i}m</text>\`;
+      scaleBar += \`<text x="\${x}" y="\${barY+24}" text-anchor="middle" font-size="11" fill="\${dimColor}" font-family="Arial">\${i}m</text>\`;
     }
     svgH = barY + 40;
+
+    // --- Referencias (leyenda): solo los símbolos realmente presentes en este plano.
+    // Las muestras (swatches) replican el mismo color/trazo que el dibujo, para que el
+    // cliente relacione cada símbolo con lo que ve. Fila compacta que se parte en dos
+    // renglones si no entra a lo ancho del plano.
+    const legItems = [
+      { type: 'loseta', label: 'Borde de loseta' },
+      { type: 'pileta', label: 'Pileta' }
+    ];
+    if(s.solarHumedo && s.solarHumedoAncho > 0) legItems.push({ type: 'solarhumedo', label: 'Solar h\\u00famedo' });
+    if(s.tipoPileta === 'fibra' && s.labios > 0) legItems.push({ type: 'espejo', label: 'Espejo de agua' });
+    if(s.escalera) legItems.push({ type: 'escalera', label: 'Escalera' });
+    if(s.luces && s.cantLuces > 0) legItems.push({ type: 'luz', label: 'Luz' });
+
+    const swW = 17, swGap = 7, itemGap = 28, rowH = 27;
+    const maxRight = ox + totalW*pxPerM;
+    let lx = ox, ly = barY + 64;
+    scaleBar += \`<text x="\${ox}" y="\${ly-16}" font-size="11" fill="\${dimColor}" font-family="Arial" font-weight="bold" letter-spacing="1">REFERENCIAS</text>\`;
+    for(const it of legItems){
+      const w = swW + swGap + it.label.length*6.9 + itemGap;
+      if(lx + w > maxRight && lx > ox){ lx = ox; ly += rowH; }
+      const sy = ly - swW/2;
+      if(it.type === 'loseta'){
+        scaleBar += \`<rect x="\${lx}" y="\${sy}" width="\${swW}" height="\${swW}" rx="2" fill="#F7E6D3" stroke="#C0522D" stroke-width="1"/>\`;
+      } else if(it.type === 'pileta'){
+        scaleBar += \`<rect x="\${lx}" y="\${sy}" width="\${swW}" height="\${swW}" rx="2" fill="url(#poolGrad)" stroke="#1B3A5C" stroke-width="1"/>\`;
+      } else if(it.type === 'solarhumedo'){
+        scaleBar += \`<rect x="\${lx}" y="\${sy}" width="\${swW}" height="\${swW}" rx="2" fill="#BFE0EF" stroke="#0C447C" stroke-width="0.75"/>\`;
+      } else if(it.type === 'espejo'){
+        scaleBar += \`<rect x="\${lx}" y="\${sy}" width="\${swW}" height="\${swW}" rx="2" fill="#DCEBF7" stroke="#1B3A5C" stroke-width="1" stroke-dasharray="3 2"/>\`;
+      } else if(it.type === 'escalera'){
+        scaleBar += \`<rect x="\${lx}" y="\${sy}" width="\${swW}" height="\${swW}" rx="1" fill="#ffffff" stroke="#1B3A5C" stroke-width="1.1" stroke-dasharray="3 2"/>\`;
+      } else if(it.type === 'luz'){
+        const cx = lx + swW/2, cy = ly;
+        scaleBar += \`<circle cx="\${cx}" cy="\${cy}" r="9" fill="url(#luzGlow)"/>\`;
+        scaleBar += \`<circle cx="\${cx}" cy="\${cy}" r="4" fill="#FFEFA8" stroke="#C99A2E" stroke-width="1"/>\`;
+      }
+      scaleBar += \`<text x="\${lx+swW+swGap}" y="\${ly}" dominant-baseline="central" font-size="12" fill="#42525E" font-family="Arial">\${it.label}</text>\`;
+      lx += w;
+    }
+    svgH = Math.max(svgH, ly + 20);
   }
 
   svg.setAttribute('viewBox', '0 0 ' + viewW + ' ' + svgH);
 
   svg.innerHTML = \`
+    <defs>
+      <linearGradient id="poolGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#E7F3FC"/>
+        <stop offset="1" stop-color="#A6D1EC"/>
+      </linearGradient>
+      <radialGradient id="luzGlow" cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0" stop-color="#FFF6CE" stop-opacity="0.95"/>
+        <stop offset="0.55" stop-color="#FFE08A" stop-opacity="0.5"/>
+        <stop offset="1" stop-color="#FFE08A" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
     <rect x="\${ox}" y="\${oy}" width="\${totalW*pxPerM}" height="\${totalH*pxPerM}" rx="6" fill="#F7E6D3" stroke="#C0522D" stroke-width="1"/>
     \${grid}
-    <rect x="\${poolX}" y="\${poolY}" width="\${poolW}" height="\${poolH}" rx="4" fill="#DCEBF7" stroke="#1B3A5C" stroke-width="1"/>
+    <rect x="\${poolX}" y="\${poolY}" width="\${poolW}" height="\${poolH}" rx="4" fill="url(#poolGrad)" stroke="#1B3A5C" stroke-width="1"/>
+    <rect x="\${poolX+2}" y="\${poolY+2}" width="\${Math.max(0,poolW-4)}" height="\${Math.max(0,poolH-4)}" rx="3" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.35"/>
     \${extras}
     \${dims}
     \${scaleBar}
@@ -286,6 +391,7 @@ function exportarInterno(){
 
 function exportarCliente(){
   const s = getState();
+  ensureLucesPos(s.luces, s.cantLuces);
   document.getElementById('clientRef').textContent = s.nombre || '';
   drawSvg('svgClient', 1000, 650, s, true);
 
@@ -309,6 +415,7 @@ function exportarCliente(){
 // de su posición off-screen y ocultan .wrap están en styles.ts (@media print).
 function imprimirVistaLimpia(){
   const s = getState();
+  ensureLucesPos(s.luces, s.cantLuces);
   document.getElementById('clientRef').textContent = s.nombre || '';
   drawSvg('svgClient', 1000, 650, s, true);
   // El navegador no deja forzar el nombre de archivo del PDF generado por
@@ -355,6 +462,7 @@ function resetAll(){
   document.getElementById('chkLuces').checked = false;
   document.getElementById('subLuces').style.display = 'none';
   document.getElementById('cantLuces').value = '0';
+  lucesPos = [];
   document.getElementById('revestimiento').value = '';
   document.getElementById('subRevestOtro').style.display = 'none';
   document.getElementById('revestimientoOtro').value = '';
@@ -368,6 +476,51 @@ function resetAll(){
 renderMaterials();
 document.querySelectorAll('#capture-area input, #capture-area select').forEach(el => el.addEventListener('input', calc));
 calc();
+
+/* ---------------- ARRASTRE DE LUCES (plano del editor) ---------------- */
+// El usuario arrastra cada luz por el plano para ubicarla donde quiera. Se captura el
+// puntero sobre el <svg> (no sobre cada círculo) porque cada pointermove vuelve a dibujar
+// el SVG entero -- el círculo original se destruye, pero la captura sigue en el <svg>, así
+// que los eventos no se pierden. La posición se guarda normalizada respecto de la pileta.
+(function initLuzDrag(){
+  const svg = document.getElementById('svg');
+  if(!svg) return;
+  let arrastrando = null;
+  function aNormalizado(e){
+    const geo = svg.__pool;
+    const ctm = svg.getScreenCTM();
+    if(!geo || !ctm || geo.poolW <= 0 || geo.poolH <= 0) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    const p = pt.matrixTransform(ctm.inverse());
+    return {
+      x: Math.max(0, Math.min(1, (p.x - geo.poolX) / geo.poolW)),
+      y: Math.max(0, Math.min(1, (p.y - geo.poolY) / geo.poolH))
+    };
+  }
+  svg.addEventListener('pointerdown', function(e){
+    const target = e.target.closest && e.target.closest('[data-luz]');
+    if(!target) return;
+    arrastrando = parseInt(target.getAttribute('data-luz'));
+    try { svg.setPointerCapture(e.pointerId); } catch(_){}
+    e.preventDefault();
+  });
+  svg.addEventListener('pointermove', function(e){
+    if(arrastrando === null) return;
+    const n = aNormalizado(e);
+    if(!n) return;
+    lucesPos[arrastrando] = n;
+    e.preventDefault();
+    drawSvg('svg', 680, 420, getState(), false);
+  });
+  function terminar(e){
+    if(arrastrando === null) return;
+    arrastrando = null;
+    try { svg.releasePointerCapture(e.pointerId); } catch(_){}
+  }
+  svg.addEventListener('pointerup', terminar);
+  svg.addEventListener('pointercancel', terminar);
+})();
 
 function cargarPresupuestoExterno(datos){
   if(!datos) return;
@@ -391,6 +544,11 @@ function cargarPresupuestoExterno(datos){
   document.getElementById('chkLuces').checked = !!datos.luces;
   document.getElementById('cantLuces').value = datos.cantLuces ?? '2';
   document.getElementById('subLuces').style.display = datos.luces ? 'block' : 'none';
+  // Restaura las posiciones guardadas de las luces (presupuestos viejos sin este dato
+  // caen en las posiciones por defecto vía ensureLucesPos en el calc() de abajo).
+  lucesPos = Array.isArray(datos.lucesPos)
+    ? datos.lucesPos.map(p => ({ x: +p.x || 0, y: +p.y || 0 }))
+    : [];
   document.getElementById('revestimiento').value = datos.revestimiento ?? '';
   document.getElementById('revestimientoOtro').value = datos.revestimientoOtro ?? '';
   document.getElementById('subRevestOtro').style.display = datos.revestimiento === 'otro' ? 'block' : 'none';
