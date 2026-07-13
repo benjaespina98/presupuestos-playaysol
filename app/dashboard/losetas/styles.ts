@@ -28,6 +28,7 @@ export const CALCULATOR_STYLES = `
 .pys-calc label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; }
 .pys-calc input, .pys-calc select { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; background: #fff; }
 .pys-calc input:focus, .pys-calc select:focus { outline: 2px solid #1B3A5C; border-color: #1B3A5C; }
+.pys-calc input[type="color"] { height: 40px; padding: 4px; cursor: pointer; }
 .pys-calc h3 { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin: 0 0 16px; padding-bottom: 10px; color: #1B3A5C; border-bottom: 1px solid #EDEAE0; }
 .pys-calc .section-hint { font-size: 11px; font-weight: 400; letter-spacing: normal; text-transform: none; color: #999; }
 /* Cada bloque de campos relacionados vive en su propia "ficha" — mismo lenguaje visual

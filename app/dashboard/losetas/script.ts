@@ -8,6 +8,12 @@ export const CALCULATOR_SCRIPT = `
 (function(){
 function fmt(n){ return new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(n); }
 function money(n){ return new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(n); }
+// Aclara un color hex mezclándolo con blanco (t=0 sin cambio, t=1 blanco). Se usa para
+// derivar el tono superior del degradé del agua a partir del color elegido por el usuario.
+// Escapa texto que entra el usuario (etiquetas de lados) antes de meterlo en el SVG por innerHTML.
+function escSvg(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function hexToRgb(h){ h = String(h||'').replace('#',''); if(h.length===3) h = h.split('').map(c=>c+c).join(''); const n = parseInt(h||'000000',16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+function lightenHex(hex, t){ const [r,g,b] = hexToRgb(hex); const m = v => Math.round(v + (255-v)*t); return '#' + [m(r),m(g),m(b)].map(v=>v.toString(16).padStart(2,'0')).join(''); }
 
 let materials = [
   { name: 'Loseta com\\u00fan', price: 0 },
@@ -121,7 +127,13 @@ function getState(){
     lucesPos: lucesPos.map(p => ({ x: +(+p.x).toFixed(4), y: +(+p.y).toFixed(4) })),
     revestimiento: document.getElementById('revestimiento').value,
     revestimientoOtro: document.getElementById('revestimientoOtro').value.trim(),
-    nombre: document.getElementById('nombre').value.trim()
+    nombre: document.getElementById('nombre').value.trim(),
+    colorAgua: document.getElementById('colorAgua').value,
+    colorLoseta: document.getElementById('colorLoseta').value,
+    lblSolar: (document.getElementById('lblSolar').value.trim() || 'Solar'),
+    lblOpuesto: (document.getElementById('lblOpuesto').value.trim() || 'Opuesto'),
+    lblLateral1: (document.getElementById('lblLateral1').value.trim() || 'Lateral 1'),
+    lblLateral2: (document.getElementById('lblLateral2').value.trim() || 'Lateral 2')
   };
 }
 
@@ -234,6 +246,13 @@ function drawSvg(svgId, viewW, viewHmax, s, showDims){
   const dimColor = '#1B3A5C';
   const labelColor = '#7a4a2e';
 
+  // Colores del plano (editables). El agua usa el color elegido como tono profundo y
+  // un tono aclarado arriba para el degradé; con el valor por defecto se mantienen
+  // exactamente los colores originales del plano.
+  const aguaBottom = s.colorAgua || '#A6D1EC';
+  const aguaTop = (String(aguaBottom).toLowerCase() === '#a6d1ec') ? '#E7F3FC' : lightenHex(aguaBottom, 0.6);
+  const losetaFill = s.colorLoseta || '#F7E6D3';
+
   const revestLabels = { ceramicos: 'Cer\\u00e1micos', travertino: 'Travertino', pintura: 'Pintura', otro: s.revestimientoOtro || 'Otro' };
   const revestText = s.revestimiento ? revestLabels[s.revestimiento] : '';
 
@@ -242,7 +261,7 @@ function drawSvg(svgId, viewW, viewHmax, s, showDims){
     // lateral es angosto, la etiqueta "Lateral 1" cae sobre el borde superior de la
     // pileta y antes se encimaba con este título. Lo subimos al espacio libre que hay
     // entre la cota "Borde total" (oy-34) y el borde de la loseta (oy).
-    dims += \`<text x="\${poolX+poolW/2}" y="\${oy-13}" text-anchor="middle" font-size="15" fill="\${dimColor}" font-family="Arial" font-weight="bold">Pileta \${fmt(s.largo)} x \${fmt(s.ancho)} m</text>\`;
+    dims += \`<text x="\${poolX+poolW/2}" y="\${oy-13}" text-anchor="middle" font-size="17" fill="\${dimColor}" font-family="Arial" font-weight="bold">Pileta \${fmt(s.largo)} x \${fmt(s.ancho)} m</text>\`;
     // Revestimiento como "pastilla" dentro del tercio inferior de la pileta -- así no se
     // encima con el título ni con la cota "Borde total" de arriba (antes iban las tres
     // líneas apiladas sobre el borde superior y se pisaban cuando el lateral era chico).
@@ -253,67 +272,53 @@ function drawSvg(svgId, viewW, viewHmax, s, showDims){
       const chipX = poolX + poolW/2 - chipW/2;
       const chipY = poolY + poolH - chipH - 16;
       dims += \`<rect x="\${chipX}" y="\${chipY}" width="\${chipW}" height="\${chipH}" rx="13" fill="#ffffff" stroke="#1B3A5C" stroke-width="0.75" opacity="0.94"/>\`;
-      dims += \`<text x="\${poolX+poolW/2}" y="\${chipY+chipH/2}" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#1B3A5C" font-family="Arial">\${chipLabel}</text>\`;
+      dims += \`<text x="\${poolX+poolW/2}" y="\${chipY+chipH/2}" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#1B3A5C" font-family="Arial">\${chipLabel}</text>\`;
     }
 
     const topY = oy - 34;
     dims += \`<line x1="\${ox}" y1="\${topY}" x2="\${ox+totalW*pxPerM}" y2="\${topY}" stroke="\${dimColor}" stroke-width="0.75"/>\`;
     dims += tickH(ox, topY, dimColor); dims += tickH(ox+totalW*pxPerM, topY, dimColor);
-    dims += \`<text x="\${ox+totalW*pxPerM/2}" y="\${topY-10}" text-anchor="middle" font-size="12" fill="\${dimColor}" font-family="Arial">Borde total: \${fmt(totalW)} m</text>\`;
+    dims += \`<text x="\${ox+totalW*pxPerM/2}" y="\${topY-10}" text-anchor="middle" font-size="13" fill="\${dimColor}" font-family="Arial">Borde total: \${fmt(totalW)} m</text>\`;
 
     const leftX = Math.max(40, ox - 60);
     dims += \`<line x1="\${leftX}" y1="\${oy}" x2="\${leftX}" y2="\${oy+totalH*pxPerM}" stroke="\${dimColor}" stroke-width="0.75"/>\`;
     dims += tick(leftX, oy, dimColor); dims += tick(leftX, oy+totalH*pxPerM, dimColor);
-    dims += \`<text x="\${leftX-16}" y="\${oy+totalH*pxPerM/2}" text-anchor="middle" dominant-baseline="central" font-size="12" fill="\${dimColor}" font-family="Arial" transform="rotate(-90 \${leftX-16} \${oy+totalH*pxPerM/2})">Borde total: \${fmt(totalH)} m</text>\`;
+    dims += \`<text x="\${leftX-16}" y="\${oy+totalH*pxPerM/2}" text-anchor="middle" dominant-baseline="central" font-size="13" fill="\${dimColor}" font-family="Arial" transform="rotate(-90 \${leftX-16} \${oy+totalH*pxPerM/2})">Borde total: \${fmt(totalH)} m</text>\`;
 
     // Solo si la franja del lateral es lo bastante alta para contener el texto sin
     // pisar el borde de la pileta (mismo criterio que Solar/Opuesto más abajo).
     if(s.lateral1*pxPerM > 16){
-      dims += \`<text x="\${poolX+poolW/2}" y="\${oy+(s.lateral1*pxPerM)/2}" text-anchor="middle" dominant-baseline="central" font-size="12" fill="\${labelColor}" font-family="Arial">Lateral 1: \${fmt(s.lateral1)} m</text>\`;
+      dims += \`<text x="\${poolX+poolW/2}" y="\${oy+(s.lateral1*pxPerM)/2}" text-anchor="middle" dominant-baseline="central" font-size="13" fill="\${labelColor}" font-family="Arial">\${escSvg(s.lblLateral1)}: \${fmt(s.lateral1)} m</text>\`;
     }
     if(s.lateral2*pxPerM > 16){
-      dims += \`<text x="\${poolX+poolW/2}" y="\${oy+s.lateral1*pxPerM+poolH+(s.lateral2*pxPerM)/2}" text-anchor="middle" dominant-baseline="central" font-size="12" fill="\${labelColor}" font-family="Arial">Lateral 2: \${fmt(s.lateral2)} m</text>\`;
+      dims += \`<text x="\${poolX+poolW/2}" y="\${oy+s.lateral1*pxPerM+poolH+(s.lateral2*pxPerM)/2}" text-anchor="middle" dominant-baseline="central" font-size="13" fill="\${labelColor}" font-family="Arial">\${escSvg(s.lblLateral2)}: \${fmt(s.lateral2)} m</text>\`;
     }
 
     if(s.solar*pxPerM > 22){
-      dims += \`<text x="\${ox+(s.solar*pxPerM)/2}" y="\${poolY+poolH/2}" text-anchor="middle" dominant-baseline="central" font-size="12" fill="\${labelColor}" font-family="Arial" transform="rotate(-90 \${ox+(s.solar*pxPerM)/2} \${poolY+poolH/2})">Solar: \${fmt(s.solar)} m</text>\`;
+      dims += \`<text x="\${ox+(s.solar*pxPerM)/2}" y="\${poolY+poolH/2}" text-anchor="middle" dominant-baseline="central" font-size="13" fill="\${labelColor}" font-family="Arial" transform="rotate(-90 \${ox+(s.solar*pxPerM)/2} \${poolY+poolH/2})">\${escSvg(s.lblSolar)}: \${fmt(s.solar)} m</text>\`;
     }
     if(s.opuesto*pxPerM > 22){
-      dims += \`<text x="\${ox+s.solar*pxPerM+poolW+(s.opuesto*pxPerM)/2}" y="\${poolY+poolH/2}" text-anchor="middle" dominant-baseline="central" font-size="12" fill="\${labelColor}" font-family="Arial" transform="rotate(-90 \${ox+s.solar*pxPerM+poolW+(s.opuesto*pxPerM)/2} \${poolY+poolH/2})">Opuesto: \${fmt(s.opuesto)} m</text>\`;
+      dims += \`<text x="\${ox+s.solar*pxPerM+poolW+(s.opuesto*pxPerM)/2}" y="\${poolY+poolH/2}" text-anchor="middle" dominant-baseline="central" font-size="13" fill="\${labelColor}" font-family="Arial" transform="rotate(-90 \${ox+s.solar*pxPerM+poolW+(s.opuesto*pxPerM)/2} \${poolY+poolH/2})">\${escSvg(s.lblOpuesto)}: \${fmt(s.opuesto)} m</text>\`;
     }
   } else {
-    dims += \`<text x="\${ox+totalW*pxPerM/2}" y="\${oy-14}" text-anchor="middle" font-size="12" fill="#555" font-family="Arial">Lateral 1: \${fmt(s.lateral1)} m</text>\`;
-    dims += \`<text x="\${ox+totalW*pxPerM/2}" y="\${oy+totalH*pxPerM+24}" text-anchor="middle" font-size="12" fill="#555" font-family="Arial">Lateral 2: \${fmt(s.lateral2)} m</text>\`;
-    dims += \`<text x="\${Math.max(14, ox-16)}" y="\${oy+totalH*pxPerM/2}" text-anchor="end" font-size="12" fill="#555" font-family="Arial">Solar: \${fmt(s.solar)} m</text>\`;
-    dims += \`<text x="\${ox+totalW*pxPerM+16}" y="\${oy+totalH*pxPerM/2}" text-anchor="start" font-size="12" fill="#555" font-family="Arial">Opuesto: \${fmt(s.opuesto)} m</text>\`;
+    dims += \`<text x="\${ox+totalW*pxPerM/2}" y="\${oy-14}" text-anchor="middle" font-size="12" fill="#555" font-family="Arial">\${escSvg(s.lblLateral1)}: \${fmt(s.lateral1)} m</text>\`;
+    dims += \`<text x="\${ox+totalW*pxPerM/2}" y="\${oy+totalH*pxPerM+24}" text-anchor="middle" font-size="12" fill="#555" font-family="Arial">\${escSvg(s.lblLateral2)}: \${fmt(s.lateral2)} m</text>\`;
+    dims += \`<text x="\${Math.max(14, ox-16)}" y="\${oy+totalH*pxPerM/2}" text-anchor="end" font-size="12" fill="#555" font-family="Arial">\${escSvg(s.lblSolar)}: \${fmt(s.solar)} m</text>\`;
+    dims += \`<text x="\${ox+totalW*pxPerM+16}" y="\${oy+totalH*pxPerM/2}" text-anchor="start" font-size="12" fill="#555" font-family="Arial">\${escSvg(s.lblOpuesto)}: \${fmt(s.opuesto)} m</text>\`;
     dims += \`<text x="\${poolX+poolW/2}" y="\${poolY+poolH/2 - (revestText?8:0)}" text-anchor="middle" dominant-baseline="central" font-size="14" fill="#1B3A5C" font-family="Arial">\${fmt(s.largo)} x \${fmt(s.ancho)} m</text>\`;
     if(revestText){
       dims += \`<text x="\${poolX+poolW/2}" y="\${poolY+poolH/2 + 12}" text-anchor="middle" dominant-baseline="central" font-size="10" fill="#1B3A5C" font-family="Arial" opacity="0.7">Revestimiento: \${revestText}</text>\`;
     }
   }
 
-  let scaleBar = '';
+  let legend = '';
   let svgH = oy + totalH*pxPerM + padBottom;
   if(showDims){
-    const barY = oy + totalH*pxPerM + 46;
-    const segments = Math.min(5, Math.max(1, Math.floor(totalW)));
-    const barX0 = ox;
-    scaleBar += \`<text x="\${barX0}" y="\${barY-12}" font-size="12" fill="\${dimColor}" font-family="Arial">Escala gr\\u00e1fica</text>\`;
-    for(let i=0; i<segments; i++){
-      const x = barX0 + i*pxPerM;
-      const fill = i % 2 === 0 ? '#1B3A5C' : '#ffffff';
-      scaleBar += \`<rect x="\${x}" y="\${barY}" width="\${pxPerM}" height="10" fill="\${fill}" stroke="\${dimColor}" stroke-width="0.75"/>\`;
-    }
-    for(let i=0; i<=segments; i++){
-      const x = barX0 + i*pxPerM;
-      scaleBar += \`<text x="\${x}" y="\${barY+24}" text-anchor="middle" font-size="11" fill="\${dimColor}" font-family="Arial">\${i}m</text>\`;
-    }
-    svgH = barY + 40;
-
     // --- Referencias (leyenda): solo los símbolos realmente presentes en este plano.
     // Las muestras (swatches) replican el mismo color/trazo que el dibujo, para que el
     // cliente relacione cada símbolo con lo que ve. Fila compacta que se parte en dos
-    // renglones si no entra a lo ancho del plano.
+    // renglones si no entra a lo ancho del plano. (La barra de escala se quitó para un
+    // look más sobrio.)
     const legItems = [
       { type: 'loseta', label: 'Borde de loseta' },
       { type: 'pileta', label: 'Pileta' }
@@ -323,33 +328,33 @@ function drawSvg(svgId, viewW, viewHmax, s, showDims){
     if(s.escalera) legItems.push({ type: 'escalera', label: 'Escalera' });
     if(s.luces && s.cantLuces > 0) legItems.push({ type: 'luz', label: 'Luz' });
 
-    const swW = 17, swGap = 7, itemGap = 28, rowH = 27;
+    const swW = 18, swGap = 8, itemGap = 30, rowH = 28;
     const maxRight = ox + totalW*pxPerM;
-    let lx = ox, ly = barY + 64;
-    scaleBar += \`<text x="\${ox}" y="\${ly-16}" font-size="11" fill="\${dimColor}" font-family="Arial" font-weight="bold" letter-spacing="1">REFERENCIAS</text>\`;
+    let lx = ox, ly = oy + totalH*pxPerM + 62;
+    legend += \`<text x="\${ox}" y="\${ly-18}" font-size="12" fill="\${dimColor}" font-family="Arial" font-weight="bold" letter-spacing="1">REFERENCIAS</text>\`;
     for(const it of legItems){
-      const w = swW + swGap + it.label.length*6.9 + itemGap;
+      const w = swW + swGap + it.label.length*7.4 + itemGap;
       if(lx + w > maxRight && lx > ox){ lx = ox; ly += rowH; }
       const sy = ly - swW/2;
       if(it.type === 'loseta'){
-        scaleBar += \`<rect x="\${lx}" y="\${sy}" width="\${swW}" height="\${swW}" rx="2" fill="#F7E6D3" stroke="#C0522D" stroke-width="1"/>\`;
+        legend += \`<rect x="\${lx}" y="\${sy}" width="\${swW}" height="\${swW}" rx="2" fill="\${losetaFill}" stroke="#C0522D" stroke-width="1"/>\`;
       } else if(it.type === 'pileta'){
-        scaleBar += \`<rect x="\${lx}" y="\${sy}" width="\${swW}" height="\${swW}" rx="2" fill="url(#poolGrad)" stroke="#1B3A5C" stroke-width="1"/>\`;
+        legend += \`<rect x="\${lx}" y="\${sy}" width="\${swW}" height="\${swW}" rx="2" fill="url(#poolGrad)" stroke="#1B3A5C" stroke-width="1"/>\`;
       } else if(it.type === 'solarhumedo'){
-        scaleBar += \`<rect x="\${lx}" y="\${sy}" width="\${swW}" height="\${swW}" rx="2" fill="#BFE0EF" stroke="#0C447C" stroke-width="0.75"/>\`;
+        legend += \`<rect x="\${lx}" y="\${sy}" width="\${swW}" height="\${swW}" rx="2" fill="#BFE0EF" stroke="#0C447C" stroke-width="0.75"/>\`;
       } else if(it.type === 'espejo'){
-        scaleBar += \`<rect x="\${lx}" y="\${sy}" width="\${swW}" height="\${swW}" rx="2" fill="#DCEBF7" stroke="#1B3A5C" stroke-width="1" stroke-dasharray="3 2"/>\`;
+        legend += \`<rect x="\${lx}" y="\${sy}" width="\${swW}" height="\${swW}" rx="2" fill="url(#poolGrad)" stroke="#1B3A5C" stroke-width="1" stroke-dasharray="3 2"/>\`;
       } else if(it.type === 'escalera'){
-        scaleBar += \`<rect x="\${lx}" y="\${sy}" width="\${swW}" height="\${swW}" rx="1" fill="#ffffff" stroke="#1B3A5C" stroke-width="1.1" stroke-dasharray="3 2"/>\`;
+        legend += \`<rect x="\${lx}" y="\${sy}" width="\${swW}" height="\${swW}" rx="1" fill="#ffffff" stroke="#1B3A5C" stroke-width="1.1" stroke-dasharray="3 2"/>\`;
       } else if(it.type === 'luz'){
         const cx = lx + swW/2, cy = ly;
-        scaleBar += \`<circle cx="\${cx}" cy="\${cy}" r="9" fill="url(#luzGlow)"/>\`;
-        scaleBar += \`<circle cx="\${cx}" cy="\${cy}" r="4" fill="#FFEFA8" stroke="#C99A2E" stroke-width="1"/>\`;
+        legend += \`<circle cx="\${cx}" cy="\${cy}" r="9" fill="url(#luzGlow)"/>\`;
+        legend += \`<circle cx="\${cx}" cy="\${cy}" r="4" fill="#FFEFA8" stroke="#C99A2E" stroke-width="1"/>\`;
       }
-      scaleBar += \`<text x="\${lx+swW+swGap}" y="\${ly}" dominant-baseline="central" font-size="12" fill="#42525E" font-family="Arial">\${it.label}</text>\`;
+      legend += \`<text x="\${lx+swW+swGap}" y="\${ly}" dominant-baseline="central" font-size="13" fill="#42525E" font-family="Arial">\${it.label}</text>\`;
       lx += w;
     }
-    svgH = Math.max(svgH, ly + 20);
+    svgH = ly + 24;
   }
 
   svg.setAttribute('viewBox', '0 0 ' + viewW + ' ' + svgH);
@@ -357,8 +362,8 @@ function drawSvg(svgId, viewW, viewHmax, s, showDims){
   svg.innerHTML = \`
     <defs>
       <linearGradient id="poolGrad" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#E7F3FC"/>
-        <stop offset="1" stop-color="#A6D1EC"/>
+        <stop offset="0" stop-color="\${aguaTop}"/>
+        <stop offset="1" stop-color="\${aguaBottom}"/>
       </linearGradient>
       <radialGradient id="luzGlow" cx="0.5" cy="0.5" r="0.5">
         <stop offset="0" stop-color="#FFF6CE" stop-opacity="0.95"/>
@@ -366,13 +371,13 @@ function drawSvg(svgId, viewW, viewHmax, s, showDims){
         <stop offset="1" stop-color="#FFE08A" stop-opacity="0"/>
       </radialGradient>
     </defs>
-    <rect x="\${ox}" y="\${oy}" width="\${totalW*pxPerM}" height="\${totalH*pxPerM}" rx="6" fill="#F7E6D3" stroke="#C0522D" stroke-width="1"/>
+    <rect x="\${ox}" y="\${oy}" width="\${totalW*pxPerM}" height="\${totalH*pxPerM}" rx="6" fill="\${losetaFill}" stroke="#C0522D" stroke-width="1"/>
     \${grid}
     <rect x="\${poolX}" y="\${poolY}" width="\${poolW}" height="\${poolH}" rx="4" fill="url(#poolGrad)" stroke="#1B3A5C" stroke-width="1"/>
     <rect x="\${poolX+2}" y="\${poolY+2}" width="\${Math.max(0,poolW-4)}" height="\${Math.max(0,poolH-4)}" rx="3" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.35"/>
     \${extras}
     \${dims}
-    \${scaleBar}
+    \${legend}
   \`;
 }
 
@@ -466,6 +471,12 @@ function resetAll(){
   document.getElementById('revestimiento').value = '';
   document.getElementById('subRevestOtro').style.display = 'none';
   document.getElementById('revestimientoOtro').value = '';
+  document.getElementById('colorAgua').value = '#A6D1EC';
+  document.getElementById('colorLoseta').value = '#F7E6D3';
+  document.getElementById('lblSolar').value = 'Solar';
+  document.getElementById('lblOpuesto').value = 'Opuesto';
+  document.getElementById('lblLateral1').value = 'Lateral 1';
+  document.getElementById('lblLateral2').value = 'Lateral 2';
   materials = [ { name: 'Loseta com\\u00fan', price: 0 }, { name: 'Decks', price: 0 } ];
   renderMaterials();
   calc();
@@ -552,6 +563,12 @@ function cargarPresupuestoExterno(datos){
   document.getElementById('revestimiento').value = datos.revestimiento ?? '';
   document.getElementById('revestimientoOtro').value = datos.revestimientoOtro ?? '';
   document.getElementById('subRevestOtro').style.display = datos.revestimiento === 'otro' ? 'block' : 'none';
+  document.getElementById('colorAgua').value = datos.colorAgua || '#A6D1EC';
+  document.getElementById('colorLoseta').value = datos.colorLoseta || '#F7E6D3';
+  document.getElementById('lblSolar').value = datos.lblSolar || 'Solar';
+  document.getElementById('lblOpuesto').value = datos.lblOpuesto || 'Opuesto';
+  document.getElementById('lblLateral1').value = datos.lblLateral1 || 'Lateral 1';
+  document.getElementById('lblLateral2').value = datos.lblLateral2 || 'Lateral 2';
   calc();
 }
 window.cargarPresupuestoExterno = cargarPresupuestoExterno;

@@ -128,6 +128,26 @@ export function buildCalculatorHtml(): string {
     </div>
   </div>
 
+  <div class="field-section">
+    <h3>Personalizaci&oacute;n del plano <span class="section-hint">(colores y etiquetas de la imagen para el cliente)</span></h3>
+    <div class="row">
+      <div>
+        <label>Color del agua (pileta)</label>
+        <input type="color" id="colorAgua" value="#A6D1EC">
+      </div>
+      <div>
+        <label>Color de la loseta (borde)</label>
+        <input type="color" id="colorLoseta" value="#F7E6D3">
+      </div>
+    </div>
+    <div class="row4" style="margin-top:14px;">
+      <div><label>Etiqueta lado solar</label><input type="text" id="lblSolar" value="Solar"></div>
+      <div><label>Etiqueta lado opuesto</label><input type="text" id="lblOpuesto" value="Opuesto"></div>
+      <div><label>Etiqueta lateral 1</label><input type="text" id="lblLateral1" value="Lateral 1"></div>
+      <div><label>Etiqueta lateral 2</label><input type="text" id="lblLateral2" value="Lateral 2"></div>
+    </div>
+  </div>
+
   <div class="plano-container">
     <svg id="svg" width="100%" viewBox="0 0 680 420"></svg>
   </div>
@@ -170,7 +190,6 @@ export function buildCalculatorHtml(): string {
     <div class="btns-label">Presupuesto</div>
     <div class="btns">
       <button class="secondary" id="btnGuardarNube" onclick="guardarEnNubeClick()">&#9729;&#65039; Guardar en la nube</button>
-      <a class="secondary" href="/dashboard/historial?tipo=losetas">&#128203; Historial</a>
       <button class="secondary" onclick="resetAll()">&#128465;&#65039; Limpiar formulario</button>
     </div>
     <div class="helptext" id="cloudMsg"></div>
