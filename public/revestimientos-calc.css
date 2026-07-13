@@ -52,58 +52,26 @@
        el JS del calculador (ResizeObserver sobre .action-bar, altura real). */
     .form-panel{max-height:none; overflow-y:visible; padding-bottom:var(--action-bar-h, 0px);}
 
-    /* --- Barra de acciones como BOTTOM SHEET en una sola columna ---
-       La versión anterior (botones apilados a ancho completo, y después solo-íconos)
-       ocupaba media pantalla o era ambigua. Acá la barra sticky muestra solo dos
-       botones claros -- "+ Nuevo presupuesto" y "Acciones ▾" -- y el resto (PDF,
-       Word, Guardar, Historial) vive en una hoja inferior que sube al tocar
-       "Acciones", cada uno como fila de ícono + TEXTO COMPLETO legible. No se toca
-       la lógica de ningún botón: son los mismos <button>/<a>, solo reubicados. */
-    .action-bar .action-trigger{ display:flex; }
-    .action-bar .action-row{
-      position:fixed;
-      left:0; right:0; bottom:0;
+    /* --- Barra de acciones: botones SIEMPRE visibles, apilados a ancho completo.
+       Antes había un toggle "Acciones ▾" + bottom sheet (poco intuitivo: había que
+       tocarlo para que recién aparecieran PDF/Word/Guardar/Historial). Ahora se
+       muestran directos, sin toggle ni hoja inferior. --- */
+    .action-bar .action-trigger{ display:none; }
+    .action-bar .action-overlay{ display:none; }
+    .action-row{
       flex-direction:column;
-      gap:6px;
-      background:var(--surface);
-      padding:8px 16px calc(16px + env(safe-area-inset-bottom, 0px));
-      border-top-left-radius:18px;
-      border-top-right-radius:18px;
-      box-shadow:0 -6px 28px rgba(27,58,92,.22);
-      transform:translateY(115%);
-      transition:transform .28s cubic-bezier(.4,0,.2,1);
-      z-index:60;
+      gap:8px;
     }
-    /* barrita/handle del sheet */
-    .action-row::before{
-      content:'';
-      display:block;
-      width:40px; height:4px;
-      background:var(--border);
-      border-radius:3px;
-      margin:2px auto 8px;
-    }
-    .action-bar.sheet-open .action-row{ transform:translateY(0); }
     .action-row .btn-secondary{
       margin-top:0;
-      min-height:52px;
-      font-size:15px;
-      text-align:left;
+      min-height:48px;
+      font-size:14px;
       display:flex;
       align-items:center;
-      gap:12px;
-      padding:0 16px;
+      justify-content:center;
+      gap:8px;
     }
     .action-row .btn-label{ font-weight:600; }
-    .action-bar .action-overlay{
-      display:block;
-      position:fixed; inset:0;
-      background:rgba(20,30,40,.42);
-      opacity:0; pointer-events:none;
-      transition:opacity .28s ease;
-      z-index:59;
-    }
-    .action-bar.sheet-open .action-overlay{ opacity:1; pointer-events:auto; }
   }
 
   /* ---------- FORM PANEL ---------- */
@@ -573,6 +541,22 @@
 
   .empty-note{color:var(--muted); font-style:italic; font-size:12px;}
 
+  /* --- Legibilidad para WhatsApp: el presupuesto se manda por chat y la letra
+     quedaba chica. Agranda ~15% SOLO el texto del documento (.sheet), sin tocar el
+     formulario de la izquierda. --- */
+  .sheet .doc-title{font-size:22px;}
+  .sheet .meta-line{font-size:13.5px;}
+  .sheet .section-heading{font-size:12.5px;}
+  .sheet .dim-list li{font-size:14px;}
+  .sheet .price-line{font-size:14px;}
+  .sheet .price-line.total{font-size:16px;}
+  .sheet .opt-title,.sheet .photos-title{font-size:12.5px;}
+  .sheet .legal-block{font-size:12.5px;}
+  .sheet .validity{font-size:13.5px;}
+  .sheet .footer-block{font-size:12.5px;}
+  .sheet .footer-block b{font-size:14px;}
+  .sheet .photo-grid figcaption{font-size:12px;}
+
   .sheet-header{
     -webkit-print-color-adjust:exact;
     print-color-adjust:exact;
@@ -671,7 +655,7 @@
        PDF salía con el layout angosto de mobile (1 columna, títulos chicos, fotos
        apiladas) en vez del documento prolijo de 2 columnas. */
     .meta-grid{grid-template-columns:1fr 1fr !important; padding:16px 20px !important; gap:5px 22px !important;}
-    .doc-title{font-size:19px !important; margin-bottom:20px !important;}
+    .doc-title{font-size:22px !important; margin-bottom:20px !important;}
     .dim-card{padding:14px 18px !important;}
     .opt-card{padding:14px 16px 16px !important;}
     .photo-grid{grid-template-columns:1fr 1fr !important; gap:12px !important;}

@@ -12,6 +12,8 @@ import {
   actualizarPresupuesto,
   subirFotoPresupuesto,
   actualizarCatalogoItem,
+  obtenerCatalogo,
+  guardarTextosCompartidos,
 } from "./presupuestos";
 
 declare global {
@@ -24,6 +26,12 @@ declare global {
       clave: string,
       precio: number | null,
       descripcion?: string
+    ) => Promise<{ error: unknown }>;
+    obtenerCatalogoCompartido?: () => Promise<
+      Array<{ clave: string; precio: number | null; descripcion: string | null }>
+    >;
+    guardarTextosCompartidos?: (
+      entradas: { clave: string; descripcion: string }[]
     ) => Promise<{ error: unknown }>;
     cargarPresupuestoExterno?: (datos: unknown) => void;
     presupuestoEnEdicionId?: string | null;
@@ -43,6 +51,8 @@ export default function PiscinasCalculator() {
     window.listarPresupuestos = listarPresupuestos;
     window.subirFotoPresupuesto = subirFotoPresupuesto;
     window.actualizarCatalogoItem = actualizarCatalogoItem;
+    window.obtenerCatalogoCompartido = obtenerCatalogo;
+    window.guardarTextosCompartidos = guardarTextosCompartidos;
     // Al duplicar, presupuestoEnEdicionId queda sin setear: "Guardar en la nube" debe
     // crear una fila nueva, no pisar el presupuesto original que se está copiando.
     window.presupuestoEnEdicionId = presupuestoId;
@@ -52,6 +62,8 @@ export default function PiscinasCalculator() {
       delete window.listarPresupuestos;
       delete window.subirFotoPresupuesto;
       delete window.actualizarCatalogoItem;
+      delete window.obtenerCatalogoCompartido;
+      delete window.guardarTextosCompartidos;
       delete window.presupuestoEnEdicionId;
     };
   }, [presupuestoId]);

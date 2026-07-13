@@ -6,7 +6,11 @@ import {
   eliminarPresupuesto as eliminar,
   subirFotoPresupuesto as subirFoto,
 } from "@/lib/presupuestos";
-import { actualizarCatalogoItem as actualizarCatalogo } from "@/lib/catalogo";
+import {
+  actualizarCatalogoItem as actualizarCatalogo,
+  obtenerCatalogo as obtenerCat,
+  guardarTextosCompartidos as guardarTextos,
+} from "@/lib/catalogo";
 
 const TIPO = "cobertores" as const;
 
@@ -29,3 +33,9 @@ export const actualizarCatalogoItem = (
   precio: number | null,
   descripcion?: string
 ) => actualizarCatalogo(TIPO, clave, precio, descripcion);
+
+export const obtenerCatalogo = () => obtenerCat(TIPO);
+
+export const guardarTextosCompartidos = (
+  entradas: { clave: string; descripcion: string }[]
+) => guardarTextos(TIPO, entradas);

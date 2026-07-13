@@ -116,6 +116,9 @@ const CALCULATOR_MARKUP = `
         <div class="field"><label>Instagram</label><input type="text" id="f-instagram"></div>
         <div class="field"><label>Link Instagram</label><input type="text" id="f-instagramUrl" placeholder="https://..."></div>
       </div>
+
+      <button class="btn-secondary" type="button" id="btn-save-textos-todos" style="margin-top:14px;" title="Guarda el texto legal y el pie como predeterminados para todos los usuarios">Guardar como predeterminado para todos</button>
+      <div class="save-flash" id="save-textos-flash"></div>
     </div>
 
     </section>
