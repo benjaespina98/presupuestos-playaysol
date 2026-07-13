@@ -540,9 +540,9 @@ async function aplicarPresupuestoAlState(q){
   // (state.fotosPorOpcional), no cambian según qué presupuesto estés viendo.
 
   renderForm();
-  // Reabrí todas las secciones del acordeón (estado inicial por defecto).
-  document.querySelectorAll('.acc-item').forEach(it=>it.classList.add('open'));
-  document.querySelectorAll('.acc-head').forEach(h=>h.setAttribute('aria-expanded','true'));
+  // Colapsá todas las secciones del acordeón (estado inicial por defecto).
+  document.querySelectorAll('.acc-item').forEach(it=>it.classList.remove('open'));
+  document.querySelectorAll('.acc-head').forEach(h=>h.setAttribute('aria-expanded','false'));
 }
 
 // Espera a que termine el arranque de la calculadora (initPromise) para no correr en paralelo
