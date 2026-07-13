@@ -12,6 +12,8 @@ import {
   actualizarPresupuesto,
   subirFotoPresupuesto,
   actualizarCatalogoItem,
+  obtenerCatalogo,
+  guardarTextosCompartidos,
 } from "./presupuestos";
 
 declare global {
@@ -24,6 +26,12 @@ declare global {
       clave: string,
       precio: number | null,
       descripcion?: string
+    ) => Promise<{ error: unknown }>;
+    obtenerCatalogoCompartido?: () => Promise<
+      Array<{ clave: string; precio: number | null; descripcion: string | null }>
+    >;
+    guardarTextosCompartidos?: (
+      entradas: { clave: string; descripcion: string }[]
     ) => Promise<{ error: unknown }>;
     cargarPresupuestoExterno?: (datos: unknown) => void;
     presupuestoEnEdicionId?: string | null;
@@ -43,6 +51,8 @@ export default function CobertoresCalculator() {
     window.listarPresupuestos = listarPresupuestos;
     window.subirFotoPresupuesto = subirFotoPresupuesto;
     window.actualizarCatalogoItem = actualizarCatalogoItem;
+    window.obtenerCatalogoCompartido = obtenerCatalogo;
+    window.guardarTextosCompartidos = guardarTextosCompartidos;
     window.presupuestoEnEdicionId = presupuestoId;
     return () => {
       delete window.guardarPresupuesto;
@@ -50,6 +60,8 @@ export default function CobertoresCalculator() {
       delete window.listarPresupuestos;
       delete window.subirFotoPresupuesto;
       delete window.actualizarCatalogoItem;
+      delete window.obtenerCatalogoCompartido;
+      delete window.guardarTextosCompartidos;
       delete window.presupuestoEnEdicionId;
     };
   }, [presupuestoId]);

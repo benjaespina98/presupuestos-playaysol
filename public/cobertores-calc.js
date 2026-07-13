@@ -333,6 +333,65 @@ function flashPreciosSaved(){
   flashPreciosTimeout = setTimeout(()=>{ el.textContent=''; }, 2000);
 }
 
+// Aplica el catálogo COMPARTIDO (Supabase) sobre los defaults ya cargados de
+// localStorage: precios/descripciones de opcionales (por slug) y los textos fijos/pie
+// que alguien dejó como predeterminados con "Guardar para todos". Se corre en el init,
+// antes del primer render y antes de cargar un presupuesto de la nube: así los
+// presupuestos NUEVOS toman los valores compartidos, pero uno abierto desde el historial
+// mantiene los suyos (cargarPresupuestoExterno pisa después). Es la contraparte de
+// lectura que faltaba: antes esta tabla solo se escribía y nadie la leía.
+async function aplicarCatalogoCompartido(){
+  if(!window.obtenerCatalogoCompartido) return;
+  let filas;
+  try{ filas = await window.obtenerCatalogoCompartido(); }
+  catch(e){ console.error('No se pudo leer el catálogo compartido', e); return; }
+  if(!Array.isArray(filas)) return;
+  for(const fila of filas){
+    const clave = fila.clave;
+    if(clave === '__legal'){
+      if(fila.descripcion != null) state.legal = fila.descripcion;
+    } else if(clave.indexOf('__footer_') === 0){
+      const campo = clave.slice('__footer_'.length);
+      if(campo && fila.descripcion != null && campo in state.footer) state.footer[campo] = fila.descripcion;
+    } else {
+      const op = state.opcionales.find(o=>o.slug === clave);
+      if(op){
+        if(fila.precio !== null && fila.precio !== undefined) op.price = fila.precio;
+        if(fila.descripcion) op.desc = fila.descripcion;
+      }
+    }
+  }
+}
+
+// Botón "Guardar como predeterminado para todos" (sección Textos fijos): empuja el
+// texto legal + todos los campos del pie al catálogo compartido de una sola vez.
+async function guardarTextosParaTodos(){
+  const flash = document.getElementById('save-textos-flash');
+  const btn = document.getElementById('btn-save-textos-todos');
+  if(!window.guardarTextosCompartidos){
+    if(flash) flash.textContent = 'No disponible.';
+    return;
+  }
+  const entradas = [{ clave:'__legal', descripcion: state.legal || '' }];
+  Object.keys(footerFieldIds).forEach(elId=>{
+    const campo = footerFieldIds[elId];
+    entradas.push({ clave:'__footer_'+campo, descripcion: state.footer[campo] || '' });
+  });
+  if(btn) btn.disabled = true;
+  if(flash){ flash.textContent = 'Guardando...'; flash.style.color = 'var(--primary-dark)'; }
+  try{
+    const { error } = await window.guardarTextosCompartidos(entradas);
+    if(error) throw error;
+    if(flash) flash.textContent = 'Guardado para todos ✓';
+  }catch(e){
+    console.error('No se pudieron guardar los textos compartidos', e);
+    if(flash){ flash.textContent = 'Error al guardar'; flash.style.color = 'var(--danger)'; }
+  }finally{
+    if(btn) btn.disabled = false;
+    setTimeout(()=>{ if(flash) flash.textContent=''; }, 2500);
+  }
+}
+
 function saveCatalog(){
   try{
     localStorage.setItem(K_CATALOG, JSON.stringify(state.opcionales));
@@ -1021,6 +1080,9 @@ Object.keys(footerFieldIds).forEach(elId=>{
   el.addEventListener('blur', saveFooter);
 });
 
+const btnSaveTextosTodos = document.getElementById('btn-save-textos-todos');
+if(btnSaveTextosTodos) btnSaveTextosTodos.addEventListener('click', guardarTextosParaTodos);
+
 document.getElementById('f-header-variant').addEventListener('change', e=>{
   state.headerVariant = e.target.value;
   renderPreview();
@@ -1613,6 +1675,7 @@ document.querySelectorAll('.acc-head').forEach(head=>{
 // seedFotosGeneralesDefaults() puede terminar después y pisar las fotos recién restauradas.
 let initPromise = (async function init(){
   await loadCatalog();
+  await aplicarCatalogoCompartido();
   // A) Las fotos generales (las que se ven al entrar) y el formulario NO dependen del
   //    catálogo de fotos por opcional, así que se muestran primero: en cold start eso baja
   //    la espera hasta la primera foto de ~800ms a <100ms. El sembrado de fotos por opcional
