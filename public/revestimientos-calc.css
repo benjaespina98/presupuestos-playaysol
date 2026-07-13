@@ -227,6 +227,22 @@
     font-size:14px;
     line-height:1;
   }
+  /* Flechas para reordenar un tipo de revestimiento en el catálogo (define el orden
+     en que salen en el documento). */
+  .opt-move-group{display:inline-flex; gap:3px;}
+  .opt-move{
+    width:22px;height:22px;
+    border:1px solid var(--border);
+    background:#fff;
+    border-radius:5px;
+    color:var(--doc-navy, #123F49);
+    cursor:pointer;
+    font-size:12px;
+    line-height:1;
+    padding:0;
+  }
+  .opt-move:hover:not(:disabled){background:#f2f6fa;}
+  .opt-move:disabled{opacity:.35; cursor:not-allowed;}
   .btn-add{
     display:inline-flex;
     align-items:center;
@@ -480,6 +496,13 @@
     margin-top:8px;
     padding-top:10px;
     color:var(--doc-navy);
+  }
+  /* Totales adicionales de un grupo (uno por revestimiento): se agrupan bajo la misma
+     regla superior, sin repetir línea/margen arriba de cada uno. */
+  .price-line.total.total-cont{
+    border-top:none;
+    margin-top:0;
+    padding-top:4px;
   }
   .opt-title{
     font-size:11px;

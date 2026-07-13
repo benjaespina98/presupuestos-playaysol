@@ -106,6 +106,41 @@ function computeRevestimientoTotal(){
   }, 0);
   return opcTotal + extras;
 }
+// Nombre corto del material para la línea de total: saca el paréntesis final
+// tipo "(por m² instalado)" / "(por obra ...)" y deja solo el nombre.
+function revestShortName(desc){
+  const s = String(desc||'').trim();
+  const corto = s.replace(/\s*\([^)]*\)\s*$/, '').trim();
+  return corto || s;
+}
+// Un total por cada revestimiento COTIZADO (con precio): precio de ese revestimiento
+// + TODOS los adicionales. Así cada alternativa muestra su total final por separado, en
+// vez de sumar los dos revestimientos juntos. Los que quedan en "No incluye" (sin precio)
+// no generan línea de total.
+function computeTotalesPorRevestimiento(){
+  const m2total = computeM2Total();
+  const extras = state.items.reduce((s,i)=>s+Number(i.price||0),0);
+  return state.opcionales
+    .filter(o=>o.included===true && o.price!==null && o.price!==undefined)
+    .map(op=>{
+      const perM2 = op.perM2 !== false;
+      const base = perM2 ? op.price*m2total : op.price;
+      return { name: revestShortName(op.desc), amount: base + extras };
+    });
+}
+// Mueve un opcional del catálogo hacia arriba (dir=-1) o abajo (dir=1). El orden del
+// catálogo define el orden en que salen los revestimientos en el documento, así que
+// esto permite, por ejemplo, poner Símil Bali arriba de Travertino o al revés.
+function moveOpt(id, dir){
+  const i = state.opcionales.findIndex(o=>o.id===id);
+  if(i<0) return;
+  const j = i + dir;
+  if(j<0 || j>=state.opcionales.length) return;
+  const tmp = state.opcionales[i];
+  state.opcionales[i] = state.opcionales[j];
+  state.opcionales[j] = tmp;
+  renderOptList(); renderPreview(); saveCatalog();
+}
 
 function cid(){ return 'i'+Math.random().toString(36).slice(2,9); }
 function todayStr(){
@@ -673,7 +708,9 @@ function renderOptList(){
   const wrap = document.getElementById('opt-list');
   wrap.innerHTML = '';
   const m2total = computeM2Total();
-  state.opcionales.forEach(op=>{
+  state.opcionales.forEach((op, idx)=>{
+    const isFirst = idx === 0;
+    const isLast = idx === state.opcionales.length - 1;
     const block = document.createElement('div');
     block.className = 'opt-block';
     const perM2 = op.perM2 !== false; // por defecto true (precio /m²)
@@ -686,6 +723,10 @@ function renderOptList(){
         <button class="btn-mini" data-id="${op.id}" title="Quitar este tipo del catálogo">✕</button>
       </div>
       <div style="display:flex; align-items:center; gap:8px; margin:2px 0 4px 26px; font-size:11px; color:var(--muted);">
+        <span class="opt-move-group" title="Cambiar el orden en que sale en el documento">
+          <button type="button" class="opt-move" data-id="${op.id}" data-dir="-1" title="Subir" ${isFirst?'disabled':''}>↑</button>
+          <button type="button" class="opt-move" data-id="${op.id}" data-dir="1" title="Bajar" ${isLast?'disabled':''}>↓</button>
+        </span>
         <label style="display:flex; align-items:center; gap:4px; cursor:pointer;">
           <input type="checkbox" class="opt-perm2" data-id="${op.id}" ${perM2?'checked':''} style="width:13px;height:13px;">
           Precio por m² (destildar = precio fijo "por obra")
@@ -701,6 +742,9 @@ function renderOptList(){
   });
   wrap.querySelectorAll('.opt-check').forEach(cb=>cb.addEventListener('change', e=>{
     updateOpt(e.target.dataset.id,'included', e.target.checked); renderPreview();
+  }));
+  wrap.querySelectorAll('.opt-move').forEach(btn=>btn.addEventListener('click', ()=>{
+    moveOpt(btn.dataset.id, Number(btn.dataset.dir));
   }));
   wrap.querySelectorAll('.opt-perm2').forEach(cb=>cb.addEventListener('change', e=>{
     updateOpt(e.target.dataset.id,'perM2', e.target.checked); updateOptComputedSpans(); renderPreview(); saveCatalog();
@@ -923,11 +967,14 @@ function buildPriceRows(rows, forExport){
     return rows.map(r=>`<div class="price-line ${r.cls||''}"><span>${r.descHtml}</span><span>${r.priceHtml}</span></div>`).join('');
   }
   const trs = rows.map(r=>{
-    const isTotal = r.cls==='total';
-    const isSubtotal = r.cls==='subtotal';
+    const clsList = (r.cls||'').split(/\s+/);
+    const isTotal = clsList.includes('total');
+    const isSubtotal = clsList.includes('subtotal');
+    const isTotalCont = clsList.includes('total-cont');
     const bold = isTotal || isSubtotal ? 'font-weight:bold;' : '';
     const fontSize = isTotal ? 'font-size:13pt;' : 'font-size:11pt;';
-    const borderTop = isTotal ? 'border-top:2px solid #123F49;' : '';
+    // En un grupo de varios totales, solo el primero lleva la regla superior.
+    const borderTop = (isTotal && !isTotalCont) ? 'border-top:2px solid #123F49;' : '';
     const cellStyle = `${fontSize}${bold}${borderTop}border-bottom:1px dotted #ccc;padding:4px 6px;`;
     return `<tr><td style="${cellStyle}">${r.descHtml}</td><td align="right" style="${cellStyle}white-space:nowrap;">${r.priceHtml}</td></tr>`;
   }).join('');
@@ -940,7 +987,6 @@ function buildPriceRows(rows, forExport){
 function buildDocumentBody({ forExport=false, photoSrc } = {}){
   const largo = Number(state.largo||0), ancho = Number(state.ancho||0), prof = Number(state.profundidad||0);
   const m2fondo = computeM2Fondo(), m2paredes = computeM2Paredes(), m2total = computeM2Total();
-  const extras = state.items.reduce((s,i)=>s+Number(i.price||0),0);
   const incluidosOpt = state.opcionales.filter(o=>o.included===true);
   const grandTotal = computeRevestimientoTotal();
 
@@ -995,7 +1041,20 @@ function buildDocumentBody({ forExport=false, photoSrc } = {}){
     html += buildPriceRows(extraRows, forExport);
   }
 
-  html += `<div class="included-block" style="margin-top:10px;">${buildPriceRows([{ descHtml:'TOTAL REVESTIMIENTO', priceHtml: fmt(grandTotal), cls:'total' }], forExport)}</div>`;
+  const totalesRev = computeTotalesPorRevestimiento();
+  let totalRows;
+  if(totalesRev.length >= 2){
+    // Un total por revestimiento (cada uno + adicionales). Solo el primero lleva la
+    // línea superior; los siguientes se agrupan debajo sin repetir la regla.
+    totalRows = totalesRev.map((t, idx)=>({
+      descHtml: 'TOTAL revestimiento con ' + escHtml(t.name),
+      priceHtml: fmt(t.amount),
+      cls: idx === 0 ? 'total' : 'total total-cont'
+    }));
+  } else {
+    totalRows = [{ descHtml:'TOTAL REVESTIMIENTO', priceHtml: fmt(grandTotal), cls:'total' }];
+  }
+  html += `<div class="included-block" style="margin-top:10px;">${buildPriceRows(totalRows, forExport)}</div>`;
 
   html += `<div class="validity">El presente presupuesto tiene una validez de ${escHtml(state.validez)} días.</div>`;
 
@@ -1540,7 +1599,13 @@ async function buildDocxSections(){
   }
 
   children.push(new Paragraph({ spacing:{before:160}, children:[] }));
-  children.push(docxPriceLine('TOTAL REVESTIMIENTO', fmt(grandTotal), {bold:true, big:true, topRule:true}));
+  const totalesRev = computeTotalesPorRevestimiento();
+  if(totalesRev.length >= 2){
+    totalesRev.forEach((t, idx)=>
+      children.push(docxPriceLine('TOTAL revestimiento con ' + t.name, fmt(t.amount), {bold:true, big:true, topRule: idx === 0})));
+  } else {
+    children.push(docxPriceLine('TOTAL REVESTIMIENTO', fmt(grandTotal), {bold:true, big:true, topRule:true}));
+  }
 
   children.push(docxValidity(state.validez));
   children.push(...docxBodyText(state.legal, {size:19}));
