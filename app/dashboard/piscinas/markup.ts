@@ -14,8 +14,8 @@ const CALCULATOR_MARKUP = `
     <div class="accordion">
 
     <!-- DATOS -->
-    <section class="acc-item open">
-    <button type="button" class="acc-head" data-acc="datos" aria-expanded="true">Datos<span class="acc-caret" aria-hidden="true">▾</span></button>
+    <section class="acc-item">
+    <button type="button" class="acc-head" data-acc="datos" aria-expanded="false">Datos<span class="acc-caret" aria-hidden="true">▾</span></button>
     <div class="tab-content" id="tab-datos">
       <div class="field"><label>Fecha</label><input type="text" id="f-fecha"></div>
       <div class="field"><label>Señor/Sra</label><input type="text" id="f-cliente" placeholder="Apellido, Nombre"></div>
@@ -34,8 +34,8 @@ const CALCULATOR_MARKUP = `
     </section>
 
     <!-- ITEMS INCLUIDOS -->
-    <section class="acc-item open">
-    <button type="button" class="acc-head" data-acc="items" aria-expanded="true">Ítems<span class="acc-caret" aria-hidden="true">▾</span></button>
+    <section class="acc-item">
+    <button type="button" class="acc-head" data-acc="items" aria-expanded="false">Ítems<span class="acc-caret" aria-hidden="true">▾</span></button>
     <div class="tab-content" id="tab-items">
       <div class="field"><label>Subtotal construcción piscina</label><input type="text" id="f-subtotal" inputmode="decimal" placeholder="0"></div>
       <div class="section-label" title="Solo si algo va sumado al total; lo demás va en Opcionales">Adicionales incluidos en el TOTAL</div>
@@ -46,8 +46,8 @@ const CALCULATOR_MARKUP = `
     </section>
 
     <!-- OPCIONALES -->
-    <section class="acc-item open">
-    <button type="button" class="acc-head" data-acc="opcionales" aria-expanded="true">Opcionales<span class="acc-caret" aria-hidden="true">▾</span></button>
+    <section class="acc-item">
+    <button type="button" class="acc-head" data-acc="opcionales" aria-expanded="false">Opcionales<span class="acc-caret" aria-hidden="true">▾</span></button>
     <div class="tab-content" id="tab-opcionales">
       <div style="display:flex; gap:8px; margin-bottom:10px;">
         <button class="btn-secondary" id="btn-check-all" style="margin-top:0;">☑ Todos</button>
@@ -61,8 +61,8 @@ const CALCULATOR_MARKUP = `
     </section>
 
     <!-- FOTOS -->
-    <section class="acc-item open">
-    <button type="button" class="acc-head" data-acc="fotos" aria-expanded="true">Fotos<span class="acc-caret" aria-hidden="true">▾</span></button>
+    <section class="acc-item">
+    <button type="button" class="acc-head" data-acc="fotos" aria-expanded="false">Fotos<span class="acc-caret" aria-hidden="true">▾</span></button>
     <div class="tab-content" id="tab-fotos">
       <div class="section-label" title="Fotos generales al final del documento. Para fotos de un ítem puntual, subilas en Opcionales">Fotos generales</div>
       <input type="file" id="foto-input" accept="image/*" multiple style="margin-bottom:10px; font-size:12px;">
@@ -72,8 +72,8 @@ const CALCULATOR_MARKUP = `
     </section>
 
     <!-- TEXTOS FIJOS -->
-    <section class="acc-item open">
-    <button type="button" class="acc-head" data-acc="textos" aria-expanded="true">Textos fijos<span class="acc-caret" aria-hidden="true">▾</span></button>
+    <section class="acc-item">
+    <button type="button" class="acc-head" data-acc="textos" aria-expanded="false">Textos fijos<span class="acc-caret" aria-hidden="true">▾</span></button>
     <div class="tab-content" id="tab-textos">
       <div class="field"><label>Texto legal / técnico</label><textarea id="f-legal" rows="12"></textarea></div>
 

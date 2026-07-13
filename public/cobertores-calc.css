@@ -50,7 +50,7 @@
        padding-bottom, el último ítem de una lista larga queda tapado por la
        barra sin forma de revelarlo con scroll normal. --action-bar-h la fija
        el JS del calculador (ResizeObserver sobre .action-bar, altura real). */
-    .form-panel{max-height:none; overflow-y:visible; padding-bottom:var(--action-bar-h, 0px);}
+    .form-panel{max-height:none; overflow-y:visible;}
 
     /* --- Barra de acciones: botones SIEMPRE visibles, apilados a ancho completo.
        Antes había un toggle "Acciones ▾" + bottom sheet (poco intuitivo: había que
@@ -96,8 +96,7 @@
   /* ---------- ACORDEÓN ----------
      Reemplaza las pestañas (una sección visible a la vez, que dejaba el panel casi
      vacío en desktop). Ahora las secciones son plegables e independientes; arrancan
-     todas abiertas para aprovechar el alto de la pantalla y el usuario pliega las que
-     no usa. */
+     colapsadas y el usuario abre las que necesita. */
   .accordion{margin-bottom:6px;}
   .acc-item{
     border:1px solid var(--border);
@@ -589,21 +588,14 @@
   .action-trigger:active{ transform:scale(.98); background:var(--primary-dark); box-shadow:0 2px 6px rgba(27,58,92,.2); }
   .action-overlay{ display:none; }
 
-  /* Barra de acciones (Nuevo / PDF / Word / Guardar en la nube / Historial): un solo
-     lugar, siempre visible sin importar qué tab esté activo, en vez de tener que
-     scrollear hasta el final del tab actual para encontrarla. */
+  /* En FLUJO NORMAL al final del formulario (no sticky/flotante): el scroll se
+     siente natural, como recorrer un formulario. Los botones quedan abajo de todo
+     cuando terminás de completar. */
   .action-bar{
-    position:sticky;
-    bottom:0;
-    /* Eleva el contexto de apilamiento de la barra por encima del preview-panel,
-       para que el bottom sheet + overlay (fixed, descendientes) no queden tapados
-       por el documento en mobile. */
-    z-index:40;
     background:var(--surface);
-    padding-top:10px;
-    margin-top:14px;
+    padding-top:14px;
+    margin-top:18px;
     border-top:1px solid var(--border);
-    box-shadow:0 -2px 8px rgba(0,0,0,.05);
   }
 
   /* ---------- MOBILE (<600px) ---------- */
