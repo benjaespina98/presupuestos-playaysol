@@ -1458,7 +1458,7 @@ async function buildDocxSections(){
       verticalAlign: VerticalAlign.CENTER,
       margins:{ top:300, bottom:300 },
       children:[ new Paragraph({ alignment:AlignmentType.CENTER,
-        children:[ new ImageRun({ type:'jpg', data:headerBytes, transformation:{ width:130, height:130 },
+        children:[ new ImageRun({ type:'png', data:headerBytes, transformation:{ width:130, height:130 },
           altText:{ title:'Logo', description:'Playa y Sol', name:'Logo' } }) ] }) ]
     }) ] }) ]
   }));
