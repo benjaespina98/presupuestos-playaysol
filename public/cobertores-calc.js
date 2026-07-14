@@ -66,8 +66,8 @@ const DEFAULT_FOTOS_GENERALES_SEED = [
 ];
 
 const HEADER_VARIANTS = {
-  teal: { color:'#00829C', img:'/header-teal.jpg' },
-  navy: { color:'#214D5A', img:'/header-navy.jpg' }
+  teal: { color:'#00829C', img:'/header-teal.png' },
+  navy: { color:'#214D5A', img:'/header-navy.png' }
 };
 
 /* ---------------- STATE ---------------- */
