@@ -66,8 +66,8 @@ const DEFAULT_FOTOS_GENERALES_SEED = [
 ];
 
 const HEADER_VARIANTS = {
-  teal: { color:'#00829C', img:'/header-teal.jpg' },
-  navy: { color:'#214D5A', img:'/header-navy.jpg' }
+  teal: { color:'#00829C', img:'/header-teal.png' },
+  navy: { color:'#214D5A', img:'/header-navy.png' }
 };
 
 /* ---------------- STATE ---------------- */
@@ -1497,7 +1497,7 @@ async function buildDocxSections(){
       verticalAlign: VerticalAlign.CENTER,
       margins:{ top:300, bottom:300 },
       children:[ new Paragraph({ alignment:AlignmentType.CENTER,
-        children:[ new ImageRun({ type:'jpg', data:headerBytes, transformation:{ width:130, height:130 },
+        children:[ new ImageRun({ type:'png', data:headerBytes, transformation:{ width:130, height:130 },
           altText:{ title:'Logo', description:'Playa y Sol', name:'Logo' } }) ] }) ]
     }) ] }) ]
   }));
