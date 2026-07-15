@@ -437,25 +437,33 @@ async function confirmarCambioCatalogoOpcional(inputEl, campo){
   if(valorNuevo === valorInicial) return;
   const op = state.opcionales.find(o=>o.id===inputEl.dataset.id);
   if(!op || !op.slug || !window.actualizarCatalogoItem || !window.mostrarModalCatalogo) return; // opcionales agregados a mano no tienen clave estable
-  const etiqueta = op.desc.length > 60 ? op.desc.slice(0,60)+'…' : op.desc;
+  const etiqueta = op.desc.length > 44 ? op.desc.slice(0,44)+'…' : op.desc;
   const mensaje = campo==='price'
-    ? `Vas a cambiar el precio de "${etiqueta}" de ${valorInicial===''?'sin precio':'$'+valorInicial} a ${valorNuevo===''?'sin precio':'$'+valorNuevo}.`
-    : `Vas a cambiar la descripción de "${etiqueta}".`;
+    ? `Precio de "${etiqueta}": ${valorInicial===''?'sin precio':'$'+valorInicial} → ${valorNuevo===''?'sin precio':'$'+valorNuevo}`
+    : `Nueva descripción de "${etiqueta}"`;
   const resultado = await window.mostrarModalCatalogo({
-    titulo: campo==='price' ? 'Actualizar precio de catálogo' : 'Actualizar descripción de catálogo',
+    titulo: '¿Dónde guardar el cambio?',
     mensaje,
-    botonPrimario: {
-      texto: 'Actualizar para todas las calculadoras',
-      aclaracion: 'Este valor va a verse en todos los presupuestos nuevos de revestimientos a partir de ahora'
-    },
-    botonSecundario: {
-      texto: 'Solo para este presupuesto',
-      aclaracion: 'El catálogo general no cambia'
-    }
+    botonPrimario: { texto: 'Guardar en el catálogo' },
+    botonSecundario: { texto: 'Solo este presupuesto' }
   });
   if(resultado !== 'primario') return;
   const { error } = await window.actualizarCatalogoItem(op.slug, op.price, op.desc);
   if(error) console.error('No se pudo actualizar el catálogo compartido', error);
+}
+
+// Popup "este/todos" al cambiar las fotos de un tipo — misma lógica que precio/descripción:
+// el cambio ya está en el documento actual (state.fotosPorOpcional). Devuelve true si además
+// hay que guardarlo en el catálogo compartido (saveFotosPorOpcional), false = solo este presupuesto.
+async function confirmarFotosEnCatalogo(cambio){
+  if(!window.mostrarModalCatalogo) return true; // sin modal: comportamiento de siempre (guardar en catálogo)
+  const r = await window.mostrarModalCatalogo({
+    titulo: '¿Dónde guardar el cambio?',
+    mensaje: cambio==='quitar' ? 'Quitaste una foto de este tipo.' : 'Agregaste fotos a este tipo.',
+    botonPrimario: { texto: 'Guardar en el catálogo' },
+    botonSecundario: { texto: 'Solo este presupuesto' }
+  });
+  return r === 'primario';
 }
 
 function saveLegal(){
@@ -700,7 +708,7 @@ function updateOptComputedSpans(){
     if(!span) return;
     const perM2 = op.perM2 !== false;
     const computedTotal = (op.price===null||op.price===undefined) ? null : (perM2 ? op.price*m2total : op.price);
-    span.textContent = computedTotal===null ? '' : '= '+fmt(computedTotal);
+    span.textContent = computedTotal===null ? '—' : fmt(computedTotal);
   });
 }
 
@@ -712,36 +720,58 @@ function renderOptList(){
     const isFirst = idx === 0;
     const isLast = idx === state.opcionales.length - 1;
     const block = document.createElement('div');
-    block.className = 'opt-block';
+    block.className = 'opt-block' + (op.included===true ? ' is-included' : '');
     const perM2 = op.perM2 !== false; // por defecto true (precio /m²)
     const computedTotal = (op.price===null||op.price===undefined) ? null : (perM2 ? op.price * m2total : op.price);
     block.innerHTML = `
-      <div class="opt-row">
-        <label class="opt-check-wrap"><input type="checkbox" ${op.included===true?'checked':''} data-id="${op.id}" class="opt-check" title="Tildado = aparece en este presupuesto"></label>
-        <textarea data-id="${op.id}" data-field="desc" class="opt-desc" data-valor-inicial="${escAttr(op.desc)}" rows="3">${escAttr(op.desc)}</textarea>
-        <input type="text" value="${op.price===null||op.price===undefined?'':op.price}" placeholder="No incluye" data-id="${op.id}" data-field="price" class="opt-price" inputmode="decimal" data-valor-inicial="${op.price===null||op.price===undefined?'':op.price}">
-        <button class="btn-mini" data-id="${op.id}" title="Quitar este tipo del catálogo">✕</button>
-      </div>
-      <div style="display:flex; align-items:center; gap:8px; margin:2px 0 4px 26px; font-size:11px; color:var(--muted);">
-        <span class="opt-move-group" title="Cambiar el orden en que sale en el documento">
-          <button type="button" class="opt-move" data-id="${op.id}" data-dir="-1" title="Subir" ${isFirst?'disabled':''}>↑</button>
-          <button type="button" class="opt-move" data-id="${op.id}" data-dir="1" title="Bajar" ${isLast?'disabled':''}>↓</button>
-        </span>
-        <label style="display:flex; align-items:center; gap:4px; cursor:pointer;">
-          <input type="checkbox" class="opt-perm2" data-id="${op.id}" ${perM2?'checked':''} style="width:13px;height:13px;">
-          Precio por m² (destildar = precio fijo "por obra")
+      <div class="opt-top">
+        <label class="opt-incluir" title="Tildado = este tipo va en el presupuesto actual">
+          <input type="checkbox" ${op.included===true?'checked':''} data-id="${op.id}" class="opt-check">
+          <span>Incluir en este presupuesto</span>
         </label>
-        <span id="opt-computed-${op.id}" style="margin-left:auto; font-weight:600;">${computedTotal===null?'':'= '+fmt(computedTotal)}</span>
+        <div class="opt-top-actions">
+          <span class="opt-move-group" title="Orden en que sale en el documento">
+            <button type="button" class="opt-move" data-id="${op.id}" data-dir="-1" title="Subir" ${isFirst?'disabled':''}>↑</button>
+            <button type="button" class="opt-move" data-id="${op.id}" data-dir="1" title="Bajar" ${isLast?'disabled':''}>↓</button>
+          </span>
+          <button class="btn-mini opt-del" data-id="${op.id}" title="Quitar este tipo del catálogo">✕</button>
+        </div>
+      </div>
+      <div class="opt-body">
+        <label class="opt-f">
+          <span class="opt-f-lbl">Descripción</span>
+          <textarea data-id="${op.id}" data-field="desc" class="opt-desc" data-valor-inicial="${escAttr(op.desc)}" rows="2">${escAttr(op.desc)}</textarea>
+        </label>
+        <div class="opt-pricegrid">
+          <label class="opt-f">
+            <span class="opt-f-lbl">Precio</span>
+            <span class="opt-price-wrap"><span class="opt-cur">$</span><input type="text" value="${op.price===null||op.price===undefined?'':op.price}" placeholder="No incluye" data-id="${op.id}" data-field="price" class="opt-price" inputmode="decimal" data-valor-inicial="${op.price===null||op.price===undefined?'':op.price}"></span>
+          </label>
+          <div class="opt-f">
+            <span class="opt-f-lbl">Cobro</span>
+            <label class="opt-switch" title="Tildado: el precio se multiplica por los m². Destildado: precio fijo por obra.">
+              <input type="checkbox" class="opt-perm2" data-id="${op.id}" ${perM2?'checked':''}>
+              por m²
+            </label>
+          </div>
+          <div class="opt-f opt-f-total">
+            <span class="opt-f-lbl">Total</span>
+            <span class="opt-total" id="opt-computed-${op.id}">${computedTotal===null?'—':fmt(computedTotal)}</span>
+          </div>
+        </div>
       </div>
       <div class="opt-fotos">
+        <span class="opt-fotos-lbl">Fotos de este tipo</span>
         <div class="opt-fotos-thumbs" id="opt-fotos-thumbs-${op.id}"></div>
-        <input type="file" accept="image/*" multiple class="opt-foto-input" data-id="${op.id}" placeholder="Fotos de este tipo">
+        <label class="opt-add-foto">📷 Agregar fotos<input type="file" accept="image/*" multiple class="opt-foto-input" data-id="${op.id}"></label>
       </div>`;
     wrap.appendChild(block);
     renderOptFotosThumbs(op.id);
   });
   wrap.querySelectorAll('.opt-check').forEach(cb=>cb.addEventListener('change', e=>{
-    updateOpt(e.target.dataset.id,'included', e.target.checked); renderPreview();
+    updateOpt(e.target.dataset.id,'included', e.target.checked);
+    const card = e.target.closest('.opt-block'); if(card) card.classList.toggle('is-included', e.target.checked);
+    renderPreview();
   }));
   wrap.querySelectorAll('.opt-move').forEach(btn=>btn.addEventListener('click', ()=>{
     moveOpt(btn.dataset.id, Number(btn.dataset.dir));
@@ -764,7 +794,7 @@ function renderOptList(){
     saveCatalog();
     confirmarCambioCatalogoOpcional(e.target, 'price');
   }));
-  wrap.querySelectorAll('.opt-row .btn-mini').forEach(btn=>btn.addEventListener('click', async ()=>{
+  wrap.querySelectorAll('.opt-del').forEach(btn=>btn.addEventListener('click', async ()=>{
     if(!confirm('¿Quitar este tipo del catálogo? Se borra para todas las cotizaciones futuras (esta compu).')) return;
     const opId = btn.dataset.id;
     state.opcionales = state.opcionales.filter(o=>o.id!==opId);
@@ -778,7 +808,7 @@ function renderOptList(){
   wrap.querySelectorAll('.opt-foto-input').forEach(inp=>inp.addEventListener('change', async e=>{
     const opId = e.target.dataset.id;
     const files = Array.from(e.target.files || []);
-    let fallidas = 0;
+    let fallidas = 0, agregadas = 0;
     for(const file of files){
       try{
         const { blob, width, height } = await resizeImageFile(file, 1400);
@@ -790,11 +820,12 @@ function renderOptList(){
         state.fotosPorOpcional[opId].push({ id, url, blob, caption:'', width, height });
         renderOptFotosThumbs(opId);
         renderPreview();
-        await saveFotosPorOpcional();
+        agregadas++;
       }catch(err){ console.error('No se pudo procesar la foto', err); fallidas++; }
     }
     e.target.value = '';
     avisarFotosFallidas(fallidas);
+    if(agregadas > 0 && await confirmarFotosEnCatalogo('agregar')) await saveFotosPorOpcional();
   }));
 }
 
@@ -810,10 +841,14 @@ function renderOptFotosThumbs(opId){
   wrap.querySelectorAll('button').forEach(btn=>btn.addEventListener('click', async ()=>{
     const opIdBtn = btn.dataset.op, fotoId = btn.dataset.foto;
     state.fotosPorOpcional[opIdBtn] = (state.fotosPorOpcional[opIdBtn]||[]).filter(f=>f.id!==fotoId);
-    await idbDeleteFoto(fotoId).catch(()=>{});
     renderOptFotosThumbs(opIdBtn);
     renderPreview();
-    await saveFotosPorOpcional();
+    // Solo si se aplica al catálogo borramos el blob de IndexedDB; si es "solo este
+    // presupuesto", el catálogo lo sigue referenciando, así que el blob debe quedar.
+    if(await confirmarFotosEnCatalogo('quitar')){
+      await idbDeleteFoto(fotoId).catch(()=>{});
+      await saveFotosPorOpcional();
+    }
   }));
 }
 

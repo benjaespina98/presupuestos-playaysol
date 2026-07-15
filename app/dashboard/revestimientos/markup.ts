@@ -66,7 +66,7 @@ const CALCULATOR_MARKUP = `
     <section class="acc-item">
     <button type="button" class="acc-head" data-acc="opcionales" aria-expanded="false">Tipos<span class="acc-caret" aria-hidden="true">▾</span></button>
     <div class="tab-content" id="tab-opcionales">
-      <div class="hint">Tildá los tipos de revestimiento que van en este presupuesto (podés tildar más de uno, ej. interior + borde solar). El total de cada tipo se calcula multiplicando el precio /m² por el TOTAL m² de la pestaña Cálculo — salvo los ítems marcados "por obra" (precio fijo, no se multiplica).</div>
+      <div class="hint"><b>Tildá "Incluir"</b> en los tipos que van en este presupuesto (podés incluir varios). El <b>Total</b> de cada uno = precio × m² de la pestaña Cálculo, salvo que marques <b>Cobro: por obra</b> (precio fijo).</div>
       <div style="display:flex; gap:8px; margin-bottom:10px;">
         <button class="btn-secondary" id="btn-check-all" style="margin-top:0;">☑ Todos</button>
         <button class="btn-secondary" id="btn-uncheck-all" style="margin-top:0;">☐ Ninguno</button>
