@@ -506,8 +506,14 @@ function quoteToPlainState(){
     localidad: state.localidad, tel: state.tel, email: state.email,
     dimension: state.dimension, validez: state.validez, subtotal: state.subtotal,
     items: state.items,
-    // Solo se guarda la excepción (lo destildado); por defecto todo el catálogo va tildado.
-    opcionalesIncluidos: state.opcionales.filter(o=>o.included===true).map(o=>o.id),
+    // Se guarda por slug (estable entre dispositivos/sesiones) y no por id: el id de cada
+    // opcional es aleatorio y se regenera en cada carga del catálogo por defecto mientras
+    // no haya nada guardado en localStorage, así que guardar solo el id hacía que los
+    // checks tildados de "Opcionales" se vieran destildados al reabrir el presupuesto en
+    // otra compu/celular (o incluso en la misma, la primera vez que el catálogo local
+    // todavía no tenía ids persistidos). Los opcionales agregados a mano no tienen slug
+    // estable, así que para esos el id sigue siendo el único identificador posible.
+    opcionalesIncluidos: state.opcionales.filter(o=>o.included===true).map(o=>o.slug || o.id),
     // Los bytes de cada foto viven en IndexedDB (idbPutFoto) para esta copia del navegador,
     // y además en Supabase Storage (storageUrl) para poder restaurarlas en otro dispositivo.
     fotos: state.fotos.map(f=>({ id:f.id, caption:f.caption, width:f.width, height:f.height, storageUrl: f.storageUrl||null })),
@@ -539,7 +545,9 @@ async function aplicarPresupuestoAlState(q){
   state.items = (q.items||[]).map(it=>({...it, id: it.id||cid()}));
   state.headerVariant = q.headerVariant || 'teal';
   const incluidos = q.opcionalesIncluidos || [];
-  state.opcionales.forEach(o=>{ o.included = incluidos.includes(o.id); });
+  // Coincide primero por slug (nuevo formato) y por id como respaldo (presupuestos
+  // guardados antes de este fix, o el raro opcional agregado a mano sin slug).
+  state.opcionales.forEach(o=>{ o.included = (o.slug && incluidos.includes(o.slug)) || incluidos.includes(o.id); });
 
   // Traer los bytes reales de cada foto: primero IndexedDB (rápido, esta copia del navegador);
   // si no está (otro dispositivo, o se limpió), caer a la copia en Supabase Storage y cachearla.
@@ -1595,7 +1603,13 @@ function imprimirConNombre(){
     setTimeout(() => { document.title = tituloOriginal; }, 3000);
   };
   window.addEventListener('afterprint', restaurarTitulo);
-  window.print();
+  // El cambio de document.title recién se propaga al chrome nativo del navegador
+  // (la barra de pestaña/título que lee el share sheet de "Guardar en PDF") en el
+  // siguiente tick -- si window.print() se llama en el mismo tick sincrónico que el
+  // cambio de título, en mobile (iOS/Android) el share sheet a veces alcanza a leer
+  // todavía el título viejo y el PDF sale sin cliente/fecha/tipo. Este pequeño delay
+  // le da tiempo al navegador a propagar el título antes de que el sistema lo capture.
+  setTimeout(() => window.print(), 60);
 }
 
 /* ---------------- ACORDEÓN ---------------- */

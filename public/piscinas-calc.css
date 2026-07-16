@@ -658,6 +658,33 @@
     .photo-grid:has(figure:only-child){grid-template-columns:minmax(0, 60%) !important;}
     * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
 
+    /* Compactación SOLO para impresión/PDF (no toca la vista en pantalla, que se
+       agrandó a propósito para que se lea bien en WhatsApp): con "break-inside:avoid"
+       en tarjetas y fotos, cuando una no entra en lo que queda de hoja el navegador la
+       empuja entera a la página siguiente y deja el resto de esa hoja en blanco — con
+       muchas fotos, esos huecos se acumulan y el PDF termina siendo carísimo de largo
+       (una foto de más, una página entera de más). Acá se achican los márgenes/padding
+       entre secciones y las fotos pasan a 3 por fila en vez de 2 (más bajas, no más
+       angostas de golpe): cada bloque "atómico" pesa menos, así un salto de página
+       desperdicia bastante menos espacio y entra más contenido por hoja. */
+    .meta-grid{margin:0 0 16px !important;}
+    .dim-card{margin:0 0 16px !important;}
+    .opt-title, .photos-title{margin:16px 0 8px !important;}
+    .opt-card{margin:0 0 8px !important;}
+    .opt-card .photo-grid{margin-top:8px !important;}
+    .photo-grid{
+      grid-template-columns:repeat(3, 1fr) !important;
+      gap:8px !important;
+      margin:10px 0 !important;
+    }
+    .photo-grid:has(figure:only-child){grid-template-columns:minmax(0, 40%) !important;}
+    .photo-grid:has(figure:nth-child(2):last-child){grid-template-columns:1fr 1fr !important;}
+    .photo-grid img{height:110px !important;}
+    .photo-grid figcaption{margin-top:3px !important;}
+    .legal-block{margin-top:12px !important;}
+    .validity{margin-top:10px !important;}
+    .footer-block{margin-top:16px !important; padding-top:10px !important;}
+
     /* Evita que el salto de página del navegador corte una tarjeta o una foto
        por la mitad (lo que se veía como imágenes "cortadas" en el PDF exportado).
        Sin esto, el navegador corta donde justo termina la hoja, sin mirar el
