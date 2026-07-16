@@ -565,7 +565,10 @@
     print-color-adjust:exact;
   }
 
-  .action-row{display:flex; gap:8px;}
+  /* Separación entre "Limpiar formulario" (arriba) y la fila de acciones (PDF/Word/
+     Guardar/Historial): antes quedaban pegados (0px), y el botón de limpiar se veía
+     encimado con las tarjetas. Este gap los deja como dos grupos claros. */
+  .action-row{display:flex; gap:8px; margin-top:10px;}
 
   /* En desktop (2 columnas) las acciones se muestran inline en .action-row y el
      disparador del bottom sheet / su overlay no existen. En una sola columna
