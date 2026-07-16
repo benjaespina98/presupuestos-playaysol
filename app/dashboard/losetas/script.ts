@@ -442,7 +442,13 @@ function imprimirVistaLimpia(){
     setTimeout(() => { document.title = tituloOriginal; }, 3000);
   };
   window.addEventListener('afterprint', restaurarTitulo);
-  window.print();
+  // El cambio de document.title recién se propaga al chrome nativo del navegador
+  // (la barra de pestaña/título que lee el share sheet de "Guardar en PDF") en el
+  // siguiente tick -- si window.print() se llama en el mismo tick sincrónico que el
+  // cambio de título, en mobile (iOS/Android) el share sheet a veces alcanza a leer
+  // todavía el título viejo y el PDF sale sin nombre/fecha. Este pequeño delay le da
+  // tiempo al navegador a propagar el título antes de que el sistema lo capture.
+  setTimeout(() => window.print(), 60);
 }
 
 function resetAll(){
