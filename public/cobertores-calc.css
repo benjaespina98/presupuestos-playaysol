@@ -520,26 +520,28 @@
     color:var(--doc-navy);
     margin-top:20px;
   }
-  /* Pie de documento tradicional: alineado a la izquierda (no centrado como
-     bloque), en el navy de marca, tipografía discreta. Se conserva el margen y el
-     divisor generosos para que no quede flotando pegado al contenido de arriba,
-     pero el color y la alineación vuelven al formato de pie clásico. Los links van
-     en navy subrayado sutil para distinguirse del texto plano sin cantar. */
+  /* Pie de documento: centrado, en el navy de marca, con el nombre de la empresa
+     destacado arriba y los datos de contacto debajo. Los links van en navy sin
+     subrayado (se resaltan al pasar el mouse) y quedan clickeables en el PDF. Se
+     conserva el margen y el divisor generosos para separarlo del contenido. */
   .footer-block{
-    margin-top:34px;
-    padding-top:16px;
-    border-top:1px solid var(--doc-border-soft);
-    font-size:11px;
-    line-height:1.75;
+    margin-top:32px;
+    padding-top:18px;
+    border-top:2px solid var(--doc-navy);
+    font-size:11.5px;
+    line-height:1.9;
     color:var(--doc-navy);
-    text-align:left;
+    text-align:center;
   }
-  .footer-block a{ color:var(--doc-navy); text-decoration:underline; text-underline-offset:2px; text-decoration-color:rgba(27,58,92,.4); }
-  .footer-block a:hover{ text-decoration-color:var(--doc-navy); }
+  .footer-block a{ color:var(--doc-navy); text-decoration:none; }
+  .footer-block a:hover{ text-decoration:underline; text-underline-offset:2px; }
   .footer-block b{
+    display:block;
     color:var(--doc-navy);
-    font-size:12.5px;
-    letter-spacing:.02em;
+    font-size:14.5px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    margin-bottom:5px;
   }
 
   .empty-note{color:var(--muted); font-style:italic; font-size:12px;}
