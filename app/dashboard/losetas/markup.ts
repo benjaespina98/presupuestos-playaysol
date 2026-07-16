@@ -165,6 +165,7 @@ export function buildCalculatorHtml(): string {
 
   <div class="field-section field-section-muted">
     <h3>Materiales y precios <span class="section-hint">(solo uso interno, no se muestra al cliente)</span></h3>
+    <div class="material-header"><span>Material</span><span>Precio $/m&sup2;</span><span></span></div>
     <div id="materialsContainer"></div>
     <button type="button" class="add-material" onclick="addMaterial()">+ Agregar material</button>
 

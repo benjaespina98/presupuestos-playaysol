@@ -66,11 +66,11 @@ async function confirmarPrecioMaterial(i, inputEl){
   const nombre = (materials[i].name || '').trim();
   if(!nombre) return; // sin nombre no hay clave estable para guardarlo en el catálogo
   const resultado = await window.mostrarModalCatalogo({
-    titulo: 'Guardar precio de catálogo',
-    mensaje: '¿Guardar $' + materials[i].price + ' como precio permanente de "' + nombre + '"?',
+    titulo: '¿Guardar como precio permanente?',
+    mensaje: 'Precio de "' + nombre + '": $' + materials[i].price,
     botonPrimario: {
-      texto: 'Guardar como precio permanente',
-      aclaracion: 'Este precio va a verse en todos los presupuestos nuevos de losetas a partir de ahora'
+      texto: 'Guardar permanente',
+      aclaracion: 'Se va a usar en los próximos presupuestos de losetas'
     },
     botonSecundario: null
   });
