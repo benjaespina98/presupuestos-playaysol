@@ -63,6 +63,7 @@ const CALCULATOR_MARKUP = `
     <section class="acc-item">
     <button type="button" class="acc-head" data-acc="opcionales" aria-expanded="false">Opcionales<span class="acc-caret" aria-hidden="true">▾</span></button>
     <div class="tab-content" id="tab-opcionales">
+      <div class="hint"><b>Tildá "Incluir"</b> en los opcionales que van en este presupuesto (podés incluir varios).</div>
       <div style="display:flex; gap:8px; margin-bottom:10px;">
         <button class="btn-secondary" id="btn-check-all" style="margin-top:0;">☑ Todos</button>
         <button class="btn-secondary" id="btn-uncheck-all" style="margin-top:0;">☐ Ninguno</button>

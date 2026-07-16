@@ -120,6 +120,11 @@ export const CALCULATOR_STYLES = `
 .pys-calc button:disabled { opacity: 0.6; cursor: not-allowed; }
 .pys-calc .helptext { font-size: 12px; color: #999; margin-top: 6px; }
 .pys-calc .material-row { display: grid; grid-template-columns: 1fr 140px auto; gap: 10px; align-items: center; margin-bottom: 8px; }
+/* Encabezado de columnas de la lista de materiales -- antes los campos no tenían
+   ninguna etiqueta visible una vez cargado el precio (el placeholder desaparece con
+   el valor), así que no quedaba claro qué representaba cada columna. */
+.pys-calc .material-header { display: grid; grid-template-columns: 1fr 140px auto; gap: 10px; margin-bottom: 6px; font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: #8A8371; }
+.pys-calc .material-header span:last-child { visibility: hidden; }
 .pys-calc .material-cost-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-top: 14px; }
 
 /* Vista limpia (plano + medidas, sin precios) — mismo lenguaje visual "documento de
@@ -193,6 +198,7 @@ export const CALCULATOR_STYLES = `
   .pys-calc .row3, .pys-calc .row4 { grid-template-columns: 1fr; gap: 10px; }
   .pys-calc .cards { grid-template-columns: 1fr; }
   .pys-calc .material-row { grid-template-columns: 1fr 80px auto; gap: 6px; }
+  .pys-calc .material-header { grid-template-columns: 1fr 80px auto; gap: 6px; }
   /* font-size 16px evita que iOS Safari haga zoom automático al enfocar el campo */
   .pys-calc input, .pys-calc select { font-size: 16px; }
   /* Acciones en FLUJO NORMAL al final del formulario (sin botón "Acciones" ni bottom

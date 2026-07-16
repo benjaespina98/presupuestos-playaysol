@@ -49,6 +49,7 @@ const CALCULATOR_MARKUP = `
     <section class="acc-item">
     <button type="button" class="acc-head" data-acc="opcionales" aria-expanded="false">Opcionales<span class="acc-caret" aria-hidden="true">▾</span></button>
     <div class="tab-content" id="tab-opcionales">
+      <div class="hint">Todos los opcionales salen en el documento. <b>Tildá "Con precio"</b> en los que cotizás; los destildados salen igual, pero como "No incluye".</div>
       <div style="display:flex; gap:8px; margin-bottom:10px;">
         <button class="btn-secondary" id="btn-check-all" style="margin-top:0;">☑ Todos</button>
         <button class="btn-secondary" id="btn-uncheck-all" style="margin-top:0;">☐ Ninguno</button>

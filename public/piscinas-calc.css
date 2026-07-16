@@ -187,46 +187,45 @@
     border:1px solid var(--border);
     border-radius:5px;
   }
-  .opt-row{
-    display:grid;
-    grid-template-columns:32px 1fr 100px 26px;
-    gap:6px;
-    margin-bottom:6px;
-    align-items:start;
+  /* ===== TIPOS/OPCIONALES: cada opcional del catálogo es una "ficha" clara y cómoda
+     de editar. Antes era una grilla apretada de 12px con un checkbox sin etiqueta;
+     ahora cada opcional es una tarjeta con campos rotulados, controles grandes y la
+     ficha se resalta cuando tiene precio activo. ===== */
+  .opt-block{
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:14px 14px 12px;
+    margin-bottom:12px;
+    background:#fff;
+    transition:border-color .15s, background .15s, box-shadow .15s;
   }
-  /* El checkbox nativo (opt-check) mide 20px, pero el "label" que lo envuelve
-     (opt-check-wrap) da un área táctil real de 32x40 — tocar en cualquier
-     parte de esa zona tilda/destilda el checkbox nativamente, sin JS extra. */
-  .opt-check-wrap{display:flex; align-items:flex-start; justify-content:center; width:32px; min-height:40px; padding-top:6px; cursor:pointer;}
-  .opt-row input[type=checkbox]{width:20px; height:20px; margin:0; accent-color:var(--primary);}
+  .opt-block.is-included{
+    border-color:var(--primary);
+    background:var(--primary-light);
+    box-shadow:inset 0 0 0 1px var(--primary);
+  }
+  .opt-top{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px;}
+  .opt-incluir{display:flex; align-items:center; gap:9px; cursor:pointer; font-size:14px; font-weight:600; color:var(--primary-dark); user-select:none;}
+  .opt-incluir input[type=checkbox]{width:22px; height:22px; margin:0; accent-color:var(--primary); cursor:pointer; flex-shrink:0;}
+  .opt-top-actions{display:flex; align-items:center; gap:6px; flex-shrink:0;}
+  .opt-body{display:flex; flex-direction:column; gap:12px;}
+  .opt-f{display:flex; flex-direction:column; gap:5px; min-width:0;}
+  .opt-f-lbl{font-size:11px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--muted);}
   .opt-desc{
-    width:100%;
-    padding:6px 8px;
-    font-size:12.5px;
-    border:1px solid var(--border);
-    border-radius:5px;
-    font-family:inherit;
-    resize:vertical;
-    line-height:1.35;
+    width:100%; padding:9px 11px; font-size:14px; border:1px solid var(--border);
+    border-radius:7px; font-family:inherit; resize:vertical; line-height:1.4; background:#fff;
   }
-  .opt-price{ align-self:start; margin-top:0; }
-  .opt-row input[type=text]{
-    padding:5px 7px;
-    font-size:12px;
-    border:1px solid var(--border);
-    border-radius:5px;
-  }
+  .opt-pricegrid{display:grid; grid-template-columns:minmax(0,1.1fr); gap:14px; align-items:end;}
+  .opt-price-wrap{display:flex; align-items:center; border:1px solid var(--border); border-radius:7px; background:#fff; overflow:hidden;}
+  .opt-price-wrap:focus-within{border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-light);}
+  .opt-cur{padding:0 3px 0 10px; color:var(--muted); font-size:14px;}
+  .opt-price{width:100%; padding:9px 10px 9px 2px; font-size:14px; border:none; outline:none; background:transparent; min-width:70px;}
 
   .btn-mini{
-    width:26px;height:26px;
-    border:1px solid var(--border);
-    background:#fff;
-    border-radius:5px;
-    color:var(--danger);
-    cursor:pointer;
-    font-size:14px;
-    line-height:1;
+    width:30px;height:30px;border:1px solid var(--border);background:#fff;border-radius:7px;
+    color:var(--danger);cursor:pointer;font-size:15px;line-height:1;flex-shrink:0;
   }
+  .btn-mini:hover{background:#fdf1ef; border-color:var(--danger);}
   .btn-add{
     display:inline-flex;
     align-items:center;
@@ -323,23 +322,28 @@
   }
   .quote-empty{font-size:12px; color:var(--muted); font-style:italic; padding:10px 4px;}
 
-  .opt-block{border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:6px;}
   .opt-fotos{
-    margin:4px 0 8px 26px;
-    padding:8px;
+    margin:12px 0 0;
+    padding:11px;
     background:var(--bg);
-    border-radius:6px;
+    border-radius:8px;
     border:1px dashed var(--border);
   }
-  .opt-fotos-thumbs{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px;}
-  .opt-foto-thumb{position:relative; width:44px; height:44px;}
-  .opt-foto-thumb img{width:44px; height:44px; object-fit:cover; border-radius:4px; display:block;}
+  .opt-fotos-lbl{font-size:11px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:8px;}
+  .opt-fotos-thumbs{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px;}
+  .opt-fotos-thumbs:empty{display:none;}
+  .opt-foto-thumb{position:relative; width:54px; height:54px;}
+  .opt-foto-thumb img{width:54px; height:54px; object-fit:cover; border-radius:6px; display:block;}
   .opt-foto-thumb button{
-    position:absolute; top:-6px; right:-6px;
-    width:16px; height:16px; border-radius:50%;
-    background:var(--danger); color:#fff; border:none; font-size:9px; line-height:16px; padding:0; cursor:pointer;
+    position:absolute; top:-7px; right:-7px;
+    width:18px; height:18px; border-radius:50%;
+    background:var(--danger); color:#fff; border:none; font-size:10px; line-height:18px; padding:0; cursor:pointer;
   }
-  .opt-foto-input{font-size:10.5px;}
+  .opt-add-foto{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600;
+    color:var(--primary-dark); background:#fff; border:1px solid var(--primary); border-radius:7px;
+    padding:8px 13px; cursor:pointer;}
+  .opt-add-foto:hover{background:var(--primary-light);}
+  .opt-foto-input{display:none;}
 
   .foto-item{
     display:flex; gap:8px; align-items:center;
@@ -605,8 +609,6 @@
     .sheet-body{padding:18px 16px 24px;}
     .row2{grid-template-columns:1fr; gap:8px;}
     .item-row{grid-template-columns:1fr 72px 26px; gap:5px;}
-    .opt-row{grid-template-columns:36px 1fr 72px 26px; gap:5px;}
-    .opt-check-wrap{width:36px; min-height:44px;}
     .photo-grid{grid-template-columns:1fr;}
     /* font-size 16px evita que iOS Safari haga zoom automático al enfocar el campo */
     .field input, .field textarea, .quote-search{font-size:16px;}
