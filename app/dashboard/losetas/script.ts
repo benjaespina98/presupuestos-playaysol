@@ -384,16 +384,6 @@ function drawSvg(svgId, viewW, viewHmax, s, showDims){
 function tick(x,y,color){ return \`<line x1="\${x-4}" y1="\${y}" x2="\${x+4}" y2="\${y}" stroke="\${color}" stroke-width="0.75"/>\`; }
 function tickH(x,y,color){ return \`<line x1="\${x}" y1="\${y-4}" x2="\${x}" y2="\${y+4}" stroke="\${color}" stroke-width="0.75"/>\`; }
 
-function exportarInterno(){
-  html2canvas(document.getElementById('capture-area'), {backgroundColor: '#ffffff', scale: 3}).then(canvas => {
-    const link = document.createElement('a');
-    const nombre = document.getElementById('nombre').value.trim();
-    link.download = window.armarNombreArchivo('Loseta', nombre, null) + '_interno.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-  }).catch(err => alert('Error generando la imagen: ' + err.message));
-}
-
 function exportarCliente(){
   const s = getState();
   ensureLucesPos(s.luces, s.cantLuces);
@@ -411,44 +401,6 @@ function exportarCliente(){
       link.click();
     }).catch(err => alert('Error generando la imagen: ' + err.message));
   });
-}
-
-// Vista limpia para imprimir/exportar a PDF: reusa el mismo contenedor #client-capture
-// que ya arma "Imagen para cliente" (plano + medidas, sin precios), en vez de crear
-// un tercer contenedor — mismo patrón que el resto de las calculadoras (form editable
-// oculto, solo se ve la "hoja" limpia). Los estilos de impresión que sacan #client-capture
-// de su posición off-screen y ocultan .wrap están en styles.ts (@media print).
-function imprimirVistaLimpia(){
-  const s = getState();
-  ensureLucesPos(s.luces, s.cantLuces);
-  document.getElementById('clientRef').textContent = s.nombre || '';
-  drawSvg('svgClient', 1000, 650, s, true);
-  // El navegador no deja forzar el nombre de archivo del PDF generado por
-  // window.print() ("Guardar como PDF") -- solo puede sugerirlo, y lo hace a
-  // partir del <title> del documento en el momento de imprimir. Lo cambiamos acá
-  // al mismo formato que ya usa el Word/PNG (armarNombreArchivo) y lo restauramos
-  // después, para no dejar el título pisado si el usuario navega sin imprimir.
-  const tituloOriginal = document.title;
-  document.title = window.armarNombreArchivo('Loseta', s.nombre, null);
-  // iOS no tiene un diálogo de impresión real: window.print() dispara la hoja
-  // compartir/imprimir del sistema operativo, que sigue abierta después de que
-  // 'afterprint' ya disparó adentro de la página -- si restauramos el título
-  // enseguida, iOS puede terminar leyendo el título genérico (ya restaurado) en
-  // vez del que pusimos, porque lee el nombre sugerido en un momento propio del
-  // sistema que no está sincronizado con ese evento. El delay le da margen a esa
-  // lectura antes de revertir.
-  const restaurarTitulo = () => {
-    window.removeEventListener('afterprint', restaurarTitulo);
-    setTimeout(() => { document.title = tituloOriginal; }, 3000);
-  };
-  window.addEventListener('afterprint', restaurarTitulo);
-  // El cambio de document.title recién se propaga al chrome nativo del navegador
-  // (la barra de pestaña/título que lee el share sheet de "Guardar en PDF") en el
-  // siguiente tick -- si window.print() se llama en el mismo tick sincrónico que el
-  // cambio de título, en mobile (iOS/Android) el share sheet a veces alcanza a leer
-  // todavía el título viejo y el PDF sale sin nombre/fecha. Este pequeño delay le da
-  // tiempo al navegador a propagar el título antes de que el sistema lo capture.
-  setTimeout(() => window.print(), 60);
 }
 
 function resetAll(){
@@ -653,9 +605,7 @@ window.addMaterial = addMaterial;
 window.removeMaterial = removeMaterial;
 window.updateMaterial = updateMaterial;
 window.confirmarPrecioMaterial = confirmarPrecioMaterial;
-window.exportarInterno = exportarInterno;
 window.exportarCliente = exportarCliente;
-window.imprimirVistaLimpia = imprimirVistaLimpia;
 window.guardarEnNubeClick = guardarEnNubeClick;
 window.resetAll = resetAll;
 window.cargarPresupuestoExterno = cargarPresupuestoExterno;

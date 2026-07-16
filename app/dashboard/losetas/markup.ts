@@ -179,12 +179,10 @@ export function buildCalculatorHtml(): string {
   <div class="btns-group">
     <div class="btns-label">Exportar</div>
     <div class="btns">
-      <button onclick="exportarInterno()">&#128202; Imagen interna (con costos)</button>
       <button class="client" onclick="exportarCliente()">&#128444;&#65039; Imagen para cliente</button>
-      <button class="secondary" onclick="imprimirVistaLimpia()">&#128424;&#65039; PDF para cliente</button>
     </div>
     <div class="helptext">
-      "Imagen para cliente" y "PDF para cliente" generan la vista limpia (plano a escala, barra de escala gr&aacute;fica y medidas &mdash; sin precios ni costos): la primera como imagen para mandar por chat, el segundo como archivo imprimible. "Imagen interna" es la vista con costos, solo para uso interno.
+      Genera una imagen limpia del plano (a escala, con medidas y sin precios ni costos) lista para mandar por chat.
     </div>
   </div>
   <div class="btns-group">

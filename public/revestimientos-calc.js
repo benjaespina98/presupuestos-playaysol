@@ -18,7 +18,7 @@ const defaultOptionales = [
 
 const defaultLegal = `REVESTIMIENTOS PARA PISCINA:
 
-El revestimiento se cotiza por m² instalado/terminado, según el material elegido. La superficie a revestir se calcula sobre el fondo y las paredes de la pileta (ver detalle de cálculo en este presupuesto).
+El revestimiento se cotiza por m² instalado/terminado, según el material elegido. La superficie a revestir se calcula sobre el piso y las paredes de la pileta (ver detalle de cálculo en este presupuesto).
 
 Opciones disponibles: cerámico importado, venecitas premium, piedra natural, mármol travertino, y terminaciones de solar seco (losetas atérmicas o deck).
 
@@ -1034,7 +1034,7 @@ function buildDocumentBody({ forExport=false, photoSrc } = {}){
   const grandTotal = computeRevestimientoTotal();
 
   let html = `<div class="doc-title">Presupuesto de revestimiento para piscina</div>`;
-  const partesM2 = [`Fondo: ${m2fondo.toLocaleString('es-AR',{maximumFractionDigits:2})} m²`, `Paredes: ${m2paredes.toLocaleString('es-AR',{maximumFractionDigits:2})} m²`];
+  const partesM2 = [`Piso: ${m2fondo.toLocaleString('es-AR',{maximumFractionDigits:2})} m²`, `Paredes: ${m2paredes.toLocaleString('es-AR',{maximumFractionDigits:2})} m²`];
   if(Number(state.escalera||0) > 0) partesM2.push(`Escalera: ${Number(state.escalera).toLocaleString('es-AR',{maximumFractionDigits:2})} m²`);
   if(Number(state.desperdicio||0) > 0) partesM2.push(`Desperdicio: ${Number(state.desperdicio).toLocaleString('es-AR',{maximumFractionDigits:2})} m²`);
   state.m2Items.forEach(it=>{
@@ -1597,7 +1597,7 @@ async function buildDocxSections(){
   children.push(new Paragraph({ spacing:{after:200}, children:[] }));
 
   children.push(...docxTitle('Presupuesto de revestimiento para piscina'));
-  const partesM2 = [`Fondo: ${m2fondo.toLocaleString('es-AR',{maximumFractionDigits:2})} m²`, `Paredes: ${m2paredes.toLocaleString('es-AR',{maximumFractionDigits:2})} m²`];
+  const partesM2 = [`Piso: ${m2fondo.toLocaleString('es-AR',{maximumFractionDigits:2})} m²`, `Paredes: ${m2paredes.toLocaleString('es-AR',{maximumFractionDigits:2})} m²`];
   if(Number(state.escalera||0) > 0) partesM2.push(`Escalera: ${Number(state.escalera).toLocaleString('es-AR',{maximumFractionDigits:2})} m²`);
   if(Number(state.desperdicio||0) > 0) partesM2.push(`Desperdicio: ${Number(state.desperdicio).toLocaleString('es-AR',{maximumFractionDigits:2})} m²`);
   state.m2Items.forEach(it=>{

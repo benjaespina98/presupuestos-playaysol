@@ -219,34 +219,4 @@ export const CALCULATOR_STYLES = `
   }
   .pys-calc button.add-material { width: 100%; }
 }
-
-/* ---------- IMPRESIÓN / PDF ---------- */
-/* Mismo patrón que las otras 4 calculadoras: ocultar el form editable, mostrar solo
-   una "hoja" limpia. Acá reusamos #client-capture (la misma vista que ya arma
-   "Imagen para cliente" — plano + medidas, sin precios) en vez de crear un tercer
-   contenedor: imprimirVistaLimpia() la puebla antes de llamar a window.print(). */
-/* Márgenes de página consistentes entre navegadores/dispositivos -- sin esto, el
-   margen que agrega el diálogo de impresión por default puede variar bastante entre
-   Chrome desktop y Safari mobile, además de sumarse al padding de acá abajo. */
-@page{ margin: 14mm; }
-
-@media print {
-  html, body { width: auto !important; }
-  .pys-calc { background: #fff; padding: 0; width: auto !important; }
-  .pys-calc .wrap { display: none !important; }
-  /* La barra de acciones (y el disparador/overlay de mobile) es hermana de .wrap, así
-     que ocultar .wrap no la saca — la ocultamos aparte para que no aparezca en el PDF
-     del cliente. */
-  .pys-calc .btns-wrap,
-  .pys-calc .losetas-sheet-trigger,
-  .pys-calc .losetas-sheet-overlay { display: none !important; }
-  .pys-calc #client-capture {
-    position: static !important;
-    top: auto !important;
-    left: auto !important;
-    width: 100% !important;
-    max-width: 100%;
-    padding: 24px !important;
-  }
-}
 `;

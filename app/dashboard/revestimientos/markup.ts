@@ -37,14 +37,14 @@ const CALCULATOR_MARKUP = `
     <section class="acc-item">
     <button type="button" class="acc-head" data-acc="items" aria-expanded="false">Cálculo<span class="acc-caret" aria-hidden="true">▾</span></button>
     <div class="tab-content" id="tab-items">
-      <div class="hint">Calculá los m² totales a revestir (fondo + paredes) según las medidas de la pileta. Fórmula: m² = (largo × ancho) + 2 × profundidad × (largo + ancho).</div>
+      <div class="hint">Calculá los m² totales a revestir (piso + paredes) según las medidas de la pileta. Fórmula: m² = (largo × ancho) + 2 × profundidad × (largo + ancho).</div>
       <div class="row2">
         <div class="field"><label>Largo pileta (m)</label><input type="text" id="f-largo" inputmode="decimal"></div>
         <div class="field"><label>Ancho pileta (m)</label><input type="text" id="f-ancho" inputmode="decimal"></div>
       </div>
       <div class="field"><label>Profundidad promedio (m)</label><input type="text" id="f-profundidad" inputmode="decimal" style="max-width:110px"></div>
       <div class="row2">
-        <div class="field"><label>Fondo (m²)</label><input type="text" id="f-m2-fondo" inputmode="decimal" readonly style="background:var(--bg);"></div>
+        <div class="field"><label>Piso (m²)</label><input type="text" id="f-m2-fondo" inputmode="decimal" readonly style="background:var(--bg);"></div>
         <div class="field"><label>Paredes (m²)</label><input type="text" id="f-m2-paredes" inputmode="decimal" readonly style="background:var(--bg);"></div>
       </div>
       <div class="row2">
