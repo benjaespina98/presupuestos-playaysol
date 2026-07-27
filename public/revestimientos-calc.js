@@ -71,7 +71,11 @@ let state = {
   dimension: defaultDimension,
   validez: '7',
   subtotal: 0,
-  largo: 0, ancho: 0, profundidad: 1.30,
+  // Profundidad de la pileta: "desde" es la única obligatoria. "hasta" se completa solo
+  // cuando la pileta va de menor a mayor profundidad (lo más habitual), y entonces el
+  // documento dice "de 1,00 m a 1,60 m" en vez de un promedio, que es como se redacta
+  // el presupuesto a mano. Para el cálculo de paredes se usa siempre el promedio.
+  largo: 0, ancho: 0, profMin: 1.30, profMax: 0,
   escalera: 0, desperdicio: 0,
   m2Items: [], // adicionales de m² manuales: [{id, label, m2}]
   items: [], // adicionales que se suman al TOTAL revestimiento
@@ -83,10 +87,36 @@ let state = {
   fotosPorOpcional: {} // { [catalogItemId]: [{id, blob, url, caption, width, height}] }
 };
 
+// Promedio entre "desde" y "hasta"; si no cargaron "hasta", la pileta es de profundidad
+// pareja y el promedio es simplemente "desde".
+// Normaliza el par desde/hasta: descarta valores no numéricos o negativos y los ordena,
+// así cargarlos al revés (1.60 en "desde" y 1.00 en "hasta") no rompe ni el cálculo ni la
+// redacción del documento.
+function profRango(){
+  const vals = [state.profMin, state.profMax]
+    .map(v=>Number(v))
+    .filter(v=>Number.isFinite(v) && v > 0)
+    .sort((a,b)=>a-b);
+  if(!vals.length) return { min:0, max:0, variable:false };
+  const min = vals[0], max = vals[vals.length-1];
+  return { min, max, variable: vals.length > 1 && max !== min };
+}
+function profPromedio(){
+  const { min, max } = profRango();
+  return (min + max) / 2;
+}
+// Cómo se lee la profundidad en el documento: "de 1 m a 1,6 m" si es variable, o
+// "profundidad 1,3 m" si es pareja.
+function profundidadTexto(){
+  const { min, max, variable } = profRango();
+  const n = v => v.toLocaleString('es-AR',{maximumFractionDigits:2});
+  return variable ? `de ${n(min)} m a ${n(max)} m de profundidad` : `profundidad ${n(min)} m`;
+}
+
 // m² = (largo × ancho) + 2 × profundidad × (largo + ancho)  [fondo + paredes]
 // + escalera + desperdicio + adicionales de m² (todos suman directo, sin ningún cálculo extra)
 function computeM2Total(){
-  const largo = Number(state.largo||0), ancho = Number(state.ancho||0), prof = Number(state.profundidad||0);
+  const largo = Number(state.largo||0), ancho = Number(state.ancho||0), prof = profPromedio();
   const fondo = largo * ancho;
   const paredes = 2 * prof * (largo + ancho);
   const escalera = Number(state.escalera||0);
@@ -95,7 +125,7 @@ function computeM2Total(){
   return fondo + paredes + escalera + desperdicio + m2Extra;
 }
 function computeM2Fondo(){ return Number(state.largo||0) * Number(state.ancho||0); }
-function computeM2Paredes(){ return 2 * Number(state.profundidad||0) * (Number(state.largo||0) + Number(state.ancho||0)); }
+function computeM2Paredes(){ return 2 * profPromedio() * (Number(state.largo||0) + Number(state.ancho||0)); }
 function computeRevestimientoTotal(){
   const m2total = computeM2Total();
   const extras = state.items.reduce((s,i)=>s+Number(i.price||0),0);
@@ -488,7 +518,11 @@ function quoteToPlainState(){
     fecha: state.fecha, cliente: state.cliente, domicilio: state.domicilio,
     localidad: state.localidad, tel: state.tel, email: state.email,
     dimension: state.dimension, validez: state.validez, subtotal: state.subtotal,
-    largo: state.largo, ancho: state.ancho, profundidad: state.profundidad,
+    largo: state.largo, ancho: state.ancho,
+    profMin: state.profMin, profMax: state.profMax,
+    // "profundidad" (el promedio) se sigue guardando aunque ya no sea la fuente de verdad:
+    // es lo que leen los presupuestos guardados con versiones anteriores de esta pantalla.
+    profundidad: profPromedio(),
     escalera: state.escalera, desperdicio: state.desperdicio, m2Items: state.m2Items,
     items: state.items,
     // Se guarda por slug (estable entre dispositivos/sesiones) y no por id: el id de cada
@@ -527,7 +561,12 @@ async function aplicarPresupuestoAlState(q){
   state.fecha=q.fecha; state.cliente=q.cliente; state.domicilio=q.domicilio;
   state.localidad=q.localidad; state.tel=q.tel; state.email=q.email;
   state.dimension=q.dimension; state.validez=q.validez; state.subtotal=q.subtotal;
-  state.largo=q.largo||0; state.ancho=q.ancho||0; state.profundidad=(q.profundidad!==undefined?q.profundidad:1.30);
+  state.largo=q.largo||0; state.ancho=q.ancho||0;
+  // Presupuestos viejos traen solo "profundidad" (el promedio): se carga como "desde" y
+  // "hasta" queda vacío, así el documento se ve igual que cuando se guardó.
+  state.profMin = (q.profMin!==undefined && q.profMin!==null) ? q.profMin
+                : (q.profundidad!==undefined ? q.profundidad : 1.30);
+  state.profMax = q.profMax || 0;
   state.escalera = q.escalera||0; state.desperdicio = q.desperdicio||0;
   state.m2Items = (q.m2Items||[]).map(it=>({...it, id: it.id||cid()}));
   state.items = (q.items||[]).map(it=>({...it, id: it.id||cid()}));
@@ -579,7 +618,7 @@ async function newQuote(){
   state.cliente=''; state.domicilio=''; state.localidad=''; state.tel=''; state.email='';
   state.dimension = defaultDimension;
   state.subtotal = 0;
-  state.largo = 0; state.ancho = 0; state.profundidad = 1.30;
+  state.largo = 0; state.ancho = 0; state.profMin = 1.30; state.profMax = 0;
   state.escalera = 0; state.desperdicio = 0; state.m2Items = [];
   state.items = [];
   state.opcionales.forEach(o=>o.included=false);
@@ -601,7 +640,8 @@ function renderForm(){
   document.getElementById('f-validez').value = state.validez;
   document.getElementById('f-largo').value = state.largo || '';
   document.getElementById('f-ancho').value = state.ancho || '';
-  document.getElementById('f-profundidad').value = state.profundidad;
+  document.getElementById('f-prof-min').value = state.profMin || '';
+  document.getElementById('f-prof-max').value = state.profMax || '';
   document.getElementById('f-escalera').value = state.escalera || '';
   document.getElementById('f-desperdicio').value = state.desperdicio || '';
   document.getElementById('f-m2-fondo').value = computeM2Fondo().toLocaleString('es-AR',{maximumFractionDigits:2});
@@ -1005,6 +1045,22 @@ function applyHeaderVariant(){
 // Genera las filas de precio. En pantalla usa flexbox (.price-line). En el export a Word
 // usa una <table> real: el "float:right" que usamos en pantalla para alinear el precio
 // es justamente lo que Word interpreta mal y hace que el texto se superponga.
+// Texto del precio unitario que acompaña a cada material cotizado por m²:
+// "$ 112.000 por m² × 95 m²". Devuelve '' cuando no aplica (precio por obra, sin precio,
+// o todavía sin medidas cargadas), así el documento nunca muestra "× 0 m²".
+function unitNoteTexto(op, m2total){
+  const perM2 = op.perM2 !== false;
+  if(!perM2 || op.price===null || op.price===undefined) return '';
+  if(!(Number(m2total) > 0)) return '';
+  return `${fmt(op.price)} por m² × ${Number(m2total).toLocaleString('es-AR',{maximumFractionDigits:2})} m²`;
+}
+// En el export los estilos van inline: el HTML viaja sin la hoja de estilos de la app.
+function unitNoteHtml(texto, forExport){
+  if(!texto) return '';
+  const style = forExport ? ' style="font-size:9pt;color:#6B7680;font-weight:normal;"' : '';
+  return `<div class="unit-note"${style}>${escHtml(texto)}</div>`;
+}
+
 function buildPriceRows(rows, forExport){
   if(!forExport){
     return rows.map(r=>`<div class="price-line ${r.cls||''}"><span>${r.descHtml}</span><span>${r.priceHtml}</span></div>`).join('');
@@ -1028,7 +1084,7 @@ function buildPriceRows(rows, forExport){
 // como para el export a Word — así evitamos mantener dos versiones que se desincronizan,
 // y evitamos el truco frágil de "retocar con regex" el HTML ya renderizado.
 function buildDocumentBody({ forExport=false, photoSrc } = {}){
-  const largo = Number(state.largo||0), ancho = Number(state.ancho||0), prof = Number(state.profundidad||0);
+  const largo = Number(state.largo||0), ancho = Number(state.ancho||0);
   const m2fondo = computeM2Fondo(), m2paredes = computeM2Paredes(), m2total = computeM2Total();
   const incluidosOpt = state.opcionales.filter(o=>o.included===true);
   const grandTotal = computeRevestimientoTotal();
@@ -1047,7 +1103,7 @@ function buildDocumentBody({ forExport=false, photoSrc } = {}){
   html += `<div class="meta-line"><b>Localidad:</b> ${escHtml(state.localidad)}</div>`;
   html += `<div class="meta-line"><b>Tel:</b> ${escHtml(state.tel)}</div>`;
   html += `<div class="meta-line"><b>Email:</b> ${escHtml(state.email)}</div>`;
-  html += `<div class="meta-line" style="grid-column:1/-1;"><b>Medidas:</b> ${largo.toLocaleString('es-AR')} m largo × ${ancho.toLocaleString('es-AR')} m ancho, profundidad promedio ${prof.toLocaleString('es-AR')} m</div>`;
+  html += `<div class="meta-line" style="grid-column:1/-1;"><b>Medidas:</b> ${largo.toLocaleString('es-AR')} m largo × ${ancho.toLocaleString('es-AR')} m ancho, ${escHtml(profundidadTexto())}</div>`;
   html += `<div class="meta-line" style="grid-column:1/-1;">${partesM2.join(' + ')} = <b>total ${m2total.toLocaleString('es-AR',{maximumFractionDigits:2})} m² a revestir</b></div>`;
   html += `</div>`;
 
@@ -1068,7 +1124,8 @@ function buildDocumentBody({ forExport=false, photoSrc } = {}){
       } else {
         priceHtml = fmt(op.price);
       }
-      const rowHtml = buildPriceRows([{ descHtml: escHtml(op.desc), priceHtml }], forExport);
+      const descHtml = escHtml(op.desc) + unitNoteHtml(unitNoteTexto(op, m2total), forExport);
+      const rowHtml = buildPriceRows([{ descHtml, priceHtml }], forExport);
       const fotosOp = state.fotosPorOpcional[op.id];
       if(fotosOp && fotosOp.length){
         html += `<div class="opt-card">${rowHtml}${renderItemPhotosBlock(fotosOp, photoSrc, forExport)}</div>`;
@@ -1146,8 +1203,12 @@ document.getElementById('f-ancho').addEventListener('input', e=>{
   state.ancho = parseNum(e.target.value);
   updateM2Fields(); updateOptComputedSpans(); renderPreview();
 });
-document.getElementById('f-profundidad').addEventListener('input', e=>{
-  state.profundidad = parseNum(e.target.value);
+document.getElementById('f-prof-min').addEventListener('input', e=>{
+  state.profMin = parseNum(e.target.value);
+  updateM2Fields(); updateOptComputedSpans(); renderPreview();
+});
+document.getElementById('f-prof-max').addEventListener('input', e=>{
+  state.profMax = parseNum(e.target.value);
   updateM2Fields(); updateOptComputedSpans(); renderPreview();
 });
 document.getElementById('f-escalera').addEventListener('input', e=>{
@@ -1482,11 +1543,12 @@ function docxPhotoGallery(fotos, imgBytesById){
 
 // Ficha de producto para un opcional (con o sin fotos): descripción + precio y, si tiene,
 // sus fotos, todo dentro de una sola celda con borde y fondo suave.
-function docxOptCard(desc, priceTxt, fotosOp, imgBytesById){
+function docxOptCard(desc, priceTxt, fotosOp, imgBytesById, unitTxt){
   const sinPrecio = priceTxt === 'No incluye';
+  const tieneFotos = !!(fotosOp && fotosOp.length);
   const cellChildren = [
     new Paragraph({
-      spacing: { after: (fotosOp && fotosOp.length) ? 120 : 0 },
+      spacing: { after: (tieneFotos || unitTxt) ? 60 : 0 },
       children: [
         new TextRun({ text: desc, bold:true, size:21, color:DOCX_TEXT }),
         new TextRun({ bold:true, size:21, color: sinPrecio ? '8B98A3' : DOCX_NAVY, children: [
@@ -1496,6 +1558,12 @@ function docxOptCard(desc, priceTxt, fotosOp, imgBytesById){
       ]
     })
   ];
+  if(unitTxt){
+    cellChildren.push(new Paragraph({
+      spacing: { after: tieneFotos ? 120 : 0 },
+      children: [ new TextRun({ text: unitTxt, size:18, color:'6B7680' }) ]
+    }));
+  }
   if(fotosOp && fotosOp.length){
     docxPhotoNodes(fotosOp, imgBytesById).forEach(n => cellChildren.push(n));
   }
@@ -1566,7 +1634,7 @@ function docxFooter(f, footerColor){
 
 /* ---------------- EXPORT WORD (.doc) ---------------- */
 async function buildDocxSections(){
-  const largo = Number(state.largo||0), ancho = Number(state.ancho||0), prof = Number(state.profundidad||0);
+  const largo = Number(state.largo||0), ancho = Number(state.ancho||0);
   const m2fondo = computeM2Fondo(), m2paredes = computeM2Paredes(), m2total = computeM2Total();
   const incluidosOpt = state.opcionales.filter(o=>o.included===true);
   const grandTotal = computeRevestimientoTotal();
@@ -1610,7 +1678,7 @@ async function buildDocxSections(){
     { label:'Localidad:', value: state.localidad },
     { label:'Tel:', value: state.tel },
     { label:'Email:', value: state.email },
-    { label:'Medidas:', value: `${largo.toLocaleString('es-AR')} m largo × ${ancho.toLocaleString('es-AR')} m ancho, profundidad promedio ${prof.toLocaleString('es-AR')} m` },
+    { label:'Medidas:', value: `${largo.toLocaleString('es-AR')} m largo × ${ancho.toLocaleString('es-AR')} m ancho, ${profundidadTexto()}` },
     { label:'m² a revestir:', value: partesM2.join(' + ') + ` = total ${m2total.toLocaleString('es-AR',{maximumFractionDigits:2})} m²` },
   ]));
   children.push(new Paragraph({ spacing:{after:220}, children:[] }));
@@ -1631,7 +1699,7 @@ async function buildDocxSections(){
       else if(perM2){ priceTxt = fmt(op.price*m2total); }
       else { priceTxt = fmt(op.price); }
       const fotosOp = state.fotosPorOpcional[op.id];
-      children.push(docxOptCard(op.desc, priceTxt, fotosOp, imgBytesById));
+      children.push(docxOptCard(op.desc, priceTxt, fotosOp, imgBytesById, unitNoteTexto(op, m2total)));
       children.push(new Paragraph({ spacing:{after:80}, children:[] }));
     });
   }

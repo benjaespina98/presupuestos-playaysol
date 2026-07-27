@@ -488,6 +488,16 @@
      la derecha — antes se desalineaba y "No incluye" caía en dos renglones. */
   .price-line > span:first-child{flex:1; text-align:justify;}
   .price-line > span:last-child{flex-shrink:0; white-space:nowrap; text-align:right;}
+  /* Precio unitario debajo del nombre del material: "$ 112.000 por m² × 95 m²".
+     Va en gris y más chico para que no compita con el nombre ni con el total. */
+  .unit-note{
+    display:block;
+    font-size:10.5px;
+    font-weight:400;
+    color:#6B7680;
+    text-align:left;
+    margin-top:3px;
+  }
   .price-line.subtotal{font-weight:700;}
   .price-line.total{
     font-weight:800;
@@ -574,6 +584,7 @@
   .sheet .section-heading{font-size:12.5px;}
   .sheet .dim-list li{font-size:14px;}
   .sheet .price-line{font-size:14px;}
+  .sheet .unit-note{font-size:11.5px;}
   .sheet .price-line.total{font-size:16px;}
   .sheet .opt-title,.sheet .photos-title{font-size:12.5px;}
   .sheet .legal-block{font-size:12.5px;}
