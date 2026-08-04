@@ -1,222 +1,228 @@
 export const CALCULATOR_STYLES = `
-.pys-calc * { box-sizing: border-box; }
+/* ===========================================================================
+   PLANO DE PISCINA (losetas)
+
+   Layout de dos columnas, igual que las otras 4 calculadoras: los campos a la
+   izquierda y el RESULTADO (plano + m²) fijo a la derecha. Antes era una sola
+   columna larguísima con el plano enterrado abajo de siete secciones de campos,
+   así que había que scrollear para ver qué efecto tenía cada medida cargada.
+
+   La paleta es la del portal (navy #1B3A5C sobre neutro frío), no el beige que
+   tenía antes: es la misma calculadora dentro de la misma app, no debería
+   sentirse como otro producto.
+   =========================================================================== */
 .pys-calc {
-  font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  background: #f2f1ec;
+  --navy: #1B3A5C;
+  --navy-soft: #EEF2F6;
+  --linea: #D7E3E7;
+  --texto: #1C2B33;
+  --gris: #6B7680;
+  --acento: #C0522D;
+  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: #F4F8F9;
   margin: 0;
   padding: clamp(12px, 2vw, 24px);
-  color: #222;
-  /* En mobile el disparador "Acciones ▾" es fixed al fondo del viewport -- sin este
-     espacio reservado, el último field-section queda tapado por él. En desktop la
-     barra está en flujo normal, así que --action-bar-h vale 0 y esto es solo 24px.
-     El valor lo fija el JS midiendo la altura real del disparador (ver script.ts). */
-  padding-bottom: calc(24px + var(--action-bar-h, 0px));
+  color: var(--texto);
 }
+.pys-calc * { box-sizing: border-box; }
+
 .pys-calc .wrap {
-  max-width: 1100px;
+  max-width: 1500px;
   margin: 0 auto;
-  background: #fff;
-  border-radius: 14px;
-  padding: clamp(18px, 2.5vw, 32px);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
-.pys-calc h1 { font-size: 22px; margin: 0 0 4px; color: #1B3A5C; }
-.pys-calc .subtitle { font-size: 14px; color: #666; margin-bottom: 28px; }
-.pys-calc .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.pys-calc .row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-.pys-calc .row4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-.pys-calc label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; }
-.pys-calc input, .pys-calc select { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; background: #fff; }
-.pys-calc input:focus, .pys-calc select:focus { outline: 2px solid #1B3A5C; border-color: #1B3A5C; }
-.pys-calc input[type="color"] { height: 40px; padding: 4px; cursor: pointer; }
-.pys-calc h3 { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin: 0 0 16px; padding-bottom: 10px; color: #1B3A5C; border-bottom: 1px solid #EDEAE0; }
-.pys-calc .section-hint { font-size: 11px; font-weight: 400; letter-spacing: normal; text-transform: none; color: #999; }
-/* Cada bloque de campos relacionados vive en su propia "ficha" — mismo lenguaje visual
-   (borde suave, radio, encabezado navy en mayúsculas) que las cards del documento
-   exportado, para que el formulario se sienta tan prolijo como el resultado. */
+
+/* ---------- Encabezado ---------- */
+.pys-calc .brand { margin: 0 0 18px; }
+.pys-calc h1 { font-size: 20px; margin: 0 0 2px; color: var(--navy); }
+.pys-calc .subtitle { font-size: 13.5px; color: var(--gris); margin: 0; }
+
+/* ---------- Layout ---------- */
+.pys-calc .lay { display: grid; grid-template-columns: 1fr; gap: 18px; }
+@media (min-width: 1000px) {
+  .pys-calc .lay { grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 24px; align-items: start; }
+  /* El resultado acompaña al usuario mientras carga las medidas. */
+  .pys-calc .out-sticky { position: sticky; top: 16px; }
+}
+
+/* ---------- Fichas de campos ---------- */
 .pys-calc .field-section {
   background: #fff;
-  border: 1px solid #EDEAE0;
+  border: 1px solid var(--linea);
   border-radius: 10px;
-  padding: 20px 22px 22px;
-  margin-bottom: 16px;
+  padding: 18px 20px 20px;
+  margin-bottom: 14px;
 }
-.pys-calc .field-section-muted { background: #FAFAF7; }
-.pys-calc .plano-container { background: #fafafa; border: 1px solid #eee; border-radius: 10px; padding: 24px; margin: 8px 0 16px; overflow: visible; }
-/* Área de agarre de cada luz en el plano del editor: se arrastra para reubicarla.
-   touch-action:none evita que el navegador interprete el arrastre como scroll/zoom. */
+.pys-calc .field-section-muted { background: #FAFBFC; }
+.pys-calc h3 {
+  font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  margin: 0 0 14px; padding-bottom: 9px; color: var(--navy);
+  border-bottom: 1px solid var(--linea);
+}
+.pys-calc .section-hint {
+  font-size: 11px; font-weight: 400; letter-spacing: normal; text-transform: none; color: var(--gris);
+}
+
+/* Sección plegable (apariencia del plano): mismo aspecto que una ficha, pero
+   cerrada por defecto — es cosmética, no debería competir con las medidas. */
+.pys-calc .field-section-fold { padding: 0; }
+.pys-calc .field-section-fold > summary {
+  list-style: none; cursor: pointer; padding: 14px 20px;
+  font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--navy); display: flex; align-items: center; gap: 8px;
+}
+.pys-calc .field-section-fold > summary::-webkit-details-marker { display: none; }
+.pys-calc .field-section-fold > summary::after {
+  content: '▾'; margin-left: auto; font-size: 12px; transition: transform 180ms ease;
+}
+.pys-calc .field-section-fold[open] > summary::after { transform: rotate(180deg); }
+.pys-calc .field-section-fold[open] > summary { border-bottom: 1px solid var(--linea); }
+.pys-calc .fold-body { padding: 16px 20px 20px; }
+
+/* ---------- Campos ----------
+   Una sola clase .row que se acomoda sola: sirve igual para 2 campos que para
+   los 4 de "ancho por lado". Antes había .row / .row3 / .row4 con reglas
+   distintas por breakpoint, y entre 420 y 600px quedaba un campo suelto en la
+   última fila. */
+.pys-calc .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 12px; }
+.pys-calc label { display: block; font-size: 11.5px; color: var(--gris); margin-bottom: 4px; }
+.pys-calc input, .pys-calc select {
+  width: 100%; padding: 9px 10px; border: 1px solid var(--linea); border-radius: 7px;
+  font-size: 14px; background: #fff; color: var(--texto); font-family: inherit;
+}
+.pys-calc input:focus, .pys-calc select:focus {
+  outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px var(--navy-soft);
+}
+.pys-calc input[type="color"] { height: 40px; padding: 4px; cursor: pointer; }
+.pys-calc .subfield { margin-top: 12px; }
+.pys-calc .helptext { font-size: 11.5px; color: var(--gris); margin: 6px 0 0; line-height: 1.45; }
+.pys-calc .helptext-lead { margin: -6px 0 12px; }
+.pys-calc .helptext b { color: var(--texto); }
+
+/* Casilleros con su sub-campo (solar húmedo, escalera, luces): tres bloques
+   parejos en vez de repartidos entre tres secciones distintas. */
+.pys-calc .opciones {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--linea);
+}
+.pys-calc .opcion { min-width: 0; }
+.pys-calc .checkrow { display: flex; align-items: center; gap: 9px; }
+.pys-calc .checkrow input[type="checkbox"] { width: 18px; height: 18px; margin: 0; accent-color: var(--navy); cursor: pointer; }
+.pys-calc .checkrow label { margin-bottom: 0; font-size: 13.5px; color: var(--texto); cursor: pointer; }
+
+/* ---------- Columna de resultado ---------- */
+.pys-calc .plano-container {
+  background: #fff; border: 1px solid var(--linea); border-radius: 10px;
+  padding: 18px; margin-bottom: 14px;
+}
+/* Área de agarre de cada luz en el plano: se arrastra para reubicarla.
+   touch-action:none evita que el navegador lo interprete como scroll/zoom. */
 .pys-calc #svg .luz-drag { cursor: grab; touch-action: none; }
 .pys-calc #svg .luz-drag:active { cursor: grabbing; }
-.pys-calc .brand { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
-.pys-calc .brand span { font-size: 12px; color: #999; }
-.pys-calc .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
-.pys-calc .card { background: #F5F3EC; border: 1px solid #EAE6DA; border-radius: 10px; padding: 16px 18px; }
-.pys-calc .card .label { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #8A8371; }
-.pys-calc .card .value { font-size: 23px; font-weight: 700; color: #1B3A5C; margin-top: 4px;}
-.pys-calc .card.accent .value { color: #C0522D; }
-.pys-calc .checkrow { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.pys-calc .checkrow input[type="checkbox"] { width: auto; }
-.pys-calc .checkrow label { margin-bottom: 0; font-size: 13px; color: #333; }
-.pys-calc .subfield { margin-top: 8px; }
-/* Botones agrupados por función (Exportar vs. Presupuesto) en vez de 6 acciones
-   sueltas en una sola fila — cada grupo con su etiqueta chica arriba. En desktop va
-   en FLUJO NORMAL al final del formulario, como una ficha más (mismo lenguaje visual
-   que .field-section: fondo blanco, borde suave, radio) — no fija al viewport, que
-   tapaba un tercio de la pantalla y resultaba incómoda. En mobile se convierte en
-   bottom sheet (ver @media más abajo). */
-.pys-calc .btns-wrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 28px;
-  margin: 24px auto 0;
-  max-width: 1100px;
-  background: #fff;
-  border: 1px solid #EDEAE0;
-  border-radius: 14px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-  padding: 22px 32px;
-}
-.pys-calc .btns-group { flex: 1 1 260px; min-width: 240px; }
-/* El disparador del bottom sheet y su overlay solo existen en mobile (ver @media
-   600px); en desktop las acciones se muestran inline en la barra fija de arriba. */
-.pys-calc .losetas-sheet-trigger { display: none; }
-.pys-calc .losetas-sheet-overlay { display: none; }
-.pys-calc .btns-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #8A8371; margin: 0 0 10px; }
-.pys-calc .btns-group .helptext { margin-top: 10px; }
-.pys-calc .btns { display: flex; gap: 10px; flex-wrap: wrap; }
-.pys-calc button { background: #1B3A5C; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-size: 14px; cursor: pointer; transition: background 150ms ease, transform 150ms ease; }
-.pys-calc button:hover { background: #14304c; }
-.pys-calc button:active { transform: scale(.97); }
-.pys-calc button.secondary { background: #fff; color: #1B3A5C; border: 1px solid #1B3A5C; }
-.pys-calc button.secondary:hover { background: #f2f6fa; }
-.pys-calc button.client { background: #C0522D; }
-.pys-calc button.client:hover { background: #a3441f; }
-.pys-calc button.danger-ghost { background: #fff; color: #a3441f; border: 1px solid #e2c4b8; padding: 6px 12px; font-size: 13px; }
-.pys-calc button.danger-ghost:hover { background: #fbf0ec; }
-/* Jerarquía de acciones dentro de .btns: 2 primarias sólidas (base + .client, ya
-   cubiertas arriba) y el resto con el mismo tratamiento secundario (borde navy,
-   mismo hover) sin importar si el elemento es <button> o <a> — antes ".secondary"
-   solo estaba definido para "button.secondary", así que el <a> de Historial no
-   tomaba ningún estilo y quedaba como texto plano suelto. */
-.pys-calc .btns > a,
-.pys-calc .btns > a.secondary {
-  background: #fff;
-  color: #1B3A5C;
-  border: 1px solid #1B3A5C;
-  padding: 10px 18px;
-  border-radius: 8px;
-  font-size: 14px;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  cursor: pointer;
-}
-.pys-calc .btns > a:hover,
-.pys-calc .btns > a.secondary:hover {
-  background: #f2f6fa;
-}
-.pys-calc button.add-material { background: #fff; color: #1B3A5C; border: 1px dashed #1B3A5C; padding: 8px 14px; font-size: 13px; width: 100%; margin-top: 6px; }
-.pys-calc button.add-material:hover { background: #f2f6fa; }
-.pys-calc button:disabled { opacity: 0.6; cursor: not-allowed; }
-.pys-calc .helptext { font-size: 12px; color: #999; margin-top: 6px; }
-.pys-calc .material-row { display: grid; grid-template-columns: 1fr 140px auto; gap: 10px; align-items: center; margin-bottom: 8px; }
-/* Encabezado de columnas de la lista de materiales -- antes los campos no tenían
-   ninguna etiqueta visible una vez cargado el precio (el placeholder desaparece con
-   el valor), así que no quedaba claro qué representaba cada columna. */
-.pys-calc .material-header { display: grid; grid-template-columns: 1fr 140px auto; gap: 10px; margin-bottom: 6px; font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: #8A8371; }
-.pys-calc .material-header span:last-child { visibility: hidden; }
-.pys-calc .material-cost-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-top: 14px; }
 
-/* Vista limpia (plano + medidas, sin precios) — mismo lenguaje visual "documento de
-   estudio" que el resto de las calculadoras: acento navy arriba, tipografía con
-   jerarquía clara, espaciado generoso, sin las líneas punteadas de planilla. */
+.pys-calc .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.pys-calc .card {
+  background: #fff; border: 1px solid var(--linea); border-radius: 10px; padding: 14px 16px;
+}
+.pys-calc .card .label { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--gris); }
+.pys-calc .card .value { font-size: 24px; font-weight: 700; color: var(--navy); margin-top: 4px; }
+/* El m² extra es el número que se cotiza: es el que hay que mirar. */
+.pys-calc .card.accent { border-color: var(--acento); background: #FDF6F3; }
+.pys-calc .card.accent .value { color: var(--acento); }
+
+/* ---------- Acciones ---------- */
+.pys-calc .btns-wrap {
+  background: #fff; border: 1px solid var(--linea); border-radius: 10px; padding: 16px 18px;
+}
+.pys-calc .btns { display: flex; gap: 10px; flex-wrap: wrap; }
+.pys-calc .btns-menores { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--linea); }
+.pys-calc button, .pys-calc .btns > a {
+  flex: 1 1 auto; text-align: center; justify-content: center;
+  background: var(--navy); color: #fff; border: 1px solid var(--navy);
+  padding: 11px 16px; border-radius: 8px; font-size: 14px; font-family: inherit;
+  cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;
+  transition: background 150ms ease, transform 150ms ease;
+}
+.pys-calc button:active, .pys-calc .btns > a:active { transform: scale(.98); }
+.pys-calc button.client { background: var(--acento); border-color: var(--acento); }
+.pys-calc button.client:hover { background: #a3441f; }
+.pys-calc button.secondary, .pys-calc .btns > a.secondary {
+  background: #fff; color: var(--navy);
+}
+.pys-calc button.secondary:hover, .pys-calc .btns > a.secondary:hover { background: var(--navy-soft); }
+.pys-calc button.ghost {
+  background: none; border-color: transparent; color: var(--gris); font-size: 13px;
+}
+.pys-calc button.ghost:hover { background: var(--navy-soft); color: var(--navy); }
+.pys-calc button:disabled { opacity: .55; cursor: not-allowed; }
+.pys-calc #cloudMsg:empty { display: none; }
+
+/* ---------- Materiales (uso interno) ---------- */
+.pys-calc .material-row { display: grid; grid-template-columns: 1fr 120px auto; gap: 10px; align-items: center; margin-bottom: 8px; }
+/* Encabezado de columnas: una vez cargado el precio el placeholder desaparece,
+   y sin esto no queda claro qué representa cada columna. */
+.pys-calc .material-header {
+  display: grid; grid-template-columns: 1fr 120px auto; gap: 10px; margin-bottom: 6px;
+  font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--gris);
+}
+.pys-calc .material-header span:last-child { visibility: hidden; }
+.pys-calc button.add-material {
+  background: #fff; color: var(--navy); border: 1px dashed var(--navy);
+  padding: 9px 14px; font-size: 13px; width: 100%; margin-top: 6px;
+}
+.pys-calc button.add-material:hover { background: var(--navy-soft); }
+.pys-calc button.danger-ghost {
+  flex: 0 0 auto; background: #fff; color: #a3441f; border: 1px solid #e2c4b8;
+  padding: 7px 12px; font-size: 13px;
+}
+.pys-calc button.danger-ghost:hover { background: #fbf0ec; }
+.pys-calc .material-cost-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 14px; }
+.pys-calc .material-cost-grid .card { background: #F4F8F9; }
+.pys-calc .material-cost-grid .value { font-size: 18px; }
+
+/* ---------- Imagen para el cliente (fuera de pantalla, la captura html2canvas) ---------- */
 .pys-calc #client-capture {
-  position: fixed;
-  top: -99999px;
-  left: -99999px;
-  width: 1100px;
-  background: #fff;
-  border-top: 5px solid #1B3A5C;
-  padding: 48px;
-  font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  position: fixed; top: -99999px; left: -99999px; width: 1100px;
+  background: #fff; border-top: 5px solid var(--navy); padding: 48px;
+  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 }
 .pys-calc #client-capture .chdr {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 28px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid #E1E7EC;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 28px; padding-bottom: 18px; border-bottom: 1px solid #E1E7EC;
 }
 .pys-calc #client-capture .chdr img { height: 56px; }
-.pys-calc #client-capture .chdr .ctitle { font-size: 21px; color: #1B3A5C; font-weight: 700; letter-spacing: .01em; }
-.pys-calc #client-capture .chdr .csub { font-size: 13px; color: #6B7680; margin-top: 3px; }
+.pys-calc #client-capture .chdr .ctitle { font-size: 21px; color: var(--navy); font-weight: 700; letter-spacing: .01em; }
+.pys-calc #client-capture .chdr .csub { font-size: 13px; color: var(--gris); margin-top: 3px; }
 .pys-calc #client-capture .cplano {
-  border: 1px solid #E1E7EC;
-  border-left: 3px solid #1B3A5C;
-  border-radius: 8px;
-  padding: 28px;
-  background: #FAFBFC;
+  border: 1px solid #E1E7EC; border-left: 3px solid var(--navy);
+  border-radius: 8px; padding: 28px; background: #FAFBFC;
 }
 .pys-calc #client-capture .cfooter {
-  margin-top: 24px;
-  padding-top: 14px;
-  border-top: 1px solid #E1E7EC;
-  font-size: 11px;
-  color: #1B3A5C;
-  text-align: left;
+  margin-top: 24px; padding-top: 14px; border-top: 1px solid #E1E7EC;
+  font-size: 11px; color: var(--navy);
 }
 
-/* font-size 16px en inputs hasta 900px (tablets, celulares grandes en horizontal):
-   con menos de 16px iOS hace zoom al enfocar el campo. Mismo criterio que las otras
-   4 calculadoras, para que el flujo de llenado se sienta parejo en cualquier dispositivo. */
+/* font-size 16px hasta 900px: con menos, iOS hace zoom al enfocar el campo.
+   Mismo criterio que las otras 4 calculadoras. */
 @media (max-width: 900px) {
   .pys-calc input, .pys-calc select, .pys-calc textarea { font-size: 16px; }
 }
 
-/* ---------- MOBILE (<600px) ---------- */
 @media (max-width: 600px) {
-  /* padding-bottom fijo = alto de la barra disparadora fija de abajo, para que el
-     último field-section no quede tapado (en mobile la barra visible es el trigger,
-     no la .btns-wrap, que acá es la hoja off-screen). */
-  .pys-calc { padding: 10px 10px 76px; }
-  .pys-calc .wrap { padding: 14px; border-radius: 10px; }
+  .pys-calc { padding: 10px 10px 24px; }
   .pys-calc .field-section { padding: 14px 14px 16px; }
+  .pys-calc .fold-body { padding: 14px; }
+  .pys-calc .field-section-fold > summary { padding: 12px 14px; }
   /* El plano tiene un viewBox fijo (680x420): con width:100% se achica
      proporcionalmente hasta volver ilegibles las medidas dibujadas adentro.
-     En vez de forzarlo a entrar achicado, acá se mantiene a su tamaño real
-     (legible) y el contenedor scrollea horizontalmente — el usuario recorre
-     el plano con scroll/pellizco nativo en vez de entrecerrar los ojos. */
+     Se mantiene a tamaño real y el contenedor scrollea en horizontal — el
+     usuario lo recorre con scroll/pellizco nativo en vez de entrecerrar los ojos. */
   .pys-calc .plano-container { padding: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .pys-calc .plano-container svg { width: 680px; max-width: none; }
-  /* .row (2 campos) se mantiene en 2 columnas balanceadas; row3/row4 (3 y 4
-     campos) pasan directo a 1 columna acá — antes recién colapsaban por
-     debajo de 420px, y entre 420-600px (el rango de la mayoría de los
-     celulares) quedaban en 2 columnas con un campo suelto solo en la
-     última fila, desprolijo. */
-  .pys-calc .row { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .pys-calc .row3, .pys-calc .row4 { grid-template-columns: 1fr; gap: 10px; }
   .pys-calc .cards { grid-template-columns: 1fr; }
-  .pys-calc .material-row { grid-template-columns: 1fr 80px auto; gap: 6px; }
-  .pys-calc .material-header { grid-template-columns: 1fr 80px auto; gap: 6px; }
-  /* font-size 16px evita que iOS Safari haga zoom automático al enfocar el campo */
-  .pys-calc input, .pys-calc select { font-size: 16px; }
-  /* Acciones en FLUJO NORMAL al final del formulario (sin botón "Acciones" ni bottom
-     sheet): en mobile los dos grupos y sus botones se apilan a ancho completo, uno
-     abajo del otro, para que el scroll se sienta natural. */
-  .pys-calc .losetas-sheet-trigger { display: none; }
-  .pys-calc .losetas-sheet-overlay { display: none; }
-  .pys-calc .btns-wrap { padding: 20px 18px; gap: 18px; }
-  .pys-calc .btns-group { flex: 1 1 100%; min-width: 0; }
-  .pys-calc .btns-group .helptext { display: block; }
-  .pys-calc #cloudMsg { display: block; margin-top: 6px; }
+  .pys-calc .material-row, .pys-calc .material-header { grid-template-columns: 1fr 88px auto; gap: 6px; }
+  /* Acciones a ancho completo: 44px+ de área de toque y sin texto cortado. */
   .pys-calc .btns { flex-direction: column; flex-wrap: nowrap; gap: 8px; }
-  .pys-calc .btns > button, .pys-calc .btns > a {
-    width: 100%;
-    justify-content: center;
-    min-height: 48px;
-    font-size: 15px;
-  }
-  .pys-calc button.add-material { width: 100%; }
+  .pys-calc .btns > button, .pys-calc .btns > a { width: 100%; min-height: 48px; font-size: 15px; }
+  .pys-calc button.danger-ghost { min-height: 0; }
 }
 `;

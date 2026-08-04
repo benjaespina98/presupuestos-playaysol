@@ -13,6 +13,7 @@ import {
   type TipoCalculadora,
 } from "@/lib/presupuestos";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { PanelPortal } from "@/components/PanelPortal";
 import { IconEdit, IconCopy, IconTrash, IconSearch } from "@/components/icons";
 
 const TIPOS_VALIDOS: TipoCalculadora[] = [
@@ -62,6 +63,7 @@ function HistorialTabla() {
   const [busqueda, setBusqueda] = useState("");
   const [eliminandoId, setEliminandoId] = useState<string | null>(null);
   const [porEliminar, setPorEliminar] = useState<Presupuesto | null>(null);
+  const [errorAccion, setErrorAccion] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const usuarioParam = searchParams.get("usuario");
 
@@ -121,23 +123,33 @@ function HistorialTabla() {
     if (!porEliminar) return;
     const id = porEliminar.id;
     setEliminandoId(id);
+    setErrorAccion(null);
     try {
       const { error } = await eliminarPresupuesto(id);
       if (error) throw error;
       setPresupuestos((prev) => (prev ? prev.filter((p) => p.id !== id) : prev));
       setPorEliminar(null);
     } catch (err) {
-      alert("Error al eliminar: " + (err instanceof Error ? err.message : String(err)));
+      // Antes esto era un alert() del navegador: cortaba el flujo y no dejaba
+      // rastro del error una vez cerrado.
+      setErrorAccion(
+        "No se pudo eliminar el presupuesto: " +
+          (err instanceof Error ? err.message : String(err))
+      );
+      setPorEliminar(null);
     } finally {
       setEliminandoId(null);
     }
   }
 
+  const hayFiltros = !!(busqueda || tipoFiltro || usuarioParam);
+
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900">Historial de presupuestos</h1>
-      </div>
+    <PanelPortal>
+      <h1 className="text-2xl font-semibold text-gray-900">Historial</h1>
+      <p className="mb-6 mt-1 text-sm text-gray-500">
+        Todos los presupuestos guardados en la nube por el equipo.
+      </p>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <select
@@ -184,13 +196,44 @@ function HistorialTabla() {
         </p>
       )}
 
+      {errorAccion && (
+        <p
+          role="alert"
+          className="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          {errorAccion}
+        </p>
+      )}
+
       {!error && presupuestos === null && <HistorialSkeleton />}
 
       {presupuestosFiltrados && presupuestosFiltrados.length === 0 && (
-        <p className="text-sm text-gray-500">
-          {busqueda || tipoFiltro || usuarioParam
-            ? "Ningún presupuesto coincide con el filtro."
-            : "Todavía no hay presupuestos guardados en la nube."}
+        <div className="rounded-lg border border-dashed border-gray-300 px-4 py-10 text-center">
+          <p className="text-sm text-gray-500">
+            {hayFiltros
+              ? "Ningún presupuesto coincide con el filtro."
+              : "Todavía no hay presupuestos guardados en la nube."}
+          </p>
+          {!hayFiltros && (
+            <Link
+              href="/dashboard"
+              className="mt-3 inline-block text-sm font-medium text-[#1B3A5C] hover:underline"
+            >
+              Crear el primero
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* Cuántos resultados quedaron: con los tres filtros combinados, sin esto
+          no queda claro si la lista está corta por el filtro o porque no hay más. */}
+      {presupuestosFiltrados && presupuestosFiltrados.length > 0 && (
+        <p className="mb-3 text-xs text-gray-500">
+          {presupuestosFiltrados.length}
+          {presupuestosFiltrados.length === 1 ? " presupuesto" : " presupuestos"}
+          {hayFiltros && presupuestos
+            ? ` de ${presupuestos.length}`
+            : ""}
         </p>
       )}
 
@@ -336,7 +379,7 @@ function HistorialTabla() {
         onConfirm={confirmarEliminar}
         onCancel={() => setPorEliminar(null)}
       />
-    </div>
+    </PanelPortal>
   );
 }
 

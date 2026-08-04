@@ -1,96 +1,61 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import Script from "next/script";
+import { obtenerPresupuesto } from "@/lib/presupuestos";
+import { usePuenteCalculadora } from "@/components/calculadora/puente";
 import { CALCULATOR_STYLES } from "./styles";
 import { buildCalculatorHtml } from "./markup";
 import { CALCULATOR_SCRIPT } from "./script";
-import {
-  guardarPresupuesto,
-  listarPresupuestos,
-  obtenerPresupuesto,
-  actualizarPresupuesto,
-  actualizarCatalogoItem,
-} from "./presupuestos";
 
-declare global {
-  interface Window {
-    guardarPresupuesto?: (datos: unknown, clienteNombre: string) => Promise<{ error: unknown }>;
-    actualizarPresupuesto?: (id: string, datos: unknown, clienteNombre: string) => Promise<{ error: unknown }>;
-    listarPresupuestos?: () => Promise<unknown>;
-    actualizarCatalogoItem?: (
-      clave: string,
-      precio: number | null,
-      descripcion?: string
-    ) => Promise<{ error: unknown }>;
-    cargarPresupuestoExterno?: (datos: unknown) => void;
-    presupuestoEnEdicionId?: string | null;
-  }
-}
-
+/**
+ * Losetas no usa components/calculadora/Calculadora.tsx como las otras 4: su
+ * script y sus estilos viajan en el bundle (no se sirven desde /public) y su
+ * markup no comparte el layout de dos paneles. Lo que SÍ comparte es el puente
+ * window.* (usePuenteCalculadora), que es el contrato que hay que mantener
+ * alineado entre las 5.
+ */
 export default function LosetasCalculator() {
-  const [html2canvasReady, setHtml2canvasReady] = useState(false);
   const searchParams = useSearchParams();
   const presupuestoId = searchParams.get("id");
   const duplicarId = searchParams.get("duplicar");
 
-  useEffect(() => {
-    window.guardarPresupuesto = guardarPresupuesto;
-    window.actualizarPresupuesto = actualizarPresupuesto;
-    window.listarPresupuestos = listarPresupuestos;
-    window.actualizarCatalogoItem = actualizarCatalogoItem;
-    window.presupuestoEnEdicionId = presupuestoId;
-    return () => {
-      delete window.guardarPresupuesto;
-      delete window.actualizarPresupuesto;
-      delete window.listarPresupuestos;
-      delete window.actualizarCatalogoItem;
-      delete window.presupuestoEnEdicionId;
-    };
-  }, [presupuestoId]);
+  usePuenteCalculadora("losetas", presupuestoId);
 
   useEffect(() => {
-    if (!html2canvasReady) return;
+    const scripts = ["/nombre-archivo.js", "/catalogo-modal.js"].map((src) => {
+      const el = document.createElement("script");
+      el.src = src;
+      el.async = false;
+      return el;
+    });
 
-    const nombreArchivoScript = document.createElement("script");
-    nombreArchivoScript.src = "/nombre-archivo.js";
-    nombreArchivoScript.async = false;
-    document.body.appendChild(nombreArchivoScript);
-
-    const modalScript = document.createElement("script");
-    modalScript.src = "/catalogo-modal.js";
-    modalScript.async = false;
-    document.body.appendChild(modalScript);
-
-    const script = document.createElement("script");
-    script.text = CALCULATOR_SCRIPT;
-    document.body.appendChild(script);
+    const principal = document.createElement("script");
+    principal.text = CALCULATOR_SCRIPT;
+    scripts.push(principal);
+    scripts.forEach((el) => document.body.appendChild(el));
 
     const idACargar = presupuestoId || duplicarId;
     if (idACargar) {
-      obtenerPresupuesto(idACargar).then((presupuesto) => {
-        window.cargarPresupuestoExterno?.(presupuesto.datos);
-      });
+      obtenerPresupuesto(idACargar)
+        .then((presupuesto) => window.cargarPresupuestoExterno?.(presupuesto.datos))
+        .catch((err) => {
+          console.error("No se pudo abrir el presupuesto", err);
+          alert(
+            "No se pudo abrir ese presupuesto. Puede que lo hayan borrado, o que se haya cortado la conexión."
+          );
+        });
     }
 
-    return () => {
-      document.body.removeChild(nombreArchivoScript);
-      document.body.removeChild(modalScript);
-      document.body.removeChild(script);
-    };
-  }, [html2canvasReady, presupuestoId, duplicarId]);
+    return () => scripts.forEach((el) => el.remove());
+  }, [presupuestoId, duplicarId]);
 
   return (
     <div>
       <style dangerouslySetInnerHTML={{ __html: CALCULATOR_STYLES }} />
-      <Script
-        src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
-        strategy="afterInteractive"
-        onReady={() => setHtml2canvasReady(true)}
-      />
       <div
         className="pys-calc"
+        data-calc="losetas"
         dangerouslySetInnerHTML={{ __html: buildCalculatorHtml() }}
       />
     </div>

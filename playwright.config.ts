@@ -15,6 +15,8 @@ export default defineConfig({
     command: "npm run dev",
     url: "http://localhost:3000",
     reuseExistingServer: true,
-    timeout: 60_000,
+    // El primer arranque en frío de Next puede pasar largo de 60s en Windows
+    // sobre un disco lento (el propio dev server lo avisa).
+    timeout: 180_000,
   },
 });

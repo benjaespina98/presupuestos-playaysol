@@ -1,10 +1,19 @@
--- Tabla principal de presupuestos
+-- Tabla principal de presupuestos.
+--
+-- ORDEN DE APLICACIÓN (los archivos no están numerados, pero el orden importa):
+--   1. schema.sql                        (este archivo)
+--   2. migration_catalogo_items.sql
+--   3. migration_perfiles_ownership.sql  ← reemplaza las policies de update/delete
+--                                          de más abajo por unas que exigen ser el
+--                                          dueño de la fila. Si aplicás solo este
+--                                          archivo, cualquier usuario puede editar
+--                                          y borrar presupuestos ajenos.
+--   4. migration_limpieza.sql
 create table if not exists public.presupuestos (
   id uuid primary key default gen_random_uuid(),
   tipo text not null check (tipo in ('piscinas', 'revestimientos', 'cobertores', 'cercos', 'losetas')),
   cliente_nombre text not null,
   datos jsonb not null,
-  imagen_url text,
   created_by uuid references auth.users (id) default auth.uid(),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
