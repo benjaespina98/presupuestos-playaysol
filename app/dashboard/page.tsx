@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PanelPortal } from "@/components/PanelPortal";
 
 const CATEGORIAS = [
   {
@@ -40,10 +41,11 @@ const CATEGORIAS = [
 
 export default function DashboardPage() {
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-semibold text-gray-900">
-        Presupuestos
-      </h1>
+    <PanelPortal>
+      <h1 className="text-2xl font-semibold text-gray-900">Nuevo presupuesto</h1>
+      <p className="mb-6 mt-1 text-sm text-gray-500">
+        Elegí el tipo de trabajo que vas a cotizar.
+      </p>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {CATEGORIAS.map((c) => (
           <Link
@@ -59,6 +61,7 @@ export default function DashboardPage() {
               strokeWidth="1.5"
               strokeLinecap="round"
               strokeLinejoin="round"
+              aria-hidden="true"
             >
               {c.icon}
             </svg>
@@ -66,6 +69,6 @@ export default function DashboardPage() {
           </Link>
         ))}
       </div>
-    </div>
+    </PanelPortal>
   );
 }

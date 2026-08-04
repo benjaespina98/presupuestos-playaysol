@@ -17,15 +17,8 @@ create table if not exists public.catalogo_items (
   unique (tipo, clave)
 );
 
-create or replace function public.set_updated_at()
-returns trigger
-language plpgsql
-as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$;
+-- set_updated_at() se define una sola vez, en schema.sql. Este trigger la usa
+-- por nombre; no hace falta redeclararla acá (ver migration_limpieza.sql).
 
 drop trigger if exists trg_catalogo_items_updated_at on public.catalogo_items;
 create trigger trg_catalogo_items_updated_at

@@ -2,14 +2,8 @@ const CALCULATOR_MARKUP = `
 <div class="app">
   <!-- ===================== FORM PANEL ===================== -->
   <div class="form-panel">
-    <h1>Generador de presupuestos</h1>
+    <h1>Piscinas</h1>
 
-    <div class="field"><label>Estilo del encabezado</label>
-      <select id="f-header-variant" style="width:100%; padding:8px 9px; font-size:13px; border:1px solid var(--border); border-radius:6px;">
-        <option value="teal">Piscinas (teal)</option>
-        <option value="navy">Marca general (azul)</option>
-      </select>
-    </div>
 
     <div class="accordion">
 
@@ -28,7 +22,7 @@ const CALCULATOR_MARKUP = `
       <div class="field"><label>Dimensión piscina</label>
         <textarea id="f-dimension" rows="5"></textarea>
       </div>
-      <div class="field"><label>Validez (días)</label><input type="text" id="f-validez" inputmode="decimal" style="max-width:90px"></div>
+      <div class="field"><label>Validez (días)</label><input type="text" id="f-validez" inputmode="decimal" class="input-corto"></div>
     </div>
 
     </section>
@@ -38,7 +32,8 @@ const CALCULATOR_MARKUP = `
     <button type="button" class="acc-head" data-acc="items" aria-expanded="false">Ítems<span class="acc-caret" aria-hidden="true">▾</span></button>
     <div class="tab-content" id="tab-items">
       <div class="field"><label>Subtotal construcción piscina</label><input type="text" id="f-subtotal" inputmode="decimal" placeholder="0"></div>
-      <div class="section-label" title="Solo si algo va sumado al total; lo demás va en Opcionales">Adicionales incluidos en el TOTAL</div>
+      <div class="section-label">Adicionales incluidos en el TOTAL</div>
+      <p class="note">Solo lo que va sumado al total. Lo demás va en Opcionales.</p>
       <div id="items-list"></div>
       <button class="btn-add" id="btn-add-item">+ Agregar ítem</button>
     </div>
@@ -50,9 +45,9 @@ const CALCULATOR_MARKUP = `
     <button type="button" class="acc-head" data-acc="opcionales" aria-expanded="false">Opcionales<span class="acc-caret" aria-hidden="true">▾</span></button>
     <div class="tab-content" id="tab-opcionales">
       <div class="hint">Todos los opcionales salen en el documento. <b>Tildá "Con precio"</b> en los que cotizás; los destildados salen igual, pero como "No incluye".</div>
-      <div style="display:flex; gap:8px; margin-bottom:10px;">
-        <button class="btn-secondary" id="btn-check-all" style="margin-top:0;">☑ Todos</button>
-        <button class="btn-secondary" id="btn-uncheck-all" style="margin-top:0;">☐ Ninguno</button>
+      <div class="btn-row">
+        <button class="btn-secondary" id="btn-check-all">Incluir todos</button>
+        <button class="btn-secondary" id="btn-uncheck-all">No incluir ninguno</button>
       </div>
       <div id="opt-list"></div>
       <button class="btn-add" id="btn-add-opt">+ Agregar opcional</button>
@@ -65,8 +60,9 @@ const CALCULATOR_MARKUP = `
     <section class="acc-item">
     <button type="button" class="acc-head" data-acc="fotos" aria-expanded="false">Fotos<span class="acc-caret" aria-hidden="true">▾</span></button>
     <div class="tab-content" id="tab-fotos">
-      <div class="section-label" title="Fotos generales al final del documento. Para fotos de un ítem puntual, subilas en Opcionales">Fotos generales</div>
-      <input type="file" id="foto-input" accept="image/*" multiple style="margin-bottom:10px; font-size:12px;">
+      <div class="section-label">Fotos generales</div>
+      <p class="note">Van al final del documento. Las fotos de un ítem puntual se suben desde Opcionales.</p>
+      <input type="file" id="foto-input" accept="image/*" multiple>
       <div id="fotos-list"></div>
     </div>
 
@@ -76,6 +72,13 @@ const CALCULATOR_MARKUP = `
     <section class="acc-item">
     <button type="button" class="acc-head" data-acc="textos" aria-expanded="false">Textos fijos<span class="acc-caret" aria-hidden="true">▾</span></button>
     <div class="tab-content" id="tab-textos">
+      <div class="field"><label>Estilo del encabezado</label>
+        <select id="f-header-variant">
+          <option value="teal">Piscinas (teal)</option>
+          <option value="navy">Marca general (azul)</option>
+        </select>
+      </div>
+
       <div class="field"><label>Texto legal / técnico</label><textarea id="f-legal" rows="12"></textarea></div>
 
       <div class="section-label">Pie de página</div>
@@ -100,7 +103,8 @@ const CALCULATOR_MARKUP = `
         <div class="field"><label>Link Instagram</label><input type="text" id="f-instagramUrl" placeholder="https://..."></div>
       </div>
 
-      <button class="btn-secondary" type="button" id="btn-save-textos-todos" style="margin-top:14px;" title="Guarda el texto legal y el pie como predeterminados para todos los usuarios">Guardar como predeterminado para todos</button>
+      <button class="btn-secondary" type="button" id="btn-save-textos-todos">Guardar como predeterminado para todos</button>
+      <p class="note">Deja el texto legal y el pie de arriba como predeterminados para todo el equipo.</p>
       <div class="save-flash" id="save-textos-flash"></div>
     </div>
     </section>
@@ -108,16 +112,15 @@ const CALCULATOR_MARKUP = `
     </div><!-- /.accordion -->
 
     <div class="action-bar">
-      <button class="btn-add" id="btn-new-quote" style="width:100%; justify-content:center;">Limpiar formulario</button>
-      <button type="button" class="action-trigger" id="btn-action-sheet" aria-expanded="false" aria-controls="action-row">Acciones <span aria-hidden="true">▾</span></button>
-      <div class="action-row" id="action-row">
-        <button class="btn-secondary" onclick="imprimirConNombre()" style="margin-top:0;" title='PDF — antes de imprimir: en "Más ajustes" desmarcá "Encabezados y pies" y tildá "Gráficos de fondo"'>🖨️<span class="btn-label"> PDF</span></button>
-        <button class="btn-secondary" id="btn-download-word" style="margin-top:0;" title="Word">📄<span class="btn-label"> Word</span></button>
-        <button class="btn-secondary" id="btn-save-cloud" onclick="guardarPresupuestoNube()" style="margin-top:0;" title="Guardar en la nube">☁️<span class="btn-label"> Guardar en la nube</span></button>
-        <a class="btn-secondary" href="/dashboard/historial?tipo=piscinas" style="margin-top:0;text-decoration:none;text-align:center;" title="Historial">📋<span class="btn-label"> Historial</span></a>
-      </div>
+      <button class="btn-primary" id="btn-save-cloud" onclick="guardarPresupuestoNube()">Guardar en la nube</button>
       <div class="save-flash" id="save-cloud-flash"></div>
-      <div class="action-overlay" id="action-overlay"></div>
+      <div class="action-row">
+        <button class="btn-secondary" onclick="imprimirConNombre()">PDF</button>
+        <button class="btn-secondary" id="btn-download-word">Word</button>
+        <a class="btn-secondary" href="/dashboard/historial?tipo=piscinas">Historial</a>
+      </div>
+      <p class="note action-note">Para el PDF, en «Más ajustes» del diálogo de impresión: desmarcá «Encabezados y pies» y tildá «Gráficos de fondo».</p>
+      <button class="btn-ghost" id="btn-new-quote">Limpiar formulario</button>
     </div>
   </div>
 

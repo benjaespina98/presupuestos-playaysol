@@ -57,7 +57,32 @@ test.beforeEach(() => {
 test("login llega al dashboard", async ({ page }) => {
   await login(page);
   await expect(page).toHaveURL(/\/dashboard$/);
-  await expect(page.getByRole("link", { name: "Presupuestos" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Nuevo presupuesto" })
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Historial" })).toBeVisible();
+});
+
+/**
+ * Navegar entre calculadoras sin recargar (SPA) reinyecta un <script> que
+ * declara las mismas variables de nivel superior que el anterior. Están
+ * envueltos en IIFE justamente para que eso no tire "Identifier already
+ * declared" y mate la calculadora entera — pero es una protección que no se ve
+ * hasta que alguien saca el wrapper.
+ */
+test("se puede navegar entre calculadoras sin errores", async ({ page }) => {
+  const errores: string[] = [];
+  page.on("pageerror", (err) => errores.push(String(err)));
+
+  await login(page);
+  for (const tipo of ["piscinas", "cercos", "revestimientos", "cobertores"]) {
+    await page.getByRole("link", { name: "Nuevo" }).click();
+    await page.click(`a[href="/dashboard/${tipo}"]`);
+    await expect(page.locator(".form-panel")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("#btn-download-word")).toBeVisible({ timeout: 15_000 });
+  }
+
+  expect(errores, `Errores al navegar entre calculadoras:\n${errores.join("\n")}`).toEqual([]);
 });
 
 for (const { tipo, nombreEsperado } of CALCULADORAS) {
@@ -74,13 +99,11 @@ for (const { tipo, nombreEsperado } of CALCULADORAS) {
     await page.goto(`/dashboard/${tipo}`);
 
     if (tipo !== "losetas") {
-      // Esperar a que el HTML legacy de la calculadora termine de montarse (el
-      // form-panel queda oculto con visibility:hidden hasta que carga el CSS).
+      // Esperar a que el HTML legacy de la calculadora termine de montarse.
       await expect(page.locator(".form-panel")).toBeVisible({ timeout: 15_000 });
     } else {
-      // Losetas no usa .form-panel ni el patrón de ocultar-hasta-que-cargue-CSS de
-      // las otras 4 (no hay <link> externo, los estilos van inline vía <style>) —
-      // su contenedor real es #capture-area (ver app/dashboard/losetas/markup.ts).
+      // Losetas no usa el layout de dos paneles de las otras 4 (no tiene
+      // .form-panel): su contenedor es #capture-area, ver losetas/markup.ts.
       await expect(page.locator("#capture-area")).toBeVisible({ timeout: 15_000 });
     }
     // Además del CSS/mount, hay que esperar a que el script principal termine de
@@ -88,7 +111,7 @@ for (const { tipo, nombreEsperado } of CALCULADORAS) {
     const botonListo =
       tipo !== "losetas"
         ? page.locator("#btn-download-word")
-        : page.locator('button:has-text("Imagen para cliente")');
+        : page.locator('button:has-text("Imagen para el cliente")');
     await expect(botonListo).toBeVisible({ timeout: 15_000 });
 
     // --- Punto 1: sin botón de WhatsApp remanente ---
@@ -124,7 +147,9 @@ for (const { tipo, nombreEsperado } of CALCULADORAS) {
     // --- Punto 4: naming del archivo descargado ---
     if (tipo !== "losetas") {
       const [download] = await Promise.all([
-        page.waitForEvent("download", { timeout: 20_000 }),
+        // 30s (antes 20): docx y html2canvas ahora se bajan del CDN recien al
+        // apretar el boton, no al cargar la pagina.
+        page.waitForEvent("download", { timeout: 30_000 }),
         page.click("#btn-download-word"),
       ]);
       const nombreArchivo = download.suggestedFilename();
@@ -137,8 +162,10 @@ for (const { tipo, nombreEsperado } of CALCULADORAS) {
     } else {
       // Losetas no tiene botón Word — su descarga real es el PNG "Imagen para cliente".
       const [download] = await Promise.all([
-        page.waitForEvent("download", { timeout: 20_000 }),
-        page.click('button:has-text("Imagen para cliente")'),
+        // 30s (antes 20): docx y html2canvas ahora se bajan del CDN recien al
+        // apretar el boton, no al cargar la pagina.
+        page.waitForEvent("download", { timeout: 30_000 }),
+        page.click('button:has-text("Imagen para el cliente")'),
       ]);
       const nombreArchivo = download.suggestedFilename();
       expect(nombreArchivo).toMatch(

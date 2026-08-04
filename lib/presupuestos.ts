@@ -47,19 +47,7 @@ export async function guardarPresupuesto(
   return { error };
 }
 
-export async function listarPresupuestos(tipo: TipoCalculadora) {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("presupuestos")
-    .select("*")
-    .eq("tipo", tipo)
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-  return data as Presupuesto[];
-}
-
-// Sin filtro de tipo, para el historial centralizado. Trae además el perfil
+// Trae los presupuestos para el historial centralizado, con el perfil
 // de quien creó cada presupuesto (nombre para mostrar + filtrar por usuario).
 // Se pide por separado en vez de con un embed de PostgREST porque
 // `presupuestos.created_by` referencia auth.users, no perfiles directamente
@@ -144,27 +132,55 @@ export async function obtenerPresupuesto(id: string) {
   return data as Presupuesto;
 }
 
+// Solo el dueño puede modificar o borrar su presupuesto (política RLS
+// "Users can update/delete their own presupuestos", ver migration_perfiles_ownership.sql).
+//
+// Postgres no considera un error que un UPDATE/DELETE no toque ninguna fila: si RLS
+// filtra la fila, Supabase devuelve `error: null` y cero filas afectadas. Sin el
+// `.select()` de abajo eso llegaba a la calculadora como éxito y mostraba
+// "Guardado en la nube ✓" sin haber guardado nada — el peor final posible para un
+// presupuesto que alguien acaba de armar. Pidiendo las filas afectadas podemos
+// distinguir "salió bien" de "no te dejó" y avisar de verdad.
+const SIN_PERMISO =
+  "No se pudo guardar: este presupuesto lo creó otra persona y solo su autor puede modificarlo. Usá «Duplicar» desde el historial para hacer una copia tuya.";
+
 export async function actualizarPresupuesto(
   id: string,
   datos: unknown,
   clienteNombre: string
 ) {
   const supabase = createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("presupuestos")
     .update({
       cliente_nombre: clienteNombre || "Sin nombre",
       datos,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id");
 
-  return { error };
+  if (error) return { error };
+  if (!data || data.length === 0) return { error: new Error(SIN_PERMISO) };
+  return { error: null };
 }
 
 export async function eliminarPresupuesto(id: string) {
   const supabase = createClient();
-  const { error } = await supabase.from("presupuestos").delete().eq("id", id);
-  return { error };
+  const { data, error } = await supabase
+    .from("presupuestos")
+    .delete()
+    .eq("id", id)
+    .select("id");
+
+  if (error) return { error };
+  if (!data || data.length === 0) {
+    return {
+      error: new Error(
+        "No se pudo eliminar: este presupuesto lo creó otra persona y solo su autor puede borrarlo."
+      ),
+    };
+  }
+  return { error: null };
 }
 
 const FOTOS_BUCKET = "presupuestos";

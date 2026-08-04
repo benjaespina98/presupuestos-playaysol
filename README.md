@@ -15,7 +15,7 @@ Este proyecto centraliza las cinco calculadoras en un solo portal con:
 
 ## Stack
 
-- **Next.js 14** (App Router) — Server Components para todo lo que lee datos, Client Components solo donde hace falta interactividad
+- **Next.js 16** (App Router) — Server Components para todo lo que lee datos, Client Components solo donde hace falta interactividad
 - **Supabase** — Postgres con Row Level Security, autenticación y storage de archivos
 - **TypeScript**
 - **Tailwind CSS**
@@ -25,19 +25,48 @@ Este proyecto centraliza las cinco calculadoras en un solo portal con:
 
 ```
 app/
-├── login/                    Autenticación
-├── dashboard/
-│   ├── layout.tsx            Guarda de sesión a nivel servidor
-│   ├── page.tsx               Selección de calculadora
-│   └── [tipo]/
-│       ├── page.tsx           Calculadora (piscinas | revestimientos | cobertores | cercos | losetas)
-│       └── historial/         Presupuestos guardados por tipo
+├── login/                          Autenticación
+└── dashboard/
+    ├── layout.tsx                  Guarda de sesión + cromo del portal
+    ├── page.tsx                    Selección de calculadora
+    ├── historial/                  Historial centralizado (las 5 calculadoras)
+    └── <tipo>/                     piscinas | revestimientos | cobertores | cercos | losetas
+        ├── page.tsx                Carga diferida del calculador
+        ├── calculator.tsx          Config del tipo (6 líneas)
+        └── markup.ts               HTML del formulario y del documento
+components/calculadora/
+├── Calculadora.tsx                 Envoltorio React común a las 4 clásicas
+├── puente.ts                       Contrato tipado del puente window.* ← ver abajo
+└── calc.css                        Estilos de las 5 calculadoras
+public/
+├── <tipo>-calc.js                  Lógica legacy de cada calculadora (JS vanilla)
+└── seeds/                          Fotos de ejemplo precargadas
 lib/
-├── supabase.ts                Cliente de browser
-└── supabase-server.ts          Cliente de servidor (Server Components / Actions)
-middleware.ts                   Protege /dashboard/* — redirige a /login sin sesión
-supabase/schema.sql             Tabla `presupuestos`, políticas RLS, trigger de updated_at
+├── presupuestos.ts                 Lectura/escritura de presupuestos
+├── catalogo.ts                     Catálogo y textos compartidos por el equipo
+├── supabase.ts                     Cliente de browser
+└── supabase-server.ts              Cliente de servidor
+proxy.ts                            Protege /dashboard/* — redirige a /login sin sesión
+supabase/*.sql                      Esquema y migraciones (el orden importa, ver schema.sql)
 ```
+
+### Las calculadoras son JS vanilla, no React
+
+Las 5 calculadoras vienen de un flujo anterior de archivos HTML sueltos y siguen
+siendo JavaScript vanilla: `public/<tipo>-calc.js` para cuatro de ellas y
+`app/dashboard/losetas/script.ts` para losetas. No importan módulos — buscan sus
+elementos por `#id` sobre el HTML de `markup.ts` y hablan con la app de Next a
+través de un puñado de funciones colgadas de `window`.
+
+Ese contrato vive en **un solo lugar**, `components/calculadora/puente.ts`, y es
+la costura por donde se corta si alguna vez se migran a React: reimplementar una
+calculadora significa rehacer su markup y su lógica llamando a las mismas
+funciones de `lib/`, y dejar de instalar el puente para ese tipo. Las otras
+cuatro no se enteran.
+
+Consecuencia práctica: **renombrar o borrar un `id` en un `markup.ts` no rompe ni
+el build ni los tipos, pero rompe la calculadora en runtime.** `tests/assets.spec.ts`
+verifica ese contrato y corre sin necesidad de credenciales.
 
 La tabla `presupuestos` guarda el estado completo de cada cálculo como JSON (`datos jsonb`), en vez de modelar una tabla distinta por tipo de trabajo. Esto evita cinco esquemas paralelos para cinco calculadoras con campos parecidos pero no idénticos, a costa de no poder hacer queries SQL finas sobre campos internos — un trade-off razonable para el volumen de uso de un negocio de este tamaño.
 
@@ -52,7 +81,17 @@ cp .env.local.example .env.local
 npm run dev
 ```
 
-Requiere un proyecto de Supabase con el esquema de `supabase/schema.sql` ya aplicado y al menos un usuario creado manualmente en Authentication → Users (no hay registro público).
+Requiere un proyecto de Supabase con los archivos de `supabase/` ya aplicados **en
+orden** (`schema.sql` → `migration_catalogo_items.sql` →
+`migration_perfiles_ownership.sql` → `migration_limpieza.sql`) y al menos un
+usuario creado manualmente en Authentication → Users (no hay registro público).
+
+## Tests
+
+```bash
+npx playwright test tests/assets.spec.ts    # sin credenciales: peso, assets y contrato DOM
+E2E_EMAIL=... E2E_PASSWORD=... npm run test:e2e   # flujo completo con login real
+```
 
 ## Flujo de trabajo
 

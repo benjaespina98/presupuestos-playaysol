@@ -384,7 +384,31 @@ function drawSvg(svgId, viewW, viewHmax, s, showDims){
 function tick(x,y,color){ return \`<line x1="\${x-4}" y1="\${y}" x2="\${x+4}" y2="\${y}" stroke="\${color}" stroke-width="0.75"/>\`; }
 function tickH(x,y,color){ return \`<line x1="\${x}" y1="\${y-4}" x2="\${x}" y2="\${y+4}" stroke="\${color}" stroke-width="0.75"/>\`; }
 
-function exportarCliente(){
+/* html2canvas pesa ~200 KB y viene de un CDN. Antes se bajaba en toda carga de la
+   calculadora, y encima el script de losetas no arrancaba hasta que terminaba —
+   el formulario tardaba en aparecer por una libreria que solo hace falta si alguien
+   aprieta "Imagen para cliente". Ahora se pide recien en la primera exportacion. */
+const HTML2CANVAS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+let html2canvasPromise = null;
+
+function cargarHtml2Canvas(){
+  if(html2canvasPromise) return html2canvasPromise;
+  html2canvasPromise = new Promise((resolve, reject)=>{
+    if(window.html2canvas) return resolve(window.html2canvas);
+    const s = document.createElement('script');
+    s.src = HTML2CANVAS_CDN;
+    s.onload = ()=> window.html2canvas ? resolve(window.html2canvas)
+      : reject(new Error('El generador de imagenes cargo incompleto.'));
+    s.onerror = ()=> reject(new Error('No se pudo descargar el generador de imagenes. Revisa la conexion.'));
+    document.head.appendChild(s);
+  }).catch(err=>{
+    html2canvasPromise = null; // permite reintentar si fue un problema de red puntual
+    throw err;
+  });
+  return html2canvasPromise;
+}
+
+async function exportarCliente(){
   const s = getState();
   ensureLucesPos(s.luces, s.cantLuces);
   document.getElementById('clientRef').textContent = s.nombre || '';
@@ -393,14 +417,41 @@ function exportarCliente(){
   const target = document.getElementById('client-capture');
   target.style.display = 'block';
 
-  requestAnimationFrame(() => {
-    html2canvas(target, {backgroundColor: '#ffffff', scale: 3, useCORS: true}).then(canvas => {
-      const link = document.createElement('a');
-      link.download = window.armarNombreArchivo('Loseta', s.nombre, null) + '_cliente.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    }).catch(err => alert('Error generando la imagen: ' + err.message));
-  });
+  const btn = document.querySelector('.btns button.client');
+  const textoOriginal = btn ? btn.textContent : null;
+  if(btn){ btn.disabled = true; btn.textContent = 'Generando...'; }
+
+  let html2canvas;
+  try {
+    html2canvas = await cargarHtml2Canvas();
+  } catch(err) {
+    if(btn){ btn.disabled = false; btn.textContent = textoOriginal; }
+    alert(err.message);
+    return;
+  }
+
+  // El logo ahora es un <img src="/logo-mark.png"> en vez de un data URI embebido.
+  // html2canvas dibuja lo que hay en ese instante: si la imagen todavia no termino
+  // de bajar (primera exportacion, cache fria), saldria un hueco en blanco donde va
+  // la marca. Esperamos a que este decodificada antes de capturar.
+  const logo = target.querySelector('img');
+  if(logo && !logo.complete){
+    try { await logo.decode(); } catch(e) { /* si falla, se exporta igual sin logo */ }
+  }
+
+  await new Promise(res => requestAnimationFrame(res));
+
+  try {
+    const canvas = await html2canvas(target, {backgroundColor: '#ffffff', scale: 3, useCORS: true});
+    const link = document.createElement('a');
+    link.download = window.armarNombreArchivo('Loseta', s.nombre, null) + '_cliente.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch(err) {
+    alert('Error generando la imagen: ' + err.message);
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = textoOriginal; }
+  }
 }
 
 function resetAll(){
@@ -529,7 +580,6 @@ function cargarPresupuestoExterno(datos){
   document.getElementById('lblLateral2').value = datos.lblLateral2 || 'Lateral 2';
   calc();
 }
-window.cargarPresupuestoExterno = cargarPresupuestoExterno;
 
 async function guardarEnNubeClick(){
   const btn = document.getElementById('btnGuardarNube');
@@ -556,46 +606,6 @@ async function guardarEnNubeClick(){
     if(btn){ btn.disabled = false; }
   }
 }
-
-/* ---------------- BARRA DE ACCIONES: espacio reservado ---------------- */
-// En desktop la barra (.btns-wrap) va en flujo normal, así que no tapa nada y no hace
-// falta reservar espacio. En mobile lo que flota fijo al fondo es el disparador
-// "Acciones ▾" (.losetas-sheet-trigger): reservamos un padding-bottom == su altura
-// REAL para que no tape el último field-section. Cuando el disparador está oculto
-// (desktop, display:none) su offsetHeight es 0 y el padding-bottom queda solo en 24px.
-(function ajustarEspacioBarraAcciones(){
-  const disparador = document.querySelector('.losetas-sheet-trigger');
-  const pagina = document.querySelector('.pys-calc');
-  if(!pagina) return;
-  const actualizar = () => pagina.style.setProperty('--action-bar-h', (disparador ? disparador.offsetHeight : 0) + 'px');
-  if(disparador) new ResizeObserver(actualizar).observe(disparador);
-  window.addEventListener('resize', actualizar);
-  actualizar();
-})();
-
-/* ---------------- BOTTOM SHEET DE ACCIONES (mobile) ---------------- */
-// Abre/cierra la hoja inferior de acciones en mobile. Mismo patrón que las otras 4
-// calculadoras (acá la clase 'sheet-open' va sobre .pys-calc). No toca la lógica de
-// ningún botón. Se cierra al elegir una acción EXCEPTO "Guardar en la nube": su
-// mensaje de estado (#cloudMsg) vive dentro de la hoja, así que hay que dejarla
-// abierta para que se vea. En desktop el trigger no existe (return).
-(function initActionSheet(){
-  const root = document.querySelector('.pys-calc');
-  const trigger = document.getElementById('losetas-action-trigger');
-  const overlay = document.getElementById('losetas-action-overlay');
-  const wrap = document.getElementById('btns-wrap');
-  if(!root || !trigger || !wrap) return;
-  const cerrar = () => { root.classList.remove('sheet-open'); trigger.setAttribute('aria-expanded','false'); };
-  trigger.addEventListener('click', () => {
-    const abierto = root.classList.toggle('sheet-open');
-    trigger.setAttribute('aria-expanded', abierto ? 'true' : 'false');
-  });
-  if(overlay) overlay.addEventListener('click', cerrar);
-  wrap.querySelectorAll('button, a').forEach(el => {
-    if(el.id === 'btnGuardarNube') return;
-    el.addEventListener('click', cerrar);
-  });
-})();
 
 // Handlers inline del markup (onclick/oninput/onblur) + funciones que llama React:
 // tienen que vivir en window porque los atributos inline se evalúan en scope global,
