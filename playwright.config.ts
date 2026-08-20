@@ -2,6 +2,9 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests",
+  // Solo *.spec.ts. Los *.test.ts son de Vitest (ver vitest.config.ts): sin esto,
+  // Playwright levantaría un navegador para correr tests unitarios.
+  testMatch: "**/*.spec.ts",
   timeout: 60_000,
   fullyParallel: false,
   workers: 1,
