@@ -196,13 +196,17 @@ Si hacen falta, son funcionalidad nueva y van después de la migración.
 
 ---
 
-## Pendientes de confirmar
+## Los seis puntos, y qué se decidió
 
-| # | Regla | Dónde |
-|---|---|---|
-| 1 | El escalón de precio a los 15 m² hace que un cobertor más grande salga más barato | Cobertores |
-| 2 | La línea TOTAL no aparece si no hay adicionales | Piscinas |
-| 3 | Los opcionales no suman al total | Cercos, piscinas |
-| 4 | Cobertor de 0 m² cotiza $ 100.000 de instalación | Cobertores |
-| 5 | Dos revestimientos = dos totales alternativos, no una suma | Revestimientos |
-| 6 | Los labios de fibra no afectan los m² | Losetas |
+Regla general vigente: **paridad primero**. Ninguno se corrige durante la
+migración. Lo que se decida acá cambia qué hacemos DESPUÉS, no qué construimos
+en el dominio: todos se preservan tal cual están.
+
+| # | Regla | Dónde | Estado |
+|---|---|---|---|
+| 1 | El escalón a los 15 m² hace que un cobertor más grande salga más barato | Cobertores | ⏳ **A decidir** — se revisa junto con el resto antes de tocar nada |
+| 2 | La línea TOTAL no aparece si no hay adicionales | Piscinas | ✅ **Se conserva el cálculo.** Después se mejora la presentación para que el documento siempre muestre TOTAL con claridad |
+| 3 | Los opcionales no suman al total | Cercos, piscinas | ⏳ **A confirmar** |
+| 4 | Cobertor de 0 m² cotiza $ 100.000 de instalación | Cobertores | ⏳ **A confirmar** |
+| 5 | Dos revestimientos = dos totales alternativos, no una suma | Revestimientos | ✅ **Se mantiene exactamente.** Son alternativas para que el cliente elija |
+| 6 | Los labios de fibra no afectan los m² | Losetas | ⏳ **A confirmar** |
