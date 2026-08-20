@@ -1249,19 +1249,18 @@ let Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
 const DOCX_PAGE_WIDTH_MM = 160; // ancho útil de página (A4 con márgenes ~2.5cm)
 let DOCX_CONTENT_WIDTH_TWIP, NO_BORDER, NO_BORDERS;
 
-const DOCX_CDN = 'https://cdn.jsdelivr.net/npm/docx@8.6.0/build/index.umd.min.js';
 let docxPromise = null;
 
 function cargarDocx(){
   if(docxPromise) return docxPromise;
-  docxPromise = new Promise((resolve, reject)=>{
-    if(window.docx) return resolve(window.docx);
-    const s = document.createElement('script');
-    s.src = DOCX_CDN;
-    s.onload = ()=> window.docx ? resolve(window.docx)
-      : reject(new Error('El generador de Word cargó incompleto.'));
-    s.onerror = ()=> reject(new Error('No se pudo descargar el generador de Word. Revisá la conexión.'));
-    document.head.appendChild(s);
+  // docx ahora es una dependencia del proyecto y viaja en el bundle de la app, no
+  // en un CDN de terceros. Se sigue pidiendo recién en el primer export a Word
+  // (Next la sirve como chunk aparte), así que la carga de la calculadora no cambia.
+  // window.cargarLibDocx la instala components/calculadora/puente.ts.
+  docxPromise = Promise.resolve().then(()=>{
+    if(window.docx) return window.docx;
+    if(!window.cargarLibDocx) throw new Error('El generador de Word no está disponible en esta pantalla.');
+    return window.cargarLibDocx();
   }).then(lib=>{
     ({ Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
        ImageRun, ExternalHyperlink, AlignmentType, BorderStyle, WidthType,

@@ -71,6 +71,24 @@ declare global {
      *  una fila nueva, no pisar el original que se está copiando. */
     presupuestoEnEdicionId?: string | null;
 
+    /* --- Librerías pesadas, servidas desde el bundle -----------------------
+       docx (~370 KB) y html2canvas (~200 KB) son dependencias del proyecto.
+       Los scripts legacy corren como <script> clásicos desde /public, así que
+       no pueden hacer `import()` de un paquete: necesitan que alguien se los
+       cargue. Estas dos funciones son ese alguien.
+
+       Antes cada script se bajaba su librería de un CDN de terceros: no estaban
+       en el lockfile, no funcionaban sin internet y un CDN caído rompía la
+       generación del presupuesto. Ahora Next las sirve como chunk aparte, que
+       se pide recién en el primer export. --------------------------------- */
+    cargarLibDocx?: () => Promise<typeof import("docx")>;
+    cargarLibHtml2Canvas?: () => Promise<
+      (typeof import("html2canvas"))["default"]
+    >;
+    /** Caché de la librería ya cargada; la leen los scripts legacy. */
+    docx?: typeof import("docx");
+    html2canvas?: (typeof import("html2canvas"))["default"];
+
     /* --- El script legacy le da a React (los instala él, acá solo se
            declaran para poder llamarlos con tipos) ------------------------ */
     cargarPresupuestoExterno?: (datos: unknown) => void;
@@ -105,6 +123,18 @@ export function usePuenteCalculadora(
       guardarTextosCompartidos(tipo, entradas);
     window.presupuestoEnEdicionId = presupuestoId;
 
+    // El import() dinámico hace que Next las ponga en un chunk aparte: no pesan
+    // nada hasta que alguien exporta. Se cachean en window.docx / window.html2canvas
+    // para que una segunda exportación no vuelva a resolver el módulo.
+    window.cargarLibDocx = async () => {
+      window.docx ??= await import("docx");
+      return window.docx;
+    };
+    window.cargarLibHtml2Canvas = async () => {
+      window.html2canvas ??= (await import("html2canvas")).default;
+      return window.html2canvas;
+    };
+
     return () => {
       delete window.guardarPresupuesto;
       delete window.actualizarPresupuesto;
@@ -113,6 +143,11 @@ export function usePuenteCalculadora(
       delete window.obtenerCatalogoCompartido;
       delete window.guardarTextosCompartidos;
       delete window.presupuestoEnEdicionId;
+      delete window.cargarLibDocx;
+      delete window.cargarLibHtml2Canvas;
+      // window.docx / window.html2canvas se dejan a propósito: son la librería ya
+      // descargada, no estado de esta pantalla. Borrarlas obligaría a re-resolver
+      // el módulo en cada navegación entre calculadoras.
     };
   }, [tipo, presupuestoId]);
 }

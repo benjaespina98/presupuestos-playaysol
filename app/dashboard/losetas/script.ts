@@ -388,21 +388,19 @@ function tickH(x,y,color){ return \`<line x1="\${x}" y1="\${y-4}" x2="\${x}" y2=
    calculadora, y encima el script de losetas no arrancaba hasta que terminaba —
    el formulario tardaba en aparecer por una libreria que solo hace falta si alguien
    aprieta "Imagen para cliente". Ahora se pide recien en la primera exportacion. */
-const HTML2CANVAS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
 let html2canvasPromise = null;
 
 function cargarHtml2Canvas(){
   if(html2canvasPromise) return html2canvasPromise;
-  html2canvasPromise = new Promise((resolve, reject)=>{
-    if(window.html2canvas) return resolve(window.html2canvas);
-    const s = document.createElement('script');
-    s.src = HTML2CANVAS_CDN;
-    s.onload = ()=> window.html2canvas ? resolve(window.html2canvas)
-      : reject(new Error('El generador de imagenes cargo incompleto.'));
-    s.onerror = ()=> reject(new Error('No se pudo descargar el generador de imagenes. Revisa la conexion.'));
-    document.head.appendChild(s);
+  // html2canvas ahora es una dependencia del proyecto y viaja en el bundle, no en un
+  // CDN de terceros. Se sigue pidiendo recien en la primera exportacion de imagen.
+  // window.cargarLibHtml2Canvas la instala components/calculadora/puente.ts.
+  html2canvasPromise = Promise.resolve().then(()=>{
+    if(window.html2canvas) return window.html2canvas;
+    if(!window.cargarLibHtml2Canvas) throw new Error('El generador de imagenes no esta disponible en esta pantalla.');
+    return window.cargarLibHtml2Canvas();
   }).catch(err=>{
-    html2canvasPromise = null; // permite reintentar si fue un problema de red puntual
+    html2canvasPromise = null; // permite reintentar si fue un problema puntual
     throw err;
   });
   return html2canvasPromise;
