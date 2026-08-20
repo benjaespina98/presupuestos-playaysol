@@ -1,0 +1,88 @@
+{
+  "tipo": "revestimientos",
+  "grabadoDesde": "public/revestimientos-calc.js",
+  "casos": [
+    {
+      "nombre": "profundidad pareja (solo desde)",
+      "totales": [
+        "TOTAL REVESTIMIENTO$ 0"
+      ],
+      "montos": [
+        0
+      ],
+      "calculados": {
+        "f-m2-fondo": "32",
+        "f-m2-paredes": "36",
+        "f-m2-total": "68"
+      }
+    },
+    {
+      "nombre": "profundidad de menor a mayor (usa el promedio)",
+      "totales": [
+        "TOTAL REVESTIMIENTO$ 0"
+      ],
+      "montos": [
+        0
+      ],
+      "calculados": {
+        "f-m2-fondo": "32",
+        "f-m2-paredes": "31,2",
+        "f-m2-total": "63,2"
+      }
+    },
+    {
+      "nombre": "con escalera y desperdicio",
+      "totales": [
+        "TOTAL REVESTIMIENTO$ 0"
+      ],
+      "montos": [
+        0
+      ],
+      "calculados": {
+        "f-m2-fondo": "32",
+        "f-m2-paredes": "36",
+        "f-m2-total": "73"
+      }
+    },
+    {
+      "nombre": "un revestimiento incluido, cobrado por m²",
+      "totales": [
+        "TOTAL REVESTIMIENTO$ 7.616.000"
+      ],
+      "montos": [
+        7616000
+      ],
+      "calculados": {
+        "f-m2-total": "68"
+      }
+    },
+    {
+      "nombre": "dos revestimientos incluidos",
+      "totales": [
+        "TOTAL revestimiento con Cerámico Bali Brasil$ 7.616.000",
+        "TOTAL revestimiento con Venecitas Premium España$ 9.520.000"
+      ],
+      "montos": [
+        7616000,
+        9520000
+      ],
+      "calculados": {
+        "f-m2-total": "68"
+      }
+    },
+    {
+      "nombre": "sin medidas",
+      "totales": [
+        "TOTAL REVESTIMIENTO$ 0"
+      ],
+      "montos": [
+        0
+      ],
+      "calculados": {
+        "f-m2-fondo": "0",
+        "f-m2-paredes": "0",
+        "f-m2-total": "0"
+      }
+    }
+  ]
+}

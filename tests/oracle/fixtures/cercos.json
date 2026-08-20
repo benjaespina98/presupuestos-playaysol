@@ -1,0 +1,68 @@
+{
+  "tipo": "cercos",
+  "grabadoDesde": "public/cercos-calc.js",
+  "casos": [
+    {
+      "nombre": "24 ml, ambos precios",
+      "totales": [
+        "TOTAL SIN INSTALACIÓN$ 1.524.000",
+        "TOTAL CON INSTALACIÓN$ 1.908.000"
+      ],
+      "montos": [
+        1524000,
+        1908000
+      ]
+    },
+    {
+      "nombre": "24 ml, solo sin instalación",
+      "totales": [
+        "TOTAL$ 1.524.000"
+      ],
+      "montos": [
+        1524000
+      ]
+    },
+    {
+      "nombre": "24 ml, solo con instalación",
+      "totales": [
+        "TOTAL (incluye instalación)$ 1.908.000"
+      ],
+      "montos": [
+        1908000
+      ]
+    },
+    {
+      "nombre": "cero metros",
+      "totales": [
+        "TOTAL SIN INSTALACIÓN$ 0",
+        "TOTAL CON INSTALACIÓN$ 0"
+      ],
+      "montos": [
+        0,
+        0
+      ]
+    },
+    {
+      "nombre": "metros con decimales (18,5)",
+      "totales": [
+        "TOTAL SIN INSTALACIÓN$ 1.174.750",
+        "TOTAL CON INSTALACIÓN$ 1.470.750"
+      ],
+      "montos": [
+        1174750,
+        1470750
+      ]
+    },
+    {
+      "nombre": "24 ml con un opcional incluido",
+      "totales": [
+        "TOTAL SIN INSTALACIÓN$ 1.524.000",
+        "TOTAL CON INSTALACIÓN$ 1.908.000"
+      ],
+      "montos": [
+        1524000,
+        1908000
+      ]
+    }
+  ]
+}
