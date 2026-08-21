@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { listarItemsCatalogo } from "@/lib/catalogo";
 import {
-  categoriaEfectiva,
+  agruparPorCategoria,
   filtrarCatalogo,
   ordenarCatalogo,
   textoParaCopiar,
@@ -47,6 +47,11 @@ export default function CatalogoPage() {
       filtrarCatalogo(items, { busqueda, categoria: categoria || null, incluirInactivos })
     );
   }, [items, busqueda, categoria, incluirInactivos]);
+
+  // Un bloque por categoría en vez de repetir la columna "Categoría" en cada
+  // fila — con el catálogo lleno (varias decenas de ítems) es mucho más
+  // rápido encontrar algo escaneando encabezados que leyendo una tabla plana.
+  const grupos = useMemo(() => (visibles ? agruparPorCategoria(visibles) : []), [visibles]);
 
   const hayFiltros = !!(busqueda || categoria || incluirInactivos);
 
@@ -163,107 +168,113 @@ export default function CatalogoPage() {
             {hayFiltros && items ? ` de ${items.length}` : ""}
           </p>
 
-          {/* Desktop / tablet: tabla completa */}
-          <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm sm:block">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50 text-gray-700">
-                  <th className="px-4 py-3 font-medium">Categoría</th>
-                  <th className="px-4 py-3 font-medium">Producto</th>
-                  <th className="px-4 py-3 font-medium">Calculadora</th>
-                  <th className="px-4 py-3 font-medium">Precio</th>
-                  <th className="px-4 py-3 font-medium">Actualizado</th>
-                  {!modoConsulta && <th className="px-4 py-3 font-medium">Estado</th>}
-                  <th className="px-4 py-3 font-medium"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibles.map((item) => (
-                  <tr key={item.id} className="border-b border-gray-100 last:border-0">
-                    <td className="px-4 py-3 text-gray-700">{categoriaEfectiva(item)}</td>
-                    <td className="px-4 py-3 text-gray-900">
-                      <ItemDescripcion item={item} />
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">{TITULOS_TIPO[item.tipo]}</td>
-                    <td className="px-4 py-3 text-gray-700">
-                      <PrecioItem item={item} />
-                    </td>
-                    <td className="px-4 py-3 text-gray-500">
-                      <FechaActualizacion updatedAt={item.updated_at} />
-                    </td>
-                    {!modoConsulta && (
-                      <td className="px-4 py-3">
-                        <EstadoBadge activo={item.activo} />
-                      </td>
-                    )}
-                    <td className="px-4 py-3 text-right">
-                      {modoConsulta ? (
-                        <button
-                          type="button"
-                          onClick={() => copiarItem(item)}
-                          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
-                        >
-                          <IconCopy className="h-4 w-4" />
-                          {copiadoId === item.id ? "¡Copiado!" : "Copiar"}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => abrirEdicion(item)}
-                          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
-                        >
-                          <IconEdit className="h-4 w-4" />
-                          Editar
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile: tarjetas */}
-          <div className="flex flex-col gap-3 sm:hidden">
-            {visibles.map((item) => (
-              <div key={item.id} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <ItemDescripcion item={item} />
-                    <p className="mt-0.5 text-xs text-gray-400">
-                      {categoriaEfectiva(item)} · {TITULOS_TIPO[item.tipo]}
-                    </p>
-                  </div>
-                  {!modoConsulta && <EstadoBadge activo={item.activo} />}
+          <div className="space-y-5">
+            {grupos.map((grupo) => (
+              <div key={grupo.categoria}>
+                {/* Desktop / tablet: tabla por categoría */}
+                <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm sm:block">
+                  <CategoriaHeader categoria={grupo.categoria} cantidad={grupo.items.length} />
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 bg-gray-50 text-gray-700">
+                        <th className="px-4 py-3 font-medium">Producto</th>
+                        <th className="px-4 py-3 font-medium">Calculadora</th>
+                        <th className="px-4 py-3 font-medium">Precio</th>
+                        <th className="px-4 py-3 font-medium">Actualizado</th>
+                        {!modoConsulta && <th className="px-4 py-3 font-medium">Estado</th>}
+                        <th className="px-4 py-3 font-medium"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {grupo.items.map((item) => (
+                        <tr key={item.id} className="border-b border-gray-100 last:border-0">
+                          <td className="px-4 py-3 text-gray-900">
+                            <ItemDescripcion item={item} />
+                          </td>
+                          <td className="px-4 py-3 text-gray-700">{TITULOS_TIPO[item.tipo]}</td>
+                          <td className="px-4 py-3 text-gray-700">
+                            <PrecioItem item={item} />
+                          </td>
+                          <td className="px-4 py-3 text-gray-500">
+                            <FechaActualizacion updatedAt={item.updated_at} />
+                          </td>
+                          {!modoConsulta && (
+                            <td className="px-4 py-3">
+                              <EstadoBadge activo={item.activo} />
+                            </td>
+                          )}
+                          <td className="px-4 py-3 text-right">
+                            {modoConsulta ? (
+                              <button
+                                type="button"
+                                onClick={() => copiarItem(item)}
+                                className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                              >
+                                <IconCopy className="h-4 w-4" />
+                                {copiadoId === item.id ? "¡Copiado!" : "Copiar"}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => abrirEdicion(item)}
+                                className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                              >
+                                <IconEdit className="h-4 w-4" />
+                                Editar
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      <PrecioItem item={item} />
-                    </p>
-                    <p className="mt-0.5 text-xs text-gray-400">
-                      <FechaActualizacion updatedAt={item.updated_at} />
-                    </p>
+
+                {/* Mobile: tarjetas por categoría */}
+                <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm sm:hidden">
+                  <CategoriaHeader categoria={grupo.categoria} cantidad={grupo.items.length} />
+                  <div className="flex flex-col divide-y divide-gray-100 p-3">
+                    {grupo.items.map((item) => (
+                      <div key={item.id} className="pt-3 first:pt-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <ItemDescripcion item={item} />
+                            <p className="mt-0.5 text-xs text-gray-400">{TITULOS_TIPO[item.tipo]}</p>
+                          </div>
+                          {!modoConsulta && <EstadoBadge activo={item.activo} />}
+                        </div>
+                        <div className="mt-2 flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              <PrecioItem item={item} />
+                            </p>
+                            <p className="mt-0.5 text-xs text-gray-400">
+                              <FechaActualizacion updatedAt={item.updated_at} />
+                            </p>
+                          </div>
+                          {modoConsulta ? (
+                            <button
+                              type="button"
+                              onClick={() => copiarItem(item)}
+                              className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                            >
+                              <IconCopy className="h-4 w-4" />
+                              {copiadoId === item.id ? "¡Copiado!" : "Copiar"}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => abrirEdicion(item)}
+                              className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                            >
+                              <IconEdit className="h-4 w-4" />
+                              Editar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  {modoConsulta ? (
-                    <button
-                      type="button"
-                      onClick={() => copiarItem(item)}
-                      className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
-                    >
-                      <IconCopy className="h-4 w-4" />
-                      {copiadoId === item.id ? "¡Copiado!" : "Copiar"}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => abrirEdicion(item)}
-                      className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
-                    >
-                      <IconEdit className="h-4 w-4" />
-                      Editar
-                    </button>
-                  )}
                 </div>
               </div>
             ))}
@@ -280,6 +291,21 @@ export default function CatalogoPage() {
         />
       )}
     </PanelPortal>
+  );
+}
+
+/** Encabezado de cada bloque de categoría — reemplaza a la columna
+ *  "Categoría" que antes se repetía en cada fila. La barra navy es sólo
+ *  ritmo visual (misma paleta que el resto del portal), no un código de
+ *  color por categoría: con 9 categorías posibles, un color distinto por
+ *  cada una sería más ruido que ayuda. */
+function CategoriaHeader({ categoria, cantidad }: { categoria: string; cantidad: number }) {
+  return (
+    <div className="flex items-center gap-2.5 border-b border-gray-200 bg-[#F4F8F9] px-4 py-2.5">
+      <span aria-hidden="true" className="h-4 w-1 shrink-0 rounded-full bg-[#1B3A5C]" />
+      <h3 className="text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">{categoria}</h3>
+      <span className="text-xs text-gray-400">({cantidad})</span>
+    </div>
   );
 }
 
@@ -342,10 +368,10 @@ function CatalogoSkeleton() {
   return (
     <div>
       <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm sm:block">
+        <div className="h-9 animate-pulse border-b border-gray-200 bg-gray-100" />
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50 text-gray-700">
-              <th className="px-4 py-3 font-medium">Categoría</th>
               <th className="px-4 py-3 font-medium">Producto</th>
               <th className="px-4 py-3 font-medium">Calculadora</th>
               <th className="px-4 py-3 font-medium">Precio</th>
@@ -357,7 +383,6 @@ function CatalogoSkeleton() {
           <tbody>
             {[0, 1, 2, 3, 4, 5].map((i) => (
               <tr key={i} className="animate-pulse border-b border-gray-100 last:border-0">
-                <td className="px-4 py-3"><div className="h-3.5 w-20 rounded bg-gray-200" /></td>
                 <td className="px-4 py-3"><div className="h-3.5 w-40 rounded bg-gray-200" /></td>
                 <td className="px-4 py-3"><div className="h-3.5 w-20 rounded bg-gray-200" /></td>
                 <td className="px-4 py-3"><div className="h-3.5 w-16 rounded bg-gray-200" /></td>
