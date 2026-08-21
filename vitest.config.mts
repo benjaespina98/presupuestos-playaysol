@@ -16,6 +16,11 @@ export default defineConfig({
     include: ["**/*.test.ts", "**/*.test.tsx"],
     exclude: ["node_modules/**", ".next/**", "test-results/**"],
     environment: "node",
+    // Los *.test.tsx piden jsdom por archivo con `// @vitest-environment jsdom`
+    // (ver ese docblock en cualquiera de ellos). setupFiles corre en todos los
+    // tests, node incluido: solo extiende `expect` con los matchers de
+    // jest-dom, no depende del DOM.
+    setupFiles: ["./tests/setup-jsdom.ts"],
   },
   resolve: {
     // Mismo alias que tsconfig, para que los tests importen igual que la app.

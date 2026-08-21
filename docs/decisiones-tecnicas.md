@@ -101,3 +101,58 @@ mal, se corrige desde la pantalla de Catálogo sin ningún riesgo de negocio.
 precios distintos. **No se unifican.** En piscinas es el revestimiento completo
 instalado de una pileta nueva; en revestimientos es el precio por m² de un
 trabajo suelto. Son ítems comerciales distintos que comparten nombre técnico.
+
+---
+
+## 6 · MoneyInput/NumberInput comparten un solo motor de máscara
+
+**Fecha:** Fase 3 · **Estado:** aplicada
+
+`components/form/useMaskedNumberInput.ts` es el único lugar que decide "cuándo
+reformatear, cuándo no tocar el texto, qué significa vacío". MoneyInput
+(`formatARS`/`parseARS`, vacío → `null`) y NumberInput (`formatNumero`/
+`parseARS`, vacío → `0`, como `parseARSOCero` en el legacy) son ese mismo motor
+con dos formatters distintos, no dos implementaciones.
+
+La regla que evita que el cursor salte: mientras el input tiene foco, el texto
+en pantalla es exactamente lo que la persona tipeó, nunca se reescribe. El
+formato "bonito" se aplica recién al perder el foco. React no mueve el cursor
+de un input controlado si el valor no cambió respecto del DOM, así que alcanza
+con no tocar `texto` mientras `editando === true`.
+
+---
+
+## 7 · `useController` de RHF, no `register`, para MoneyField/NumberField
+
+**Fecha:** Fase 3 · **Estado:** aplicada
+
+TextField/SelectField/CheckboxField usan `register`: el dato que guardan es
+literalmente el string/valor del input, así que RHF lo maneja sin ayuda.
+MoneyField/NumberField no pueden: el dato semántico es `number | null` pero lo
+que hay en el DOM es un string formateado ("$ 1.500.000"), y esa traducción
+tiene que pasar por alguien. `useController` es ese puente.
+
+Al desestructurar `field` de `useController`, el objeto trae una propiedad
+`ref` (el callback ref de RHF) junto con `name`/`value`/`onChange`/`onBlur`. La
+regla `react-hooks/refs` de eslint-plugin-react-hooks 7.x asume que cualquier
+objeto con una propiedad `ref` es un ref de React y prohíbe leer sus otras
+propiedades durante el render — falso positivo con la forma que tiene
+`ControllerRenderProps`, no un problema real (nada ahí es un ref de React salvo
+el propio `.ref`). Se resuelve desestructurando cada propiedad por separado
+(`const { field: { ref: campoRef, name: campoNombre, ... } }`) en vez de pasar
+el objeto `field` completo, sin desactivar la regla.
+
+---
+
+## 8 · Zod valida forma, no fórmulas
+
+**Fecha:** Fase 3 · **Estado:** aplicada
+
+`useZodForm` (lib/forms) es el único punto donde un formulario conecta
+`zodResolver` con React Hook Form. Los schemas que se le pasan describen
+"¿está el campo obligatorio?, ¿es un número?, ¿el string mide lo que tiene que
+medir?" — nunca una fórmula de precio. El cálculo sigue siendo enteramente de
+`lib/domain/precios`: un campo puede exigir "tiene que haber un número" pero
+jamás "el total tiene que dar tanto". Esa separación es la misma razón por la
+que las líneas de presupuesto llevan su total ya calculado (ver decisión 1):
+domain calcula, la capa de formulario solo valida forma.
