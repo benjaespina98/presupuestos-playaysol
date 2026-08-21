@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CATEGORIAS } from "./categorias";
 import {
+  agruparPorCategoria,
   categoriaEfectiva,
   filtrarCatalogo,
   ItemCatalogo,
@@ -135,6 +136,41 @@ describe("filtrarCatalogo", () => {
 });
 
 const $ = (n: number) => `$${n.toLocaleString("es-AR")}`;
+
+describe("agruparPorCategoria", () => {
+  it("agrupa bloques consecutivos de la misma categoría, en el orden en que vienen", () => {
+    const lista = [
+      item({ id: "1", categoria: "Cercos" }),
+      item({ id: "2", categoria: "Cercos" }),
+      item({ id: "3", categoria: "Piscinas" }),
+    ];
+    const grupos = agruparPorCategoria(lista);
+    expect(grupos).toEqual([
+      { categoria: "Cercos", items: [lista[0], lista[1]] },
+      { categoria: "Piscinas", items: [lista[2]] },
+    ]);
+  });
+
+  it("un ítem sin categoría cae en la categoría por defecto (Otros)", () => {
+    const grupos = agruparPorCategoria([item({ id: "1", categoria: null })]);
+    expect(grupos).toEqual([{ categoria: "Otros", items: expect.any(Array) }]);
+  });
+
+  it("lista vacía da grupos vacíos", () => {
+    expect(agruparPorCategoria([])).toEqual([]);
+  });
+
+  it("combinado con ordenarCatalogo: agrupa TODOS los ítems de una categoría en un solo bloque, aunque no vinieran contiguos", () => {
+    const lista = [
+      item({ id: "1", categoria: "Piscinas", descripcion: "B" }),
+      item({ id: "2", categoria: "Cercos", descripcion: "A" }),
+      item({ id: "3", categoria: "Piscinas", descripcion: "A" }),
+    ];
+    const grupos = agruparPorCategoria(ordenarCatalogo(lista));
+    expect(grupos.map((g) => g.categoria)).toEqual(["Piscinas", "Cercos"]);
+    expect(grupos[0].items.map((i) => i.id)).toEqual(["3", "1"]); // "A" antes que "B"
+  });
+});
 
 describe("textoParaCopiar", () => {
   it("nombre: precio/unidad, listo para pegar en WhatsApp", () => {

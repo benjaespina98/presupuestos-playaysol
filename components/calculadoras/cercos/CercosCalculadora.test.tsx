@@ -120,7 +120,7 @@ describe("CercosCalculadora · Lote 3, snapshot autosuficiente", () => {
 
     await cargarMetros(user, "24");
     await user.type(screen.getByLabelText("Señor/Sra"), "Pérez, Juan");
-    await user.click(screen.getByRole("button", { name: "Guardar en la nube" }));
+    await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
 
     await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
     const [tipo, datos, clienteNombre] = guardarPresupuesto.mock.calls[0];
@@ -144,7 +144,7 @@ describe("CercosCalculadora · Lote 3, snapshot autosuficiente", () => {
     const catalogoMutable = CATALOGO_ORACULO.map((r) => ({ ...r }));
     render(<CercosCalculadora catalogo={catalogoMutable} />);
     await cargarMetros(user, "24");
-    await user.click(screen.getByRole("button", { name: "Guardar en la nube" }));
+    await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
 
     await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
     const datos = guardarPresupuesto.mock.calls[0][1] as unknown as { preciosBase: Record<string, number> };
@@ -160,7 +160,7 @@ describe("CercosCalculadora · Lote 3, snapshot autosuficiente", () => {
     render(<CercosCalculadora catalogo={CATALOGO_ORACULO} />);
     await cargarMetros(user, "24");
     await user.click(screen.getByLabelText("Portón de acceso reforzado — a cotizar"));
-    await user.click(screen.getByRole("button", { name: "Guardar en la nube" }));
+    await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
 
     await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
     const snapshot = PresupuestoV1.parse(guardarPresupuesto.mock.calls[0][1]);

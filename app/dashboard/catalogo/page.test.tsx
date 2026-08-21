@@ -57,6 +57,23 @@ describe("CatalogoPage · lectura", () => {
     expect(screen.getAllByText("Cerco perimetral")[0]).toBeInTheDocument();
   });
 
+  it("agrupa los ítems por categoría, con un encabezado por bloque", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: [
+        item({ id: "a", descripcion: "Luces LED", categoria: "Iluminación" }),
+        item({ id: "b", descripcion: "Cerco perimetral", categoria: "Cercos" }),
+      ],
+      error: null,
+    });
+    render(<CatalogoPage />);
+
+    await screen.findAllByText("Luces LED");
+    expect(screen.getAllByText("Iluminación")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Cercos")[0]).toBeInTheDocument();
+    // Ya no se repite la categoría al lado de cada ítem individual.
+    expect(screen.queryByText("Iluminación · Piscinas")).not.toBeInTheDocument();
+  });
+
   it("un precio null se muestra como 'A cotizar', no como $0", async () => {
     listarItemsCatalogo.mockResolvedValue({
       items: [item({ id: "a", descripcion: "Baño químico", precio: null })],

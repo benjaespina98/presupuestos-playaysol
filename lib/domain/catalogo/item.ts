@@ -70,6 +70,25 @@ export function ordenarCatalogo(items: ItemCatalogo[]): ItemCatalogo[] {
 }
 
 /**
+ * Agrupa una lista YA ORDENADA (ver `ordenarCatalogo`) en bloques
+ * consecutivos por categoría efectiva, preservando el orden. Sirve para
+ * pintar un encabezado por categoría en vez de repetir la columna
+ * "Categoría" en cada fila — más rápido de escanear con la vista llena de
+ * ítems. No reordena nada: si `items` no viene ya ordenado por categoría,
+ * el mismo nombre de categoría puede aparecer en más de un grupo.
+ */
+export function agruparPorCategoria(items: ItemCatalogo[]): { categoria: Categoria; items: ItemCatalogo[] }[] {
+  const grupos: { categoria: Categoria; items: ItemCatalogo[] }[] = [];
+  for (const item of items) {
+    const categoria = categoriaEfectiva(item);
+    const actual = grupos[grupos.length - 1];
+    if (actual && actual.categoria === categoria) actual.items.push(item);
+    else grupos.push({ categoria, items: [item] });
+  }
+  return grupos;
+}
+
+/**
  * Texto listo para pegar en WhatsApp ("Modo consulta rápida", punto 6):
  * `Cerco perimetral con instalación: $79.500/ml` o `Baño químico: a cotizar`.
  * Pura — separada del botón "Copiar" para poder testearla sin

@@ -2,6 +2,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 import { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { PresupuestoLeido } from "@/lib/domain/presupuesto/adaptadores";
 import { LosetasCalculadora } from "./LosetasCalculadora";
@@ -134,7 +136,7 @@ describe("LosetasCalculadora · snapshot", () => {
     const colorAgua = screen.getByLabelText("Color del agua") as HTMLInputElement;
     fireEvent.input(colorAgua, { target: { value: "#112233" } });
 
-    await user.click(screen.getByRole("button", { name: "Guardar en la nube" }));
+    await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
 
     await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
     const [tipo, datos, clienteNombre] = guardarPresupuesto.mock.calls[0];
@@ -153,7 +155,7 @@ describe("LosetasCalculadora · snapshot", () => {
     const user = userEvent.setup();
     render(<LosetasCalculadora presupuestoId="abc-123" />);
     await cargarMedidas(user, "8", "4");
-    await user.click(screen.getByRole("button", { name: "Guardar en la nube" }));
+    await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
 
     await waitFor(() => expect(actualizarPresupuesto).toHaveBeenCalled());
     expect(actualizarPresupuesto.mock.calls[0][0]).toBe("abc-123");
@@ -214,5 +216,31 @@ describe("LosetasCalculadora · abrir un plano guardado", () => {
     const poolY = Number(pool.getAttribute("y"));
     const poolH = Number(pool.getAttribute("height"));
     expect(Number(luz.getAttribute("cy"))).toBeCloseTo(poolY + 0.9 * poolH, 1);
+  });
+});
+
+describe("LosetasCalculadora · el div capturado por html2canvas no usa colores de paleta de Tailwind", () => {
+  // Tailwind v4 genera los tokens de paleta (bg-white, border-gray-200,
+  // text-gray-500, bg-red-50, etc.) en oklch(). html2canvas 1.4.1 no entiende
+  // oklch/lab/color() — con uno solo de estos en el árbol que se rasteriza,
+  // "Imagen para el cliente" tira "Attempting to parse an unsupported color
+  // function" y no exporta nada (bug real, visto en producción). Dentro de
+  // `clientCaptureRef` sólo pueden usarse colores hex explícitos
+  // (`bg-[#...]`/`text-[#...]`/`border-[#...]`) — este test lo congela para
+  // que nadie vuelva a colar un token de paleta ahí adentro sin darse cuenta.
+  it("sólo usa hex explícito (bg-[#..]/text-[#..]/border-[#..]) dentro de clientCaptureRef", () => {
+    const src = fs.readFileSync(path.join(__dirname, "LosetasCalculadora.tsx"), "utf8");
+    const inicio = src.indexOf("ref={clientCaptureRef}");
+    expect(inicio, "no se encontró el div capturado por html2canvas").toBeGreaterThan(-1);
+    // El bloque termina donde arranca el próximo elemento hermano del JSX
+    // (ConfirmDialog), que sigue inmediatamente después de este div en el árbol.
+    const fin = src.indexOf("<ConfirmDialog", inicio);
+    expect(fin, "no se encontró el fin del div capturado").toBeGreaterThan(inicio);
+    const bloque = src.slice(inicio, fin);
+
+    const TOKENS_DE_PALETA =
+      /\b(?:bg|text|border|from|via|to|ring|fill|stroke|decoration|outline|divide|placeholder|caret|accent)-(?:white|black|transparent|current|inherit|slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)(?:-\d{2,3})?\b/g;
+    const encontrados = bloque.match(TOKENS_DE_PALETA) ?? [];
+    expect(encontrados, "token(s) de paleta de Tailwind dentro del div capturado por html2canvas").toEqual([]);
   });
 });

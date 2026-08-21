@@ -13,6 +13,8 @@ import { guardarPresupuesto, actualizarPresupuesto } from "@/lib/presupuestos";
 import { armarNombreArchivo } from "@/lib/documentos/nombreArchivo";
 import { PlanoLosetasSvg } from "./PlanoLosetasSvg";
 import { LosetasFormSchema, formularioVacio, type LosetasForm } from "./schema";
+import { IconCloudUpload, IconImage } from "@/components/icons";
+import { FloatingSaveBar } from "@/components/calculadoras/FloatingSaveBar";
 
 /**
  * Losetas — "Plano de Piscina": editor SVG interactivo, no un documento con
@@ -303,7 +305,7 @@ export function LosetasCalculadora({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_460px]">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 gap-6 pb-20 sm:pb-0 lg:grid-cols-[minmax(0,1fr)_460px]">
       <div className="space-y-6">
         {presupuestoInicial && !presupuestoInicial.preciosCongelados && (
           <p role="status" className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -488,23 +490,29 @@ export function LosetasCalculadora({
               <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">Error generando la imagen: {errorExport}</p>
             )}
 
+            {/* "Guardar" es la acción primaria (persiste el trabajo) en las 5
+                calculadoras por igual — antes acá abajo era al revés
+                (terracotta = exportar arriba, navy outline = guardar abajo),
+                la única de las 5 con esa jerarquía invertida. */}
+            <button
+              type="submit"
+              disabled={guardando}
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#1B3A5C] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <IconCloudUpload className="h-4 w-4" />
+              {guardando ? "Guardando..." : "Guardar en la nube"}
+            </button>
+
             <button
               type="button"
               onClick={onExportarCliente}
               disabled={exportando}
-              className="min-h-11 w-full rounded-md bg-[#C0522D] px-4 text-sm font-semibold text-white hover:bg-[#a3441f] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-[#1B3A5C] px-4 text-sm font-medium text-[#1B3A5C] transition-colors hover:bg-[#1B3A5C]/5 disabled:cursor-not-allowed disabled:opacity-50"
             >
+              <IconImage className="h-4 w-4" />
               {exportando ? "Generando..." : "Imagen para el cliente"}
             </button>
             <p className="text-xs text-gray-500">La imagen sale a escala, con las medidas y sin precios: lista para mandar por chat.</p>
-
-            <button
-              type="submit"
-              disabled={guardando}
-              className="min-h-11 w-full rounded-md border border-[#1B3A5C] bg-white px-4 text-sm font-semibold text-[#1B3A5C] hover:bg-[#EEF2F6] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {guardando ? "Guardando..." : "Guardar en la nube"}
-            </button>
 
             <div className="grid grid-cols-2 gap-2 border-t border-gray-100 pt-3">
               <a href="/dashboard/historial?tipo=losetas" className="min-h-11 rounded-md px-4 py-2.5 text-center text-sm font-medium text-[#1B3A5C] hover:bg-gray-100">
@@ -522,25 +530,40 @@ export function LosetasCalculadora({
         </div>
       </div>
 
-      {/* Capturado por html2canvas — fuera de pantalla, nunca visible. */}
+      {/*
+        Capturado por html2canvas — fuera de pantalla, nunca visible.
+
+        SOLO colores hex explícitos acá adentro (`text-[#...]`/`bg-[#...]`/
+        `border-[#...]`), nunca los tokens de paleta de Tailwind (`bg-white`,
+        `border-gray-200`, `text-gray-500`, etc.): en Tailwind v4 esos tokens
+        se generan en `oklch()`, y html2canvas 1.4.1 sólo entiende
+        rgb/rgba/hex/hsl — con un color de paleta en este árbol, "Imagen para
+        el cliente" tira "Attempting to parse an unsupported color function
+        oklch/lab" y no exporta nada. El resto de la pantalla (fuera de este
+        div) no lo sufre porque nunca se rasteriza.
+
+        Los hex de acá son los mismos que usaba el plano legacy
+        (`app/dashboard/losetas/styles.ts`, ya borrado) — no son un cambio de
+        paleta, son ESOS MISMOS colores escritos a mano para esquivar oklch.
+      */}
       <div
         ref={clientCaptureRef}
         aria-hidden="true"
         style={{ position: "fixed", top: -99999, left: -99999, width: 1100 }}
-        className="bg-white p-12 font-sans"
+        className="bg-[#ffffff] p-12 font-sans"
       >
-        <div className="mb-7 flex items-center justify-between border-b border-gray-200 pb-4">
+        <div className="mb-7 flex items-center justify-between border-b border-[#E1E7EC] pb-4">
           <div>
             <div className="text-xl font-bold text-[#1B3A5C]">Plano de Piscina</div>
-            <div className="mt-1 text-sm text-gray-500">{valoresForm.nombre || ""}</div>
+            <div className="mt-1 text-sm text-[#6B7680]">{valoresForm.nombre || ""}</div>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element -- capturada por html2canvas, no puede depender de next/image */}
           <img ref={logoRef} src="/logo-mark.png" alt="Playa y Sol" className="h-14" />
         </div>
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-7">
+        <div className="rounded-lg border border-[#E1E7EC] bg-[#FAFBFC] p-7">
           <PlanoLosetasSvg geometria={geometriaCliente} interactive={false} ariaLabel="Plano de la piscina para el cliente" />
         </div>
-        <div className="mt-6 border-t border-gray-200 pt-4 text-xs text-[#1B3A5C]">
+        <div className="mt-6 border-t border-[#E1E7EC] pt-4 text-xs text-[#1B3A5C]">
           Playa y Sol S.A.S. — Corrientes 1210, Villa María
         </div>
       </div>
@@ -554,6 +577,8 @@ export function LosetasCalculadora({
         onConfirm={limpiarFormulario}
         onCancel={() => setConfirmarLimpiar(false)}
       />
+
+      <FloatingSaveBar guardando={guardando} />
     </form>
   );
 }
