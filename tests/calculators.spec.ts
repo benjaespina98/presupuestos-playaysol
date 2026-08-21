@@ -102,9 +102,9 @@ for (const { tipo, nombreEsperado } of CALCULADORAS) {
       // Esperar a que el HTML legacy de la calculadora termine de montarse.
       await expect(page.locator(".form-panel")).toBeVisible({ timeout: 15_000 });
     } else {
-      // Losetas no usa el layout de dos paneles de las otras 4 (no tiene
-      // .form-panel): su contenedor es #capture-area, ver losetas/markup.ts.
-      await expect(page.locator("#capture-area")).toBeVisible({ timeout: 15_000 });
+      // Losetas es React puro (Fase 5, última en migrar): no tiene
+      // .form-panel: se espera el encabezado propio de la pantalla.
+      await expect(page.getByRole("heading", { name: "Plano de Piscina" })).toBeVisible({ timeout: 15_000 });
     }
     // Además del CSS/mount, hay que esperar a que el script principal termine de
     // correr — recién ahí existen los botones de acción.

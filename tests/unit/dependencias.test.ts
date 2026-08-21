@@ -26,12 +26,14 @@ const VERSIONES_ESPERADAS = {
   html2canvas: "1.4.1",
 } as const;
 
-// Cercos, cobertores, piscinas y revestimientos ya no están acá: se
-// migraron a React (Fase 5) y sus public/*-calc.js se borraron. Su
-// equivalente de "no CDN, docx por import dinámico" se prueba en
+// Las 5 calculadoras ya se migraron a React (Fase 5) y sus public/*-calc.js
+// (+ app/dashboard/losetas/script.ts, components/calculadora/puente.ts,
+// components/calculadora/Calculadora.tsx) se borraron. Su equivalente de "no
+// CDN, docx por import dinámico" se prueba en
 // lib/documentos/{cercos,cobertores,piscinas,revestimientos}/docx.test.ts.
-// Sólo losetas sigue siendo legacy (usa el puente para html2canvas, no para
-// docx — nunca generó Word). Vacío hasta que losetas también migre.
+// Losetas nunca generó Word (su export es PNG vía html2canvas, pedido con
+// `await import("html2canvas")` directo desde LosetasCalculadora.tsx — sin
+// puente, ya no hace falta: ver el describe de abajo).
 const CALCULADORAS: string[] = [];
 
 describe("dependencias del proyecto", () => {
@@ -55,10 +57,8 @@ describe("dependencias del proyecto", () => {
 describe("ninguna librería se carga desde un CDN", () => {
   const fuentes = [
     ...CALCULADORAS,
-    "app/dashboard/losetas/script.ts",
-    "components/calculadora/Calculadora.tsx",
-    "components/calculadora/puente.ts",
-    "app/dashboard/losetas/calculator.tsx",
+    "components/calculadoras/losetas/LosetasCalculadora.tsx",
+    "app/dashboard/losetas/page.tsx",
   ];
 
   for (const rel of fuentes) {
@@ -71,33 +71,14 @@ describe("ninguna librería se carga desde un CDN", () => {
   }
 });
 
-describe("el puente entrega las librerías al código legacy", () => {
-  // Los scripts de /public son <script> clásicos: no pueden hacer import() de un
-  // paquete. Dependen de que el puente les deje estas dos funciones en window.
-  const puente = leer("components/calculadora/puente.ts");
-
-  it("el puente instala cargarLibDocx y cargarLibHtml2Canvas", () => {
-    expect(puente).toContain("window.cargarLibDocx =");
-    expect(puente).toContain("window.cargarLibHtml2Canvas =");
-  });
-
-  it("las importa dinámicamente, para que no pesen hasta el primer export", () => {
-    expect(puente).toMatch(/await import\(\s*["']docx["']\s*\)/);
-    expect(puente).toMatch(/await import\(\s*["']html2canvas["']\s*\)/);
-  });
-
-  for (const rel of CALCULADORAS) {
-    it(`${path.basename(rel)} pide docx por el puente y no por red`, () => {
-      const src = leer(rel);
-      expect(src).toContain("window.cargarLibDocx");
-      // Si vuelve a aparecer un <script src> para cargar la librería, es un CDN.
-      expect(src).not.toMatch(/s\.src\s*=\s*DOCX_CDN/);
-    });
-  }
-
-  it("losetas pide html2canvas por el puente", () => {
-    const src = leer("app/dashboard/losetas/script.ts");
-    expect(src).toContain("window.cargarLibHtml2Canvas");
+describe("las librerías pesadas se piden por import() dinámico, no por CDN", () => {
+  // Las 5 calculadoras React son módulos: pueden hacer import() de un paquete
+  // directo, sin necesitar un puente que se los deje en `window` (ese puente,
+  // components/calculadora/puente.ts, se borró junto con el último consumidor
+  // que lo necesitaba — losetas).
+  it("LosetasCalculadora pide html2canvas dinámicamente, recién al exportar", () => {
+    const src = leer("components/calculadoras/losetas/LosetasCalculadora.tsx");
+    expect(src).toMatch(/await import\(\s*["']html2canvas["']\s*\)/);
   });
 });
 

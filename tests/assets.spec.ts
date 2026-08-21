@@ -74,26 +74,20 @@ test.describe("librerías pesadas: se cargan solo cuando se usan", () => {
     }
   });
 
-  test("las calculadoras no traen <Script> de CDN al montar", () => {
-    const componente = fs.readFileSync(
-      path.join(RAIZ, "components", "calculadora", "Calculadora.tsx"),
+  test("losetas no trae <Script> de CDN al montar", () => {
+    // Las otras 4 ya se prueban arriba vía sus *-calc.js. Losetas es React
+    // puro (Fase 5, última en migrar): no hay ningún <script src> que revisar,
+    // pero sigue valiendo la pena guardar contra un CDN colado en el componente.
+    const src = fs.readFileSync(
+      path.join(RAIZ, "components", "calculadoras", "losetas", "LosetasCalculadora.tsx"),
       "utf8"
     );
-    const losetas = fs.readFileSync(
-      path.join(RAIZ, "app", "dashboard", "losetas", "calculator.tsx"),
-      "utf8"
+    expect(src, "LosetasCalculadora.tsx sigue cargando una librería de CDN al montar").not.toContain(
+      "cdn.jsdelivr.net"
     );
-    for (const [nombre, src] of [
-      ["Calculadora.tsx", componente],
-      ["losetas/calculator.tsx", losetas],
-    ] as const) {
-      expect(src, `${nombre} sigue cargando una librería de CDN al montar`).not.toContain(
-        "cdn.jsdelivr.net"
-      );
-      expect(src, `${nombre} sigue cargando una librería de CDN al montar`).not.toContain(
-        "cdnjs.cloudflare.com"
-      );
-    }
+    expect(src, "LosetasCalculadora.tsx sigue cargando una librería de CDN al montar").not.toContain(
+      "cdnjs.cloudflare.com"
+    );
   });
 });
 
@@ -122,17 +116,7 @@ test.describe("el DOM que el script legacy necesita sigue existiendo", () => {
       expect(faltantes, `ids que el script busca y el markup no define`).toEqual([]);
     });
   }
-
-  test("losetas: el markup define todos los ids que busca su script", () => {
-    const dir = path.join(RAIZ, "app", "dashboard", "losetas");
-    const js = fs.readFileSync(path.join(dir, "script.ts"), "utf8");
-    const markup = fs.readFileSync(path.join(dir, "markup.ts"), "utf8");
-
-    const definidos = new Set([...markup.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
-    const buscados = new Set(
-      [...js.matchAll(/getElementById\('([^']+)'\)/g)].map((m) => m[1])
-    );
-    const faltantes = [...buscados].filter((id) => !definidos.has(id));
-    expect(faltantes, "ids que el script busca y el markup no define").toEqual([]);
-  });
+  // Losetas ya no aplica: es React puro (Fase 5), no hay markup.ts/script.ts
+  // con ids sueltos que puedan desalinearse — el compilador de TypeScript ya
+  // ata cada campo del formulario a su tipo.
 });

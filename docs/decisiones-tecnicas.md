@@ -271,3 +271,67 @@ número uno de toda la migración (no romper presupuestos). El motor puro
 (`lib/domain/precios/losetas.ts`) ya existe y ya está verificado contra el
 oráculo (`tests/unit/oraculo-losetas.test.ts`) desde antes de esta fase —
 lo que falta es la UI/documento, y eso merece su propia pasada enfocada.
+
+## 12 · Losetas migrada como editor gráfico, no como una quinta variación del documento — Fase 5 cerrada
+
+**Fecha:** Fase 5 · **Estado:** hecho — 5/5 calculadoras migradas
+
+Retomando la decisión 11: losetas se migró en su propia pasada, tratándola
+como lo que la auditoría dijo que era — un editor SVG interactivo, no un
+documento con líneas de precio — en vez de forzarla dentro del molde de
+`LineaPresupuesto`/`DocumentoXxx.tsx` de las otras cuatro.
+
+- **Geometría como dato, no como HTML.** `lib/domain/plano/losetas.ts` es la
+  contraparte gráfica de `lib/domain/precios/losetas.ts`: puro, sin DOM,
+  transcribe `drawSvg()` pero devolviendo una lista de primitivas
+  (`rect`/`line`/`circle`/`text` con sus coordenadas ya calculadas) en vez de
+  un template string. `components/calculadoras/losetas/PlanoLosetasSvg.tsx`
+  sólo mapea esas primitivas a JSX — nunca hay `innerHTML` ni
+  `querySelector`, así que el estado del plano vive donde tiene que vivir: en
+  React, no en el DOM. Verificado contra los mismos casos que ya protegía
+  `tests/unit/oraculo-losetas.test.ts` (ahora borrado junto con el arnés
+  legacy que levantaba) — ver `lib/domain/plano/losetas.test.ts`.
+- **El arrastre se resuelve con `getBoundingClientRect`, no con
+  `getScreenCTM`.** El legacy convertía coordenadas de pantalla a
+  coordenadas SVG con `getScreenCTM().inverse()`. El plano nuevo se sigue
+  sirviendo a `width:100%` sin alto propio (mismo criterio que el legacy), así
+  que su alto en pantalla sigue siempre la proporción del `viewBox` — no hay
+  letterboxing que compensar, y una escala uniforme (`viewBox.width /
+  rect.width`) alcanza. Más simple de razonar y de testear con
+  Testing Library que un cálculo con matrices.
+- **`PresupuestoV1.medidas` alcanza como snapshot propio — no hizo falta
+  inventar un tipo aparte.** `medidas` ya es un `z.record` abierto (pensado
+  para que cada calculadora meta lo suyo); ahí entran dimensiones, colores,
+  posición de cada luz, escalera, espejo de agua y las etiquetas de cada
+  lado, sin depender del catálogo ni de `LineaPresupuesto`. `lineas` y
+  `totales` quedan vacíos a propósito: losetas nunca imprimió un documento
+  con precios, y forzar una línea ahí sólo para llenar el campo hubiera sido
+  la clase de "quinta variación" que esta decisión evita.
+- **Los materiales NO viajan en el snapshot.** Es fidelidad al legacy, no un
+  recorte: `getState()` nunca los incluía — cada plano abría siempre con los
+  mismos dos materiales en $0. Se preservó tal cual (ver el comentario en
+  `LosetasCalculadora.tsx`).
+- **Sin edición de catálogo inline.** El legacy tenía un popup
+  "¿guardar como precio permanente?" al perder foco de un precio de
+  material (`confirmarPrecioMaterial`, vía `public/catalogo-modal.js`). Las
+  otras cuatro calculadoras, al migrar, ya habían dejado esa función
+  exclusivamente para la pantalla de administración del catálogo
+  (`/dashboard/catalogo`, Fase 4) — ninguna volvió a ofrecer edición inline.
+  Losetas nunca estuvo sembrada en `catalogo_items` (sin seed inicial,
+  comentario ya existente en `lib/catalogo.ts`) y no aparece en la pantalla
+  de catálogo: sumarle ahí un flujo que las otras cuatro no tienen hubiera
+  sido inconsistente con la arquitectura que dejaron las Fases 2-4, así que
+  se lo dejó afuera a propósito.
+- **Adaptador v0 completado, no sólo el de medidas base.** `adaptadores.ts`
+  ya traducía `largo/ancho/inc/solar/opuesto/lateral1/lateral2` desde antes
+  de esta pasada, pero un plano guardado por el legacy real también tenía
+  colores, luces, escalera, solar húmedo y revestimiento — y su campo de
+  cliente se llama `nombre`, no `cliente` (único caso entre las 5). Sin
+  completar esto, abrir un plano viejo perdía todo lo que no fueran las
+  medidas del borde. Cubierto en `adaptadores.test.ts`.
+- **Legacy eliminado en el mismo lote.** `app/dashboard/losetas/{calculator,
+  markup,script,styles}.ts`, `components/calculadora/{Calculadora.tsx,
+  puente.ts,calc.css}`, `public/{catalogo-modal,nombre-archivo}.js` y el
+  arnés `tests/oracle/harness.ts` (+ `oraculo-losetas.test.ts`) se borraron:
+  losetas era su último consumidor. `tests/unit/dependencias.test.ts` y
+  `tests/assets.spec.ts` se actualizaron para dejar de exigir ese contrato.

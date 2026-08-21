@@ -32,8 +32,14 @@ const numero = (v: unknown): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
-/** Campos que todas las calculadoras guardan igual. */
-function clienteDesdeV0(d: Record<string, unknown>): DatosCliente {
+/** Campos que todas las calculadoras guardan igual — salvo losetas, que
+ *  nunca tuvo un formulario de datos de cliente: su único campo de
+ *  referencia es "Cliente o referencia" (`nombre` en `getState()`, no
+ *  `cliente`) y no guarda domicilio/localidad/teléfono/email. */
+function clienteDesdeV0(tipo: TipoCalculadora, d: Record<string, unknown>): DatosCliente {
+  if (tipo === "losetas") {
+    return DatosCliente.parse({ nombre: texto(d.nombre) });
+  }
   return DatosCliente.parse({
     nombre: texto(d.cliente),
     domicilio: texto(d.domicilio),
@@ -82,7 +88,27 @@ function medidasDesdeV0(
           : [],
       };
 
-    case "losetas":
+    case "losetas": {
+      // Todos los campos que `getState()`/`cargarPresupuestoExterno` del
+      // legacy leían y escribían (app/dashboard/losetas/script.ts, ya
+      // borrado) — no sólo las medidas del borde. Sin esto, abrir un plano
+      // guardado antes de la migración perdía colores, luces, escalera,
+      // solar húmedo y revestimiento.
+      const bool = (v: unknown) => v === true;
+      const lucesPos = Array.isArray(d.lucesPos)
+        ? (d.lucesPos as { x?: unknown; y?: unknown }[]).map((p) => ({ x: numero(p?.x), y: numero(p?.y) }))
+        : [];
+      const escaleraPosValida = (["solar", "opuesto", "lateral1", "lateral2"] as const).includes(
+        d.escaleraPos as never
+      )
+        ? (d.escaleraPos as string)
+        : "solar";
+      const tipoPiletaValido = d.tipoPileta === "fibra" ? "fibra" : "hormigon";
+      const revestimientoValido = (["", "ceramicos", "travertino", "pintura", "otro"] as const).includes(
+        d.revestimiento as never
+      )
+        ? (d.revestimiento as string)
+        : "";
       return {
         largo: numero(d.largo),
         ancho: numero(d.ancho),
@@ -91,7 +117,25 @@ function medidasDesdeV0(
         opuesto: numero(d.opuesto),
         lateral1: numero(d.lateral1),
         lateral2: numero(d.lateral2),
+        solarHumedo: bool(d.solarHumedo),
+        solarHumedoAncho: numero(d.solarHumedoAncho),
+        escalera: bool(d.escalera),
+        escaleraPos: escaleraPosValida,
+        tipoPileta: tipoPiletaValido,
+        labios: d.labios !== undefined ? numero(d.labios) : 0.2,
+        luces: bool(d.luces),
+        cantLuces: numero(d.cantLuces),
+        lucesPos,
+        revestimiento: revestimientoValido,
+        revestimientoOtro: texto(d.revestimientoOtro),
+        colorAgua: texto(d.colorAgua) || "#A6D1EC",
+        colorLoseta: texto(d.colorLoseta) || "#F7E6D3",
+        lblSolar: texto(d.lblSolar) || "Solar",
+        lblOpuesto: texto(d.lblOpuesto) || "Opuesto",
+        lblLateral1: texto(d.lblLateral1) || "Lateral 1",
+        lblLateral2: texto(d.lblLateral2) || "Lateral 2",
       };
+    }
   }
 }
 
@@ -134,7 +178,7 @@ export function leerPresupuesto(
     tipo,
     fecha: texto(d.fecha),
     validezDias: texto(d.validez),
-    cliente: clienteDesdeV0(d),
+    cliente: clienteDesdeV0(tipo, d),
     medidas: medidasDesdeV0(tipo, d),
     // v0 no guardó precios. Los completa el llamador desde el catálogo.
     lineas: [],
