@@ -136,7 +136,7 @@ describe("LosetasCalculadora · snapshot", () => {
     const colorAgua = screen.getByLabelText("Color del agua") as HTMLInputElement;
     fireEvent.input(colorAgua, { target: { value: "#112233" } });
 
-    await user.click(screen.getByRole("button", { name: "Guardar en la nube" }));
+    await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
 
     await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
     const [tipo, datos, clienteNombre] = guardarPresupuesto.mock.calls[0];
@@ -155,7 +155,7 @@ describe("LosetasCalculadora · snapshot", () => {
     const user = userEvent.setup();
     render(<LosetasCalculadora presupuestoId="abc-123" />);
     await cargarMedidas(user, "8", "4");
-    await user.click(screen.getByRole("button", { name: "Guardar en la nube" }));
+    await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
 
     await waitFor(() => expect(actualizarPresupuesto).toHaveBeenCalled());
     expect(actualizarPresupuesto.mock.calls[0][0]).toBe("abc-123");

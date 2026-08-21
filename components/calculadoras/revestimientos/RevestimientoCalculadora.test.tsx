@@ -105,7 +105,7 @@ describe("RevestimientoCalculadora · snapshot", () => {
     await user.click(screen.getByLabelText("Cerámico Bali Brasil (por m² instalado) — $ 112.000/m²"));
     await user.click(screen.getByLabelText("Venecitas Premium España (por m² instalado) — $ 140.000/m²"));
     await user.type(screen.getByLabelText("Señor/Sra"), "Gómez");
-    await user.click(screen.getByRole("button", { name: "Guardar en la nube" }));
+    await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
 
     await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
     const [tipo, datos] = guardarPresupuesto.mock.calls[0];

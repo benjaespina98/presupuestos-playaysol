@@ -13,6 +13,8 @@ import { guardarPresupuesto, actualizarPresupuesto } from "@/lib/presupuestos";
 import { armarNombreArchivo } from "@/lib/documentos/nombreArchivo";
 import { PlanoLosetasSvg } from "./PlanoLosetasSvg";
 import { LosetasFormSchema, formularioVacio, type LosetasForm } from "./schema";
+import { IconCloudUpload, IconImage } from "@/components/icons";
+import { FloatingSaveBar } from "@/components/calculadoras/FloatingSaveBar";
 
 /**
  * Losetas — "Plano de Piscina": editor SVG interactivo, no un documento con
@@ -303,7 +305,7 @@ export function LosetasCalculadora({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_460px]">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 gap-6 pb-20 sm:pb-0 lg:grid-cols-[minmax(0,1fr)_460px]">
       <div className="space-y-6">
         {presupuestoInicial && !presupuestoInicial.preciosCongelados && (
           <p role="status" className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -488,23 +490,29 @@ export function LosetasCalculadora({
               <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">Error generando la imagen: {errorExport}</p>
             )}
 
+            {/* "Guardar" es la acción primaria (persiste el trabajo) en las 5
+                calculadoras por igual — antes acá abajo era al revés
+                (terracotta = exportar arriba, navy outline = guardar abajo),
+                la única de las 5 con esa jerarquía invertida. */}
+            <button
+              type="submit"
+              disabled={guardando}
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#1B3A5C] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <IconCloudUpload className="h-4 w-4" />
+              {guardando ? "Guardando..." : "Guardar en la nube"}
+            </button>
+
             <button
               type="button"
               onClick={onExportarCliente}
               disabled={exportando}
-              className="min-h-11 w-full rounded-md bg-[#C0522D] px-4 text-sm font-semibold text-white hover:bg-[#a3441f] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-[#1B3A5C] px-4 text-sm font-medium text-[#1B3A5C] transition-colors hover:bg-[#1B3A5C]/5 disabled:cursor-not-allowed disabled:opacity-50"
             >
+              <IconImage className="h-4 w-4" />
               {exportando ? "Generando..." : "Imagen para el cliente"}
             </button>
             <p className="text-xs text-gray-500">La imagen sale a escala, con las medidas y sin precios: lista para mandar por chat.</p>
-
-            <button
-              type="submit"
-              disabled={guardando}
-              className="min-h-11 w-full rounded-md border border-[#1B3A5C] bg-white px-4 text-sm font-semibold text-[#1B3A5C] hover:bg-[#EEF2F6] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {guardando ? "Guardando..." : "Guardar en la nube"}
-            </button>
 
             <div className="grid grid-cols-2 gap-2 border-t border-gray-100 pt-3">
               <a href="/dashboard/historial?tipo=losetas" className="min-h-11 rounded-md px-4 py-2.5 text-center text-sm font-medium text-[#1B3A5C] hover:bg-gray-100">
@@ -569,6 +577,8 @@ export function LosetasCalculadora({
         onConfirm={limpiarFormulario}
         onCancel={() => setConfirmarLimpiar(false)}
       />
+
+      <FloatingSaveBar guardando={guardando} />
     </form>
   );
 }

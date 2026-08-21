@@ -94,7 +94,7 @@ describe("PiscinaCalculadora · snapshot", () => {
     render(<PiscinaCalculadora catalogo={CATALOGO_ORACULO} />);
     await cargarSubtotal(user, "18500000");
     await user.type(screen.getByLabelText("Señor/Sra"), "Pérez, Juan");
-    await user.click(screen.getByRole("button", { name: "Guardar en la nube" }));
+    await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
 
     await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
     const [tipo, datos] = guardarPresupuesto.mock.calls[0];
@@ -109,7 +109,7 @@ describe("PiscinaCalculadora · snapshot", () => {
     await cargarSubtotal(user, "18500000");
     await user.type(screen.getByLabelText("Largo (m)"), "8");
     await user.type(screen.getByLabelText("Ancho (m)"), "4");
-    await user.click(screen.getByRole("button", { name: "Guardar en la nube" }));
+    await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
 
     await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
     const [, datos] = guardarPresupuesto.mock.calls[0];

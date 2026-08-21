@@ -19,6 +19,9 @@ import { imprimirConNombre } from "@/lib/documentos/imprimir";
 import { redimensionarImagen, MAX_DIM_SUBIDA, CALIDAD_SUBIDA } from "@/lib/documentos/imagenes";
 import { DocumentoPiscina } from "./DocumentoPiscina";
 import { PiscinaFormSchema, formularioVacio, type PiscinaForm } from "./schema";
+import { AccionesDocumento } from "@/components/calculadoras/AccionesDocumento";
+import { FloatingSaveBar } from "@/components/calculadoras/FloatingSaveBar";
+import { CamposObligatoriosHint } from "@/components/calculadoras/CamposObligatoriosHint";
 
 function esOpcionalCatalogo(r: CatalogoRow): boolean {
   return !esTextoCompartido(r.clave);
@@ -368,8 +371,9 @@ export function PiscinaCalculadora({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 gap-6 pb-20 sm:pb-0 lg:grid-cols-[minmax(0,1fr)_420px]">
       <div data-print-hide="" className="space-y-6">
+        <CamposObligatoriosHint />
         {presupuestoInicial && !presupuestoInicial.preciosCongelados && (
           <p role="status" className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-800">
             Este presupuesto es de antes de que se empezaran a guardar los precios. Los importes se
@@ -503,47 +507,15 @@ export function PiscinaCalculadora({
           )}
         </section>
 
-        <section className="space-y-3 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          {errorGuardado && (
-            <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-              No se pudo guardar: {errorGuardado}
-            </p>
-          )}
-          {guardadoOk && !errorGuardado && (
-            <p role="status" className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-              Presupuesto guardado en la nube.
-            </p>
-          )}
-          {errorWord && (
-            <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-              No se pudo generar el Word: {errorWord}
-            </p>
-          )}
-          <button
-            type="submit"
-            disabled={guardando}
-            className="min-h-11 w-full rounded-md bg-[#1B3A5C] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {guardando ? "Guardando..." : "Guardar en la nube"}
-          </button>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={onDescargarWord}
-              disabled={generandoWord}
-              className="min-h-11 rounded-md border border-[#1B3A5C] px-4 text-sm font-medium text-[#1B3A5C] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {generandoWord ? "Generando..." : "Word"}
-            </button>
-            <button
-              type="button"
-              onClick={onImprimir}
-              className="min-h-11 rounded-md border border-[#1B3A5C] px-4 text-sm font-medium text-[#1B3A5C]"
-            >
-              PDF / Imprimir
-            </button>
-          </div>
-        </section>
+        <AccionesDocumento
+          errorGuardado={errorGuardado}
+          guardadoOk={guardadoOk}
+          errorWord={errorWord}
+          guardando={guardando}
+          generandoWord={generandoWord}
+          onDescargarWord={onDescargarWord}
+          onImprimir={onImprimir}
+        />
       </div>
 
       <div>
@@ -555,6 +527,8 @@ export function PiscinaCalculadora({
           />
         </div>
       </div>
+
+      <FloatingSaveBar guardando={guardando} />
     </form>
   );
 }
