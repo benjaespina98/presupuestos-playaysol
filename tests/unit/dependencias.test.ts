@@ -26,14 +26,10 @@ const VERSIONES_ESPERADAS = {
   html2canvas: "1.4.1",
 } as const;
 
-// Cercos ya no está acá: se migró a React (Fase 5) y public/cercos-calc.js se
-// borró. Su equivalente de "no CDN, docx por import dinámico" se prueba en
-// lib/documentos/cercos/docx.test.ts.
-const CALCULADORAS = [
-  "public/cobertores-calc.js",
-  "public/piscinas-calc.js",
-  "public/revestimientos-calc.js",
-];
+// Cercos y cobertores ya no están acá: se migraron a React (Fase 5) y sus
+// public/*-calc.js se borraron. Su equivalente de "no CDN, docx por import
+// dinámico" se prueba en lib/documentos/{cercos,cobertores}/docx.test.ts.
+const CALCULADORAS = ["public/piscinas-calc.js", "public/revestimientos-calc.js"];
 
 describe("dependencias del proyecto", () => {
   for (const [nombre, version] of Object.entries(VERSIONES_ESPERADAS)) {

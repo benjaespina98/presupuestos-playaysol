@@ -18,84 +18,13 @@ export interface Caso {
   leerAdemas?: string[];
 }
 
-// Cercos ya no está acá: se migró a React (Fase 5), así que ya no hay
-// calculadora legacy contra la cual grabar/comparar estos casos. La fixture
-// que estos casos produjeron (tests/oracle/fixtures/cercos.json) sigue viva:
-// lib/domain/precios/contra-oraculo.test.ts la usa para proteger el motor
-// nuevo para siempre, sin necesitar volver a ejecutar el legacy.
+// Cercos y cobertores ya no están acá: se migraron a React (Fase 5), así que
+// ya no hay calculadora legacy contra la cual grabar/comparar estos casos.
+// Las fixtures que produjeron (tests/oracle/fixtures/{cercos,cobertores}.json)
+// siguen vivas: lib/domain/precios/contra-oraculo.test.ts las usa para
+// proteger el motor nuevo para siempre, sin necesitar volver a ejecutar el
+// legacy.
 export const CASOS: Record<TipoLegacy, Caso[]> = {
-  /* ── COBERTORES ──────────────────────────────────────────────────────────
-     m² = largo × ancho + adicional.  El precio SALTA a los 15 m²:
-     hasta 15 → 10.903 /m² · más de 15 → 9.902 /m² · instalación 100.000
-     Los tres casos del borde son los más importantes de todo el archivo. */
-  cobertores: [
-    {
-      nombre: "borde: exactamente 15 m² (3 × 5)",
-      preparar: (c) => {
-        c.set("f-largo", "3");
-        c.set("f-ancho", "5");
-        c.set("f-modo-precio", "ambos");
-      },
-      leerAdemas: ["f-m2"],
-    },
-    {
-      nombre: "borde: apenas debajo de 15 m² (3 × 4,9)",
-      preparar: (c) => {
-        c.set("f-largo", "3");
-        c.set("f-ancho", "4.9");
-        c.set("f-modo-precio", "ambos");
-      },
-      leerAdemas: ["f-m2"],
-    },
-    {
-      nombre: "borde: apenas encima de 15 m² (3 × 5,1)",
-      preparar: (c) => {
-        c.set("f-largo", "3");
-        c.set("f-ancho", "5.1");
-        c.set("f-modo-precio", "ambos");
-      },
-      leerAdemas: ["f-m2"],
-    },
-    {
-      nombre: "pileta grande 8 × 4",
-      preparar: (c) => {
-        c.set("f-largo", "8");
-        c.set("f-ancho", "4");
-        c.set("f-modo-precio", "ambos");
-      },
-      leerAdemas: ["f-m2"],
-    },
-    {
-      nombre: "el adicional de m² cruza el umbral (3 × 4,5 = 13,5 + 2 = 15,5)",
-      preparar: (c) => {
-        c.set("f-largo", "3");
-        c.set("f-ancho", "4.5");
-        c.set("f-adicional-m2", "2");
-        c.set("f-modo-precio", "ambos");
-      },
-      leerAdemas: ["f-m2"],
-    },
-    {
-      nombre: "el adicional de m² NO alcanza a cruzarlo (13,5 + 1 = 14,5)",
-      preparar: (c) => {
-        c.set("f-largo", "3");
-        c.set("f-ancho", "4.5");
-        c.set("f-adicional-m2", "1");
-        c.set("f-modo-precio", "ambos");
-      },
-      leerAdemas: ["f-m2"],
-    },
-    {
-      nombre: "sin medidas",
-      preparar: (c) => {
-        c.set("f-largo", "0");
-        c.set("f-ancho", "0");
-        c.set("f-modo-precio", "ambos");
-      },
-      leerAdemas: ["f-m2"],
-    },
-  ],
-
   /* ── PISCINAS ────────────────────────────────────────────────────────────
      total = subtotal (lo tipea una persona) + Σ adicionales.
      La complejidad no está en la cuenta sino en cómo se muestran los
