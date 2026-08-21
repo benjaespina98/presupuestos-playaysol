@@ -278,7 +278,7 @@ export function CercosCalculadora({ catalogo }: { catalogo: CatalogoRow[] }) {
               <dd>{formatARS(resultado.adicionales)}</dd>
             </div>
           </dl>
-          <div className="space-y-1 border-t border-gray-100 pt-3">
+          <div data-testid="totales" className="space-y-1 border-t border-gray-100 pt-3">
             {totales.map((t, i) => (
               <div key={etiquetas[i]} className="flex justify-between text-base font-bold text-[#1B3A5C]">
                 <span>{etiquetas[i]}</span>
