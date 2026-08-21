@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useFieldArray, useWatch } from "react-hook-form";
 import { useZodForm } from "@/lib/forms/useZodForm";
-import { MoneyField, TextField, CheckboxField } from "@/components/form";
+import { MoneyField, NumberField, TextField, CheckboxField } from "@/components/form";
 import { calcularPiscina, importesAMostrar } from "@/lib/domain/precios/piscinas";
 import { crearLinea, type LineaPresupuesto } from "@/lib/domain/precios/tipos";
 import { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
@@ -41,11 +41,15 @@ function formularioDesdePresupuesto(leido: PresupuestoLeido, catalogo: CatalogoR
   const base = formularioDesdeCatalogo(catalogo);
   const { presupuesto, preciosCongelados, clavesIncluidas } = leido;
 
+  const medidas = presupuesto.medidas as { largo?: unknown; ancho?: unknown };
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
   const comunes = {
     fecha: presupuesto.fecha,
     validezDias: presupuesto.validezDias,
     cliente: presupuesto.cliente,
     detalle: presupuesto.detalle,
+    largo: num(medidas.largo),
+    ancho: num(medidas.ancho),
   };
 
   if (!preciosCongelados) {
@@ -215,7 +219,7 @@ export function PiscinaCalculadora({
       fecha: valoresForm.fecha ?? "",
       validezDias: valoresForm.validezDias ?? "",
       cliente: valoresForm.cliente ?? {},
-      medidas: {},
+      medidas: { largo: valoresForm.largo ?? 0, ancho: valoresForm.ancho ?? 0 },
       lineas: [...lineasAdicionales, ...lineasOpcionales],
       preciosBase: {},
       totales: importes,
@@ -277,7 +281,7 @@ export function PiscinaCalculadora({
         fecha: valores.fecha,
         validezDias: valores.validezDias,
         cliente: valores.cliente,
-        medidas: {},
+        medidas: { largo: valores.largo, ancho: valores.ancho },
         lineas: [...lineasAdicionales, ...lineasOpcionales],
         preciosBase: {},
         totales: importesFinales,
@@ -384,13 +388,27 @@ export function PiscinaCalculadora({
           </div>
           <TextField register={register} errors={errors} name="cliente.email" label="Email" type="email" />
           <TextField register={register} errors={errors} name="detalle" label="Dimensión piscina" multiline rows={4} />
+
+          <div>
+            <div className="grid grid-cols-2 gap-4">
+              <NumberField control={control} name="largo" label="Largo (m)" />
+              <NumberField control={control} name="ancho" label="Ancho (m)" />
+            </div>
+            <p className="mt-1.5 text-xs text-gray-500">
+              Informativo por ahora — no cambia el Subtotal ni el texto de arriba.
+              {!!valoresForm.largo && !!valoresForm.ancho && (
+                <> {" "}Área aprox.: {(valoresForm.largo * valoresForm.ancho).toLocaleString("es-AR")} m².</>
+              )}
+            </p>
+          </div>
+
           <TextField register={register} errors={errors} name="fecha" label="Fecha" />
           <TextField register={register} errors={errors} name="validezDias" label="Validez (días)" />
         </section>
 
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Ítems</h2>
-          <MoneyField control={control} name="subtotal" label="Subtotal construcción piscina" emptyValue="zero" />
+          <MoneyField control={control} name="subtotal" label="Subtotal construcción piscina" emptyValue="zero" required />
 
           <div>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">

@@ -465,19 +465,21 @@ export function CercosCalculadora({
 
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Cálculo</h2>
-          <NumberField control={control} name="metrosLineales" label="Metros lineales a cercar (ml)" placeholder="Ej: 24" />
+          <NumberField control={control} name="metrosLineales" label="Metros lineales a cercar (ml)" placeholder="Ej: 24" required />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <MoneyField
               control={control}
               name="precioPorMlSinInstalacion"
               label="Precio /ml sin instalación"
               emptyValue="zero"
+              required
             />
             <MoneyField
               control={control}
               name="precioPorMlConInstalacion"
               label="Precio /ml con instalación"
               emptyValue="zero"
+              required
             />
           </div>
           <SelectField

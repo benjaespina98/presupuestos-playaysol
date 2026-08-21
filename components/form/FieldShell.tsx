@@ -27,14 +27,21 @@ export function FieldShell({
 
   return (
     <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-sm font-medium text-gray-700">
-        {label}
+      <div className="flex items-baseline gap-0.5">
+        {/* El asterisco queda FUERA de <label> a propósito: si estuviera adentro,
+            `getByLabelText`/el nombre accesible del campo pasarían a incluirlo
+            (aria-hidden no lo saca del textContent), y "Largo (m)" dejaría de
+            matchear con "Largo (m) *" — rompería cualquier test o software de
+            accesibilidad que busque el campo por su label real. */}
+        <label htmlFor={htmlFor} className="block text-sm font-medium text-gray-700">
+          {label}
+        </label>
         {required && (
-          <span className="ml-0.5 text-red-600" aria-hidden="true">
+          <span className="text-red-600" aria-hidden="true">
             *
           </span>
         )}
-      </label>
+      </div>
       {children}
       {hint && !error && (
         <p id={hintId} className="text-xs text-gray-500">

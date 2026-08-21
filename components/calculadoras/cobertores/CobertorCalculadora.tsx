@@ -456,8 +456,8 @@ export function CobertorCalculadora({
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Cálculo</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <NumberField control={control} name="largo" label="Largo pileta (m)" />
-            <NumberField control={control} name="ancho" label="Ancho pileta (m)" />
+            <NumberField control={control} name="largo" label="Largo pileta (m)" required />
+            <NumberField control={control} name="ancho" label="Ancho pileta (m)" required />
           </div>
           <NumberField
             control={control}
@@ -466,10 +466,10 @@ export function CobertorCalculadora({
             hint="Para cubrir más allá del espejo de agua."
           />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <MoneyField control={control} name="precioPorM2HastaUmbral" label="Precio /m² (≤15 m²)" emptyValue="zero" />
-            <MoneyField control={control} name="precioPorM2SobreUmbral" label="Precio /m² (>15 m²)" emptyValue="zero" />
+            <MoneyField control={control} name="precioPorM2HastaUmbral" label="Precio /m² (≤15 m²)" emptyValue="zero" required />
+            <MoneyField control={control} name="precioPorM2SobreUmbral" label="Precio /m² (>15 m²)" emptyValue="zero" required />
           </div>
-          <MoneyField control={control} name="precioInstalacion" label="Precio instalación (fijo)" emptyValue="zero" />
+          <MoneyField control={control} name="precioInstalacion" label="Precio instalación (fijo)" emptyValue="zero" required />
           <SelectField
             register={register}
             errors={errors}

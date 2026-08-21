@@ -458,8 +458,8 @@ export function RevestimientoCalculadora({
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Cálculo</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <NumberField control={control} name="largo" label="Largo pileta (m)" />
-            <NumberField control={control} name="ancho" label="Ancho pileta (m)" />
+            <NumberField control={control} name="largo" label="Largo pileta (m)" required />
+            <NumberField control={control} name="ancho" label="Ancho pileta (m)" required />
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <NumberField control={control} name="profMin" label="Profundidad desde (m)" />
