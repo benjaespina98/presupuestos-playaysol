@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ItemCatalogo } from "@/lib/domain/catalogo/item";
+import { CATEGORIAS } from "@/lib/domain/catalogo/categorias";
 import CatalogoPage from "./page";
 
 const { listarItemsCatalogo, actualizarItemCatalogo } = vi.hoisted(() => ({
@@ -183,5 +184,72 @@ describe("CatalogoPage · edición", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(screen.getAllByText("$ 240.000")[0]).toBeInTheDocument();
     expect(actualizarItemCatalogo).not.toHaveBeenCalled();
+  });
+
+  it("editar otro campo sin tocar la categoría no se la pierde", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: [item({ id: "a", descripcion: "Luces LED", precio: 240000, categoria: "Iluminación" })],
+      error: null,
+    });
+    actualizarItemCatalogo.mockResolvedValue({ error: null });
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+
+    await screen.findAllByText("Luces LED");
+    await user.click(screen.getAllByRole("button", { name: "Editar" })[0]);
+    await user.clear(await screen.findByLabelText("Precio"));
+    await user.type(screen.getByLabelText("Precio"), "300000");
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    await waitFor(() => expect(actualizarItemCatalogo).toHaveBeenCalled());
+    expect(actualizarItemCatalogo).toHaveBeenCalledWith(
+      "a",
+      expect.objectContaining({ categoria: "Iluminación" })
+    );
+    // La columna Categoría del listado sigue mostrando la original.
+    expect(screen.getAllByText("Iluminación")[0]).toBeInTheDocument();
+  });
+});
+
+describe("CatalogoPage · las 9 categorías", () => {
+  beforeEach(() => {
+    actualizarItemCatalogo.mockReset();
+  });
+
+  it("el filtro por categoría ofrece exactamente las 9 acordadas en Fase 2", async () => {
+    listarItemsCatalogo.mockResolvedValue({ items: [], error: null });
+    render(<CatalogoPage />);
+    await screen.findByLabelText("Filtrar por categoría");
+
+    const opciones = screen
+      .getAllByRole("option")
+      .filter((o) => o.closest("select")?.getAttribute("aria-label") === "Filtrar por categoría")
+      .map((o) => o.textContent);
+
+    expect(opciones).toEqual(["Todas las categorías", ...CATEGORIAS]);
+  });
+
+  it("un ítem sin clasificar (categoria null) se lista bajo 'Otros' y puede clasificarse", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: [item({ id: "a", descripcion: "Material nuevo", categoria: null })],
+      error: null,
+    });
+    actualizarItemCatalogo.mockResolvedValue({ error: null });
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+
+    expect((await screen.findAllByText("Otros"))[0]).toBeInTheDocument();
+
+    await user.click(screen.getAllByRole("button", { name: "Editar" })[0]);
+    await user.selectOptions(await screen.findByLabelText("Categoría"), "Piscinas");
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    await waitFor(() =>
+      expect(actualizarItemCatalogo).toHaveBeenCalledWith(
+        "a",
+        expect.objectContaining({ categoria: "Piscinas" })
+      )
+    );
+    expect(screen.getAllByText("Piscinas")[0]).toBeInTheDocument();
   });
 });
