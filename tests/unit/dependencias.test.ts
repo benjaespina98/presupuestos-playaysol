@@ -28,13 +28,13 @@ const VERSIONES_ESPERADAS = {
 
 // Las 5 calculadoras ya se migraron a React (Fase 5) y sus public/*-calc.js
 // (+ app/dashboard/losetas/script.ts, components/calculadora/puente.ts,
-// components/calculadora/Calculadora.tsx) se borraron. Su equivalente de "no
-// CDN, docx por import dinámico" se prueba en
-// lib/documentos/{cercos,cobertores,piscinas,revestimientos}/docx.test.ts.
+// components/calculadora/Calculadora.tsx) se borraron. El chequeo de "ningún
+// <script src> de CDN" para las 5 componentes React vive en
+// tests/assets.spec.ts (no necesita vitest: es texto de archivo, igual que
+// acá, y así queda junto con el resto de los chequeos de assets/bundle).
 // Losetas nunca generó Word (su export es PNG vía html2canvas, pedido con
 // `await import("html2canvas")` directo desde LosetasCalculadora.tsx — sin
 // puente, ya no hace falta: ver el describe de abajo).
-const CALCULADORAS: string[] = [];
 
 describe("dependencias del proyecto", () => {
   for (const [nombre, version] of Object.entries(VERSIONES_ESPERADAS)) {
@@ -54,32 +54,30 @@ describe("dependencias del proyecto", () => {
   }
 });
 
-describe("ninguna librería se carga desde un CDN", () => {
-  const fuentes = [
-    ...CALCULADORAS,
-    "components/calculadoras/losetas/LosetasCalculadora.tsx",
-    "app/dashboard/losetas/page.tsx",
-  ];
-
-  for (const rel of fuentes) {
-    it(`${rel} no referencia un CDN`, () => {
-      const src = leer(rel);
-      for (const cdn of ["cdn.jsdelivr.net", "cdnjs.cloudflare.com", "unpkg.com"]) {
-        expect(src, `${rel} volvió a cargar una librería desde ${cdn}`).not.toContain(cdn);
-      }
-    });
-  }
-});
-
 describe("las librerías pesadas se piden por import() dinámico, no por CDN", () => {
   // Las 5 calculadoras React son módulos: pueden hacer import() de un paquete
   // directo, sin necesitar un puente que se los deje en `window` (ese puente,
   // components/calculadora/puente.ts, se borró junto con el último consumidor
-  // que lo necesitaba — losetas).
+  // que lo necesitaba — losetas). El equivalente para docx en las otras 4 se
+  // prueba en lib/documentos/{cercos,cobertores,piscinas,revestimientos}/docx.ts
+  // (cada uno usa `await import("docx")`, no un import estático) y se verifica
+  // funcionalmente en sus propios docx.test.ts.
   it("LosetasCalculadora pide html2canvas dinámicamente, recién al exportar", () => {
     const src = leer("components/calculadoras/losetas/LosetasCalculadora.tsx");
     expect(src).toMatch(/await import\(\s*["']html2canvas["']\s*\)/);
   });
+
+  for (const tipo of ["cercos", "cobertores", "piscinas", "revestimientos"]) {
+    it(`${tipo}: docx.ts pide docx dinámicamente, no con un import estático`, () => {
+      const src = leer(`lib/documentos/${tipo}/docx.ts`);
+      expect(src, `lib/documentos/${tipo}/docx.ts no usa import() dinámico para docx`).toMatch(
+        /await import\(\s*["']docx["']\s*\)/
+      );
+      expect(src, `lib/documentos/${tipo}/docx.ts importa "docx" de forma estática`).not.toMatch(
+        /^import\s+.*from\s+["']docx["']/m
+      );
+    });
+  }
 });
 
 describe("docx es seguro de empaquetar para el navegador", () => {
