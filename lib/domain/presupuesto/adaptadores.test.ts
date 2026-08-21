@@ -189,6 +189,70 @@ describe("leerPresupuesto · formato viejo (v0)", () => {
     });
   });
 
+  it("losetas: el cliente usa `nombre`, no `cliente` — y no arrastra campos que losetas nunca tuvo", () => {
+    // Único caso entre las 5: las otras calculadoras guardan el nombre en
+    // `cliente`. Si algún día alguien confunde las claves acá, el nombre del
+    // cliente desaparece silenciosamente al reabrir un plano viejo.
+    const r = leerPresupuesto("losetas", {
+      nombre: "Pérez, María José",
+      cliente: "esto no debería leerse para losetas",
+      domicilio: "Rivadavia 123",
+      tel: "3534000000",
+    });
+    expect(r.presupuesto.cliente).toEqual({
+      nombre: "Pérez, María José",
+      domicilio: "",
+      localidad: "",
+      telefono: "",
+      email: "",
+    });
+  });
+
+  it("losetas: revestimientoOtro y las etiquetas de los cuatro lados se recuperan completas", () => {
+    const r = leerPresupuesto("losetas", {
+      revestimiento: "otro",
+      revestimientoOtro: "Gresite azul",
+      lblSolar: "Frente",
+      lblOpuesto: "Fondo",
+      lblLateral1: "Izquierda",
+      lblLateral2: "Derecha",
+    });
+    expect(r.presupuesto.medidas).toMatchObject({
+      revestimiento: "otro",
+      revestimientoOtro: "Gresite azul",
+      lblSolar: "Frente",
+      lblOpuesto: "Fondo",
+      lblLateral1: "Izquierda",
+      lblLateral2: "Derecha",
+    });
+  });
+
+  it("losetas: un valor de enum corrupto/desconocido cae al default en vez de colarse tal cual", () => {
+    const r = leerPresupuesto("losetas", {
+      escaleraPos: "un-valor-que-no-existe",
+      tipoPileta: "un-valor-que-no-existe",
+      revestimiento: "un-valor-que-no-existe",
+    });
+    expect(r.presupuesto.medidas).toMatchObject({
+      escaleraPos: "solar",
+      tipoPileta: "hormigon",
+      revestimiento: "",
+    });
+  });
+
+  it("losetas: lucesPos con elementos corruptos no rompe la lectura", () => {
+    const r = leerPresupuesto("losetas", {
+      luces: true,
+      cantLuces: 2,
+      lucesPos: [{ x: "no es un número", y: null }, "esto ni siquiera es un objeto", { x: 0.4, y: 0.5 }],
+    });
+    expect(r.presupuesto.medidas.lucesPos).toEqual([
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
+      { x: 0.4, y: 0.5 },
+    ]);
+  });
+
   it("aguanta un presupuesto incompleto sin romperse", () => {
     // Filas viejas, guardadas antes de que existieran algunos campos.
     for (const datos of [{}, null, { cliente: "X" }, { fotos: "no es un array" }]) {
