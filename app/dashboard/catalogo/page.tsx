@@ -11,7 +11,8 @@ import {
 import { CATEGORIAS, type Categoria } from "@/lib/domain/catalogo/categorias";
 import { formatARS } from "@/lib/format/ars";
 import { PanelPortal } from "@/components/PanelPortal";
-import { IconSearch } from "@/components/icons";
+import { IconEdit, IconSearch } from "@/components/icons";
+import { EditarItemModal } from "@/components/catalogo/EditarItemModal";
 import type { TipoCalculadora } from "@/lib/presupuestos";
 
 const TITULOS_TIPO: Record<TipoCalculadora, string> = {
@@ -28,6 +29,8 @@ export default function CatalogoPage() {
   const [busqueda, setBusqueda] = useState("");
   const [categoria, setCategoria] = useState<Categoria | "">("");
   const [incluirInactivos, setIncluirInactivos] = useState(false);
+  const [editando, setEditando] = useState<ItemCatalogo | null>(null);
+  const [mensajeExito, setMensajeExito] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -49,6 +52,17 @@ export default function CatalogoPage() {
   }, [items, busqueda, categoria, incluirInactivos]);
 
   const hayFiltros = !!(busqueda || categoria || incluirInactivos);
+
+  function abrirEdicion(item: ItemCatalogo) {
+    setMensajeExito(null);
+    setEditando(item);
+  }
+
+  function guardarEdicion(actualizado: ItemCatalogo) {
+    setItems((prev) => (prev ? prev.map((it) => (it.id === actualizado.id ? actualizado : it)) : prev));
+    setEditando(null);
+    setMensajeExito(`Se guardó "${actualizado.descripcion || actualizado.clave}".`);
+  }
 
   return (
     <PanelPortal>
@@ -101,6 +115,12 @@ export default function CatalogoPage() {
         </p>
       )}
 
+      {mensajeExito && (
+        <p role="status" className="mb-4 rounded-md bg-green-50 px-4 py-3 text-sm text-green-700">
+          {mensajeExito}
+        </p>
+      )}
+
       {!error && items === null && <CatalogoSkeleton />}
 
       {!error && visibles && visibles.length === 0 && (
@@ -131,6 +151,7 @@ export default function CatalogoPage() {
                   <th className="px-4 py-3 font-medium">Calculadora</th>
                   <th className="px-4 py-3 font-medium">Precio</th>
                   <th className="px-4 py-3 font-medium">Estado</th>
+                  <th className="px-4 py-3 font-medium"></th>
                 </tr>
               </thead>
               <tbody>
@@ -146,6 +167,16 @@ export default function CatalogoPage() {
                     </td>
                     <td className="px-4 py-3">
                       <EstadoBadge activo={item.activo} />
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => abrirEdicion(item)}
+                        className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                      >
+                        <IconEdit className="h-4 w-4" />
+                        Editar
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -166,13 +197,32 @@ export default function CatalogoPage() {
                   </div>
                   <EstadoBadge activo={item.activo} />
                 </div>
-                <p className="mt-2 text-sm font-medium text-gray-900">
-                  <PrecioItem item={item} />
-                </p>
+                <div className="mt-2 flex items-center justify-between">
+                  <p className="text-sm font-medium text-gray-900">
+                    <PrecioItem item={item} />
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => abrirEdicion(item)}
+                    className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                  >
+                    <IconEdit className="h-4 w-4" />
+                    Editar
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </>
+      )}
+
+      {editando && (
+        <EditarItemModal
+          key={editando.id}
+          item={editando}
+          onClose={() => setEditando(null)}
+          onGuardado={guardarEdicion}
+        />
       )}
     </PanelPortal>
   );
@@ -223,6 +273,7 @@ function CatalogoSkeleton() {
               <th className="px-4 py-3 font-medium">Calculadora</th>
               <th className="px-4 py-3 font-medium">Precio</th>
               <th className="px-4 py-3 font-medium">Estado</th>
+              <th className="px-4 py-3 font-medium"></th>
             </tr>
           </thead>
           <tbody>
@@ -233,6 +284,7 @@ function CatalogoSkeleton() {
                 <td className="px-4 py-3"><div className="h-3.5 w-20 rounded bg-gray-200" /></td>
                 <td className="px-4 py-3"><div className="h-3.5 w-16 rounded bg-gray-200" /></td>
                 <td className="px-4 py-3"><div className="h-3.5 w-14 rounded bg-gray-200" /></td>
+                <td className="px-4 py-3"><div className="h-3.5 w-14 rounded bg-gray-100" /></td>
               </tr>
             ))}
           </tbody>

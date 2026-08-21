@@ -18,6 +18,11 @@ const CLASE_BASE =
  * Texto libre (descripciones, nombres, observaciones). A diferencia de
  * MoneyField/NumberField no necesita `useController`: no hay formato que
  * separar del dato, así que `register` de RHF alcanza y es más liviano.
+ *
+ * `multiline` cambia el elemento a `<textarea>` para las descripciones largas
+ * del catálogo (algunas ocupan varias líneas) — mismo campo, mismo label y
+ * mismo manejo de error que la versión de una línea, así que no vale la pena
+ * un componente aparte solo por el tag del DOM.
  */
 export function TextField<TFieldValues extends FieldValues>({
   register,
@@ -27,6 +32,8 @@ export function TextField<TFieldValues extends FieldValues>({
   hint,
   required,
   type = "text",
+  multiline = false,
+  rows = 3,
   className,
   ...rest
 }: {
@@ -37,23 +44,38 @@ export function TextField<TFieldValues extends FieldValues>({
   hint?: string;
   required?: boolean;
   type?: "text" | "email" | "tel" | "search";
+  multiline?: boolean;
+  rows?: number;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
 }) {
   const error = errors[name]?.message as string | undefined;
+  const claseFinal = className ? `${CLASE_BASE} ${className}` : CLASE_BASE;
 
   return (
     <FieldShell label={label} htmlFor={name} hint={hint} error={error} required={required}>
-      <input
-        id={name}
-        type={type}
-        aria-invalid={!!error}
-        aria-describedby={describedBy(name, hint, error)}
-        className={className ? `${CLASE_BASE} ${className}` : CLASE_BASE}
-        {...register(name)}
-        {...rest}
-      />
+      {multiline ? (
+        <textarea
+          id={name}
+          rows={rows}
+          aria-invalid={!!error}
+          aria-describedby={describedBy(name, hint, error)}
+          className={claseFinal}
+          {...register(name)}
+          {...rest}
+        />
+      ) : (
+        <input
+          id={name}
+          type={type}
+          aria-invalid={!!error}
+          aria-describedby={describedBy(name, hint, error)}
+          className={claseFinal}
+          {...register(name)}
+          {...rest}
+        />
+      )}
     </FieldShell>
   );
 }

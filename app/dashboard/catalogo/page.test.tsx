@@ -1,14 +1,15 @@
 // @vitest-environment jsdom
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ItemCatalogo } from "@/lib/domain/catalogo/item";
 import CatalogoPage from "./page";
 
-const { listarItemsCatalogo } = vi.hoisted(() => ({
+const { listarItemsCatalogo, actualizarItemCatalogo } = vi.hoisted(() => ({
   listarItemsCatalogo: vi.fn(),
+  actualizarItemCatalogo: vi.fn(),
 }));
-vi.mock("@/lib/catalogo", () => ({ listarItemsCatalogo }));
+vi.mock("@/lib/catalogo", () => ({ listarItemsCatalogo, actualizarItemCatalogo }));
 
 function item(overrides: Partial<ItemCatalogo>): ItemCatalogo {
   return {
@@ -135,5 +136,52 @@ describe("CatalogoPage · lectura", () => {
 
     await waitFor(() => expect(screen.queryByText("Luces LED")).not.toBeInTheDocument());
     expect(screen.getAllByText("Cerco perimetral")[0]).toBeInTheDocument();
+  });
+});
+
+describe("CatalogoPage · edición", () => {
+  beforeEach(() => {
+    actualizarItemCatalogo.mockReset();
+  });
+
+  it("editar un ítem, guardarlo y ver el listado actualizado con feedback de éxito", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: [item({ id: "a", descripcion: "Luces LED", precio: 240000 })],
+      error: null,
+    });
+    actualizarItemCatalogo.mockResolvedValue({ error: null });
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+
+    await screen.findAllByText("Luces LED");
+    await user.click(screen.getAllByRole("button", { name: "Editar" })[0]);
+
+    const precio = await screen.findByLabelText("Precio");
+    await user.clear(precio);
+    await user.type(precio, "300000");
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    // El modal se cierra y el listado ya muestra el precio nuevo.
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getAllByText("$ 300.000")[0]).toBeInTheDocument();
+    expect(await screen.findByText('Se guardó "Luces LED".')).toBeInTheDocument();
+  });
+
+  it("cancelar la edición no cambia el listado", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: [item({ id: "a", descripcion: "Luces LED", precio: 240000 })],
+      error: null,
+    });
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+
+    await screen.findAllByText("Luces LED");
+    await user.click(screen.getAllByRole("button", { name: "Editar" })[0]);
+    await screen.findByLabelText("Precio");
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getAllByText("$ 240.000")[0]).toBeInTheDocument();
+    expect(actualizarItemCatalogo).not.toHaveBeenCalled();
   });
 });

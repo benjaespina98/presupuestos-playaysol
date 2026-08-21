@@ -150,8 +150,20 @@ export interface CambiosItemCatalogo {
   activo: boolean;
 }
 
-/** Actualiza una fila existente por id (no upsert: en esta pantalla el ítem
- *  ya existe, se está editando, no creando uno nuevo). */
+const SIN_FILA_AFECTADA =
+  "No se pudo guardar: el ítem ya no existe en el catálogo (puede haber sido eliminado por otra persona).";
+
+/**
+ * Actualiza una fila existente por id (no upsert: en esta pantalla el ítem ya
+ * existe, se está editando, no creando uno nuevo).
+ *
+ * Pide `.select("id")` después del update por el mismo motivo que
+ * `actualizarPresupuesto` en lib/presupuestos.ts: si el `.eq("id", id)` no
+ * matchea ninguna fila (por ejemplo, la borraron desde otro lado mientras se
+ * editaba), Postgres/PostgREST devuelve `error: null` y cero filas afectadas.
+ * Sin este chequeo, eso llegaría a la pantalla como "guardado" sin haber
+ * guardado nada.
+ */
 export async function actualizarItemCatalogo(
   id: string,
   cambios: CambiosItemCatalogo
@@ -161,12 +173,16 @@ export async function actualizarItemCatalogo(
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("catalogo_items")
     .update({ ...cambios, updated_by: user?.id })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id");
 
-  if (!error) return { error: null };
-  if (esErrorMigracionPendiente(error)) return { error: ERROR_MIGRACION_PENDIENTE };
-  return { error: error.message };
+  if (error) {
+    if (esErrorMigracionPendiente(error)) return { error: ERROR_MIGRACION_PENDIENTE };
+    return { error: error.message };
+  }
+  if (!data || data.length === 0) return { error: SIN_FILA_AFECTADA };
+  return { error: null };
 }
