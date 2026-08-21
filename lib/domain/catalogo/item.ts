@@ -69,6 +69,18 @@ export function ordenarCatalogo(items: ItemCatalogo[]): ItemCatalogo[] {
   });
 }
 
+/**
+ * Texto listo para pegar en WhatsApp ("Modo consulta rápida", punto 6):
+ * `Cerco perimetral con instalación: $79.500/ml` o `Baño químico: a cotizar`.
+ * Pura — separada del botón "Copiar" para poder testearla sin
+ * `navigator.clipboard`, que no existe en todos los entornos de test.
+ */
+export function textoParaCopiar(item: Pick<ItemCatalogo, "descripcion" | "clave" | "precio" | "unidad">, formatearPrecio: (n: number) => string): string {
+  const nombre = item.descripcion || item.clave;
+  const precio = item.precio === null ? "a cotizar" : formatearPrecio(item.precio) + (item.unidad ? `/${item.unidad}` : "");
+  return `${nombre}: ${precio}`;
+}
+
 export interface FiltroCatalogo {
   busqueda?: string;
   categoria?: Categoria | null;

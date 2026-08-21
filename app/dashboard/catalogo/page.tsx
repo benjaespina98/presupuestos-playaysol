@@ -6,13 +6,15 @@ import {
   categoriaEfectiva,
   filtrarCatalogo,
   ordenarCatalogo,
+  textoParaCopiar,
   type ItemCatalogo,
 } from "@/lib/domain/catalogo/item";
 import { CATEGORIAS, type Categoria } from "@/lib/domain/catalogo/categorias";
 import { formatARS } from "@/lib/format/ars";
 import { formatFechaRelativa, formatFechaCompleta } from "@/lib/format/fecha";
+import { copiarAlPortapapeles } from "@/lib/clipboard";
 import { PanelPortal } from "@/components/PanelPortal";
-import { IconEdit, IconSearch } from "@/components/icons";
+import { IconEdit, IconCopy, IconSearch } from "@/components/icons";
 import { EditarItemModal } from "@/components/catalogo/EditarItemModal";
 import { TITULOS_TIPO } from "@/components/catalogo/titulos-tipo";
 
@@ -22,8 +24,10 @@ export default function CatalogoPage() {
   const [busqueda, setBusqueda] = useState("");
   const [categoria, setCategoria] = useState<Categoria | "">("");
   const [incluirInactivos, setIncluirInactivos] = useState(false);
+  const [modoConsulta, setModoConsulta] = useState(false);
   const [editando, setEditando] = useState<ItemCatalogo | null>(null);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+  const [copiadoId, setCopiadoId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -55,6 +59,14 @@ export default function CatalogoPage() {
     setItems((prev) => (prev ? prev.map((it) => (it.id === actualizado.id ? actualizado : it)) : prev));
     setEditando(null);
     setMensajeExito(`Se guardó "${actualizado.descripcion || actualizado.clave}".`);
+  }
+
+  async function copiarItem(item: ItemCatalogo) {
+    const texto = textoParaCopiar(item, formatARS);
+    const ok = await copiarAlPortapapeles(texto);
+    if (!ok) return; // sin permiso de portapapeles: no hay feedback de "copiado", nada más que mostrar
+    setCopiadoId(item.id);
+    setTimeout(() => setCopiadoId((actual) => (actual === item.id ? null : actual)), 2000);
   }
 
   return (
@@ -100,7 +112,24 @@ export default function CatalogoPage() {
           />
           Mostrar dados de baja
         </label>
+
+        <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-gray-700 sm:ml-auto">
+          <input
+            type="checkbox"
+            checked={modoConsulta}
+            onChange={(e) => setModoConsulta(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-[#1B3A5C] focus:ring-2 focus:ring-[#1B3A5C]/30"
+          />
+          Modo consulta rápida
+        </label>
       </div>
+
+      {modoConsulta && (
+        <p className="mb-4 rounded-md bg-[#EEF2F6] px-4 py-2.5 text-xs text-gray-600">
+          Modo consulta: sólo lectura, sin edición. Copiá el texto de un ítem con el botón de al lado del
+          precio para pegarlo directo en WhatsApp.
+        </p>
+      )}
 
       {error && (
         <p role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -144,7 +173,7 @@ export default function CatalogoPage() {
                   <th className="px-4 py-3 font-medium">Calculadora</th>
                   <th className="px-4 py-3 font-medium">Precio</th>
                   <th className="px-4 py-3 font-medium">Actualizado</th>
-                  <th className="px-4 py-3 font-medium">Estado</th>
+                  {!modoConsulta && <th className="px-4 py-3 font-medium">Estado</th>}
                   <th className="px-4 py-3 font-medium"></th>
                 </tr>
               </thead>
@@ -162,18 +191,31 @@ export default function CatalogoPage() {
                     <td className="px-4 py-3 text-gray-500">
                       <FechaActualizacion updatedAt={item.updated_at} />
                     </td>
-                    <td className="px-4 py-3">
-                      <EstadoBadge activo={item.activo} />
-                    </td>
+                    {!modoConsulta && (
+                      <td className="px-4 py-3">
+                        <EstadoBadge activo={item.activo} />
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => abrirEdicion(item)}
-                        className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
-                      >
-                        <IconEdit className="h-4 w-4" />
-                        Editar
-                      </button>
+                      {modoConsulta ? (
+                        <button
+                          type="button"
+                          onClick={() => copiarItem(item)}
+                          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                        >
+                          <IconCopy className="h-4 w-4" />
+                          {copiadoId === item.id ? "¡Copiado!" : "Copiar"}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => abrirEdicion(item)}
+                          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                        >
+                          <IconEdit className="h-4 w-4" />
+                          Editar
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -192,7 +234,7 @@ export default function CatalogoPage() {
                       {categoriaEfectiva(item)} · {TITULOS_TIPO[item.tipo]}
                     </p>
                   </div>
-                  <EstadoBadge activo={item.activo} />
+                  {!modoConsulta && <EstadoBadge activo={item.activo} />}
                 </div>
                 <div className="mt-2 flex items-center justify-between">
                   <div>
@@ -203,14 +245,25 @@ export default function CatalogoPage() {
                       <FechaActualizacion updatedAt={item.updated_at} />
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => abrirEdicion(item)}
-                    className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
-                  >
-                    <IconEdit className="h-4 w-4" />
-                    Editar
-                  </button>
+                  {modoConsulta ? (
+                    <button
+                      type="button"
+                      onClick={() => copiarItem(item)}
+                      className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                    >
+                      <IconCopy className="h-4 w-4" />
+                      {copiadoId === item.id ? "¡Copiado!" : "Copiar"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => abrirEdicion(item)}
+                      className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                    >
+                      <IconEdit className="h-4 w-4" />
+                      Editar
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
