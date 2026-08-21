@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase";
 import type { TipoCalculadora } from "@/lib/presupuestos";
+import { esTextoCompartido } from "@/lib/domain/catalogo/categorias";
+import { ItemCatalogo } from "@/lib/domain/catalogo/item";
 
 // Actualiza (o crea, si no existía — caso losetas, que no tiene seed inicial)
 // el precio/descripción permanente de un ítem de catálogo para TODOS los
@@ -80,4 +82,91 @@ export async function guardarTextosCompartidos(
     .upsert(rows, { onConflict: "tipo,clave" });
 
   return { error };
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * Pantalla de Catálogo (Fase 4)
+ *
+ * Todo lo de acá abajo es capa nueva, para la pantalla de administración del
+ * catálogo. Lee/escribe las mismas filas que el bloque de arriba, pero con
+ * las columnas de `migration_catalogo_categorias.sql` (categoria, unidad,
+ * activo, orden) — que el puente legacy ni conoce ni necesita.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+const COLUMNAS_ITEM_CATALOGO =
+  "id, tipo, clave, descripcion, precio, categoria, unidad, activo, orden, updated_at";
+
+/**
+ * Postgres devuelve 42703 ("undefined_column") cuando se pide una columna que
+ * no existe. Es exactamente lo que pasa acá si alguien abre esta pantalla en
+ * un ambiente donde todavía no corrió `migration_catalogo_categorias.sql`: el
+ * código de Fase 4 no la cubre con datos inventados, la detecta y lo dice.
+ */
+function esErrorMigracionPendiente(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  if (error.code === "42703") return true;
+  return /column .*(categoria|unidad|activo|orden)/i.test(error.message ?? "");
+}
+
+export const ERROR_MIGRACION_PENDIENTE =
+  "El catálogo todavía no tiene las columnas de categoría/unidad/estado. " +
+  "Falta correr supabase/migration_catalogo_categorias.sql (ver docs/decisiones-tecnicas.md).";
+
+export type ResultadoListarCatalogo =
+  | { items: ItemCatalogo[]; error: null }
+  | { items: null; error: string };
+
+/** Todos los productos del catálogo (las 5 calculadoras juntas), sin las
+ *  claves reservadas de texto compartido (`__legal`, `__footer_*`). La UI
+ *  filtra/agrupa/ordena sobre esto con las funciones puras de
+ *  lib/domain/catalogo/item.ts — acá sólo se trae el dato. */
+export async function listarItemsCatalogo(): Promise<ResultadoListarCatalogo> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("catalogo_items")
+    .select(COLUMNAS_ITEM_CATALOGO);
+
+  if (error) {
+    if (esErrorMigracionPendiente(error)) {
+      return { items: null, error: ERROR_MIGRACION_PENDIENTE };
+    }
+    return { items: null, error: error.message };
+  }
+
+  const filas = (data ?? []).filter((f) => !esTextoCompartido(f.clave as string));
+  const items = filas.map((f) => ItemCatalogo.parse(f));
+  return { items, error: null };
+}
+
+/** Lo que se puede cambiar desde la pantalla de Catálogo. `clave`/`tipo`
+ *  quedan afuera a propósito: son la identidad de la fila — el puente legacy
+ *  y los presupuestos existentes la referencian por ese par, y renombrarla
+ *  rompería esa referencia sin que nada avise. */
+export interface CambiosItemCatalogo {
+  descripcion: string | null;
+  precio: number | null;
+  categoria: ItemCatalogo["categoria"];
+  unidad: string | null;
+  activo: boolean;
+}
+
+/** Actualiza una fila existente por id (no upsert: en esta pantalla el ítem
+ *  ya existe, se está editando, no creando uno nuevo). */
+export async function actualizarItemCatalogo(
+  id: string,
+  cambios: CambiosItemCatalogo
+): Promise<{ error: string | null }> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { error } = await supabase
+    .from("catalogo_items")
+    .update({ ...cambios, updated_by: user?.id })
+    .eq("id", id);
+
+  if (!error) return { error: null };
+  if (esErrorMigracionPendiente(error)) return { error: ERROR_MIGRACION_PENDIENTE };
+  return { error: error.message };
 }
