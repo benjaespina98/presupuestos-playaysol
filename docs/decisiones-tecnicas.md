@@ -156,3 +156,47 @@ medir?" — nunca una fórmula de precio. El cálculo sigue siendo enteramente d
 jamás "el total tiene que dar tanto". Esa separación es la misma razón por la
 que las líneas de presupuesto llevan su total ya calculado (ver decisión 1):
 domain calcula, la capa de formulario solo valida forma.
+
+---
+
+## 9 · Auditoría de seguridad de la pantalla de Catálogo (Fase 4)
+
+**Fecha:** Fase 4 · **Estado:** aplicada — sin cambios de código, hallazgo documentado
+
+Antes de dar por cerrada la Fase 4 se auditó específicamente lo que la
+pantalla de Catálogo toca (no la aplicación entera). Verificado contra el
+proyecto real, no contra la teoría:
+
+- **Sin RLS no hay lectura**: una request sin `Authorization` a
+  `catalogo_items` devuelve `200 []`, no los datos — confirmado en vivo contra
+  el proyecto de Supabase configurado. `anon` no matchea ninguna policy (son
+  todas `to authenticated`), así que RLS lo filtra en silencio, como el resto
+  de la app espera (ver el comentario sobre `actualizarPresupuesto` en
+  lib/presupuestos.ts para el mismo patrón).
+- **No hay policy de `delete`** sobre `catalogo_items` (ver
+  migration_catalogo_items.sql): ni la pantalla nueva ni el puente legacy
+  pueden borrar una fila aunque quisieran. `activo=false` ("De baja") es la
+  única forma de sacar un ítem de la vista, y es reversible.
+- **`updated_by` nunca se lee** desde el cliente: `listarItemsCatalogo` no lo
+  selecciona, así que el id de quien tocó cada fila por última vez no llega al
+  navegador de otro usuario.
+- **`clave`/`tipo` son de solo lectura en la pantalla nueva**: `CambiosItemCatalogo`
+  no los declara, así que TypeScript impide armar un `update` que los toque.
+  Importa porque el puente legacy referencia cada fila por el par
+  `(tipo, clave)` — cambiarlos por esta pantalla correría el catálogo de abajo
+  de una calculadora en producción sin que nada avise.
+
+**Lo que se verificó y NO se tocó, porque ya era así antes de la Fase 4 y
+cambiarlo es una decisión de producto, no un bug de esta fase:** la policy de
+`update` de `catalogo_items` es `using (true) with check (true)` para
+cualquier usuario autenticado — cualquiera del equipo puede editar el precio
+de cualquier ítem, no sólo el suyo. Es intencional y está documentado desde
+`migration_catalogo_items.sql`/`lib/catalogo.ts` original: el catálogo es
+compartido a propósito ("actualizar para todos los presupuestos futuros"), a
+diferencia de `presupuestos` (que sí es por dueño, ver
+`migration_perfiles_ownership.sql`). La pantalla de Fase 4 no amplía este
+permiso — expone con una UI más clara una capacidad que el popup legacy ya
+daba. Si en algún momento se quiere un rol "admin de catálogo" distinto de
+"vendedor", hace falta antes un sistema de roles que hoy no existe en el
+schema (no hay tabla de roles ni columna en `perfiles`); no se inventó acá
+porque sería una decisión de negocio, no una corrección técnica.

@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 /**
@@ -182,5 +184,27 @@ describe("actualizarItemCatalogo", () => {
     const resultado = await actualizarItemCatalogo("id-1", cambios);
 
     expect(resultado.error).toBeNull();
+  });
+});
+
+describe("Lote 6 · guardas de seguridad de la pantalla de Catálogo", () => {
+  const src = fs.readFileSync(path.join(__dirname, "catalogo.ts"), "utf8");
+
+  it("el listado nunca pide updated_by (el id de otro usuario no tiene por qué llegar al navegador)", () => {
+    expect(src).not.toMatch(/COLUMNAS_ITEM_CATALOGO\s*=[^;]*updated_by/);
+  });
+
+  it("no hay ningún .delete() sobre catalogo_items: no hay política de RLS que lo permita", () => {
+    expect(src).not.toMatch(/catalogo_items["']\)\s*\.delete\(/);
+  });
+
+  // clave/tipo son la identidad de la fila (ver CambiosItemCatalogo): esto ya
+  // lo hace cumplir el tipo en tiempo de compilación (pasar `tipo` o `clave`
+  // dentro de `cambios` es un error de TypeScript), este test es la
+  // constancia de que la regla existe y por qué.
+  it("CambiosItemCatalogo no declara tipo/clave como editables", () => {
+    const bloque = src.slice(src.indexOf("interface CambiosItemCatalogo"), src.indexOf("actualizarItemCatalogo"));
+    expect(bloque).not.toMatch(/\btipo\s*:/);
+    expect(bloque).not.toMatch(/\bclave\s*:/);
   });
 });
