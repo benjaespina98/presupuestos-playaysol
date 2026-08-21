@@ -235,3 +235,39 @@ cerrada" con el documento sin migrar — es intencional: cerrar la fase
 implica también poder borrar el legacy, y borrarlo sin la exportación
 funcionando sería la clase de regresión que ninguna de las fases anteriores
 se permitió.
+
+**Actualización:** cercos, cobertores, piscinas y revestimientos completaron
+el patrón entero (cálculo + snapshot + Word + PDF + fotos + reemplazo de
+ruta + baja del legacy) y quedaron cerrados. Sigue pendiente losetas — ver
+decisión 11.
+
+---
+
+## 11 · Losetas queda fuera de esta pasada de la Fase 5, a propósito
+
+**Fecha:** Fase 5 · **Estado:** pendiente, alcance deliberadamente acotado
+
+El propio comentario que ya vivía en `tests/unit/oraculo-losetas.test.ts`
+desde antes de este trabajo lo anticipaba: *"Es el módulo con la reescritura
+más grande por delante (Fase 7)"*. Auditado ahora, se confirma por qué:
+
+- No genera un documento con líneas de precio como las otras cuatro — su
+  salida es un **plano SVG interactivo** (`drawSvg()`, ~230 líneas): grilla
+  de medidas, luces arrastrables con drag & drop (`initLuzDrag`), colores de
+  agua/loseta editables, posición de escalera, "espejo de agua" para piletas
+  de fibra con labios, y export a **imagen PNG** vía `html2canvas` — no a
+  Word. No hay `imprimirConNombre`/PDF tampoco.
+- Su snapshot no encaja en `LineaPresupuesto`/`NaturalezaLinea`: no hay
+  "líneas" ni "totales", hay dos m² (incluidos/a cotizar) y una tarjeta de
+  costo por material. Migrarlo exige decidir cómo se ve ese dato en
+  `PresupuestoV1.medidas`, no sólo portar un formulario.
+- Es interactivo de una forma que ninguna otra calculadora es (arrastrar un
+  punto en un SVG y que se guarde su posición normalizada) — ese
+  comportamiento no tiene equivalente en los componentes de Fase 3.
+
+Migrar esto con la misma prisa que las otras cuatro, al final de una sesión
+ya larga, es exactamente el tipo de decisión que arriesga la prioridad
+número uno de toda la migración (no romper presupuestos). El motor puro
+(`lib/domain/precios/losetas.ts`) ya existe y ya está verificado contra el
+oráculo (`tests/unit/oraculo-losetas.test.ts`) desde antes de esta fase —
+lo que falta es la UI/documento, y eso merece su propia pasada enfocada.
