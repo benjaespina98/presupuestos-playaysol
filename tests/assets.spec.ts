@@ -7,132 +7,56 @@ import path from "path";
  * calculators.spec.ts, estos NO necesitan credenciales ni navegador logueado:
  * corren siempre, en cualquier máquina, con `npx playwright test`.
  *
- * Cubren lo que la limpieza de peso arregló y que es fácil volver a romper sin
- * darse cuenta, porque nada falla de forma visible cuando pasa: la página sigue
- * andando, solo tarda muchísimo más.
+ * Hasta la Fase 5, este archivo comparaba las 4 calculadoras que ya estaban
+ * en React contra `public/<tipo>-calc.js` — el peso del bundle legacy, sus
+ * `data:` embebidos, los ids que buscaba por `getElementById`. Esos archivos
+ * ya no existen (las 5 calculadoras son React desde que losetas migró), así
+ * que esos chequeos dejaron de tener sentido: no protegían nada, tiraban
+ * ENOENT si alguien los llegaba a correr. Lo que queda acá es lo que sigue
+ * siendo relevante con las 5 en React.
  */
 
 const RAIZ = path.join(__dirname, "..");
-const PUBLIC = path.join(RAIZ, "public");
-const TIPOS = ["cercos", "cobertores", "piscinas", "revestimientos"] as const;
 
-// Los cuatro rondaban los 70-90 KB después de sacarles las fotos. Este techo deja
-// aire para que el código crezca, pero salta enseguida si alguien vuelve a pegar
-// una imagen en base64 adentro (que es como llegaron a pesar 1,3-1,8 MB cada uno).
-const TECHO_KB = 200;
+const CALCULADORAS = [
+  { tipo: "cercos", archivo: path.join(RAIZ, "components", "calculadoras", "cercos", "CercosCalculadora.tsx") },
+  { tipo: "cobertores", archivo: path.join(RAIZ, "components", "calculadoras", "cobertores", "CobertorCalculadora.tsx") },
+  { tipo: "piscinas", archivo: path.join(RAIZ, "components", "calculadoras", "piscinas", "PiscinaCalculadora.tsx") },
+  { tipo: "revestimientos", archivo: path.join(RAIZ, "components", "calculadoras", "revestimientos", "RevestimientoCalculadora.tsx") },
+  { tipo: "losetas", archivo: path.join(RAIZ, "components", "calculadoras", "losetas", "LosetasCalculadora.tsx") },
+] as const;
 
-test.describe("peso de las calculadoras", () => {
-  for (const tipo of TIPOS) {
-    test(`${tipo}-calc.js pesa menos de ${TECHO_KB} KB`, () => {
-      const kb = fs.statSync(path.join(PUBLIC, `${tipo}-calc.js`)).size / 1024;
-      expect(
-        kb,
-        `${tipo}-calc.js pesa ${Math.round(kb)} KB. Si subió de golpe, lo más ` +
-          `probable es que se haya vuelto a embeber una imagen en base64: las ` +
-          `fotos de ejemplo van como archivos en public/seeds/.`
-      ).toBeLessThan(TECHO_KB);
-    });
-  }
-
-  test("ningún -calc.js embebe imágenes en base64", () => {
-    for (const tipo of TIPOS) {
-      const src = fs.readFileSync(path.join(PUBLIC, `${tipo}-calc.js`), "utf8");
-      expect(src, `${tipo}-calc.js tiene un data URI embebido`).not.toContain("base64,");
-    }
-  });
-
-  test("las fotos de ejemplo que referencian existen en public/seeds", () => {
-    for (const tipo of TIPOS) {
-      const src = fs.readFileSync(path.join(PUBLIC, `${tipo}-calc.js`), "utf8");
-      const urls = [...src.matchAll(/"(\/seeds\/[^"]+)"/g)].map((m) => m[1]);
-      expect(urls.length, `${tipo}-calc.js no referencia ninguna foto de ejemplo`).toBeGreaterThan(0);
-      for (const url of urls) {
-        expect(
-          fs.existsSync(path.join(PUBLIC, url)),
-          `${tipo}-calc.js referencia ${url}, que no existe`
-        ).toBe(true);
+test.describe("librerías pesadas: ninguna calculadora las carga desde un CDN", () => {
+  // docx (~370 KB) y html2canvas (~200 KB) venían de un CDN de terceros en
+  // TODA carga de calculadora, en el flujo legacy. Ahora son dependencias del
+  // proyecto (ver tests/unit/dependencias.test.ts para las versiones fijadas
+  // y el import() dinámico) — esto sólo guarda contra que alguien vuelva a
+  // colar un <script src> de CDN en el componente de alguna de las 5.
+  for (const { tipo, archivo } of CALCULADORAS) {
+    test(`${tipo}: su componente no referencia un CDN`, () => {
+      const src = fs.readFileSync(archivo, "utf8");
+      for (const cdn of ["cdn.jsdelivr.net", "cdnjs.cloudflare.com", "unpkg.com"]) {
+        expect(src, `${tipo} sigue cargando una librería desde ${cdn}`).not.toContain(cdn);
       }
-    }
-  });
-});
-
-test.describe("librerías pesadas: se cargan solo cuando se usan", () => {
-  // docx (~370 KB) y html2canvas (~200 KB) venían de un CDN en TODA carga de
-  // calculadora, y encima el script de la calculadora esperaba a que terminaran
-  // de bajar antes de arrancar. Ahora se piden en el primer export.
-  test("docx no se pide al cargar: solo desde downloadWord", () => {
-    for (const tipo of TIPOS) {
-      const src = fs.readFileSync(path.join(PUBLIC, `${tipo}-calc.js`), "utf8");
-      expect(src, `${tipo}-calc.js no tiene el cargador diferido de docx`).toContain(
-        "function cargarDocx()"
-      );
-      // Si alguien vuelve a desestructurar docx en el nivel superior del archivo,
-      // el módulo revienta al cargar porque la librería todavía no existe.
-      expect(src, `${tipo}-calc.js desestructura docx al cargar`).not.toMatch(
-        /^\s*const \{[^}]*\} = docx;/m
-      );
-    }
-  });
-
-  test("las calculadoras no traen <Script> de CDN al montar", () => {
-    const componente = fs.readFileSync(
-      path.join(RAIZ, "components", "calculadora", "Calculadora.tsx"),
-      "utf8"
-    );
-    const losetas = fs.readFileSync(
-      path.join(RAIZ, "app", "dashboard", "losetas", "calculator.tsx"),
-      "utf8"
-    );
-    for (const [nombre, src] of [
-      ["Calculadora.tsx", componente],
-      ["losetas/calculator.tsx", losetas],
-    ] as const) {
-      expect(src, `${nombre} sigue cargando una librería de CDN al montar`).not.toContain(
-        "cdn.jsdelivr.net"
-      );
-      expect(src, `${nombre} sigue cargando una librería de CDN al montar`).not.toContain(
-        "cdnjs.cloudflare.com"
-      );
-    }
-  });
-});
-
-test.describe("el DOM que el script legacy necesita sigue existiendo", () => {
-  // Los -calc.js no importan nada: ubican todo por #id sobre el HTML de markup.ts.
-  // Un cambio de UI que renombre o borre un id no rompe el build ni los tipos —
-  // rompe la calculadora en runtime, en silencio.
-  for (const tipo of TIPOS) {
-    test(`${tipo}: el markup define todos los ids que busca el script`, () => {
-      const js = fs.readFileSync(path.join(PUBLIC, `${tipo}-calc.js`), "utf8");
-      const markup = fs.readFileSync(
-        path.join(RAIZ, "app", "dashboard", tipo, "markup.ts"),
-        "utf8"
-      );
-
-      const definidos = new Set([...markup.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
-      // Prefijos de ids que el propio script genera al renderizar listas.
-      const generados = [...js.matchAll(/id="([^"$]*)\$\{/g)].map((m) => m[1]);
-      const buscados = new Set(
-        [...js.matchAll(/getElementById\('([^']+)'\)/g)].map((m) => m[1])
-      );
-
-      const faltantes = [...buscados].filter(
-        (id) => !definidos.has(id) && !generados.some((g) => g && id.startsWith(g))
-      );
-      expect(faltantes, `ids que el script busca y el markup no define`).toEqual([]);
     });
   }
+});
 
-  test("losetas: el markup define todos los ids que busca su script", () => {
-    const dir = path.join(RAIZ, "app", "dashboard", "losetas");
-    const js = fs.readFileSync(path.join(dir, "script.ts"), "utf8");
-    const markup = fs.readFileSync(path.join(dir, "markup.ts"), "utf8");
-
-    const definidos = new Set([...markup.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
-    const buscados = new Set(
-      [...js.matchAll(/getElementById\('([^']+)'\)/g)].map((m) => m[1])
-    );
-    const faltantes = [...buscados].filter((id) => !definidos.has(id));
-    expect(faltantes, "ids que el script busca y el markup no define").toEqual([]);
+test.describe("fotos de ejemplo (public/seeds)", () => {
+  // Las 5 calculadoras React sólo suben fotos que carga la persona usuaria
+  // (ver el input type=file de cada Calculadora.tsx) — ninguna ofrece ya un
+  // picker de fotos de ejemplo precargadas, a diferencia del legacy. Este
+  // test no reafirma una funcionalidad (no la hay), sólo dejar registrado
+  // que si `public/seeds` todavía existe, es un directorio sin consumidores
+  // en el código — no se borra acá porque borrar archivos reales de assets
+  // no forma parte de este chequeo automatizado, pero vale la pena que quede
+  // visible en vez de asumido en silencio.
+  test("ninguna calculadora React referencia /seeds/ (la galería de ejemplos era sólo del legacy)", () => {
+    for (const { tipo, archivo } of CALCULADORAS) {
+      const src = fs.readFileSync(archivo, "utf8");
+      expect(src, `${tipo} referencia /seeds/ — actualizar este test si se reintrodujo la galería`).not.toContain(
+        "/seeds/"
+      );
+    }
   });
 });

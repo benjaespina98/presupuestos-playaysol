@@ -31,42 +31,37 @@ app/
     ├── page.tsx                    Selección de calculadora
     ├── historial/                  Historial centralizado (las 5 calculadoras)
     └── <tipo>/                     piscinas | revestimientos | cobertores | cercos | losetas
-        ├── page.tsx                Carga diferida del calculador
-        ├── calculator.tsx          Config del tipo (6 líneas)
-        └── markup.ts               HTML del formulario y del documento
-components/calculadora/
-├── Calculadora.tsx                 Envoltorio React común a las 4 clásicas
-├── puente.ts                       Contrato tipado del puente window.* ← ver abajo
-└── calc.css                        Estilos de las 5 calculadoras
+        └── page.tsx                Carga el componente React de la calculadora
+components/calculadoras/<tipo>/     Formulario (React Hook Form + Zod), documento/editor
+                                     y motor de dominio de cada calculadora
 public/
-├── <tipo>-calc.js                  Lógica legacy de cada calculadora (JS vanilla)
 └── seeds/                          Fotos de ejemplo precargadas
 lib/
 ├── presupuestos.ts                 Lectura/escritura de presupuestos
 ├── catalogo.ts                     Catálogo y textos compartidos por el equipo
+├── domain/                         Motores de precio y de dibujo, puros — sin DOM ni React
 ├── supabase.ts                     Cliente de browser
 └── supabase-server.ts              Cliente de servidor
 proxy.ts                            Protege /dashboard/* — redirige a /login sin sesión
 supabase/*.sql                      Esquema y migraciones (el orden importa, ver schema.sql)
 ```
 
-### Las calculadoras son JS vanilla, no React
+### Las 5 calculadoras son React (Fase 5, completa)
 
-Las 5 calculadoras vienen de un flujo anterior de archivos HTML sueltos y siguen
-siendo JavaScript vanilla: `public/<tipo>-calc.js` para cuatro de ellas y
-`app/dashboard/losetas/script.ts` para losetas. No importan módulos — buscan sus
-elementos por `#id` sobre el HTML de `markup.ts` y hablan con la app de Next a
-través de un puñado de funciones colgadas de `window`.
+Las 5 calculadoras vinieron originalmente de un flujo de archivos HTML sueltos,
+JavaScript vanilla que buscaba sus elementos por `#id` y hablaba con la app de
+Next a través de un puñado de funciones colgadas de `window`. La Fase 5 migró
+las cinco, una por una, a componentes React (`components/calculadoras/<tipo>/`)
+sobre motores de dominio puros (`lib/domain/precios/`, `lib/domain/plano/`) —
+sin DOM, sin `window`, testeables en milisegundos. Losetas ("Plano de Piscina")
+fue la última: a diferencia de las otras cuatro no genera un documento con
+líneas de precio sino un editor SVG interactivo (luces arrastrables, colores,
+espejo de agua) exportado a PNG.
 
-Ese contrato vive en **un solo lugar**, `components/calculadora/puente.ts`, y es
-la costura por donde se corta si alguna vez se migran a React: reimplementar una
-calculadora significa rehacer su markup y su lógica llamando a las mismas
-funciones de `lib/`, y dejar de instalar el puente para ese tipo. Las otras
-cuatro no se enteran.
-
-Consecuencia práctica: **renombrar o borrar un `id` en un `markup.ts` no rompe ni
-el build ni los tipos, pero rompe la calculadora en runtime.** `tests/assets.spec.ts`
-verifica ese contrato y corre sin necesidad de credenciales.
+Cada motor de dominio quedó verificado contra la aritmética/geometría del
+código legacy que reemplazó (`lib/domain/precios/contra-oraculo.test.ts` y los
+tests de cada motor), así que un cambio de UI no puede desviar silenciosamente
+un cálculo de precios.
 
 La tabla `presupuestos` guarda el estado completo de cada cálculo como JSON (`datos jsonb`), en vez de modelar una tabla distinta por tipo de trabajo. Esto evita cinco esquemas paralelos para cinco calculadoras con campos parecidos pero no idénticos, a costa de no poder hacer queries SQL finas sobre campos internos — un trade-off razonable para el volumen de uso de un negocio de este tamaño.
 

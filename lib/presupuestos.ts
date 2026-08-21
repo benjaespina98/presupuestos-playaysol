@@ -82,21 +82,47 @@ export async function listarTodosLosPresupuestos() {
 }
 
 // Dato identificador clave para reconocer un presupuesto en el historial sin abrirlo,
-// además del nombre de cliente. Forma de `datos` confirmada contra filas reales de la
-// tabla `presupuestos` (no inferida):
-// - piscinas: no tiene largo/ancho estructurados, solo `dimension` (texto libre que el
-//   usuario escribe a mano, ej. "7.00 mts largo por 3.00 mts ancho y de..."). Se toma el
-//   comienzo de ese texto.
-// - cercos: `ml` (metros lineales).
-// - cobertores / revestimientos: `largo` y `ancho` numéricos.
-// - losetas: `largo` y `ancho` numéricos.
+// además del nombre de cliente.
+//
+// Convive con DOS formatos de `datos` (ver lib/domain/presupuesto/v1.ts):
+//   v0 (legacy, histórico) → las medidas quedan sueltas en la raíz de `datos`.
+//   v1 (desde la Fase 5)   → cada calculadora las anida en `datos.medidas`,
+//                            con nombres de campo propios del motor nuevo
+//                            (ver medidasDesdeV0 en adaptadores.ts para la
+//                            traducción completa nombre viejo → nombre nuevo).
+//
+// Esta función NO usa `leerPresupuesto`/`PresupuestoV1.parse` a propósito: es
+// una lectura best-effort para una lista, no la reconstrucción completa de un
+// presupuesto, y no vale la pena pagar el costo (ni el acoplamiento al motor
+// de dominio) de una validación completa sólo para una línea de subtítulo.
+//
+// Regla de prioridad: si el campo nuevo (v1, anidado) está presente y es
+// válido, gana; si no, se cae al campo viejo (v0, en la raíz) — así un
+// presupuesto que por lo que sea tuviera las dos formas (no debería pasar,
+// pero la función no confía en `datos.v` para decidir) igual muestra lo
+// correcto, y uno viejo puro sigue funcionando exactamente como antes.
+//
+// Forma confirmada contra filas reales de la tabla `presupuestos` (no
+// inferida) para v0, y contra el snapshot que arma cada Calculadora.tsx para
+// v1:
+// - piscinas: nunca tuvo largo/ancho estructurados. v0 guardaba el texto
+//   libre en `dimension`; v1 lo guarda en `detalle` (top-level, no dentro de
+//   `medidas` — PiscinaCalculadora.tsx deja `medidas: {}` siempre, el
+//   subtotal no es un dato para resumir acá). Se toma el comienzo de ese texto.
+// - cercos: v0 `ml` (metros lineales) → v1 `medidas.metrosLineales`.
+// - cobertores / revestimientos: v0 y v1 usan el mismo nombre, `largo`/`ancho`
+//   — v1 sólo los anida un nivel adentro, en `medidas`.
+// - losetas: igual que cobertores/revestimientos (`largo`/`ancho`, sólo
+//   anidados en v1).
 export function resumenPresupuesto(tipo: TipoCalculadora, datos: unknown): string {
   const d = (datos ?? {}) as Record<string, unknown>;
+  const medidas = (d.medidas && typeof d.medidas === "object" ? d.medidas : {}) as Record<string, unknown>;
   const num = (v: unknown) => (typeof v === "number" && v > 0 ? v : null);
 
   switch (tipo) {
     case "piscinas": {
-      const dimension = typeof d.dimension === "string" ? d.dimension.trim() : "";
+      const fuente = typeof d.detalle === "string" && d.detalle.trim() ? d.detalle : d.dimension;
+      const dimension = typeof fuente === "string" ? fuente.trim() : "";
       if (!dimension) return "";
       const primeraLinea = dimension.split("\n")[0].trim();
       return primeraLinea.length > 55
@@ -104,14 +130,14 @@ export function resumenPresupuesto(tipo: TipoCalculadora, datos: unknown): strin
         : primeraLinea;
     }
     case "cercos": {
-      const ml = num(d.ml);
+      const ml = num(medidas.metrosLineales) ?? num(d.ml);
       return ml ? `${ml} m lineales` : "";
     }
     case "cobertores":
     case "revestimientos":
     case "losetas": {
-      const largo = num(d.largo);
-      const ancho = num(d.ancho);
+      const largo = num(medidas.largo) ?? num(d.largo);
+      const ancho = num(medidas.ancho) ?? num(d.ancho);
       if (largo && ancho) return `${largo} x ${ancho} m`;
       return "";
     }

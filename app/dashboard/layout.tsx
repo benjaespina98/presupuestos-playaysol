@@ -49,6 +49,12 @@ export default async function DashboardLayout({
               >
                 Historial
               </Link>
+              <Link
+                href="/dashboard/catalogo"
+                className="font-medium text-[#1B3A5C] hover:underline"
+              >
+                Catálogo
+              </Link>
               <span className="hidden text-gray-400 sm:inline">{user.email}</span>
               <LogoutButton />
             </nav>

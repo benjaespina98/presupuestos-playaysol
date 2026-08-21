@@ -1,0 +1,104 @@
+{
+  "tipo": "cobertores",
+  "grabadoDesde": "public/cobertores-calc.js",
+  "casos": [
+    {
+      "nombre": "borde: exactamente 15 m² (3 × 5)",
+      "totales": [
+        "TOTAL SIN INSTALACIÓN$ 163.545",
+        "TOTAL CON INSTALACIÓN$ 263.545"
+      ],
+      "montos": [
+        163545,
+        263545
+      ],
+      "calculados": {
+        "f-m2": "15"
+      }
+    },
+    {
+      "nombre": "borde: apenas debajo de 15 m² (3 × 4,9)",
+      "totales": [
+        "TOTAL SIN INSTALACIÓN$ 160.274,1",
+        "TOTAL CON INSTALACIÓN$ 260.274,1"
+      ],
+      "montos": [
+        160274.1,
+        260274.1
+      ],
+      "calculados": {
+        "f-m2": "14,7"
+      }
+    },
+    {
+      "nombre": "borde: apenas encima de 15 m² (3 × 5,1)",
+      "totales": [
+        "TOTAL SIN INSTALACIÓN$ 151.500,6",
+        "TOTAL CON INSTALACIÓN$ 251.500,6"
+      ],
+      "montos": [
+        151500.6,
+        251500.6
+      ],
+      "calculados": {
+        "f-m2": "15,3"
+      }
+    },
+    {
+      "nombre": "pileta grande 8 × 4",
+      "totales": [
+        "TOTAL SIN INSTALACIÓN$ 316.864",
+        "TOTAL CON INSTALACIÓN$ 416.864"
+      ],
+      "montos": [
+        316864,
+        416864
+      ],
+      "calculados": {
+        "f-m2": "32"
+      }
+    },
+    {
+      "nombre": "el adicional de m² cruza el umbral (3 × 4,5 = 13,5 + 2 = 15,5)",
+      "totales": [
+        "TOTAL SIN INSTALACIÓN$ 153.481",
+        "TOTAL CON INSTALACIÓN$ 253.481"
+      ],
+      "montos": [
+        153481,
+        253481
+      ],
+      "calculados": {
+        "f-m2": "15,5"
+      }
+    },
+    {
+      "nombre": "el adicional de m² NO alcanza a cruzarlo (13,5 + 1 = 14,5)",
+      "totales": [
+        "TOTAL SIN INSTALACIÓN$ 158.093,5",
+        "TOTAL CON INSTALACIÓN$ 258.093,5"
+      ],
+      "montos": [
+        158093.5,
+        258093.5
+      ],
+      "calculados": {
+        "f-m2": "14,5"
+      }
+    },
+    {
+      "nombre": "sin medidas",
+      "totales": [
+        "TOTAL SIN INSTALACIÓN$ 0",
+        "TOTAL CON INSTALACIÓN$ 100.000"
+      ],
+      "montos": [
+        0,
+        100000
+      ],
+      "calculados": {
+        "f-m2": "0"
+      }
+    }
+  ]
+}

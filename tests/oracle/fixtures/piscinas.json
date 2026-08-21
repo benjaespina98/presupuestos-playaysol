@@ -1,0 +1,64 @@
+{
+  "tipo": "piscinas",
+  "grabadoDesde": "public/piscinas-calc.js",
+  "casos": [
+    {
+      "nombre": "subtotal a mano, sin opcionales",
+      "totales": [
+        "SUBTOTAL$ 18.500.000"
+      ],
+      "montos": [
+        18500000
+      ]
+    },
+    {
+      "nombre": "subtotal con un opcional tildado",
+      "totales": [
+        "SUBTOTAL$ 18.500.000"
+      ],
+      "montos": [
+        18500000
+      ]
+    },
+    {
+      "nombre": "subtotal con tres opcionales tildados",
+      "totales": [
+        "SUBTOTAL$ 18.500.000"
+      ],
+      "montos": [
+        18500000
+      ]
+    },
+    {
+      "nombre": "sin subtotal cargado",
+      "totales": [
+        "SUBTOTAL$ 0"
+      ],
+      "montos": [
+        0
+      ]
+    },
+    {
+      "nombre": "subtotal + un adicional (aparece la línea TOTAL)",
+      "totales": [
+        "SUBTOTAL$ 18.500.000",
+        "TOTAL$ 18.850.000"
+      ],
+      "montos": [
+        18500000,
+        18850000
+      ]
+    },
+    {
+      "nombre": "subtotal + dos adicionales",
+      "totales": [
+        "SUBTOTAL$ 18.500.000",
+        "TOTAL$ 19.270.000"
+      ],
+      "montos": [
+        18500000,
+        19270000
+      ]
+    }
+  ]
+}
