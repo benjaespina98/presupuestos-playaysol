@@ -200,3 +200,38 @@ daba. Si en algún momento se quiere un rol "admin de catálogo" distinto de
 "vendedor", hace falta antes un sistema de roles que hoy no existe en el
 schema (no hay tabla de roles ni columna en `perfiles`); no se inventó acá
 porque sería una decisión de negocio, no una corrección técnica.
+
+---
+
+## 10 · La Fase 5 migra cálculo + snapshot primero; documento/fotos quedan para después
+
+**Fecha:** Fase 5 · **Estado:** en curso, alcance acotado a propósito
+
+Cada `public/<tipo>-calc.js` legacy son ~1750-1950 líneas que hacen mucho más
+que calcular: arman el documento Word con `docx`, el PDF por impresión del
+navegador, suben y recortan fotos con `html2canvas`, sincronizan contra el
+catálogo compartido y arman el link de WhatsApp. Migrar TODO eso de las 5
+calculadoras a React en una sola pasada no es realista sin arriesgar
+precisamente lo que la Fase 2 puso como prioridad número uno: no romper
+presupuestos ni el documento final que recibe el cliente.
+
+La decisión: cada calculadora se migra primero como **formulario + motor +
+resultado + snapshot** (React + RHF/Zod + `lib/domain/precios/*` +
+`PresupuestoV1`, guardado en `presupuestos` igual que hoy), montada en una
+ruta nueva (`/dashboard/<tipo>/nuevo`) que **no reemplaza** la ruta de
+producción. La calculadora legacy (con Word/PDF/fotos funcionando) sigue
+siendo la única que un vendedor ve y usa hasta que:
+
+1. la versión React tenga paridad demostrada contra el oráculo (Lote 2 de
+   cada calculadora, como se hizo con cercos);
+2. se porte (no se reinvente) la generación de documento — probablemente
+   reusando las funciones de `docx`/`html2canvas` ya extraídas del CDN en la
+   Fase 0, alimentadas por el snapshot nuevo en vez del estado del DOM viejo;
+3. recién ahí se reemplaza la ruta y se borra el `-calc.js` correspondiente,
+   nunca antes (ver la "Regla sobre legacy" del prompt de Fase 5).
+
+Cortar la fase en este punto y reportarlo así — en vez de declarar "Fase 5
+cerrada" con el documento sin migrar — es intencional: cerrar la fase
+implica también poder borrar el legacy, y borrarlo sin la exportación
+funcionando sería la clase de regresión que ninguna de las fases anteriores
+se permitió.
