@@ -3,6 +3,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { calcularCerco, totalesAMostrar as totalesCerco, type ModoPrecio } from "./cercos";
 import { calcularCobertor, totalesAMostrar as totalesCobertor } from "./cobertores";
+import { calcularPiscina, importesAMostrar as importesPiscina } from "./piscinas";
+import {
+  calcularRevestimiento,
+  importesAMostrar as importesRevestimiento,
+} from "./revestimientos";
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
@@ -178,5 +183,184 @@ describe("el umbral de los 15 m², documentado en un test", () => {
     expect(grande).toBeLessThan(chico);
     // No se corrige acá: la migración preserva el comportamiento.
     expect(chico - grande).toBeCloseTo(10064, 0);
+  });
+});
+
+/* ═════════════════════════════ PISCINAS ═════════════════════════════ */
+
+describe("calcularPiscina reproduce el legacy", () => {
+  const fixture = leerFixture("piscinas");
+
+  const ESCENARIOS: Record<
+    string,
+    { subtotal: number; adicionales?: { descripcion: string; precio: number }[] }
+  > = {
+    // Los opcionales tildados NO suman: los tres primeros escenarios difieren
+    // sólo en cuántos se tildaron, y los tres tienen que dar lo mismo.
+    "subtotal a mano, sin opcionales": { subtotal: 18500000 },
+    "subtotal con un opcional tildado": { subtotal: 18500000 },
+    "subtotal con tres opcionales tildados": { subtotal: 18500000 },
+    "sin subtotal cargado": { subtotal: 0 },
+    "subtotal + un adicional (aparece la línea TOTAL)": {
+      subtotal: 18500000,
+      adicionales: [{ descripcion: "Traslado de equipos", precio: 350000 }],
+    },
+    "subtotal + dos adicionales": {
+      subtotal: 18500000,
+      adicionales: [
+        { descripcion: "Traslado de equipos", precio: 350000 },
+        { descripcion: "Retiro de tierra", precio: 420000 },
+      ],
+    },
+  };
+
+  it("hay un escenario por cada caso grabado", () => {
+    expect(Object.keys(ESCENARIOS).sort()).toEqual(fixture.map((c) => c.nombre).sort());
+  });
+
+  for (const caso of fixture) {
+    it(caso.nombre, () => {
+      const esc = ESCENARIOS[caso.nombre];
+      expect(esc, `falta el escenario "${caso.nombre}"`).toBeDefined();
+
+      const r = calcularPiscina({
+        subtotal: esc.subtotal,
+        adicionales: esc.adicionales ?? [],
+      });
+
+      esperarMontos(importesPiscina(r), caso.montos, caso.nombre);
+    });
+  }
+
+  it("tildar opcionales no mueve el total (punto 3 de reglas-de-negocio)", () => {
+    const sinOpcionales = calcularPiscina({ subtotal: 18500000, adicionales: [] });
+    // No hay forma de "pasarle" opcionales al motor porque no participan del
+    // cálculo. Eso ES el modelo: son líneas informativas, no entradas de precio.
+    expect(sinOpcionales.total).toBe(18500000);
+  });
+
+  it("sin adicionales el documento no dibuja la línea TOTAL", () => {
+    expect(calcularPiscina({ subtotal: 18500000, adicionales: [] }).muestraTotal).toBe(false);
+    expect(
+      calcularPiscina({
+        subtotal: 18500000,
+        adicionales: [{ descripcion: "x", precio: 1 }],
+      }).muestraTotal
+    ).toBe(true);
+  });
+});
+
+/* ═══════════════════════════ REVESTIMIENTOS ═══════════════════════════ */
+
+describe("calcularRevestimiento reproduce el legacy", () => {
+  const fixture = leerFixture("revestimientos");
+
+  // Precios por defecto de los dos primeros materiales del catálogo legacy.
+  const CERAMICO = {
+    clave: "revestimiento_ceramico_bali",
+    descripcion: "Cerámico Bali Brasil (por m² instalado)",
+    precio: 112000,
+    porM2: true,
+  };
+  const VENECITAS = {
+    clave: "venecitas_premium_espana",
+    descripcion: "Venecitas Premium España (por m² instalado)",
+    precio: 140000,
+    porM2: true,
+  };
+
+  const ESCENARIOS: Record<string, Parameters<typeof calcularRevestimiento>[0]> = {
+    "profundidad pareja (solo desde)": { largo: 8, ancho: 4, profMin: 1.5 },
+    "profundidad de menor a mayor (usa el promedio)": {
+      largo: 8,
+      ancho: 4,
+      profMin: 1,
+      profMax: 1.6,
+    },
+    "con escalera y desperdicio": {
+      largo: 8,
+      ancho: 4,
+      profMin: 1.5,
+      escalera: 3,
+      desperdicio: 2,
+    },
+    "un revestimiento incluido, cobrado por m²": {
+      largo: 8,
+      ancho: 4,
+      profMin: 1.5,
+      materiales: [{ ...CERAMICO, incluida: true }],
+    },
+    "dos revestimientos incluidos": {
+      largo: 8,
+      ancho: 4,
+      profMin: 1.5,
+      materiales: [
+        { ...CERAMICO, incluida: true },
+        { ...VENECITAS, incluida: true },
+      ],
+    },
+    "sin medidas": { largo: 0, ancho: 0, profMin: 0 },
+  };
+
+  it("hay un escenario por cada caso grabado", () => {
+    expect(Object.keys(ESCENARIOS).sort()).toEqual(fixture.map((c) => c.nombre).sort());
+  });
+
+  for (const caso of fixture) {
+    it(caso.nombre, () => {
+      const esc = ESCENARIOS[caso.nombre];
+      expect(esc, `falta el escenario "${caso.nombre}"`).toBeDefined();
+
+      const r = calcularRevestimiento(esc);
+      esperarMontos(importesRevestimiento(r), caso.montos, caso.nombre);
+
+      // Los m² que el legacy muestra en sus campos de sólo lectura.
+      const leer = (id: string) => {
+        const v = caso.calculados?.[id];
+        return v === undefined ? null : Number(v.replace(/\./g, "").replace(",", "."));
+      };
+      const piso = leer("f-m2-fondo");
+      const paredes = leer("f-m2-paredes");
+      const total = leer("f-m2-total");
+      if (piso !== null) expect(r.m2Piso).toBeCloseTo(piso, 6);
+      if (paredes !== null) expect(r.m2Paredes).toBeCloseTo(paredes, 6);
+      if (total !== null) expect(r.m2Total).toBeCloseTo(total, 6);
+    });
+  }
+
+  it("dos materiales dan dos totales, no su suma (punto 5)", () => {
+    const r = calcularRevestimiento({
+      largo: 8,
+      ancho: 4,
+      profMin: 1.5,
+      materiales: [
+        { ...CERAMICO, incluida: true },
+        { ...VENECITAS, incluida: true },
+      ],
+    });
+    const importes = importesRevestimiento(r);
+    expect(importes).toHaveLength(2);
+    expect(importes[0]).toBeCloseTo(7616000, 2);
+    expect(importes[1]).toBeCloseTo(9520000, 2);
+    // La suma NO es un importe que el documento muestre en ningún lado.
+    expect(importes).not.toContain(17136000);
+  });
+
+  it("un material cobrado por obra no multiplica por m²", () => {
+    const r = calcularRevestimiento({
+      largo: 8,
+      ancho: 4,
+      profMin: 1.5,
+      materiales: [
+        {
+          clave: "disqueado",
+          descripcion: "Disqueado / remoción de revestimiento previo",
+          precio: 800000,
+          porM2: false,
+          incluida: true,
+        },
+      ],
+    });
+    expect(r.alternativas[0].total).toBe(800000);
   });
 });
