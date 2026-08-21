@@ -522,25 +522,40 @@ export function LosetasCalculadora({
         </div>
       </div>
 
-      {/* Capturado por html2canvas — fuera de pantalla, nunca visible. */}
+      {/*
+        Capturado por html2canvas — fuera de pantalla, nunca visible.
+
+        SOLO colores hex explícitos acá adentro (`text-[#...]`/`bg-[#...]`/
+        `border-[#...]`), nunca los tokens de paleta de Tailwind (`bg-white`,
+        `border-gray-200`, `text-gray-500`, etc.): en Tailwind v4 esos tokens
+        se generan en `oklch()`, y html2canvas 1.4.1 sólo entiende
+        rgb/rgba/hex/hsl — con un color de paleta en este árbol, "Imagen para
+        el cliente" tira "Attempting to parse an unsupported color function
+        oklch/lab" y no exporta nada. El resto de la pantalla (fuera de este
+        div) no lo sufre porque nunca se rasteriza.
+
+        Los hex de acá son los mismos que usaba el plano legacy
+        (`app/dashboard/losetas/styles.ts`, ya borrado) — no son un cambio de
+        paleta, son ESOS MISMOS colores escritos a mano para esquivar oklch.
+      */}
       <div
         ref={clientCaptureRef}
         aria-hidden="true"
         style={{ position: "fixed", top: -99999, left: -99999, width: 1100 }}
-        className="bg-white p-12 font-sans"
+        className="bg-[#ffffff] p-12 font-sans"
       >
-        <div className="mb-7 flex items-center justify-between border-b border-gray-200 pb-4">
+        <div className="mb-7 flex items-center justify-between border-b border-[#E1E7EC] pb-4">
           <div>
             <div className="text-xl font-bold text-[#1B3A5C]">Plano de Piscina</div>
-            <div className="mt-1 text-sm text-gray-500">{valoresForm.nombre || ""}</div>
+            <div className="mt-1 text-sm text-[#6B7680]">{valoresForm.nombre || ""}</div>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element -- capturada por html2canvas, no puede depender de next/image */}
           <img ref={logoRef} src="/logo-mark.png" alt="Playa y Sol" className="h-14" />
         </div>
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-7">
+        <div className="rounded-lg border border-[#E1E7EC] bg-[#FAFBFC] p-7">
           <PlanoLosetasSvg geometria={geometriaCliente} interactive={false} ariaLabel="Plano de la piscina para el cliente" />
         </div>
-        <div className="mt-6 border-t border-gray-200 pt-4 text-xs text-[#1B3A5C]">
+        <div className="mt-6 border-t border-[#E1E7EC] pt-4 text-xs text-[#1B3A5C]">
           Playa y Sol S.A.S. — Corrientes 1210, Villa María
         </div>
       </div>
