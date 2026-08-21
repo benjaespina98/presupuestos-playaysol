@@ -4,19 +4,10 @@ import { useState } from "react";
 import { useZodForm } from "@/lib/forms/useZodForm";
 import { MoneyField, TextField, SelectField, CheckboxField } from "@/components/form";
 import { actualizarItemCatalogo } from "@/lib/catalogo";
-import { CATEGORIAS } from "@/lib/domain/catalogo/categorias";
-import { UNIDADES } from "@/lib/domain/catalogo/categorias";
+import { CATEGORIAS, UNIDADES } from "@/lib/domain/catalogo/categorias";
 import type { ItemCatalogo } from "@/lib/domain/catalogo/item";
-import type { TipoCalculadora } from "@/lib/presupuestos";
 import { aCambios, aFormulario, EditarItemSchema, type EditarItemForm } from "./editar-item.schema";
-
-const TITULOS_TIPO: Record<TipoCalculadora, string> = {
-  piscinas: "Piscinas",
-  cercos: "Cercos",
-  cobertores: "Cobertores",
-  losetas: "Plano de Piscina",
-  revestimientos: "Revestimientos",
-};
+import { TITULOS_TIPO } from "./titulos-tipo";
 
 const OPCIONES_CATEGORIA = [
   { value: "", label: "Sin clasificar" },

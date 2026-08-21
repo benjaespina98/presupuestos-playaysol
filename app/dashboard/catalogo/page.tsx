@@ -13,15 +13,7 @@ import { formatARS } from "@/lib/format/ars";
 import { PanelPortal } from "@/components/PanelPortal";
 import { IconEdit, IconSearch } from "@/components/icons";
 import { EditarItemModal } from "@/components/catalogo/EditarItemModal";
-import type { TipoCalculadora } from "@/lib/presupuestos";
-
-const TITULOS_TIPO: Record<TipoCalculadora, string> = {
-  piscinas: "Piscinas",
-  cercos: "Cercos",
-  cobertores: "Cobertores",
-  losetas: "Plano de Piscina",
-  revestimientos: "Revestimientos",
-};
+import { TITULOS_TIPO } from "@/components/catalogo/titulos-tipo";
 
 export default function CatalogoPage() {
   const [items, setItems] = useState<ItemCatalogo[] | null>(null);
