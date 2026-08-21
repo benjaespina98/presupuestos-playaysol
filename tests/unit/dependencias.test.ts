@@ -26,8 +26,10 @@ const VERSIONES_ESPERADAS = {
   html2canvas: "1.4.1",
 } as const;
 
+// Cercos ya no está acá: se migró a React (Fase 5) y public/cercos-calc.js se
+// borró. Su equivalente de "no CDN, docx por import dinámico" se prueba en
+// lib/documentos/cercos/docx.test.ts.
 const CALCULADORAS = [
-  "public/cercos-calc.js",
   "public/cobertores-calc.js",
   "public/piscinas-calc.js",
   "public/revestimientos-calc.js",

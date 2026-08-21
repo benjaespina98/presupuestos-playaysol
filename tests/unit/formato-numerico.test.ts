@@ -31,16 +31,26 @@ import { abrirCalculadora, montoDeLinea } from "../oracle/harness";
  * transcribir la función (y arriesgarnos a transcribirla mal), se le tipea al
  * campo real y se lee el total que sale del documento. Eso mide lo que le pasa
  * de verdad a un usuario.
+ *
+ * ── Por qué cobertores y no cercos ──────────────────────────────────────────
+ * Este archivo probaba cercos hasta que se migró a React (Fase 5) y adoptó
+ * `parseARS` — ahí dejó de estar "roto", así que ya no puede ser el ejemplo de
+ * acá. Cobertores todavía es legacy y tiene el mismo bug (mismo `parseNum()`,
+ * copiado y pegado en cada -calc.js), así que sigue documentando lo mismo.
+ * Cuando cobertores también migre, este archivo vuelve a moverse.
  */
 
-/** Con 1 metro lineal, el TOTAL SIN INSTALACIÓN es exactamente el precio /ml
- *  tipeado. Así el total leído es el número que el sistema entendió. */
+/** Con 1 m² (largo=1, ancho=1, sin adicional) y modo "sin instalación", el
+ *  TOTAL es exactamente el precio /m² (≤15 m²) tipeado. Así el total leído es
+ *  el número que el sistema entendió. */
 async function precioQueEntendio(loTipeado: string): Promise<number> {
-  const calc = await abrirCalculadora("cercos");
+  const calc = await abrirCalculadora("cobertores");
   try {
-    calc.set("f-ml", "1");
+    calc.set("f-largo", "1");
+    calc.set("f-ancho", "1");
+    calc.set("f-adicional-m2", "0");
     calc.set("f-modo-precio", "sin");
-    calc.set("f-precio-sin", loTipeado);
+    calc.set("f-precio-menos15", loTipeado);
     await calc.asentar();
     const total = calc.totales().find((t) => t.includes("TOTAL"));
     return montoDeLinea(total ?? "");

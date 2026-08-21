@@ -18,56 +18,12 @@ export interface Caso {
   leerAdemas?: string[];
 }
 
+// Cercos ya no está acá: se migró a React (Fase 5), así que ya no hay
+// calculadora legacy contra la cual grabar/comparar estos casos. La fixture
+// que estos casos produjeron (tests/oracle/fixtures/cercos.json) sigue viva:
+// lib/domain/precios/contra-oraculo.test.ts la usa para proteger el motor
+// nuevo para siempre, sin necesitar volver a ejecutar el legacy.
 export const CASOS: Record<TipoLegacy, Caso[]> = {
-  /* ── CERCOS ──────────────────────────────────────────────────────────────
-     total = ml × precio + Σ adicionales.  Precios base por defecto:
-     sin instalación 63.500 /ml · con instalación 79.500 /ml            */
-  cercos: [
-    {
-      nombre: "24 ml, ambos precios",
-      preparar: (c) => {
-        c.set("f-ml", "24");
-        c.set("f-modo-precio", "ambos");
-      },
-    },
-    {
-      nombre: "24 ml, solo sin instalación",
-      preparar: (c) => {
-        c.set("f-ml", "24");
-        c.set("f-modo-precio", "sin");
-      },
-    },
-    {
-      nombre: "24 ml, solo con instalación",
-      preparar: (c) => {
-        c.set("f-ml", "24");
-        c.set("f-modo-precio", "con");
-      },
-    },
-    {
-      nombre: "cero metros",
-      preparar: (c) => {
-        c.set("f-ml", "0");
-        c.set("f-modo-precio", "ambos");
-      },
-    },
-    {
-      nombre: "metros con decimales (18,5)",
-      preparar: (c) => {
-        c.set("f-ml", "18.5");
-        c.set("f-modo-precio", "ambos");
-      },
-    },
-    {
-      nombre: "24 ml con un opcional incluido",
-      preparar: (c) => {
-        c.set("f-ml", "24");
-        c.set("f-modo-precio", "ambos");
-        c.opcional(0, true);
-      },
-    },
-  ],
-
   /* ── COBERTORES ──────────────────────────────────────────────────────────
      m² = largo × ancho + adicional.  El precio SALTA a los 15 m²:
      hasta 15 → 10.903 /m² · más de 15 → 9.902 /m² · instalación 100.000

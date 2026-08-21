@@ -39,11 +39,12 @@ import { JSDOM } from "jsdom";
 
 const RAIZ = path.join(__dirname, "..", "..");
 
-export type TipoLegacy =
-  | "cercos"
-  | "cobertores"
-  | "piscinas"
-  | "revestimientos";
+// Cercos ya no está acá: se migró a React (Fase 5) y `public/cercos-calc.js` /
+// `app/dashboard/cercos/markup.ts` se borraron. Su fixture
+// (tests/oracle/fixtures/cercos.json) sigue viva y protegida para siempre por
+// lib/domain/precios/contra-oraculo.test.ts, que compara el motor nuevo
+// contra esa misma foto sin necesitar la calculadora vieja.
+export type TipoLegacy = "cobertores" | "piscinas" | "revestimientos";
 
 /** Extrae el HTML del markup.ts sin compilar TypeScript: es un template literal. */
 function leerMarkup(tipo: TipoLegacy): string {
