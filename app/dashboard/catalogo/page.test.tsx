@@ -12,6 +12,9 @@ const { listarItemsCatalogo, actualizarItemCatalogo } = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/catalogo", () => ({ listarItemsCatalogo, actualizarItemCatalogo }));
 
+const { copiarAlPortapapeles } = vi.hoisted(() => ({ copiarAlPortapapeles: vi.fn() }));
+vi.mock("@/lib/clipboard", () => ({ copiarAlPortapapeles }));
+
 function item(overrides: Partial<ItemCatalogo>): ItemCatalogo {
   return {
     id: "id",
@@ -63,6 +66,17 @@ describe("CatalogoPage · lectura", () => {
 
     expect((await screen.findAllByText("A cotizar"))[0]).toBeInTheDocument();
     expect(screen.queryByText("$ 0")).not.toBeInTheDocument();
+  });
+
+  it("muestra hace cuánto se actualizó cada ítem", async () => {
+    const hoy = new Date().toISOString();
+    listarItemsCatalogo.mockResolvedValue({
+      items: [item({ id: "a", descripcion: "Luces LED", updated_at: hoy })],
+      error: null,
+    });
+    render(<CatalogoPage />);
+
+    expect((await screen.findAllByText("hoy"))[0]).toBeInTheDocument();
   });
 
   it("estado vacío cuando no hay ítems", async () => {
@@ -137,6 +151,75 @@ describe("CatalogoPage · lectura", () => {
 
     await waitFor(() => expect(screen.queryByText("Luces LED")).not.toBeInTheDocument());
     expect(screen.getAllByText("Cerco perimetral")[0]).toBeInTheDocument();
+  });
+});
+
+describe("CatalogoPage · modo consulta rápida", () => {
+  beforeEach(() => {
+    copiarAlPortapapeles.mockReset();
+    copiarAlPortapapeles.mockResolvedValue(true);
+  });
+
+  it("por defecto se puede editar y no hay botón Copiar", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: [item({ id: "a", descripcion: "Luces LED", precio: 240000 })],
+      error: null,
+    });
+    render(<CatalogoPage />);
+
+    expect((await screen.findAllByRole("button", { name: /Editar/ }))[0]).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Copiar/ })).not.toBeInTheDocument();
+  });
+
+  it("activar el modo consulta cambia Editar por Copiar y oculta el Estado", async () => {
+    const user = userEvent.setup();
+    listarItemsCatalogo.mockResolvedValue({
+      items: [item({ id: "a", descripcion: "Luces LED", precio: 240000, unidad: "unidad" })],
+      error: null,
+    });
+    render(<CatalogoPage />);
+    await screen.findAllByText("Luces LED");
+
+    await user.click(screen.getByLabelText("Modo consulta rápida"));
+
+    expect(screen.queryByRole("button", { name: /Editar/ })).not.toBeInTheDocument();
+    expect((await screen.findAllByRole("button", { name: /^Copiar$/ }))[0]).toBeInTheDocument();
+    expect(screen.queryByText("Activo")).not.toBeInTheDocument();
+  });
+
+  it("copiar arma el texto tipo WhatsApp y lo manda al portapapeles", async () => {
+    const user = userEvent.setup();
+    listarItemsCatalogo.mockResolvedValue({
+      items: [
+        item({ id: "a", descripcion: "Cerco perimetral con instalación", precio: 79500, unidad: "ml" }),
+      ],
+      error: null,
+    });
+    render(<CatalogoPage />);
+    await screen.findAllByText("Cerco perimetral con instalación");
+    await user.click(screen.getByLabelText("Modo consulta rápida"));
+
+    await user.click((await screen.findAllByRole("button", { name: /^Copiar$/ }))[0]);
+
+    expect(copiarAlPortapapeles).toHaveBeenCalledWith("Cerco perimetral con instalación: $ 79.500/ml");
+    expect((await screen.findAllByText("¡Copiado!"))[0]).toBeInTheDocument();
+  });
+
+  it("sin permiso de portapapeles, no muestra '¡Copiado!' (no hay feedback engañoso)", async () => {
+    copiarAlPortapapeles.mockResolvedValue(false);
+    const user = userEvent.setup();
+    listarItemsCatalogo.mockResolvedValue({
+      items: [item({ id: "a", descripcion: "Luces LED", precio: 240000 })],
+      error: null,
+    });
+    render(<CatalogoPage />);
+    await screen.findAllByText("Luces LED");
+    await user.click(screen.getByLabelText("Modo consulta rápida"));
+
+    await user.click((await screen.findAllByRole("button", { name: /^Copiar$/ }))[0]);
+
+    expect(copiarAlPortapapeles).toHaveBeenCalled();
+    expect(screen.queryByText("¡Copiado!")).not.toBeInTheDocument();
   });
 });
 

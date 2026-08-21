@@ -6,6 +6,7 @@ import { obtenerCatalogo, type CatalogoRow } from "@/lib/catalogo";
 import { obtenerPresupuesto } from "@/lib/presupuestos";
 import { leerPresupuesto, paraDuplicar, type PresupuestoLeido } from "@/lib/domain/presupuesto/adaptadores";
 import { PiscinaCalculadora } from "@/components/calculadoras/piscinas/PiscinaCalculadora";
+import { DuplicarUltimoBanner } from "@/components/DuplicarUltimoBanner";
 
 /**
  * Piscinas — React + RHF/Zod + el motor de dominio
@@ -78,6 +79,7 @@ function PiscinasContenido() {
       {!error && cargando && <p className="mt-4 text-sm text-gray-500">Cargando…</p>}
       {!error && !cargando && catalogo && (
         <div className="mt-6">
+          {!idParam && !duplicarParam && <DuplicarUltimoBanner tipo="piscinas" tipoLabel="Piscina" />}
           <PiscinaCalculadora catalogo={catalogo} presupuestoId={idParam} presupuestoInicial={presupuestoInicial} />
         </div>
       )}

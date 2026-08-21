@@ -5,6 +5,7 @@ import {
   filtrarCatalogo,
   ItemCatalogo,
   ordenarCatalogo,
+  textoParaCopiar,
   type FiltroCatalogo,
 } from "./item";
 
@@ -130,5 +131,29 @@ describe("filtrarCatalogo", () => {
   it("combina búsqueda + categoría + inactivos en un solo paso", () => {
     const filtro: FiltroCatalogo = { categoria: "Piscinas", busqueda: "descontinuado", incluirInactivos: true };
     expect(filtrarCatalogo(items, filtro).map((i) => i.id)).toEqual(["inactivo-piscinas"]);
+  });
+});
+
+const $ = (n: number) => `$${n.toLocaleString("es-AR")}`;
+
+describe("textoParaCopiar", () => {
+  it("nombre: precio/unidad, listo para pegar en WhatsApp", () => {
+    const i = item({ descripcion: "Cerco perimetral con instalación", precio: 79500, unidad: "ml" });
+    expect(textoParaCopiar(i, $)).toBe("Cerco perimetral con instalación: $79.500/ml");
+  });
+
+  it("sin unidad, no agrega la barra", () => {
+    const i = item({ descripcion: "Kit de limpieza", precio: 45000, unidad: null });
+    expect(textoParaCopiar(i, $)).toBe("Kit de limpieza: $45.000");
+  });
+
+  it("precio null: 'a cotizar'", () => {
+    const i = item({ descripcion: "Baño químico", precio: null, unidad: null });
+    expect(textoParaCopiar(i, $)).toBe("Baño químico: a cotizar");
+  });
+
+  it("sin descripción, usa la clave", () => {
+    const i = item({ descripcion: null, clave: "luces", precio: 240000, unidad: null });
+    expect(textoParaCopiar(i, $)).toBe("luces: $240.000");
   });
 });

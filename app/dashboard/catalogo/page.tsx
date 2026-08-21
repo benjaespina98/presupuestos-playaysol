@@ -6,12 +6,15 @@ import {
   categoriaEfectiva,
   filtrarCatalogo,
   ordenarCatalogo,
+  textoParaCopiar,
   type ItemCatalogo,
 } from "@/lib/domain/catalogo/item";
 import { CATEGORIAS, type Categoria } from "@/lib/domain/catalogo/categorias";
 import { formatARS } from "@/lib/format/ars";
+import { formatFechaRelativa, formatFechaCompleta } from "@/lib/format/fecha";
+import { copiarAlPortapapeles } from "@/lib/clipboard";
 import { PanelPortal } from "@/components/PanelPortal";
-import { IconEdit, IconSearch } from "@/components/icons";
+import { IconEdit, IconCopy, IconSearch } from "@/components/icons";
 import { EditarItemModal } from "@/components/catalogo/EditarItemModal";
 import { TITULOS_TIPO } from "@/components/catalogo/titulos-tipo";
 
@@ -21,8 +24,10 @@ export default function CatalogoPage() {
   const [busqueda, setBusqueda] = useState("");
   const [categoria, setCategoria] = useState<Categoria | "">("");
   const [incluirInactivos, setIncluirInactivos] = useState(false);
+  const [modoConsulta, setModoConsulta] = useState(false);
   const [editando, setEditando] = useState<ItemCatalogo | null>(null);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+  const [copiadoId, setCopiadoId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -54,6 +59,14 @@ export default function CatalogoPage() {
     setItems((prev) => (prev ? prev.map((it) => (it.id === actualizado.id ? actualizado : it)) : prev));
     setEditando(null);
     setMensajeExito(`Se guardó "${actualizado.descripcion || actualizado.clave}".`);
+  }
+
+  async function copiarItem(item: ItemCatalogo) {
+    const texto = textoParaCopiar(item, formatARS);
+    const ok = await copiarAlPortapapeles(texto);
+    if (!ok) return; // sin permiso de portapapeles: no hay feedback de "copiado", nada más que mostrar
+    setCopiadoId(item.id);
+    setTimeout(() => setCopiadoId((actual) => (actual === item.id ? null : actual)), 2000);
   }
 
   return (
@@ -99,7 +112,24 @@ export default function CatalogoPage() {
           />
           Mostrar dados de baja
         </label>
+
+        <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-gray-700 sm:ml-auto">
+          <input
+            type="checkbox"
+            checked={modoConsulta}
+            onChange={(e) => setModoConsulta(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-[#1B3A5C] focus:ring-2 focus:ring-[#1B3A5C]/30"
+          />
+          Modo consulta rápida
+        </label>
       </div>
+
+      {modoConsulta && (
+        <p className="mb-4 rounded-md bg-[#EEF2F6] px-4 py-2.5 text-xs text-gray-600">
+          Modo consulta: sólo lectura, sin edición. Copiá el texto de un ítem con el botón de al lado del
+          precio para pegarlo directo en WhatsApp.
+        </p>
+      )}
 
       {error && (
         <p role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -142,7 +172,8 @@ export default function CatalogoPage() {
                   <th className="px-4 py-3 font-medium">Producto</th>
                   <th className="px-4 py-3 font-medium">Calculadora</th>
                   <th className="px-4 py-3 font-medium">Precio</th>
-                  <th className="px-4 py-3 font-medium">Estado</th>
+                  <th className="px-4 py-3 font-medium">Actualizado</th>
+                  {!modoConsulta && <th className="px-4 py-3 font-medium">Estado</th>}
                   <th className="px-4 py-3 font-medium"></th>
                 </tr>
               </thead>
@@ -157,18 +188,34 @@ export default function CatalogoPage() {
                     <td className="px-4 py-3 text-gray-700">
                       <PrecioItem item={item} />
                     </td>
-                    <td className="px-4 py-3">
-                      <EstadoBadge activo={item.activo} />
+                    <td className="px-4 py-3 text-gray-500">
+                      <FechaActualizacion updatedAt={item.updated_at} />
                     </td>
+                    {!modoConsulta && (
+                      <td className="px-4 py-3">
+                        <EstadoBadge activo={item.activo} />
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => abrirEdicion(item)}
-                        className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
-                      >
-                        <IconEdit className="h-4 w-4" />
-                        Editar
-                      </button>
+                      {modoConsulta ? (
+                        <button
+                          type="button"
+                          onClick={() => copiarItem(item)}
+                          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                        >
+                          <IconCopy className="h-4 w-4" />
+                          {copiadoId === item.id ? "¡Copiado!" : "Copiar"}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => abrirEdicion(item)}
+                          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                        >
+                          <IconEdit className="h-4 w-4" />
+                          Editar
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -187,20 +234,36 @@ export default function CatalogoPage() {
                       {categoriaEfectiva(item)} · {TITULOS_TIPO[item.tipo]}
                     </p>
                   </div>
-                  <EstadoBadge activo={item.activo} />
+                  {!modoConsulta && <EstadoBadge activo={item.activo} />}
                 </div>
                 <div className="mt-2 flex items-center justify-between">
-                  <p className="text-sm font-medium text-gray-900">
-                    <PrecioItem item={item} />
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => abrirEdicion(item)}
-                    className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
-                  >
-                    <IconEdit className="h-4 w-4" />
-                    Editar
-                  </button>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      <PrecioItem item={item} />
+                    </p>
+                    <p className="mt-0.5 text-xs text-gray-400">
+                      <FechaActualizacion updatedAt={item.updated_at} />
+                    </p>
+                  </div>
+                  {modoConsulta ? (
+                    <button
+                      type="button"
+                      onClick={() => copiarItem(item)}
+                      className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                    >
+                      <IconCopy className="h-4 w-4" />
+                      {copiadoId === item.id ? "¡Copiado!" : "Copiar"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => abrirEdicion(item)}
+                      className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                    >
+                      <IconEdit className="h-4 w-4" />
+                      Editar
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -229,16 +292,38 @@ function ItemDescripcion({ item }: { item: ItemCatalogo }) {
   );
 }
 
+/**
+ * Distingue de un vistazo un precio cerrado (listo para usar tal cual en un
+ * presupuesto) de uno "a cotizar" (necesita ajuste manual antes de mandarlo).
+ * El badge ámbar es la señal fuerte porque es la EXCEPCIÓN: la mayoría de
+ * las filas tiene precio cerrado, así que no vale la pena un badge en cada
+ * una — el número solo ya comunica "esto está listo".
+ */
 function PrecioItem({ item }: { item: ItemCatalogo }) {
   if (item.precio === null) {
-    return <span className="italic text-gray-500">A cotizar</span>;
+    return (
+      <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+        A cotizar
+      </span>
+    );
   }
   return (
-    <>
+    <span className="font-medium text-gray-900">
       {formatARS(item.precio)}
-      {item.unidad && <span className="text-gray-400"> / {item.unidad}</span>}
-    </>
+      {item.unidad && <span className="font-normal text-gray-400"> / {item.unidad}</span>}
+    </span>
   );
+}
+
+/** Trazabilidad mínima: hace cuánto se tocó el precio/descripción de este
+ *  ítem, para poder confiar (o desconfiar) en que no está desactualizado.
+ *  Sólo la fecha — "quién" queda para una iteración futura (evaluado: sumar
+ *  el autor exige un join a `perfiles` fila por fila, más complejidad de la
+ *  que vale la pena para esta pasada). */
+function FechaActualizacion({ updatedAt }: { updatedAt: string }) {
+  const relativa = formatFechaRelativa(updatedAt);
+  if (!relativa) return null;
+  return <span title={formatFechaCompleta(updatedAt)}>{relativa}</span>;
 }
 
 function EstadoBadge({ activo }: { activo: boolean }) {
@@ -264,6 +349,7 @@ function CatalogoSkeleton() {
               <th className="px-4 py-3 font-medium">Producto</th>
               <th className="px-4 py-3 font-medium">Calculadora</th>
               <th className="px-4 py-3 font-medium">Precio</th>
+              <th className="px-4 py-3 font-medium">Actualizado</th>
               <th className="px-4 py-3 font-medium">Estado</th>
               <th className="px-4 py-3 font-medium"></th>
             </tr>
@@ -275,6 +361,7 @@ function CatalogoSkeleton() {
                 <td className="px-4 py-3"><div className="h-3.5 w-40 rounded bg-gray-200" /></td>
                 <td className="px-4 py-3"><div className="h-3.5 w-20 rounded bg-gray-200" /></td>
                 <td className="px-4 py-3"><div className="h-3.5 w-16 rounded bg-gray-200" /></td>
+                <td className="px-4 py-3"><div className="h-3.5 w-16 rounded bg-gray-100" /></td>
                 <td className="px-4 py-3"><div className="h-3.5 w-14 rounded bg-gray-200" /></td>
                 <td className="px-4 py-3"><div className="h-3.5 w-14 rounded bg-gray-100" /></td>
               </tr>

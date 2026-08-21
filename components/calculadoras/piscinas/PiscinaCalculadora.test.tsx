@@ -102,6 +102,21 @@ describe("PiscinaCalculadora · snapshot", () => {
     const snapshot = PresupuestoV1.parse(datos);
     expect(snapshot.totales).toEqual([18500000]);
   });
+
+  it("largo/ancho son informativos: se guardan en medidas pero no alteran el subtotal", async () => {
+    const user = userEvent.setup();
+    render(<PiscinaCalculadora catalogo={CATALOGO_ORACULO} />);
+    await cargarSubtotal(user, "18500000");
+    await user.type(screen.getByLabelText("Largo (m)"), "8");
+    await user.type(screen.getByLabelText("Ancho (m)"), "4");
+    await user.click(screen.getByRole("button", { name: "Guardar en la nube" }));
+
+    await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
+    const [, datos] = guardarPresupuesto.mock.calls[0];
+    const snapshot = PresupuestoV1.parse(datos);
+    expect(snapshot.medidas).toEqual({ largo: 8, ancho: 4 });
+    expect(snapshot.totales).toEqual([18500000]); // el subtotal manual no se movió
+  });
 });
 
 describe("Fixture completa", () => {

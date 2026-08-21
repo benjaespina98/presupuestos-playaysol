@@ -85,4 +85,25 @@ describe("React Hook Form + Zod · integración", () => {
     const precio = await screen.findByLabelText("Precio");
     expect(precio).toHaveAttribute("aria-invalid", "true");
   });
+
+  it("el asterisco de 'required' no se cuela en el nombre accesible del campo", () => {
+    // El asterisco visual vive FUERA de <label> (ver FieldShell): si estuviera
+    // adentro, getByLabelText("Precio") dejaría de encontrar el campo apenas
+    // alguna pantalla empezara a marcarlo obligatorio con el prop `required`.
+    function ConRequerido() {
+      const { control, register, formState } = useZodForm(schema, {
+        defaultValues: { nombre: "", precio: null as unknown as number },
+      });
+      return (
+        <div>
+          <TextField register={register} errors={formState.errors} name="nombre" label="Nombre" required />
+          <MoneyField control={control} name="precio" label="Precio" required />
+        </div>
+      );
+    }
+    render(<ConRequerido />);
+    expect(screen.getByLabelText("Nombre")).toBeInTheDocument();
+    expect(screen.getByLabelText("Precio")).toBeInTheDocument();
+    expect(screen.getAllByText("*", { exact: true })).toHaveLength(2);
+  });
 });
