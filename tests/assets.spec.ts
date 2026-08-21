@@ -42,21 +42,29 @@ test.describe("librerías pesadas: ninguna calculadora las carga desde un CDN", 
   }
 });
 
-test.describe("fotos de ejemplo (public/seeds)", () => {
-  // Las 5 calculadoras React sólo suben fotos que carga la persona usuaria
-  // (ver el input type=file de cada Calculadora.tsx) — ninguna ofrece ya un
-  // picker de fotos de ejemplo precargadas, a diferencia del legacy. Este
-  // test no reafirma una funcionalidad (no la hay), sólo dejar registrado
-  // que si `public/seeds` todavía existe, es un directorio sin consumidores
-  // en el código — no se borra acá porque borrar archivos reales de assets
-  // no forma parte de este chequeo automatizado, pero vale la pena que quede
-  // visible en vez de asumido en silencio.
-  test("ninguna calculadora React referencia /seeds/ (la galería de ejemplos era sólo del legacy)", () => {
+test.describe("fotos de referencia (public/seeds)", () => {
+  // Piscinas restauró las fotos de referencia por opcional que tenía el
+  // legacy (revestimientos, climatización, cerco perimetral + "Modelos de
+  // referencia") — ver lib/documentos/piscinas/fotosSeed.ts. Las otras 4
+  // calculadoras no la tienen ni la tuvieron nunca en React: sólo suben
+  // fotos que carga la persona usuaria (input type=file). Este test no
+  // revisa PiscinaCalculadora.tsx (el formulario no referencia /seeds/ —
+  // las fotos viven en el documento, no en un picker) sino que las otras 4
+  // sigan sin ninguna referencia.
+  test("cercos/cobertores/revestimientos/losetas no referencian /seeds/", () => {
     for (const { tipo, archivo } of CALCULADORAS) {
+      if (tipo === "piscinas") continue;
       const src = fs.readFileSync(archivo, "utf8");
-      expect(src, `${tipo} referencia /seeds/ — actualizar este test si se reintrodujo la galería`).not.toContain(
-        "/seeds/"
-      );
+      expect(src, `${tipo} referencia /seeds/ inesperadamente`).not.toContain("/seeds/");
+    }
+  });
+
+  test("cada foto que Piscinas referencia en fotosSeed.ts existe en public/seeds", () => {
+    const src = fs.readFileSync(path.join(RAIZ, "lib", "documentos", "piscinas", "fotosSeed.ts"), "utf8");
+    const rutas = [...src.matchAll(/"(\/seeds\/[^"]+)"/g)].map((m) => m[1]);
+    expect(rutas.length, "fotosSeed.ts no referencia ninguna foto").toBeGreaterThan(0);
+    for (const ruta of rutas) {
+      expect(fs.existsSync(path.join(RAIZ, "public", ruta)), `${ruta} no existe`).toBe(true);
     }
   });
 });
