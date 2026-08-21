@@ -6,6 +6,7 @@ import { obtenerCatalogo, type CatalogoRow } from "@/lib/catalogo";
 import { obtenerPresupuesto } from "@/lib/presupuestos";
 import { leerPresupuesto, paraDuplicar, type PresupuestoLeido } from "@/lib/domain/presupuesto/adaptadores";
 import { CercosCalculadora } from "@/components/calculadoras/cercos/CercosCalculadora";
+import { DuplicarUltimoBanner } from "@/components/DuplicarUltimoBanner";
 
 /**
  * Cercos perimetrales — React + RHF/Zod + el motor de dominio
@@ -81,6 +82,7 @@ function CercosContenido() {
       {!error && cargando && <p className="mt-4 text-sm text-gray-500">Cargando…</p>}
       {!error && !cargando && catalogo && (
         <div className="mt-6">
+          {!idParam && !duplicarParam && <DuplicarUltimoBanner tipo="cercos" tipoLabel="Cerco perimetral" />}
           <CercosCalculadora catalogo={catalogo} presupuestoId={idParam} presupuestoInicial={presupuestoInicial} />
         </div>
       )}

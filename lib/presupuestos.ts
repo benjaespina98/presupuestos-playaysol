@@ -158,6 +158,38 @@ export async function obtenerPresupuesto(id: string) {
   return data as Presupuesto;
 }
 
+/**
+ * El presupuesto más reciente de un tipo (cualquiera lo haya creado, no sólo
+ * el usuario actual — el equipo trabaja compartido, igual que el catálogo).
+ * Alimenta el atajo "duplicar el último parecido" de cada calculadora
+ * (Mejoras de formularios, punto 5).
+ *
+ * `null` en cualquier caso de "no hay nada que ofrecer" — sin presupuestos
+ * de ese tipo, o si Supabase falla: es un atajo de conveniencia, nunca debe
+ * bloquear ni ensuciar de errores la pantalla de una calculadora nueva.
+ */
+export async function obtenerUltimoPresupuesto(tipo: TipoCalculadora): Promise<Presupuesto | null> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("presupuestos")
+      .select("*")
+      .eq("tipo", tipo)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error("No se pudo buscar el último presupuesto para duplicar", error);
+      return null;
+    }
+    return (data as Presupuesto | null) ?? null;
+  } catch (err) {
+    console.error("No se pudo buscar el último presupuesto para duplicar", err);
+    return null;
+  }
+}
+
 // Solo el dueño puede modificar o borrar su presupuesto (política RLS
 // "Users can update/delete their own presupuestos", ver migration_perfiles_ownership.sql).
 //
