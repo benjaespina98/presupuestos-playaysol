@@ -47,8 +47,16 @@ export function calcularCerco(entrada: EntradaCercos): ResultadoCercos {
   };
 }
 
-/** Qué totales muestra el documento, según lo elegido en el formulario. */
-export type ModoPrecio = "sin" | "con" | "ambos";
+/**
+ * Qué totales muestra el documento, según lo elegido en el formulario.
+ *
+ * Exportado también como schema de Zod (no sólo el tipo) para que el
+ * formulario React de Fase 5 valide contra la misma lista sin transcribirla
+ * — un `z.enum` que se desincroniza de este tipo es justo lo que se quiere
+ * evitar acá.
+ */
+export const ModoPrecio = z.enum(["sin", "con", "ambos"]);
+export type ModoPrecio = z.infer<typeof ModoPrecio>;
 
 export function totalesAMostrar(
   r: ResultadoCercos,
