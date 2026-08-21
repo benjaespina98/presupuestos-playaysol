@@ -18,64 +18,13 @@ export interface Caso {
   leerAdemas?: string[];
 }
 
-// Cercos y cobertores ya no están acá: se migraron a React (Fase 5), así que
-// ya no hay calculadora legacy contra la cual grabar/comparar estos casos.
-// Las fixtures que produjeron (tests/oracle/fixtures/{cercos,cobertores}.json)
-// siguen vivas: lib/domain/precios/contra-oraculo.test.ts las usa para
-// proteger el motor nuevo para siempre, sin necesitar volver a ejecutar el
-// legacy.
+// Cercos, cobertores y piscinas ya no están acá: se migraron a React (Fase
+// 5), así que ya no hay calculadora legacy contra la cual grabar/comparar
+// estos casos. Las fixtures que produjeron
+// (tests/oracle/fixtures/{cercos,cobertores,piscinas}.json) siguen vivas:
+// lib/domain/precios/contra-oraculo.test.ts las usa para proteger el motor
+// nuevo para siempre, sin necesitar volver a ejecutar el legacy.
 export const CASOS: Record<TipoLegacy, Caso[]> = {
-  /* ── PISCINAS ────────────────────────────────────────────────────────────
-     total = subtotal (lo tipea una persona) + Σ adicionales.
-     La complejidad no está en la cuenta sino en cómo se muestran los
-     opcionales: salen TODOS, con precio si están tildados y "No incluye"
-     si no.                                                              */
-  piscinas: [
-    {
-      nombre: "subtotal a mano, sin opcionales",
-      preparar: (c) => {
-        c.set("f-subtotal", "18500000");
-      },
-    },
-    {
-      nombre: "subtotal con un opcional tildado",
-      preparar: (c) => {
-        c.set("f-subtotal", "18500000");
-        c.opcional(0, true);
-      },
-    },
-    {
-      nombre: "subtotal con tres opcionales tildados",
-      preparar: (c) => {
-        c.set("f-subtotal", "18500000");
-        c.opcional(0, true);
-        c.opcional(1, true);
-        c.opcional(2, true);
-      },
-    },
-    {
-      nombre: "sin subtotal cargado",
-      preparar: (c) => {
-        c.set("f-subtotal", "0");
-      },
-    },
-    {
-      nombre: "subtotal + un adicional (aparece la línea TOTAL)",
-      preparar: (c) => {
-        c.set("f-subtotal", "18500000");
-        c.agregarAdicional("Traslado de equipos", "350000");
-      },
-    },
-    {
-      nombre: "subtotal + dos adicionales",
-      preparar: (c) => {
-        c.set("f-subtotal", "18500000");
-        c.agregarAdicional("Traslado de equipos", "350000");
-        c.agregarAdicional("Retiro de tierra", "420000");
-      },
-    },
-  ],
-
   /* ── REVESTIMIENTOS ──────────────────────────────────────────────────────
      m² = piso + paredes + escalera + desperdicio + adicionales
      paredes = 2 × profundidad_promedio × (largo + ancho)

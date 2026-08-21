@@ -39,12 +39,13 @@ import { JSDOM } from "jsdom";
 
 const RAIZ = path.join(__dirname, "..", "..");
 
-// Cercos y cobertores ya no están acá: se migraron a React (Fase 5) y sus
-// `public/*-calc.js` / `markup.ts` se borraron. Sus fixtures
-// (tests/oracle/fixtures/{cercos,cobertores}.json) siguen vivas y protegidas
-// para siempre por lib/domain/precios/contra-oraculo.test.ts, que compara el
-// motor nuevo contra esa misma foto sin necesitar la calculadora vieja.
-export type TipoLegacy = "piscinas" | "revestimientos";
+// Cercos, cobertores y piscinas ya no están acá: se migraron a React (Fase
+// 5) y sus `public/*-calc.js` / `markup.ts` se borraron. Sus fixtures
+// (tests/oracle/fixtures/{cercos,cobertores,piscinas}.json) siguen vivas y
+// protegidas para siempre por lib/domain/precios/contra-oraculo.test.ts, que
+// compara el motor nuevo contra esa misma foto sin necesitar la calculadora
+// vieja.
+export type TipoLegacy = "revestimientos";
 
 /** Extrae el HTML del markup.ts sin compilar TypeScript: es un template literal. */
 function leerMarkup(tipo: TipoLegacy): string {

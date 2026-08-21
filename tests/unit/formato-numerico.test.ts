@@ -32,22 +32,23 @@ import { abrirCalculadora, montoDeLinea } from "../oracle/harness";
  * campo real y se lee el total que sale del documento. Eso mide lo que le pasa
  * de verdad a un usuario.
  *
- * ── Por qué piscinas y no cercos/cobertores ─────────────────────────────────
- * Este archivo probaba cercos, después cobertores, hasta que cada uno se
- * migró a React (Fase 5) y adoptó `parseARS` — ahí dejaron de estar "rotos",
- * así que ya no pueden ser el ejemplo de acá. Piscinas todavía es legacy y
- * tiene el mismo bug (mismo `parseNum()`, copiado y pegado en cada
- * -calc.js), así que sigue documentando lo mismo. Cuando piscinas también
- * migre, este archivo vuelve a moverse (revestimientos o losetas).
+ * ── Por qué revestimientos y no cercos/cobertores/piscinas ──────────────────
+ * Este archivo probaba cercos, después cobertores, después piscinas, hasta
+ * que cada uno se migró a React (Fase 5) y adoptó `parseARS` — ahí dejaron
+ * de estar "rotos", así que ya no pueden ser el ejemplo de acá.
+ * Revestimientos todavía es legacy y tiene el mismo bug (mismo `parseNum()`,
+ * copiado y pegado en cada -calc.js), así que sigue documentando lo mismo.
+ * Cuando revestimientos también migre, este archivo vuelve a moverse
+ * (losetas, el último legacy que queda).
  */
 
-/** El SUBTOTAL de piscinas se tipea directo (no hay multiplicación de por
- *  medio), así que el total leído es exactamente el número que el sistema
- *  entendió de lo tipeado. */
+/** Sin ningún material tildado, el TOTAL REVESTIMIENTO de un solo adicional
+ *  es exactamente lo tipeado (no hay multiplicación de por medio — el m²
+ *  sólo entra en juego si hay un material seleccionado). */
 async function precioQueEntendio(loTipeado: string): Promise<number> {
-  const calc = await abrirCalculadora("piscinas");
+  const calc = await abrirCalculadora("revestimientos");
   try {
-    calc.set("f-subtotal", loTipeado);
+    calc.agregarAdicional("Adicional", loTipeado);
     await calc.asentar();
     const total = calc.totales().find((t) => t.includes("TOTAL"));
     return montoDeLinea(total ?? "");
