@@ -26,11 +26,13 @@ const VERSIONES_ESPERADAS = {
   html2canvas: "1.4.1",
 } as const;
 
-// Cercos, cobertores y piscinas ya no están acá: se migraron a React (Fase
-// 5) y sus public/*-calc.js se borraron. Su equivalente de "no CDN, docx por
-// import dinámico" se prueba en
-// lib/documentos/{cercos,cobertores,piscinas}/docx.test.ts.
-const CALCULADORAS = ["public/revestimientos-calc.js"];
+// Cercos, cobertores, piscinas y revestimientos ya no están acá: se
+// migraron a React (Fase 5) y sus public/*-calc.js se borraron. Su
+// equivalente de "no CDN, docx por import dinámico" se prueba en
+// lib/documentos/{cercos,cobertores,piscinas,revestimientos}/docx.test.ts.
+// Sólo losetas sigue siendo legacy (usa el puente para html2canvas, no para
+// docx — nunca generó Word). Vacío hasta que losetas también migre.
+const CALCULADORAS: string[] = [];
 
 describe("dependencias del proyecto", () => {
   for (const [nombre, version] of Object.entries(VERSIONES_ESPERADAS)) {
