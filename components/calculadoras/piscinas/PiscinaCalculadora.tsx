@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFieldArray, useWatch } from "react-hook-form";
 import { useZodForm } from "@/lib/forms/useZodForm";
 import { MoneyField, NumberField, TextField, CheckboxField } from "@/components/form";
@@ -25,6 +25,14 @@ import { CamposObligatoriosHint } from "@/components/calculadoras/CamposObligato
 
 function esOpcionalCatalogo(r: CatalogoRow): boolean {
   return !esTextoCompartido(r.clave);
+}
+
+/** Texto sugerido para "Dimensión piscina" a partir de Largo/Ancho — el
+ *  punto de partida editable que pidió el negocio: no hace falta escribir
+ *  toda la frase a mano si lo único que cambia es la medida. */
+function textoDimension(largo: number, ancho: number): string {
+  const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toLocaleString("es-AR"));
+  return `${fmt(largo)} mts largo por ${fmt(ancho)} mts ancho`;
 }
 
 function formularioDesdeCatalogo(catalogo: CatalogoRow[]): PiscinaForm {
@@ -160,6 +168,8 @@ export function PiscinaCalculadora({
     control,
     register,
     handleSubmit,
+    getValues,
+    setValue,
     formState: { errors },
   } = useZodForm(PiscinaFormSchema, {
     defaultValues: presupuestoInicial
@@ -174,6 +184,26 @@ export function PiscinaCalculadora({
   const subtotal = valoresForm.subtotal;
   const adicionalesEnVivo = valoresForm.adicionales;
   const opcionalesEnVivo = valoresForm.opcionales;
+
+  // Autocompleta "Dimensión piscina" con Largo/Ancho — sólo mientras el texto
+  // sigue siendo lo que nosotros mismos completamos la última vez (o está
+  // vacío). En cuanto el vendedor lo edita a mano, queda tal cual lo dejó:
+  // no depende de `detalle` en el array de dependencias a propósito (mismo
+  // criterio que `ensureLucesPos` en Losetas) — si dependiera, cada letra
+  // tipeada dispararía el efecto de nuevo.
+  const largo = valoresForm.largo;
+  const ancho = valoresForm.ancho;
+  const autocompletadoRef = useRef("");
+  useEffect(() => {
+    if (!largo || !ancho) return;
+    const sugerido = textoDimension(largo, ancho);
+    const actual = getValues("detalle") ?? "";
+    if (actual === "" || actual === autocompletadoRef.current) {
+      setValue("detalle", sugerido, { shouldDirty: false });
+      autocompletadoRef.current = sugerido;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [largo, ancho]);
 
   const resultado = useMemo(
     () =>
@@ -391,20 +421,28 @@ export function PiscinaCalculadora({
             <TextField register={register} errors={errors} name="cliente.telefono" label="Teléfono" type="tel" />
           </div>
           <TextField register={register} errors={errors} name="cliente.email" label="Email" type="email" />
-          <TextField register={register} errors={errors} name="detalle" label="Dimensión piscina" multiline rows={4} />
-
           <div>
             <div className="grid grid-cols-2 gap-4">
               <NumberField control={control} name="largo" label="Largo (m)" />
               <NumberField control={control} name="ancho" label="Ancho (m)" />
             </div>
             <p className="mt-1.5 text-xs text-gray-500">
-              Informativo por ahora — no cambia el Subtotal ni el texto de arriba.
+              Completa sola la Dimensión de acá abajo — no cambia el Subtotal.
               {!!valoresForm.largo && !!valoresForm.ancho && (
                 <> {" "}Área aprox.: {(valoresForm.largo * valoresForm.ancho).toLocaleString("es-AR")} m².</>
               )}
             </p>
           </div>
+
+          <TextField
+            register={register}
+            errors={errors}
+            name="detalle"
+            label="Dimensión piscina"
+            hint="Se completa sola con Largo/Ancho — si la editás a mano, queda como la dejaste."
+            multiline
+            rows={4}
+          />
 
           <TextField register={register} errors={errors} name="fecha" label="Fecha" />
           <TextField register={register} errors={errors} name="validezDias" label="Validez (días)" />

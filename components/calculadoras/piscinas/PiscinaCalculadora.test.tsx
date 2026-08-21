@@ -119,6 +119,44 @@ describe("PiscinaCalculadora · snapshot", () => {
   });
 });
 
+describe("PiscinaCalculadora · autocompletar Dimensión piscina", () => {
+  it("carga Largo/Ancho y completa sola la Dimensión", async () => {
+    const user = userEvent.setup();
+    render(<PiscinaCalculadora catalogo={CATALOGO_ORACULO} />);
+
+    await user.type(screen.getByLabelText("Largo (m)"), "8");
+    await user.type(screen.getByLabelText("Ancho (m)"), "4");
+
+    expect(screen.getByLabelText("Dimensión piscina")).toHaveValue("8 mts largo por 4 mts ancho");
+  });
+
+  it("si el vendedor edita la Dimensión a mano, un cambio posterior de medida no se la pisa", async () => {
+    const user = userEvent.setup();
+    render(<PiscinaCalculadora catalogo={CATALOGO_ORACULO} />);
+
+    await user.type(screen.getByLabelText("Largo (m)"), "8");
+    await user.type(screen.getByLabelText("Ancho (m)"), "4");
+    const dimension = screen.getByLabelText("Dimensión piscina");
+    await user.clear(dimension);
+    await user.type(dimension, "Pileta con forma de riñón, profundidad variable");
+
+    await user.clear(screen.getByLabelText("Ancho (m)"));
+    await user.type(screen.getByLabelText("Ancho (m)"), "5");
+
+    expect(dimension).toHaveValue("Pileta con forma de riñón, profundidad variable");
+  });
+
+  it("números con decimales se ven sin ceros de más (8.5, no 8.50)", async () => {
+    const user = userEvent.setup();
+    render(<PiscinaCalculadora catalogo={CATALOGO_ORACULO} />);
+
+    await user.type(screen.getByLabelText("Largo (m)"), "8,5");
+    await user.type(screen.getByLabelText("Ancho (m)"), "4");
+
+    expect(screen.getByLabelText("Dimensión piscina")).toHaveValue("8,5 mts largo por 4 mts ancho");
+  });
+});
+
 describe("Fixture completa", () => {
   it("no queda ningún caso de tests/oracle/fixtures/piscinas.json sin cubrir por nombre", () => {
     const fixture = JSON.parse(
