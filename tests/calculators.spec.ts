@@ -13,30 +13,38 @@ import fs from "fs";
  *   3. No aparece ningún botón/texto de WhatsApp (verifica que el punto 1 del pedido
  *      se aplicó bien en las 5 — solo se había llegado a implementar en piscinas).
  *   4. No aparece el tab "Guardados" en ninguna (punto 2).
- *   5. El botón "Word" (que sí es una descarga programática real, a diferencia del
- *      botón "PDF" que abre el diálogo nativo de impresión del navegador — ESE no se
- *      puede verificar por automatización, ver nota abajo) descarga un archivo cuyo
- *      nombre sigue el formato Presupuesto_<Tipo>_<Cliente>_<Fecha>.docx (punto 4).
+ *   5. El botón de descarga real de cada una (que sí genera un archivo de forma
+ *      programática, a diferencia del botón "PDF" que abre el diálogo nativo de
+ *      impresión del navegador — ESE no se puede verificar por automatización, ver
+ *      nota abajo) descarga un archivo cuyo nombre sigue el formato
+ *      Presupuesto_<Tipo>_<Cliente>_<Fecha>.docx en las 4 tradicionales (botón
+ *      "Word"), o Presupuesto_<Tipo>_<Cliente>_<Fecha>_cliente.png en losetas
+ *      (botón "Imagen para el cliente" — losetas no genera Word, su salida es un
+ *      plano PNG) (punto 4).
  *
  * Nota importante sobre el botón "PDF": dispara window.print(), que abre el diálogo
  * nativo del navegador. No genera un archivo de forma programática — no hay ningún
  * evento de descarga que Playwright (ni ningún test automatizado) pueda interceptar,
  * porque el archivo final lo arma el sistema operativo/navegador fuera del control de
- * la página. Por eso este test verifica el botón "Word" para el punto 4 (naming), que
- * sí es una descarga real generada por el código.
+ * la página. Por eso este test verifica el botón de descarga real de cada calculadora
+ * para el punto 4 (naming), no el botón "PDF".
  */
 
 const E2E_EMAIL = process.env.E2E_EMAIL;
 const E2E_PASSWORD = process.env.E2E_PASSWORD;
 
-type Calculadora = { tipo: string; nombreEsperado: string };
+type Calculadora = { tipo: string; nombreEsperado: string; encabezado: string };
 
+// `encabezado` es el <h1> real de cada app/dashboard/<tipo>/page.tsx — sirve
+// como señal de "esta calculadora ya montó", una por una, sin depender de
+// ninguna clase/id compartido entre las 5 (no lo hay: cada una es su propio
+// componente React desde la Fase 5).
 const CALCULADORAS: Calculadora[] = [
-  { tipo: "piscinas", nombreEsperado: "Piscina" },
-  { tipo: "cercos", nombreEsperado: "Cerco" },
-  { tipo: "cobertores", nombreEsperado: "Cobertor" },
-  { tipo: "revestimientos", nombreEsperado: "Revestimiento" },
-  { tipo: "losetas", nombreEsperado: "Loseta" },
+  { tipo: "piscinas", nombreEsperado: "Piscina", encabezado: "Piscinas" },
+  { tipo: "cercos", nombreEsperado: "Cerco", encabezado: "Cercos perimetrales" },
+  { tipo: "cobertores", nombreEsperado: "Cobertor", encabezado: "Cobertores" },
+  { tipo: "revestimientos", nombreEsperado: "Revestimiento", encabezado: "Revestimientos" },
+  { tipo: "losetas", nombreEsperado: "Loseta", encabezado: "Plano de Piscina" },
 ];
 
 async function login(page: Page) {
@@ -64,29 +72,29 @@ test("login llega al dashboard", async ({ page }) => {
 });
 
 /**
- * Navegar entre calculadoras sin recargar (SPA) reinyecta un <script> que
- * declara las mismas variables de nivel superior que el anterior. Están
- * envueltos en IIFE justamente para que eso no tire "Identifier already
- * declared" y mate la calculadora entera — pero es una protección que no se ve
- * hasta que alguien saca el wrapper.
+ * Las 5 calculadoras son componentes React montados por su propio
+ * app/dashboard/<tipo>/page.tsx (client component) — navegar entre ellas es
+ * una navegación de Next normal, no la reinyección de un <script> legacy.
+ * Este test sólo confirma que ir de una a otra no deja errores sueltos en
+ * consola (p.ej. un componente que no limpia un listener/efecto al
+ * desmontar).
  */
 test("se puede navegar entre calculadoras sin errores", async ({ page }) => {
   const errores: string[] = [];
   page.on("pageerror", (err) => errores.push(String(err)));
 
   await login(page);
-  for (const tipo of ["piscinas", "cercos", "revestimientos", "cobertores"]) {
+  for (const { tipo, encabezado } of CALCULADORAS) {
     await page.getByRole("link", { name: "Nuevo" }).click();
     await page.click(`a[href="/dashboard/${tipo}"]`);
-    await expect(page.locator(".form-panel")).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator("#btn-download-word")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: encabezado })).toBeVisible({ timeout: 15_000 });
   }
 
   expect(errores, `Errores al navegar entre calculadoras:\n${errores.join("\n")}`).toEqual([]);
 });
 
-for (const { tipo, nombreEsperado } of CALCULADORAS) {
-  test(`${tipo}: carga sin errores, sin WhatsApp, sin tab Guardados, y descarga Word con el nombre correcto`, async ({
+for (const { tipo, nombreEsperado, encabezado } of CALCULADORAS) {
+  test(`${tipo}: carga sin errores, sin WhatsApp, sin tab Guardados, y descarga el archivo con el nombre correcto`, async ({
     page,
   }) => {
     const erroresConsola: string[] = [];
@@ -98,21 +106,22 @@ for (const { tipo, nombreEsperado } of CALCULADORAS) {
     await login(page);
     await page.goto(`/dashboard/${tipo}`);
 
-    if (tipo !== "losetas") {
-      // Esperar a que el HTML legacy de la calculadora termine de montarse.
-      await expect(page.locator(".form-panel")).toBeVisible({ timeout: 15_000 });
-    } else {
-      // Losetas es React puro (Fase 5, última en migrar): no tiene
-      // .form-panel: se espera el encabezado propio de la pantalla.
-      await expect(page.getByRole("heading", { name: "Plano de Piscina" })).toBeVisible({ timeout: 15_000 });
-    }
-    // Además del CSS/mount, hay que esperar a que el script principal termine de
-    // correr — recién ahí existen los botones de acción.
-    const botonListo =
+    // Encabezado propio de cada calculadora — señal de que el componente
+    // React ya montó (y, para las 4 tradicionales, de que el catálogo ya se
+    // cargó: app/dashboard/<tipo>/page.tsx no renderiza el formulario hasta
+    // tenerlo, así que no hay una ventana donde tipear pise un defaultValue
+    // que todavía no llegó).
+    await expect(page.getByRole("heading", { name: encabezado })).toBeVisible({ timeout: 15_000 });
+
+    // Botón de descarga real de cada una: "Word" en las 4 tradicionales,
+    // "Imagen para el cliente" (PNG) en losetas — el botón "PDF" dispara
+    // window.print() y no genera un archivo interceptable (ver comentario
+    // arriba del archivo).
+    const botonDescarga =
       tipo !== "losetas"
-        ? page.locator("#btn-download-word")
-        : page.locator('button:has-text("Imagen para el cliente")');
-    await expect(botonListo).toBeVisible({ timeout: 15_000 });
+        ? page.getByRole("button", { name: "Word", exact: true })
+        : page.getByRole("button", { name: "Imagen para el cliente" });
+    await expect(botonDescarga).toBeVisible({ timeout: 15_000 });
 
     // --- Punto 1: sin botón de WhatsApp remanente ---
     await expect(page.locator("#btn-whatsapp")).toHaveCount(0);
@@ -124,57 +133,27 @@ for (const { tipo, nombreEsperado } of CALCULADORAS) {
 
     // Cargar un nombre de cliente con tilde y espacios para probar el sanitizado
     // del punto 4 (naming) en un caso real, no solo el default "Sin_nombre".
-    if (tipo !== "losetas") {
-      // El botón visible NO garantiza que -calc.js ya terminó su init asincrónico
-      // (loadCatalog/loadFotosPorOpcional/seedFotosGeneralesDefaults contra Supabase),
-      // que recién al final llama renderForm() y pisa #f-cliente con el state actual.
-      // Si se llena el campo antes de eso, renderForm() sobreescribe lo tipeado y el
-      // archivo sale con "Sin_nombre" — se vio pasar en cercos por timing. #f-fecha
-      // arranca vacío en el markup y solo se puebla en renderForm(), así que esperar
-      // a que tenga valor es la señal real de que el init terminó.
-      await expect(page.locator("#f-fecha")).not.toHaveValue("", { timeout: 15_000 });
-
-      // La sección "Datos" del acordeón arranca abierta por defecto (acc-item open),
-      // así que #f-cliente ya está visible — no hace falta clickear ningún encabezado
-      // (clickear el .acc-head lo plegaría y ocultaría el input).
-      const clienteInput = page.locator("#f-cliente");
-      if (await clienteInput.count()) await clienteInput.fill("Pérez, María José");
-    } else {
-      const nombreInput = page.locator("#nombre");
-      if (await nombreInput.count()) await nombreInput.fill("Pérez, María José");
-    }
+    // Las 4 tradicionales usan "Señor/Sra" (RHF: `cliente.nombre`); losetas
+    // usa "Cliente o referencia" (`nombre`, es la única sin ficha de cliente
+    // completa — ver adaptadores.ts).
+    const nombreInput = tipo !== "losetas" ? page.getByLabel("Señor/Sra") : page.getByLabel("Cliente o referencia");
+    await nombreInput.fill("Pérez, María José");
 
     // --- Punto 4: naming del archivo descargado ---
-    if (tipo !== "losetas") {
-      const [download] = await Promise.all([
-        // 30s (antes 20): docx y html2canvas ahora se bajan del CDN recien al
-        // apretar el boton, no al cargar la pagina.
-        page.waitForEvent("download", { timeout: 30_000 }),
-        page.click("#btn-download-word"),
-      ]);
-      const nombreArchivo = download.suggestedFilename();
-      expect(nombreArchivo).toMatch(
-        new RegExp(`^Presupuesto_${nombreEsperado}_Perez_Maria_Jose_\\d{4}-\\d{2}-\\d{2}\\.docx$`)
-      );
-      const destino = path.join(test.info().outputDir, nombreArchivo);
-      await download.saveAs(destino);
-      expect(fs.existsSync(destino)).toBe(true);
-    } else {
-      // Losetas no tiene botón Word — su descarga real es el PNG "Imagen para cliente".
-      const [download] = await Promise.all([
-        // 30s (antes 20): docx y html2canvas ahora se bajan del CDN recien al
-        // apretar el boton, no al cargar la pagina.
-        page.waitForEvent("download", { timeout: 30_000 }),
-        page.click('button:has-text("Imagen para el cliente")'),
-      ]);
-      const nombreArchivo = download.suggestedFilename();
-      expect(nombreArchivo).toMatch(
-        new RegExp(`^Presupuesto_${nombreEsperado}_Perez_Maria_Jose_\\d{4}-\\d{2}-\\d{2}_cliente\\.png$`)
-      );
-      const destino = path.join(test.info().outputDir, nombreArchivo);
-      await download.saveAs(destino);
-      expect(fs.existsSync(destino)).toBe(true);
-    }
+    const [download] = await Promise.all([
+      // 30s: docx/html2canvas se piden con import() dinámico recién al
+      // apretar el botón, no al cargar la página (ver dependencias.test.ts).
+      page.waitForEvent("download", { timeout: 30_000 }),
+      botonDescarga.click(),
+    ]);
+    const nombreArchivo = download.suggestedFilename();
+    const sufijo = tipo !== "losetas" ? "\\.docx" : "_cliente\\.png";
+    expect(nombreArchivo).toMatch(
+      new RegExp(`^Presupuesto_${nombreEsperado}_Perez_Maria_Jose_\\d{4}-\\d{2}-\\d{2}${sufijo}$`)
+    );
+    const destino = path.join(test.info().outputDir, nombreArchivo);
+    await download.saveAs(destino);
+    expect(fs.existsSync(destino)).toBe(true);
 
     // --- Sin errores de consola durante toda la carga/interacción ---
     expect(erroresConsola, `Errores de consola en ${tipo}: ${erroresConsola.join("\n")}`).toEqual([]);

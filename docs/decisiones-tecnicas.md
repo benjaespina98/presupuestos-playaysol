@@ -205,7 +205,7 @@ porque sería una decisión de negocio, no una corrección técnica.
 
 ## 10 · La Fase 5 migra cálculo + snapshot primero; documento/fotos quedan para después
 
-**Fecha:** Fase 5 · **Estado:** en curso, alcance acotado a propósito
+**Fecha:** Fase 5 · **Estado:** aplicada — completada, ver la actualización al final
 
 Cada `public/<tipo>-calc.js` legacy son ~1750-1950 líneas que hacen mucho más
 que calcular: arman el documento Word con `docx`, el PDF por impresión del
@@ -238,8 +238,11 @@ se permitió.
 
 **Actualización:** cercos, cobertores, piscinas y revestimientos completaron
 el patrón entero (cálculo + snapshot + Word + PDF + fotos + reemplazo de
-ruta + baja del legacy) y quedaron cerrados. Sigue pendiente losetas — ver
-decisión 11.
+ruta + baja del legacy) y quedaron cerrados. Losetas, la última, migró como
+editor SVG + PNG (no como documento — ver decisión 11 para el porqué y
+decisión 12 para el cierre). Con las 5 migradas, `public/*-calc.js` y
+`app/dashboard/losetas/{calculator,markup,script,styles}.ts` no existen más
+en el repositorio.
 
 ---
 
