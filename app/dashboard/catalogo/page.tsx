@@ -10,6 +10,7 @@ import {
 } from "@/lib/domain/catalogo/item";
 import { CATEGORIAS, type Categoria } from "@/lib/domain/catalogo/categorias";
 import { formatARS } from "@/lib/format/ars";
+import { formatFechaRelativa, formatFechaCompleta } from "@/lib/format/fecha";
 import { PanelPortal } from "@/components/PanelPortal";
 import { IconEdit, IconSearch } from "@/components/icons";
 import { EditarItemModal } from "@/components/catalogo/EditarItemModal";
@@ -142,6 +143,7 @@ export default function CatalogoPage() {
                   <th className="px-4 py-3 font-medium">Producto</th>
                   <th className="px-4 py-3 font-medium">Calculadora</th>
                   <th className="px-4 py-3 font-medium">Precio</th>
+                  <th className="px-4 py-3 font-medium">Actualizado</th>
                   <th className="px-4 py-3 font-medium">Estado</th>
                   <th className="px-4 py-3 font-medium"></th>
                 </tr>
@@ -156,6 +158,9 @@ export default function CatalogoPage() {
                     <td className="px-4 py-3 text-gray-700">{TITULOS_TIPO[item.tipo]}</td>
                     <td className="px-4 py-3 text-gray-700">
                       <PrecioItem item={item} />
+                    </td>
+                    <td className="px-4 py-3 text-gray-500">
+                      <FechaActualizacion updatedAt={item.updated_at} />
                     </td>
                     <td className="px-4 py-3">
                       <EstadoBadge activo={item.activo} />
@@ -190,9 +195,14 @@ export default function CatalogoPage() {
                   <EstadoBadge activo={item.activo} />
                 </div>
                 <div className="mt-2 flex items-center justify-between">
-                  <p className="text-sm font-medium text-gray-900">
-                    <PrecioItem item={item} />
-                  </p>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      <PrecioItem item={item} />
+                    </p>
+                    <p className="mt-0.5 text-xs text-gray-400">
+                      <FechaActualizacion updatedAt={item.updated_at} />
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => abrirEdicion(item)}
@@ -229,16 +239,38 @@ function ItemDescripcion({ item }: { item: ItemCatalogo }) {
   );
 }
 
+/**
+ * Distingue de un vistazo un precio cerrado (listo para usar tal cual en un
+ * presupuesto) de uno "a cotizar" (necesita ajuste manual antes de mandarlo).
+ * El badge ámbar es la señal fuerte porque es la EXCEPCIÓN: la mayoría de
+ * las filas tiene precio cerrado, así que no vale la pena un badge en cada
+ * una — el número solo ya comunica "esto está listo".
+ */
 function PrecioItem({ item }: { item: ItemCatalogo }) {
   if (item.precio === null) {
-    return <span className="italic text-gray-500">A cotizar</span>;
+    return (
+      <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+        A cotizar
+      </span>
+    );
   }
   return (
-    <>
+    <span className="font-medium text-gray-900">
       {formatARS(item.precio)}
-      {item.unidad && <span className="text-gray-400"> / {item.unidad}</span>}
-    </>
+      {item.unidad && <span className="font-normal text-gray-400"> / {item.unidad}</span>}
+    </span>
   );
+}
+
+/** Trazabilidad mínima: hace cuánto se tocó el precio/descripción de este
+ *  ítem, para poder confiar (o desconfiar) en que no está desactualizado.
+ *  Sólo la fecha — "quién" queda para una iteración futura (evaluado: sumar
+ *  el autor exige un join a `perfiles` fila por fila, más complejidad de la
+ *  que vale la pena para esta pasada). */
+function FechaActualizacion({ updatedAt }: { updatedAt: string }) {
+  const relativa = formatFechaRelativa(updatedAt);
+  if (!relativa) return null;
+  return <span title={formatFechaCompleta(updatedAt)}>{relativa}</span>;
 }
 
 function EstadoBadge({ activo }: { activo: boolean }) {
@@ -264,6 +296,7 @@ function CatalogoSkeleton() {
               <th className="px-4 py-3 font-medium">Producto</th>
               <th className="px-4 py-3 font-medium">Calculadora</th>
               <th className="px-4 py-3 font-medium">Precio</th>
+              <th className="px-4 py-3 font-medium">Actualizado</th>
               <th className="px-4 py-3 font-medium">Estado</th>
               <th className="px-4 py-3 font-medium"></th>
             </tr>
@@ -275,6 +308,7 @@ function CatalogoSkeleton() {
                 <td className="px-4 py-3"><div className="h-3.5 w-40 rounded bg-gray-200" /></td>
                 <td className="px-4 py-3"><div className="h-3.5 w-20 rounded bg-gray-200" /></td>
                 <td className="px-4 py-3"><div className="h-3.5 w-16 rounded bg-gray-200" /></td>
+                <td className="px-4 py-3"><div className="h-3.5 w-16 rounded bg-gray-100" /></td>
                 <td className="px-4 py-3"><div className="h-3.5 w-14 rounded bg-gray-200" /></td>
                 <td className="px-4 py-3"><div className="h-3.5 w-14 rounded bg-gray-100" /></td>
               </tr>

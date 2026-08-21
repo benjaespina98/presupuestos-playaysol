@@ -65,6 +65,17 @@ describe("CatalogoPage · lectura", () => {
     expect(screen.queryByText("$ 0")).not.toBeInTheDocument();
   });
 
+  it("muestra hace cuánto se actualizó cada ítem", async () => {
+    const hoy = new Date().toISOString();
+    listarItemsCatalogo.mockResolvedValue({
+      items: [item({ id: "a", descripcion: "Luces LED", updated_at: hoy })],
+      error: null,
+    });
+    render(<CatalogoPage />);
+
+    expect((await screen.findAllByText("hoy"))[0]).toBeInTheDocument();
+  });
+
   it("estado vacío cuando no hay ítems", async () => {
     listarItemsCatalogo.mockResolvedValue({ items: [], error: null });
     render(<CatalogoPage />);
