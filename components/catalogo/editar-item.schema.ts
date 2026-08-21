@@ -16,7 +16,10 @@ import type { CambiosItemCatalogo } from "@/lib/catalogo";
  */
 export const EditarItemSchema = z.object({
   descripcion: z.string(),
-  precio: z.number().nullable(),
+  // No es una fórmula: es una restricción de entrada (un precio no puede ser
+  // negativo), igual que "el campo es obligatorio". La aritmética de negocio
+  // sigue viviendo enteramente en lib/domain/precios.
+  precio: z.number().nonnegative("El precio no puede ser negativo").nullable(),
   categoria: z.union([Categoria, z.literal("")]),
   unidad: z.union([z.enum(UNIDADES), z.literal("")]),
   activo: z.boolean(),

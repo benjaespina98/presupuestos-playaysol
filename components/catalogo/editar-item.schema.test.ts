@@ -100,4 +100,28 @@ describe("EditarItemSchema", () => {
     });
     expect(r.success).toBe(false);
   });
+
+  it("rechaza un precio negativo", () => {
+    const r = EditarItemSchema.safeParse({
+      descripcion: "x",
+      precio: -100,
+      categoria: "",
+      unidad: "",
+      activo: true,
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("precio null (a cotizar) y 0 siguen siendo válidos", () => {
+    for (const precio of [null, 0]) {
+      const r = EditarItemSchema.safeParse({
+        descripcion: "x",
+        precio,
+        categoria: "",
+        unidad: "",
+        activo: true,
+      });
+      expect(r.success).toBe(true);
+    }
+  });
 });

@@ -116,26 +116,46 @@ export type ResultadoListarCatalogo =
   | { items: ItemCatalogo[]; error: null }
   | { items: null; error: string };
 
+const ERROR_DE_RED =
+  "No se pudo conectar con el catálogo. Revisá tu conexión a internet e intentá de nuevo.";
+
 /** Todos los productos del catálogo (las 5 calculadoras juntas), sin las
  *  claves reservadas de texto compartido (`__legal`, `__footer_*`). La UI
  *  filtra/agrupa/ordena sobre esto con las funciones puras de
- *  lib/domain/catalogo/item.ts — acá sólo se trae el dato. */
+ *  lib/domain/catalogo/item.ts — acá sólo se trae el dato.
+ *
+ * Nunca rechaza la promesa: a diferencia de `listarTodosLosPresupuestos` (que
+ * tira si Supabase falla), acá el error viaja en el resultado. Es a propósito
+ * — así la pantalla no depende de acordarse de poner un `.catch()`, y una fila
+ * que no valida contra `ItemCatalogo` (dato cargado a mano en Supabase que no
+ * respeta la forma esperada) no tira abajo el resto del listado: se descarta
+ * esa fila sola y se avisa por consola, no en pantalla. */
 export async function listarItemsCatalogo(): Promise<ResultadoListarCatalogo> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("catalogo_items")
-    .select(COLUMNAS_ITEM_CATALOGO);
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("catalogo_items")
+      .select(COLUMNAS_ITEM_CATALOGO);
 
-  if (error) {
-    if (esErrorMigracionPendiente(error)) {
-      return { items: null, error: ERROR_MIGRACION_PENDIENTE };
+    if (error) {
+      if (esErrorMigracionPendiente(error)) {
+        return { items: null, error: ERROR_MIGRACION_PENDIENTE };
+      }
+      return { items: null, error: error.message };
     }
-    return { items: null, error: error.message };
-  }
 
-  const filas = (data ?? []).filter((f) => !esTextoCompartido(f.clave as string));
-  const items = filas.map((f) => ItemCatalogo.parse(f));
-  return { items, error: null };
+    const filas = (data ?? []).filter((f) => !esTextoCompartido(f.clave as string));
+    const items: ItemCatalogo[] = [];
+    for (const fila of filas) {
+      const resultado = ItemCatalogo.safeParse(fila);
+      if (resultado.success) items.push(resultado.data);
+      else console.error("Fila de catalogo_items con forma inesperada, se omite", fila, resultado.error);
+    }
+    return { items, error: null };
+  } catch (err) {
+    console.error("No se pudo leer el catálogo", err);
+    return { items: null, error: ERROR_DE_RED };
+  }
 }
 
 /** Lo que se puede cambiar desde la pantalla de Catálogo. `clave`/`tipo`
@@ -168,21 +188,26 @@ export async function actualizarItemCatalogo(
   id: string,
   cambios: CambiosItemCatalogo
 ): Promise<{ error: string | null }> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  const { data, error } = await supabase
-    .from("catalogo_items")
-    .update({ ...cambios, updated_by: user?.id })
-    .eq("id", id)
-    .select("id");
+    const { data, error } = await supabase
+      .from("catalogo_items")
+      .update({ ...cambios, updated_by: user?.id })
+      .eq("id", id)
+      .select("id");
 
-  if (error) {
-    if (esErrorMigracionPendiente(error)) return { error: ERROR_MIGRACION_PENDIENTE };
-    return { error: error.message };
+    if (error) {
+      if (esErrorMigracionPendiente(error)) return { error: ERROR_MIGRACION_PENDIENTE };
+      return { error: error.message };
+    }
+    if (!data || data.length === 0) return { error: SIN_FILA_AFECTADA };
+    return { error: null };
+  } catch (err) {
+    console.error("No se pudo guardar el ítem de catálogo", err);
+    return { error: ERROR_DE_RED };
   }
-  if (!data || data.length === 0) return { error: SIN_FILA_AFECTADA };
-  return { error: null };
 }

@@ -89,6 +89,20 @@ describe("EditarItemModal", () => {
     expect(actualizarItemCatalogo).toHaveBeenCalledWith("id-1", expect.objectContaining({ precio: 0 }));
   });
 
+  it("un precio negativo se rechaza en el cliente y no llega a persistirse", async () => {
+    const onGuardado = vi.fn();
+    const user = userEvent.setup();
+    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={onGuardado} />);
+
+    await user.clear(screen.getByLabelText("Precio"));
+    await user.type(screen.getByLabelText("Precio"), "-100");
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    expect(await screen.findByText("El precio no puede ser negativo")).toBeInTheDocument();
+    expect(actualizarItemCatalogo).not.toHaveBeenCalled();
+    expect(onGuardado).not.toHaveBeenCalled();
+  });
+
   it("muestra el error de guardado y no cierra el modal", async () => {
     actualizarItemCatalogo.mockResolvedValue({ error: "No se pudo guardar: motivo tal." });
     const onGuardado = vi.fn();

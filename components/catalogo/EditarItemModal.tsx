@@ -91,6 +91,7 @@ export function EditarItemModal({
             label="Descripción"
             multiline
             rows={3}
+            autoFocus
           />
           <MoneyField
             control={control}
@@ -130,7 +131,7 @@ export function EditarItemModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full rounded-md bg-[#1B3A5C] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B3A5C] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
+              className="min-h-11 w-full rounded-md bg-[#1B3A5C] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B3A5C] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
             >
               {isSubmitting ? "Guardando..." : "Guardar cambios"}
             </button>
@@ -138,7 +139,7 @@ export function EditarItemModal({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
+              className="min-h-11 w-full rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
             >
               Cancelar
             </button>
