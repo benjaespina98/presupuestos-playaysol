@@ -72,7 +72,7 @@ function CercosContenido() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <h1 className="text-2xl font-semibold text-gray-900">Cercos perimetrales</h1>
+      <h1 data-print-hide="" className="text-2xl font-semibold text-gray-900">Cercos perimetrales</h1>
 
       {error && (
         <p role="alert" className="mt-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">

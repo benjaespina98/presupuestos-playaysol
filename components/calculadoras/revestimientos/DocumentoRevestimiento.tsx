@@ -157,7 +157,7 @@ export function DocumentoRevestimiento({
             </h2>
             <div className="space-y-2 text-sm">
               {materialesIncluidos.map((m, i) => (
-                <div key={i} className="border-b border-dotted border-gray-300 py-1">
+                <div key={i} className="break-inside-avoid border-b border-dotted border-gray-300 py-1 print:break-inside-avoid">
                   <div className="flex justify-between">
                     <span>{m.descripcion}</span>
                     <span>{m.total === null ? "No incluye" : formatARS(m.total)}</span>
@@ -227,7 +227,7 @@ export function DocumentoRevestimiento({
           </section>
         )}
 
-        <footer className="space-y-1 border-t border-[#E1E7EC] pt-4 text-xs text-[#1B3A5C]">
+        <footer className="break-inside-avoid space-y-1 border-t border-[#E1E7EC] pt-4 text-xs text-[#1B3A5C] print:break-inside-avoid">
           <p className="font-bold tracking-wide">{f.empresa}</p>
           {f.direccion && (
             <p>

@@ -67,3 +67,43 @@ test.describe("fotos de referencia (public/seeds)", () => {
     }
   });
 });
+
+test.describe("impresión/PDF: el documento ocupa todo el ancho, no la columna de 420px del formulario", () => {
+  // Bug real visto en producción: al imprimir, la grilla de 2 columnas del
+  // formulario (form + documento de 420px) seguía activa — `lg:` es una
+  // media query de ANCHO, no de pantalla-vs-impresión, así que seguía
+  // aplicando en la vista de impresión. El formulario se oculta con
+  // data-print-hide, pero la columna del documento quedaba angosta dentro
+  // de esa grilla igual: el encabezado y todo el contenido salían apretados
+  // en vez de a todo el ancho de la hoja.
+  for (const { tipo, archivo } of CALCULADORAS) {
+    test(`${tipo}: el <form> pasa a una sola columna en impresión`, () => {
+      const src = fs.readFileSync(archivo, "utf8");
+      expect(src, `${tipo} no tiene un override de impresión para el grid de 2 columnas`).toMatch(
+        /print:block|print:grid-cols-1/
+      );
+    });
+  }
+});
+
+test.describe("impresión/PDF: el título de la página (chrome del portal) no se cuela en el documento", () => {
+  // Otro bug real: el <h1> de cada page.tsx ("Piscinas", "Cercos
+  // perimetrales", etc.) y el banner de "Duplicar el último" no tenían
+  // data-print-hide — a diferencia del header/nav del portal (protegidos a
+  // nivel de layout), así que aparecían arriba del documento real al
+  // imprimir. El documento ya tiene su propio título ("PRESUPUESTO DE
+  // CONSTRUCCIÓN PISCINA", etc.) — el de la página es sólo para navegar la
+  // app, nunca debería llegar al PDF.
+  const PAGINAS = ["piscinas", "cercos", "cobertores", "revestimientos", "losetas"] as const;
+  for (const tipo of PAGINAS) {
+    test(`${tipo}: el <h1> de la página tiene data-print-hide`, () => {
+      const src = fs.readFileSync(path.join(RAIZ, "app", "dashboard", tipo, "page.tsx"), "utf8");
+      expect(src, `${tipo}/page.tsx: el <h1> no tiene data-print-hide`).toMatch(/<h1 data-print-hide=""/);
+    });
+  }
+
+  test("DuplicarUltimoBanner tiene data-print-hide en su propio componente", () => {
+    const src = fs.readFileSync(path.join(RAIZ, "components", "DuplicarUltimoBanner.tsx"), "utf8");
+    expect(src).toContain('data-print-hide=""');
+  });
+});

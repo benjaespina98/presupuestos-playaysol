@@ -27,12 +27,29 @@ function esOpcionalCatalogo(r: CatalogoRow): boolean {
   return !esTextoCompartido(r.clave);
 }
 
-/** Texto sugerido para "Dimensión piscina" a partir de Largo/Ancho — el
- *  punto de partida editable que pidió el negocio: no hace falta escribir
- *  toda la frase a mano si lo único que cambia es la medida. */
+/**
+ * Texto sugerido para "Dimensión piscina" a partir de Largo/Ancho — el
+ * párrafo base que se manda en TODOS los presupuestos de piscina, tomado
+ * tal cual del texto real que ya se le entregaba al cliente (ver
+ * presupuesto de referencia "Pettenon, Rogelio 7x3"), no inventado.
+ *
+ * Sólo largo/ancho salen del formulario (son los únicos datos que ya carga
+ * el vendedor en otro lado); profundidad, cama de agua y escalera varían
+ * obra por obra y no hay de dónde sacarlos solos — se autocompletan como
+ * placeholders entre corchetes para que el vendedor los pise a mano con el
+ * valor real, en vez de inventar un número que puede no corresponder a
+ * este presupuesto. La segunda línea (losetas del borde perimetral) es
+ * fija: la misma en cualquier piscina de la empresa.
+ */
 function textoDimension(largo: number, ancho: number): string {
   const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toLocaleString("es-AR"));
-  return `${fmt(largo)} mts largo por ${fmt(ancho)} mts ancho`;
+  return (
+    `${fmt(largo)} mts largo por ${fmt(ancho)} mts ancho y de [profundidad mínima] mts a ` +
+    `[profundidad máxima] mts de profundidad, incluye cama de agua de [largo cama de agua] mts largo ` +
+    `por ${fmt(ancho)} mts de ancho, con escalera de tres escalones de 0.30 mts huella y ` +
+    `[ancho escalera] mts de ancho para ingreso a piscina.\n` +
+    `Losetas Atérmicas Antideslizantes para el borde perimetral de la piscina 0.50 mts.`
+  );
 }
 
 function formularioDesdeCatalogo(catalogo: CatalogoRow[]): PiscinaForm {
@@ -401,7 +418,7 @@ export function PiscinaCalculadora({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 gap-6 pb-20 sm:pb-0 lg:grid-cols-[minmax(0,1fr)_420px]">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 gap-6 pb-20 sm:pb-0 lg:grid-cols-[minmax(0,1fr)_420px] print:block print:pb-0">
       <div data-print-hide="" className="space-y-6">
         <CamposObligatoriosHint />
         {presupuestoInicial && !presupuestoInicial.preciosCongelados && (
@@ -439,9 +456,9 @@ export function PiscinaCalculadora({
             errors={errors}
             name="detalle"
             label="Dimensión piscina"
-            hint="Se completa sola con Largo/Ancho — si la editás a mano, queda como la dejaste."
+            hint="Se completa sola con Largo/Ancho, con el texto base de siempre. Reemplazá lo que está entre corchetes (profundidad, cama de agua, escalera) por la medida real de esta obra."
             multiline
-            rows={4}
+            rows={6}
           />
 
           <TextField register={register} errors={errors} name="fecha" label="Fecha" />

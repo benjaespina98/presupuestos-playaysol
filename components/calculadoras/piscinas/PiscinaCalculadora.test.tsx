@@ -120,14 +120,20 @@ describe("PiscinaCalculadora · snapshot", () => {
 });
 
 describe("PiscinaCalculadora · autocompletar Dimensión piscina", () => {
-  it("carga Largo/Ancho y completa sola la Dimensión", async () => {
+  it("carga Largo/Ancho y completa sola la Dimensión con el párrafo base completo (como Pettenon)", async () => {
     const user = userEvent.setup();
     render(<PiscinaCalculadora catalogo={CATALOGO_ORACULO} />);
 
     await user.type(screen.getByLabelText("Largo (m)"), "8");
     await user.type(screen.getByLabelText("Ancho (m)"), "4");
 
-    expect(screen.getByLabelText("Dimensión piscina")).toHaveValue("8 mts largo por 4 mts ancho");
+    expect(screen.getByLabelText("Dimensión piscina")).toHaveValue(
+      "8 mts largo por 4 mts ancho y de [profundidad mínima] mts a [profundidad máxima] mts de " +
+        "profundidad, incluye cama de agua de [largo cama de agua] mts largo por 4 mts de ancho, " +
+        "con escalera de tres escalones de 0.30 mts huella y [ancho escalera] mts de ancho para " +
+        "ingreso a piscina.\n" +
+        "Losetas Atérmicas Antideslizantes para el borde perimetral de la piscina 0.50 mts."
+    );
   });
 
   it("si el vendedor edita la Dimensión a mano, un cambio posterior de medida no se la pisa", async () => {
@@ -153,7 +159,22 @@ describe("PiscinaCalculadora · autocompletar Dimensión piscina", () => {
     await user.type(screen.getByLabelText("Largo (m)"), "8,5");
     await user.type(screen.getByLabelText("Ancho (m)"), "4");
 
-    expect(screen.getByLabelText("Dimensión piscina")).toHaveValue("8,5 mts largo por 4 mts ancho");
+    const texto = (screen.getByLabelText("Dimensión piscina") as HTMLTextAreaElement).value;
+    expect(texto).toContain("8,5 mts largo por 4 mts ancho y de");
+  });
+
+  it("lo que varía obra por obra queda como placeholder entre corchetes, no un número inventado", async () => {
+    const user = userEvent.setup();
+    render(<PiscinaCalculadora catalogo={CATALOGO_ORACULO} />);
+
+    await user.type(screen.getByLabelText("Largo (m)"), "8");
+    await user.type(screen.getByLabelText("Ancho (m)"), "4");
+
+    const texto = (screen.getByLabelText("Dimensión piscina") as HTMLTextAreaElement).value;
+    expect(texto).toContain("[profundidad mínima]");
+    expect(texto).toContain("[profundidad máxima]");
+    expect(texto).toContain("[largo cama de agua]");
+    expect(texto).toContain("[ancho escalera]");
   });
 });
 

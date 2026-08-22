@@ -127,7 +127,7 @@ export function DocumentoPiscina({
                 const precio = precioDeOpcional({ incluida: op.incluida, precioUnitario: op.precioUnitario });
                 const fotos = fotosSeedDeOpcional(op.clave);
                 return (
-                  <div key={i} className="rounded-md border border-[#E1E7EC] bg-[#FAFBFC] p-3">
+                  <div key={i} className="break-inside-avoid rounded-md border border-[#E1E7EC] bg-[#FAFBFC] p-3 print:break-inside-avoid">
                     <div className="flex justify-between font-semibold">
                       <span>{op.descripcion}</span>
                       <span className={precio === null ? "text-gray-400" : "text-[#1B3A5C]"}>
@@ -163,7 +163,7 @@ export function DocumentoPiscina({
           </section>
         )}
 
-        <footer className="space-y-1 border-t border-[#E1E7EC] pt-4 text-xs text-[#1B3A5C]">
+        <footer className="break-inside-avoid space-y-1 border-t border-[#E1E7EC] pt-4 text-xs text-[#1B3A5C] print:break-inside-avoid">
           <p className="font-bold tracking-wide">{f.empresa}</p>
           {f.direccion && (
             <p>

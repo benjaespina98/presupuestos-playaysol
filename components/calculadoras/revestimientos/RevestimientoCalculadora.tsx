@@ -434,7 +434,7 @@ export function RevestimientoCalculadora({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 gap-6 pb-20 sm:pb-0 lg:grid-cols-[minmax(0,1fr)_420px]">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 gap-6 pb-20 sm:pb-0 lg:grid-cols-[minmax(0,1fr)_420px] print:block print:pb-0">
       <div data-print-hide="" className="space-y-6">
         <CamposObligatoriosHint />
         {presupuestoInicial && !presupuestoInicial.preciosCongelados && (
