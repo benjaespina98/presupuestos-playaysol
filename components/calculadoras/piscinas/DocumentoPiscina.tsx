@@ -153,7 +153,7 @@ export function DocumentoPiscina({
             <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">Fotos ilustrativas</h2>
             <div className="grid grid-cols-2 gap-3">
               {fotos.map((foto) => (
-                <figure key={foto.id}>
+                <figure key={foto.id} className="break-inside-avoid print:break-inside-avoid">
                   {/* eslint-disable-next-line @next/next/no-img-element -- foto subida por el usuario */}
                   <img src={foto.url} alt="" className="w-full rounded-md object-cover" />
                   {foto.caption && <figcaption className="mt-1 text-xs text-gray-500">{foto.caption}</figcaption>}
@@ -190,7 +190,7 @@ export function DocumentoPiscina({
         {/* Modelos de referencia: van al final, después del pie de la empresa
             — mismo lugar que en un presupuesto real ya entregado (no es un
             error de orden, es la posición que el negocio ya usaba). */}
-        <section>
+        <section className="break-inside-avoid print:break-inside-avoid">
           <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">Modelos de referencia</h2>
           <FotosSeedGrid fotos={FOTOS_GENERALES_PISCINAS} columnas={3} />
         </section>

@@ -92,7 +92,7 @@ export function DocumentoCerco({
           <Meta label="Metros lineales a cercar:" value={`${ml.toLocaleString("es-AR")} ml`} />
         </dl>
 
-        <section>
+        <section className="break-inside-avoid print:break-inside-avoid">
           <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">Fotos de referencia</h2>
           <FotosSeedGrid fotos={FOTOS_REFERENCIA_CERCOS} columnas={2} />
         </section>
@@ -168,7 +168,7 @@ export function DocumentoCerco({
             </h2>
             <div className="grid grid-cols-2 gap-3">
               {fotos.map((foto) => (
-                <figure key={foto.id}>
+                <figure key={foto.id} className="break-inside-avoid print:break-inside-avoid">
                   {/* eslint-disable-next-line @next/next/no-img-element -- foto subida por el usuario, no un asset estático */}
                   <img src={foto.url} alt="" className="w-full rounded-md object-cover" />
                   {foto.caption && <figcaption className="mt-1 text-xs text-gray-500">{foto.caption}</figcaption>}
