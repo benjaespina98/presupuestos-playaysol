@@ -305,7 +305,7 @@ export function LosetasCalculadora({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 gap-6 pb-20 sm:pb-0 lg:grid-cols-[minmax(0,1fr)_460px]">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 gap-6 pb-20 sm:pb-0 lg:grid-cols-[minmax(0,1fr)_460px] print:block print:pb-0">
       <div className="space-y-6">
         {presupuestoInicial && !presupuestoInicial.preciosCongelados && (
           <p role="status" className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-800">

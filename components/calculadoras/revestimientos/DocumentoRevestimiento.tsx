@@ -157,7 +157,7 @@ export function DocumentoRevestimiento({
             </h2>
             <div className="space-y-2 text-sm">
               {materialesIncluidos.map((m, i) => (
-                <div key={i} className="border-b border-dotted border-gray-300 py-1">
+                <div key={i} className="break-inside-avoid border-b border-dotted border-gray-300 py-1 print:break-inside-avoid">
                   <div className="flex justify-between">
                     <span>{m.descripcion}</span>
                     <span>{m.total === null ? "No incluye" : formatARS(m.total)}</span>
@@ -217,7 +217,7 @@ export function DocumentoRevestimiento({
             <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">Fotos ilustrativas</h2>
             <div className="grid grid-cols-2 gap-3">
               {fotos.map((foto) => (
-                <figure key={foto.id}>
+                <figure key={foto.id} className="break-inside-avoid print:break-inside-avoid">
                   {/* eslint-disable-next-line @next/next/no-img-element -- foto subida por el usuario */}
                   <img src={foto.url} alt="" className="w-full rounded-md object-cover" />
                   {foto.caption && <figcaption className="mt-1 text-xs text-gray-500">{foto.caption}</figcaption>}
@@ -227,7 +227,7 @@ export function DocumentoRevestimiento({
           </section>
         )}
 
-        <footer className="space-y-1 border-t border-[#E1E7EC] pt-4 text-xs text-[#1B3A5C]">
+        <footer className="break-inside-avoid space-y-1 border-t border-[#E1E7EC] pt-4 text-xs text-[#1B3A5C] print:break-inside-avoid">
           <p className="font-bold tracking-wide">{f.empresa}</p>
           {f.direccion && (
             <p>

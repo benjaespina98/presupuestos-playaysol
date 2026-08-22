@@ -92,7 +92,7 @@ export function DocumentoCerco({
           <Meta label="Metros lineales a cercar:" value={`${ml.toLocaleString("es-AR")} ml`} />
         </dl>
 
-        <section>
+        <section className="break-inside-avoid print:break-inside-avoid">
           <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">Fotos de referencia</h2>
           <FotosSeedGrid fotos={FOTOS_REFERENCIA_CERCOS} columnas={2} />
         </section>
@@ -142,7 +142,7 @@ export function DocumentoCerco({
             </h2>
             <div className="space-y-2 text-sm">
               {opcionalesIncluidos.map((op, i) => (
-                <div key={i} className="rounded-md border border-[#E1E7EC] bg-[#FAFBFC] p-3">
+                <div key={i} className="break-inside-avoid rounded-md border border-[#E1E7EC] bg-[#FAFBFC] p-3 print:break-inside-avoid">
                   <div className="flex justify-between font-semibold">
                     <span>{op.descripcion}</span>
                     <span className={op.precioUnitario === null ? "text-gray-400" : "text-[#1B3A5C]"}>
@@ -168,7 +168,7 @@ export function DocumentoCerco({
             </h2>
             <div className="grid grid-cols-2 gap-3">
               {fotos.map((foto) => (
-                <figure key={foto.id}>
+                <figure key={foto.id} className="break-inside-avoid print:break-inside-avoid">
                   {/* eslint-disable-next-line @next/next/no-img-element -- foto subida por el usuario, no un asset estático */}
                   <img src={foto.url} alt="" className="w-full rounded-md object-cover" />
                   {foto.caption && <figcaption className="mt-1 text-xs text-gray-500">{foto.caption}</figcaption>}
@@ -178,7 +178,7 @@ export function DocumentoCerco({
           </section>
         )}
 
-        <footer className="space-y-1 border-t border-[#E1E7EC] pt-4 text-xs text-[#1B3A5C]">
+        <footer className="break-inside-avoid space-y-1 border-t border-[#E1E7EC] pt-4 text-xs text-[#1B3A5C] print:break-inside-avoid">
           <p className="font-bold tracking-wide">{f.empresa}</p>
           {f.direccion && (
             <p>

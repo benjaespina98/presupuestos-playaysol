@@ -38,6 +38,7 @@ export function DuplicarUltimoBanner({ tipo, tipoLabel }: { tipo: TipoCalculador
   return (
     <div
       role="status"
+      data-print-hide=""
       className="mb-6 flex flex-col items-start justify-between gap-3 rounded-lg border border-[#1B3A5C]/20 bg-[#EEF2F6] px-4 py-3 text-sm sm:flex-row sm:items-center"
     >
       <p className="text-gray-700">
