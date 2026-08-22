@@ -2,6 +2,8 @@ import type { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { TextosCompartidos } from "@/lib/documentos/textosCompartidos";
 import { calcularRevestimiento } from "@/lib/domain/precios/revestimientos";
 import { formatARS, formatNumero } from "@/lib/format/ars";
+import { fotosSeedDeOpcional } from "@/lib/documentos/fotosSeed";
+import { FotosSeedGrid } from "@/components/calculadoras/FotosSeedGrid";
 
 /**
  * El documento en pantalla de Revestimientos. Mismo contenido/orden que
@@ -165,6 +167,7 @@ export function DocumentoRevestimiento({
                       {formatARS(m.precioUnitario)} por m² × {formatNumero(r.m2Total)} m²
                     </p>
                   )}
+                  <FotosSeedGrid fotos={fotosSeedDeOpcional(m.clave)} />
                 </div>
               ))}
             </div>

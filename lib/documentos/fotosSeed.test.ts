@@ -1,12 +1,23 @@
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { FOTOS_GENERALES, FOTOS_POR_CLAVE, fotosSeedDeOpcional } from "./fotosSeed";
+import {
+  FOTOS_GENERALES_PISCINAS,
+  FOTOS_POR_CLAVE,
+  FOTOS_REFERENCIA_CERCOS,
+  FOTOS_REFERENCIA_COBERTORES,
+  fotosSeedDeOpcional,
+} from "./fotosSeed";
 
-const PUBLIC = path.join(__dirname, "..", "..", "..", "public");
+const PUBLIC = path.join(__dirname, "..", "..", "public");
 
 function todasLasFotos(): { url: string; width: number; height: number }[] {
-  return [...Object.values(FOTOS_POR_CLAVE).flat(), ...FOTOS_GENERALES];
+  return [
+    ...Object.values(FOTOS_POR_CLAVE).flat(),
+    ...FOTOS_GENERALES_PISCINAS,
+    ...FOTOS_REFERENCIA_CERCOS,
+    ...FOTOS_REFERENCIA_COBERTORES,
+  ];
 }
 
 describe("fotosSeed", () => {
@@ -35,7 +46,18 @@ describe("fotosSeed", () => {
     expect(fotosSeedDeOpcional("travertino_pulido_interior").length).toBeGreaterThan(0);
   });
 
-  it("FOTOS_GENERALES tiene exactamente 3 fotos (2 modelos + 1 de obra)", () => {
-    expect(FOTOS_GENERALES).toHaveLength(3);
+  it("FOTOS_GENERALES_PISCINAS tiene exactamente 3 fotos (2 modelos + 1 de obra)", () => {
+    expect(FOTOS_GENERALES_PISCINAS).toHaveLength(3);
+  });
+
+  it("FOTOS_REFERENCIA_CERCOS y FOTOS_REFERENCIA_COBERTORES tienen 2 fotos cada una", () => {
+    expect(FOTOS_REFERENCIA_CERCOS).toHaveLength(2);
+    expect(FOTOS_REFERENCIA_COBERTORES).toHaveLength(2);
+  });
+
+  it("las fotos de Cercos y Cobertores no se pisan entre sí", () => {
+    const urlsCercos = new Set(FOTOS_REFERENCIA_CERCOS.map((f) => f.url));
+    const urlsCobertores = new Set(FOTOS_REFERENCIA_COBERTORES.map((f) => f.url));
+    for (const url of urlsCercos) expect(urlsCobertores.has(url)).toBe(false);
   });
 });

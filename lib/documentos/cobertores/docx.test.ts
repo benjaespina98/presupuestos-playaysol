@@ -41,4 +41,12 @@ describe("generarDocxCobertores", () => {
     const bytes = new Uint8Array(await blob.arrayBuffer());
     expect([bytes[0], bytes[1]]).toEqual([0x50, 0x4b]);
   });
+
+  it("pide las 2 fotos de referencia del cobertor, siempre", async () => {
+    await generarDocxCobertores(snapshotBase(), [], TEXTOS_POR_DEFECTO_COBERTORES);
+    const urlsPedidas = vi.mocked(fetch).mock.calls.map((c) => String(c[0]));
+    expect(urlsPedidas).toEqual(
+      expect.arrayContaining(["/seeds/general-1-adad76e0.jpg", "/seeds/general-2-a55d37fe.jpg"])
+    );
+  });
 });

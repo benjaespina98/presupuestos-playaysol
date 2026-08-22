@@ -1,6 +1,8 @@
 import type { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { TextosCompartidos } from "@/lib/documentos/textosCompartidos";
 import { formatARS, formatNumero } from "@/lib/format/ars";
+import { FOTOS_REFERENCIA_COBERTORES } from "@/lib/documentos/fotosSeed";
+import { FotosSeedGrid } from "@/components/calculadoras/FotosSeedGrid";
 
 /**
  * El documento en pantalla de Cobertores. Mismo contenido/orden que
@@ -89,6 +91,11 @@ export function DocumentoCobertor({
             <span className="font-bold">Medidas:</span> {medidasTexto.join(" + ")} = {formatNumero(m2)} m² a cubrir
           </div>
         </dl>
+
+        <section>
+          <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">Fotos de referencia</h2>
+          <FotosSeedGrid fotos={FOTOS_REFERENCIA_COBERTORES} columnas={2} />
+        </section>
 
         {lineasDimension.length > 0 && (
           <section>

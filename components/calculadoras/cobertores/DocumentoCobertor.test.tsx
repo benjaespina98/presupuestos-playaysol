@@ -78,3 +78,12 @@ describe("DocumentoCobertor · contenido", () => {
     expect(screen.getByText("Presupuesto de cobertor para piscina")).toBeInTheDocument();
   });
 });
+
+describe("DocumentoCobertor · fotos de referencia", () => {
+  it("siempre muestra las 2 fotos de referencia del cobertor", () => {
+    const { container } = render(<DocumentoCobertor snapshot={snapshotBase()} textos={TEXTOS_POR_DEFECTO_COBERTORES} fotos={[]} />);
+    expect(screen.getByText("Fotos de referencia")).toBeInTheDocument();
+    const imgs = [...container.querySelectorAll("img")].filter((img) => img.getAttribute("src")?.includes("/seeds/general-"));
+    expect(imgs).toHaveLength(2);
+  });
+});

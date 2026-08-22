@@ -94,6 +94,14 @@ describe("generarDocxCercos", () => {
     expect(blob.size).toBeGreaterThan(1000);
   });
 
+  it("pide las 2 fotos de referencia del cerco perimetral, siempre", async () => {
+    await generarDocxCercos(snapshotBase(), [], TEXTOS_POR_DEFECTO_CERCOS);
+    const urlsPedidas = vi.mocked(fetch).mock.calls.map((c) => String(c[0]));
+    expect(urlsPedidas).toEqual(
+      expect.arrayContaining(["/seeds/cerco_perimetral-1-6dde6bea.jpg", "/seeds/cerco_perimetral-2-23004a23.jpg"])
+    );
+  });
+
   it("respeta un texto legal / footer distinto del default (catálogo compartido)", async () => {
     const blob = await generarDocxCercos(snapshotBase(), [], {
       legal: "Texto legal reemplazado por el equipo.",

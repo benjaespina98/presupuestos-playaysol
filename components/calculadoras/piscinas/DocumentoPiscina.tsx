@@ -2,7 +2,8 @@ import type { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { TextosCompartidos } from "@/lib/documentos/textosCompartidos";
 import { precioDeOpcional } from "@/lib/domain/precios/piscinas";
 import { formatARS } from "@/lib/format/ars";
-import { FOTOS_GENERALES, fotosSeedDeOpcional, type FotoSeed } from "@/lib/documentos/piscinas/fotosSeed";
+import { FOTOS_GENERALES_PISCINAS, fotosSeedDeOpcional } from "@/lib/documentos/fotosSeed";
+import { FotosSeedGrid } from "@/components/calculadoras/FotosSeedGrid";
 
 /**
  * El documento en pantalla de Piscinas. Mismo contenido/orden que
@@ -191,20 +192,9 @@ export function DocumentoPiscina({
             error de orden, es la posición que el negocio ya usaba). */}
         <section>
           <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">Modelos de referencia</h2>
-          <FotosSeedGrid fotos={FOTOS_GENERALES} columnas={3} />
+          <FotosSeedGrid fotos={FOTOS_GENERALES_PISCINAS} columnas={3} />
         </section>
       </div>
-    </div>
-  );
-}
-
-function FotosSeedGrid({ fotos, columnas = 3 }: { fotos: FotoSeed[]; columnas?: number }) {
-  return (
-    <div className={`mt-2 grid gap-2 ${columnas === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
-      {fotos.map((foto) => (
-        // eslint-disable-next-line @next/next/no-img-element -- foto de referencia estática (public/seeds), no puede depender de next/image
-        <img key={foto.url} src={foto.url} alt="" className="aspect-square w-full rounded object-cover" />
-      ))}
     </div>
   );
 }

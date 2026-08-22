@@ -4,6 +4,7 @@ import { calcularRevestimiento } from "@/lib/domain/precios/revestimientos";
 import { formatARS, formatNumero } from "@/lib/format/ars";
 import { redimensionarImagen, MAX_DIM_DOCX, CALIDAD_DOCX } from "../imagenes";
 import type { TextosCompartidos } from "../textosCompartidos";
+import { fotosSeedDeOpcional, type FotoSeed } from "../fotosSeed";
 
 /**
  * Generador del .docx de Revestimientos. Port 1:1 de
@@ -126,6 +127,35 @@ export async function generarDocxRevestimientos(
   const imgBytesById: Record<string, { bytes: Uint8Array; width: number; height: number }> = {};
   for (const f of fotosGenerales) {
     imgBytesById[f.id] = await blobABytesConstrained(f.blob);
+  }
+
+  // Fotos de referencia por material (mismo criterio y mismo mapeo que
+  // Piscinas — ver lib/documentos/fotosSeed.ts: la clave del material es la
+  // misma en las dos calculadoras).
+  const seedUrls = new Set<string>();
+  for (const m of materialesIncluidos) for (const f of fotosSeedDeOpcional(m.clave)) seedUrls.add(f.url);
+  const seedBytesByUrl: Record<string, Uint8Array> = {};
+  for (const url of seedUrls) seedBytesByUrl[url] = await urlABytes(url);
+
+  function docxSeedPhotos(fotos: FotoSeed[], width = 220) {
+    return fotos
+      .filter((f) => seedBytesByUrl[f.url])
+      .map(
+        (f) =>
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 60, after: 100 },
+            keepLines: true,
+            children: [
+              new ImageRun({
+                type: "jpg",
+                data: seedBytesByUrl[f.url],
+                transformation: { width, height: Math.round(width * (f.height / f.width)) },
+                altText: { title: "Foto de referencia", description: "Foto de referencia", name: "Foto de referencia" },
+              }),
+            ],
+          })
+      );
   }
 
   function docxTitle(text: string) {
@@ -443,6 +473,7 @@ export async function generarDocxRevestimientos(
           })
         );
       }
+      children.push(...docxSeedPhotos(fotosSeedDeOpcional(m.clave)));
     });
   }
 

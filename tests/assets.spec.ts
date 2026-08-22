@@ -43,24 +43,23 @@ test.describe("librerías pesadas: ninguna calculadora las carga desde un CDN", 
 });
 
 test.describe("fotos de referencia (public/seeds)", () => {
-  // Piscinas restauró las fotos de referencia por opcional que tenía el
-  // legacy (revestimientos, climatización, cerco perimetral + "Modelos de
-  // referencia") — ver lib/documentos/piscinas/fotosSeed.ts. Las otras 4
-  // calculadoras no la tienen ni la tuvieron nunca en React: sólo suben
-  // fotos que carga la persona usuaria (input type=file). Este test no
-  // revisa PiscinaCalculadora.tsx (el formulario no referencia /seeds/ —
-  // las fotos viven en el documento, no en un picker) sino que las otras 4
-  // sigan sin ninguna referencia.
-  test("cercos/cobertores/revestimientos/losetas no referencian /seeds/", () => {
-    for (const { tipo, archivo } of CALCULADORAS) {
-      if (tipo === "piscinas") continue;
-      const src = fs.readFileSync(archivo, "utf8");
-      expect(src, `${tipo} referencia /seeds/ inesperadamente`).not.toContain("/seeds/");
-    }
+  // Piscinas, Revestimientos, Cercos y Cobertores restauraron las fotos de
+  // referencia por opcional/material que tenía el legacy (climatización,
+  // revestimientos, cerco perimetral, cobertor + "Modelos de referencia" de
+  // Piscinas) — ver lib/documentos/fotosSeed.ts, compartido entre las 4.
+  // Losetas es la única de las 5 que no la tuvo nunca en React: sólo el
+  // vendedor cambia colores/medidas, no hay fotos de producto involucradas.
+  // Este test no revisa los *Calculadora.tsx (el formulario no referencia
+  // /seeds/ en ninguna — las fotos viven en el documento generado, no en un
+  // picker) sino que Losetas siga sin ninguna referencia.
+  test("losetas no referencia /seeds/", () => {
+    const losetas = CALCULADORAS.find((c) => c.tipo === "losetas")!;
+    const src = fs.readFileSync(losetas.archivo, "utf8");
+    expect(src, "losetas referencia /seeds/ inesperadamente").not.toContain("/seeds/");
   });
 
-  test("cada foto que Piscinas referencia en fotosSeed.ts existe en public/seeds", () => {
-    const src = fs.readFileSync(path.join(RAIZ, "lib", "documentos", "piscinas", "fotosSeed.ts"), "utf8");
+  test("cada foto que fotosSeed.ts referencia existe en public/seeds", () => {
+    const src = fs.readFileSync(path.join(RAIZ, "lib", "documentos", "fotosSeed.ts"), "utf8");
     const rutas = [...src.matchAll(/"(\/seeds\/[^"]+)"/g)].map((m) => m[1]);
     expect(rutas.length, "fotosSeed.ts no referencia ninguna foto").toBeGreaterThan(0);
     for (const ruta of rutas) {
