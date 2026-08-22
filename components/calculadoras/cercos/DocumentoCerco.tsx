@@ -1,6 +1,8 @@
 import type { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { TextosCompartidos } from "@/lib/documentos/textosCompartidos";
 import { formatARS } from "@/lib/format/ars";
+import { FOTOS_REFERENCIA_CERCOS } from "@/lib/documentos/fotosSeed";
+import { FotosSeedGrid } from "@/components/calculadoras/FotosSeedGrid";
 
 /**
  * El documento en pantalla — lo que se ve en el panel de vista previa y lo
@@ -89,6 +91,11 @@ export function DocumentoCerco({
           <Meta label="Email:" value={snapshot.cliente.email} />
           <Meta label="Metros lineales a cercar:" value={`${ml.toLocaleString("es-AR")} ml`} />
         </dl>
+
+        <section>
+          <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">Fotos de referencia</h2>
+          <FotosSeedGrid fotos={FOTOS_REFERENCIA_CERCOS} columnas={2} />
+        </section>
 
         {lineasDimension.length > 0 && (
           <section>

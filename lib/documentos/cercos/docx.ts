@@ -3,6 +3,7 @@ import type { LineaPresupuesto } from "@/lib/domain/precios/tipos";
 import { formatARS } from "@/lib/format/ars";
 import { redimensionarImagen, MAX_DIM_DOCX, CALIDAD_DOCX } from "../imagenes";
 import type { TextosCompartidos } from "../textosCompartidos";
+import { FOTOS_REFERENCIA_CERCOS } from "../fotosSeed";
 
 /**
  * Generador del .docx de Cercos. Port 1:1 de `buildDocxSections`/`downloadWord`
@@ -112,6 +113,31 @@ export async function generarDocxCercos(
   const imgBytesById: Record<string, { bytes: Uint8Array; width: number; height: number }> = {};
   for (const f of fotosGenerales) {
     imgBytesById[f.id] = await blobABytesConstrained(f.blob);
+  }
+
+  // Fotos de referencia fijas (Cercos no modela "cerco perimetral" como
+  // opcional de catálogo — es el producto principal — así que no cuelgan de
+  // ninguna clave, van siempre). Ver lib/documentos/fotosSeed.ts.
+  const seedBytesByUrl: Record<string, Uint8Array> = {};
+  for (const f of FOTOS_REFERENCIA_CERCOS) seedBytesByUrl[f.url] = await urlABytes(f.url);
+
+  function docxFotosReferencia(width = 260) {
+    return FOTOS_REFERENCIA_CERCOS.map(
+      (f) =>
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 60, after: 100 },
+          keepLines: true,
+          children: [
+            new ImageRun({
+              type: "jpg",
+              data: seedBytesByUrl[f.url],
+              transformation: { width, height: Math.round(width * (f.height / f.width)) },
+              altText: { title: "Foto de referencia", description: "Foto de referencia", name: "Foto de referencia" },
+            }),
+          ],
+        })
+    );
   }
 
   function docxTitle(text: string) {
@@ -438,6 +464,10 @@ export async function generarDocxCercos(
     ])
   );
   children.push(new Paragraph({ spacing: { after: 220 }, children: [] }));
+
+  children.push(docxSectionTitle("Fotos de referencia"));
+  children.push(...docxFotosReferencia());
+  children.push(new Paragraph({ spacing: { after: 120 }, children: [] }));
 
   if (snapshot.detalle && snapshot.detalle.trim()) {
     children.push(docxSectionTitle("Detalle del recorrido"));

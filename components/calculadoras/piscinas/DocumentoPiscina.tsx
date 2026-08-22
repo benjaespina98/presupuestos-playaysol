@@ -2,6 +2,8 @@ import type { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { TextosCompartidos } from "@/lib/documentos/textosCompartidos";
 import { precioDeOpcional } from "@/lib/domain/precios/piscinas";
 import { formatARS } from "@/lib/format/ars";
+import { FOTOS_GENERALES_PISCINAS, fotosSeedDeOpcional } from "@/lib/documentos/fotosSeed";
+import { FotosSeedGrid } from "@/components/calculadoras/FotosSeedGrid";
 
 /**
  * El documento en pantalla de Piscinas. Mismo contenido/orden que
@@ -123,6 +125,7 @@ export function DocumentoPiscina({
             <div className="space-y-2 text-sm">
               {opcionales.map((op, i) => {
                 const precio = precioDeOpcional({ incluida: op.incluida, precioUnitario: op.precioUnitario });
+                const fotos = fotosSeedDeOpcional(op.clave);
                 return (
                   <div key={i} className="rounded-md border border-[#E1E7EC] bg-[#FAFBFC] p-3">
                     <div className="flex justify-between font-semibold">
@@ -131,6 +134,7 @@ export function DocumentoPiscina({
                         {precio === null ? "No incluye" : formatARS(precio)}
                       </span>
                     </div>
+                    {fotos.length > 0 && <FotosSeedGrid fotos={fotos} />}
                   </div>
                 );
               })}
@@ -182,6 +186,14 @@ export function DocumentoPiscina({
           {f.facebook && <p>Facebook: {f.facebook}</p>}
           {f.instagram && <p>Instagram: {f.instagram}</p>}
         </footer>
+
+        {/* Modelos de referencia: van al final, después del pie de la empresa
+            — mismo lugar que en un presupuesto real ya entregado (no es un
+            error de orden, es la posición que el negocio ya usaba). */}
+        <section>
+          <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">Modelos de referencia</h2>
+          <FotosSeedGrid fotos={FOTOS_GENERALES_PISCINAS} columnas={3} />
+        </section>
       </div>
     </div>
   );

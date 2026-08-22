@@ -118,3 +118,52 @@ describe("DocumentoRevestimiento · la regla alternativa", () => {
     expect(screen.getByText(/\$ 112\.000 por m² × 68 m²/)).toBeInTheDocument();
   });
 });
+
+describe("DocumentoRevestimiento · fotos de referencia por material", () => {
+  it("un material tildado con clave conocida (cerámico Bali) muestra sus fotos — mismas que en Piscinas", () => {
+    const snapshot = snapshotBase({
+      lineas: [
+        crearLinea({
+          clave: "revestimiento_ceramico_bali",
+          descripcion: "Cerámico Bali Brasil (por m² instalado)",
+          unidad: "m²",
+          cantidad: 1,
+          precioUnitario: 112000,
+          naturaleza: "alternativa",
+          incluida: true,
+          origen: "catalogo",
+        }),
+      ],
+      totales: [7616000],
+    });
+    const { container } = render(
+      <DocumentoRevestimiento snapshot={snapshot} textos={TEXTOS_POR_DEFECTO_REVESTIMIENTOS} fotos={[]} />
+    );
+    const imgs = [...container.querySelectorAll("img")].filter((img) =>
+      img.getAttribute("src")?.includes("revestimiento_ceramico_bali")
+    );
+    expect(imgs).toHaveLength(4);
+  });
+
+  it("un material sin fotos asociadas no agrega ninguna imagen", () => {
+    const snapshot = snapshotBase({
+      lineas: [
+        crearLinea({
+          clave: "venecitas_premium_espana",
+          descripcion: "Venecitas Premium España (por m² instalado)",
+          unidad: "m²",
+          cantidad: 1,
+          precioUnitario: 140000,
+          naturaleza: "alternativa",
+          incluida: true,
+          origen: "catalogo",
+        }),
+      ],
+      totales: [9520000],
+    });
+    const { container } = render(
+      <DocumentoRevestimiento snapshot={snapshot} textos={TEXTOS_POR_DEFECTO_REVESTIMIENTOS} fotos={[]} />
+    );
+    expect(container.querySelectorAll("img")).toHaveLength(1); // sólo el logo del header
+  });
+});

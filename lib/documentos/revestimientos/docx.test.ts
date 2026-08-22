@@ -83,4 +83,48 @@ describe("generarDocxRevestimientos", () => {
     const blob = await generarDocxRevestimientos(snapshot, [], TEXTOS_POR_DEFECTO_REVESTIMIENTOS);
     expect(blob.size).toBeGreaterThan(1000);
   });
+
+  it("un material con clave conocida (cerámico Bali) pide sus fotos de referencia", async () => {
+    const snapshot = snapshotBase({
+      lineas: [
+        crearLinea({
+          clave: "revestimiento_ceramico_bali",
+          descripcion: "Cerámico Bali Brasil (por m² instalado)",
+          unidad: "m²",
+          cantidad: 1,
+          precioUnitario: 112000,
+          total: 7616000,
+          naturaleza: "alternativa",
+          incluida: true,
+          origen: "catalogo",
+        }),
+      ],
+    });
+    await generarDocxRevestimientos(snapshot, [], TEXTOS_POR_DEFECTO_REVESTIMIENTOS);
+    const urlsPedidas = vi.mocked(fetch).mock.calls.map((c) => String(c[0]));
+    expect(urlsPedidas).toEqual(
+      expect.arrayContaining(["/seeds/revestimiento_ceramico_bali-1-c19833a5.jpg"])
+    );
+  });
+
+  it("un material sin fotos asociadas (venecitas) no pide ninguna foto de referencia", async () => {
+    const snapshot = snapshotBase({
+      lineas: [
+        crearLinea({
+          clave: "venecitas_premium_espana",
+          descripcion: "Venecitas Premium España (por m² instalado)",
+          unidad: "m²",
+          cantidad: 1,
+          precioUnitario: 140000,
+          total: 9520000,
+          naturaleza: "alternativa",
+          incluida: true,
+          origen: "catalogo",
+        }),
+      ],
+    });
+    await generarDocxRevestimientos(snapshot, [], TEXTOS_POR_DEFECTO_REVESTIMIENTOS);
+    const urlsPedidas = vi.mocked(fetch).mock.calls.map((c) => String(c[0]));
+    expect(urlsPedidas.some((u) => u.includes("/seeds/"))).toBe(false);
+  });
 });

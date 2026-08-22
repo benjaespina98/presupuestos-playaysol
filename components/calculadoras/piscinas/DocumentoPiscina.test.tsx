@@ -99,3 +99,75 @@ describe("DocumentoPiscina · reglas propias", () => {
     expect(screen.getByText("Presupuesto de construcción piscina")).toBeInTheDocument();
   });
 });
+
+describe("DocumentoPiscina · fotos de referencia por opcional", () => {
+  it("un opcional con fotos asociadas (cerco perimetral) las muestra, tildado o no", () => {
+    const snapshot = snapshotBase({
+      lineas: [
+        crearLinea({
+          clave: "cerco_perimetral",
+          descripcion: "Cerco perimetral",
+          unidad: "ml",
+          cantidad: 1,
+          precioUnitario: 79500,
+          naturaleza: "informativa",
+          incluida: false,
+          origen: "catalogo",
+        }),
+      ],
+    });
+    const { container } = render(<DocumentoPiscina snapshot={snapshot} textos={TEXTOS_POR_DEFECTO_PISCINAS} fotos={[]} />);
+    const imgs = [...container.querySelectorAll("img")].filter((img) => img.getAttribute("src")?.includes("cerco_perimetral"));
+    expect(imgs).toHaveLength(2);
+  });
+
+  it("un opcional sin fotos asociadas (baño químico) no agrega ninguna imagen", () => {
+    const snapshot = snapshotBase({
+      lineas: [
+        crearLinea({
+          clave: "bano_quimico",
+          descripcion: "Baño químico",
+          unidad: null,
+          cantidad: 1,
+          precioUnitario: null,
+          naturaleza: "informativa",
+          incluida: false,
+          origen: "catalogo",
+        }),
+      ],
+    });
+    const { container } = render(<DocumentoPiscina snapshot={snapshot} textos={TEXTOS_POR_DEFECTO_PISCINAS} fotos={[]} />);
+    // El logo del header + las 3 "Modelos de referencia", siempre presentes.
+    expect(container.querySelectorAll("img")).toHaveLength(4);
+  });
+
+  it("'Modelos de referencia' (3 fotos) aparece siempre, sin depender de ningún opcional", () => {
+    const { container } = render(<DocumentoPiscina snapshot={snapshotBase()} textos={TEXTOS_POR_DEFECTO_PISCINAS} fotos={[]} />);
+    expect(screen.getByText("Modelos de referencia")).toBeInTheDocument();
+    const imgs = [...container.querySelectorAll("img")].filter((img) => img.getAttribute("src")?.includes("/seeds/general-"));
+    expect(imgs).toHaveLength(3);
+  });
+
+  it("travertino: las fotos aparecen una sola vez, no repetidas en los dos opcionales", () => {
+    const opcionTravertino = (clave: string, descripcion: string) =>
+      crearLinea({
+        clave,
+        descripcion,
+        unidad: null,
+        cantidad: 1,
+        precioUnitario: null,
+        naturaleza: "informativa" as const,
+        incluida: false,
+        origen: "catalogo" as const,
+      });
+    const snapshot = snapshotBase({
+      lineas: [
+        opcionTravertino("travertino_rustico_exterior", "Travertino rústico exterior"),
+        opcionTravertino("travertino_pulido_interior", "Travertino pulido interior"),
+      ],
+    });
+    const { container } = render(<DocumentoPiscina snapshot={snapshot} textos={TEXTOS_POR_DEFECTO_PISCINAS} fotos={[]} />);
+    const imgs = [...container.querySelectorAll("img")].filter((img) => img.getAttribute("src")?.includes("travertino"));
+    expect(imgs).toHaveLength(3); // el set completo una sola vez, no 3+3
+  });
+});

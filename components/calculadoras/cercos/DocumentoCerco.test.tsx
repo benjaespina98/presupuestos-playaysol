@@ -234,3 +234,12 @@ describe("DocumentoCerco · fotos", () => {
     expect(screen.getByText("Frente de la propiedad")).toBeInTheDocument();
   });
 });
+
+describe("DocumentoCerco · fotos de referencia", () => {
+  it("siempre muestra las 2 fotos de referencia del cerco perimetral", () => {
+    const { container } = render(<DocumentoCerco snapshot={snapshotBase()} textos={TEXTOS_POR_DEFECTO_CERCOS} fotos={[]} />);
+    expect(screen.getByText("Fotos de referencia")).toBeInTheDocument();
+    const imgs = [...container.querySelectorAll("img")].filter((img) => img.getAttribute("src")?.includes("cerco_perimetral"));
+    expect(imgs).toHaveLength(2);
+  });
+});

@@ -4,6 +4,7 @@ import { precioDeOpcional } from "@/lib/domain/precios/piscinas";
 import { formatARS } from "@/lib/format/ars";
 import { redimensionarImagen, MAX_DIM_DOCX, CALIDAD_DOCX } from "../imagenes";
 import type { TextosCompartidos } from "../textosCompartidos";
+import { FOTOS_GENERALES_PISCINAS, fotosSeedDeOpcional, type FotoSeed } from "../fotosSeed";
 
 /**
  * Generador del .docx de Piscinas. Port 1:1 de
@@ -96,6 +97,38 @@ export async function generarDocxPiscinas(
   const imgBytesById: Record<string, { bytes: Uint8Array; width: number; height: number }> = {};
   for (const f of fotosGenerales) {
     imgBytesById[f.id] = await blobABytesConstrained(f.blob);
+  }
+
+  // Fotos de referencia por opcional (revestimientos, climatización, cerco
+  // perimetral) + las "generales" del final — contenido de catálogo, no del
+  // presupuesto: se piden una sola vez por URL (travertino se comparte entre
+  // dos opcionales, ver fotosSeed.ts) y se insertan bytes a bytes, iguales a
+  // como ya se pide el logo del encabezado un poco más arriba.
+  const seedUrls = new Set<string>();
+  for (const op of opcionales) for (const f of fotosSeedDeOpcional(op.clave)) seedUrls.add(f.url);
+  for (const f of FOTOS_GENERALES_PISCINAS) seedUrls.add(f.url);
+  const seedBytesByUrl: Record<string, Uint8Array> = {};
+  for (const url of seedUrls) seedBytesByUrl[url] = await urlABytes(url);
+
+  function docxSeedPhotos(fotos: FotoSeed[], width = 220) {
+    return fotos
+      .filter((f) => seedBytesByUrl[f.url])
+      .map(
+        (f) =>
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 60, after: 100 },
+            keepLines: true,
+            children: [
+              new ImageRun({
+                type: "jpg",
+                data: seedBytesByUrl[f.url],
+                transformation: { width, height: Math.round(width * (f.height / f.width)) },
+                altText: { title: "Foto de referencia", description: "Foto de referencia", name: "Foto de referencia" },
+              }),
+            ],
+          })
+      );
   }
 
   function docxTitle(text: string) {
@@ -437,6 +470,7 @@ export async function generarDocxPiscinas(
       const precio = precioDeOpcional({ incluida: op.incluida, precioUnitario: op.precioUnitario });
       const priceTxt = precio === null ? "No incluye" : formatARS(precio);
       children.push(docxOptCard(op.descripcion, priceTxt));
+      children.push(...docxSeedPhotos(fotosSeedDeOpcional(op.clave)));
       children.push(new Paragraph({ spacing: { after: 80 }, children: [] }));
     });
   }
@@ -445,6 +479,12 @@ export async function generarDocxPiscinas(
   children.push(...docxBodyText(textos.legal, 19));
   children.push(...docxPhotoGallery(fotosGenerales));
   children.push(...docxFooter());
+
+  // "Modelos de referencia": van al final, después del pie de la empresa —
+  // mismo lugar que en un presupuesto real ya entregado (no es un error de
+  // orden, es la posición que el negocio ya usaba).
+  children.push(docxSectionTitle("Modelos de referencia"));
+  children.push(...docxSeedPhotos(FOTOS_GENERALES_PISCINAS, 260));
 
   const doc = new Document({
     styles: { default: { document: { run: { font: "Arial" } } } },
