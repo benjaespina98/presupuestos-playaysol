@@ -46,7 +46,7 @@ function RevestimientosContenido() {
           const leido = leerPresupuesto("revestimientos", fila.datos);
           setPresupuestoInicial(
             duplicarParam
-              ? { presupuesto: paraDuplicar(leido.presupuesto), preciosCongelados: false, clavesIncluidas: [] }
+              ? { presupuesto: paraDuplicar(leido.presupuesto), preciosCongelados: false, clavesIncluidas: leido.clavesIncluidas }
               : leido
           );
         }

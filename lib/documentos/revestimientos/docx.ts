@@ -407,7 +407,7 @@ export async function generarDocxRevestimientos(
                     new ImageRun({
                       type: "png",
                       data: headerBytes,
-                      transformation: { width: 130, height: 130 },
+                      transformation: { width: 210, height: 210 },
                       altText: { title: "Logo", description: "Playa y Sol", name: "Logo" },
                     }),
                   ],

@@ -307,35 +307,38 @@ describe("leerPresupuesto · formato nuevo (v1)", () => {
 });
 
 describe("duplicar toma los precios de hoy", () => {
-  it("descarta el snapshot, conserva cliente y medidas", () => {
+  it("descarta preciosBase/totales, conserva cliente, medidas y lineas", () => {
     const original = leerPresupuesto("cercos", V0_CERCOS).presupuesto;
+    const linea = crearLinea({
+      clave: "x",
+      descripcion: "algo",
+      unidad: null,
+      cantidad: 1,
+      precioUnitario: 100,
+      naturaleza: "cotiza",
+      incluida: true,
+      origen: "catalogo",
+    });
     const conPrecios = PresupuestoV1.parse({
       ...original,
       preciosBase: { precioSin: 63500 },
       totales: [1524000],
-      lineas: [
-        crearLinea({
-          clave: "x",
-          descripcion: "algo",
-          unidad: null,
-          cantidad: 1,
-          precioUnitario: 100,
-          naturaleza: "cotiza",
-          incluida: true,
-          origen: "catalogo",
-        }),
-      ],
+      lineas: [linea],
     });
 
     const copia = paraDuplicar(conPrecios);
 
-    expect(copia.lineas).toEqual([]);
     expect(copia.preciosBase).toEqual({});
     expect(copia.totales).toEqual([]);
-    // Lo que sí se conserva:
+    // Lo que sí se conserva: cliente, medidas, detalle, y las líneas — para
+    // que el vendedor arranque con los mismos adicionales/opcionales
+    // tildados en vez de una hoja en blanco (ver comentario en
+    // `paraDuplicar`). Los PRECIOS de esas líneas se recalculan solos
+    // porque el llamador siempre trata un duplicado como "no congelado".
     expect(copia.cliente.nombre).toBe("Pérez, María José");
     expect(copia.medidas).toEqual({ metrosLineales: 24 });
     expect(copia.detalle).toBe("Perímetro completo de la piscina.");
+    expect(copia.lineas).toEqual([linea]);
   });
 });
 

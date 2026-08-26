@@ -49,6 +49,7 @@ export function TextField<TFieldValues extends FieldValues>({
   placeholder?: string;
   disabled?: boolean;
   autoFocus?: boolean;
+  autoComplete?: string;
   className?: string;
 }) {
   const error = errors[name]?.message as string | undefined;

@@ -65,9 +65,14 @@ export function DocumentoPiscina({
 
   return (
     <div id="documento-piscina" className="mx-auto max-w-2xl bg-white text-[#1C2B33] print:max-w-none">
-      <div className="flex h-24 items-center justify-center print:h-20" style={{ background: variante.color }}>
+      {/* El asset YA es el lockup completo (aro+ola + "PLAYA & SOL" + "PISCINAS"),
+          no sólo un ícono — por eso va grande: a 64px el wordmark queda
+          ilegible. Banda alta y logo grande, igual criterio que el presupuesto
+          real (ver PDF de referencia: el header ocupa una banda visible, no un
+          ícono chico). */}
+      <div className="flex h-40 items-center justify-center print:h-32" style={{ background: variante.color }}>
         {/* eslint-disable-next-line @next/next/no-img-element -- documento imprimible, no la app */}
-        <img src={variante.img} alt="Playa &amp; Sol" className="h-16 w-16 object-contain" />
+        <img src={variante.img} alt="Playa &amp; Sol" className="h-32 w-32 object-contain print:h-28 print:w-28" />
       </div>
 
       <div className="space-y-6 p-6 print:p-0 print:pt-4">
@@ -155,7 +160,7 @@ export function DocumentoPiscina({
               {fotos.map((foto) => (
                 <figure key={foto.id} className="break-inside-avoid print:break-inside-avoid">
                   {/* eslint-disable-next-line @next/next/no-img-element -- foto subida por el usuario */}
-                  <img src={foto.url} alt="" className="w-full rounded-md object-cover" />
+                  <img src={foto.url} alt="" loading="lazy" decoding="async" className="w-full rounded-md object-cover" />
                   {foto.caption && <figcaption className="mt-1 text-xs text-gray-500">{foto.caption}</figcaption>}
                 </figure>
               ))}

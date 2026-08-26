@@ -155,7 +155,7 @@ function HistorialTabla() {
         <select
           value={tipoFiltro ?? ""}
           onChange={(e) => cambiarTipo(e.target.value)}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#1B3A5C] focus:outline-none sm:w-auto"
+          className="min-h-11 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#1B3A5C] focus:outline-none sm:w-auto"
         >
           <option value="">Todos los tipos</option>
           {TIPOS_VALIDOS.map((t) => (
@@ -168,7 +168,7 @@ function HistorialTabla() {
         <select
           value={usuarioParam ?? ""}
           onChange={(e) => cambiarUsuario(e.target.value)}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#1B3A5C] focus:outline-none sm:w-auto"
+          className="min-h-11 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#1B3A5C] focus:outline-none sm:w-auto"
         >
           <option value="">Todos los usuarios</option>
           {usuarios.map(([id, nombre]) => (
