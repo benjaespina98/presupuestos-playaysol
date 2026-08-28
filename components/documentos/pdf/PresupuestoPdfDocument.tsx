@@ -16,7 +16,10 @@ import { justificarFilas } from "@/lib/domain/documentos/imageLayout";
  * corta un título de su precio ni una foto a la mitad.
  */
 
-const NAVY = "#1B3A5C";
+// Azul Institucional del manual de marca (RGB 36,75,90 / Pantone 7477 C) —
+// único navy en todo el documento (antes había dos valores parecidos pero
+// distintos para texto y para el fondo del encabezado).
+const NAVY = "#244B5A";
 const TEAL = "#00829C";
 const TEXTO = "#1C2B33";
 const NAVY_SUAVE = "#EEF2F6";
@@ -30,11 +33,18 @@ const MARGEN_HORIZONTAL = 70.9;
 const ANCHO_PAGINA = 595.28; // A4 en pt
 const ANCHO_CONTENIDO = ANCHO_PAGINA - MARGEN_HORIZONTAL * 2;
 
+// header-navy.png/header-teal.png son un banner ancho (2745×778, ya recortado
+// para ocupar todo el ancho de una hoja) — no el isotipo cuadrado suelto. El
+// encabezado simplemente estira ese banner al 100% del ancho de página y deja
+// que la altura salga de mantener su proporción real, a sangre (por eso va
+// fuera del padding del "cuerpo", ver el render() más abajo).
+const HEADER_ASPECT = 2745 / 778;
+
 const styles = StyleSheet.create({
   page: { fontFamily: "Helvetica", fontSize: 10, color: TEXTO },
   cuerpo: { paddingTop: 24, paddingBottom: MARGEN_VERTICAL, paddingHorizontal: MARGEN_HORIZONTAL },
-  encabezado: { width: "100%", height: 170, alignItems: "center", justifyContent: "center" },
-  logo: { width: 150, height: 150, objectFit: "contain" },
+  encabezado: { width: "100%", height: ANCHO_PAGINA / HEADER_ASPECT },
+  logo: { width: "100%", height: "100%", objectFit: "cover" },
   titulo: {
     textAlign: "center",
     fontSize: 15,
@@ -96,6 +106,11 @@ const styles = StyleSheet.create({
   validez: { fontSize: 9.5, fontFamily: "Helvetica-Bold", marginBottom: 10 },
   legal: { fontSize: 8, color: "#444", lineHeight: 1.4, marginBottom: 4 },
   filaFotos: { flexDirection: "row", marginBottom: 6 },
+  // Marco fino alrededor de cada foto (recorte de catálogo o subida por el
+  // vendedor): sin esto, contra el fondo blanco de la página, una foto sin
+  // borde se ve "cruda" pegada al texto — el mismo criterio de borde suave
+  // que ya usan las tarjetas de opcionales.
+  fotoMarco: { borderRadius: 4, borderWidth: 1, borderColor: BORDE_SUAVE, overflow: "hidden" },
   fotoCaption: { fontSize: 7.5, color: "#666", marginTop: 2, textAlign: "center" },
   pie: { borderTopWidth: 1, borderTopColor: BORDE_SUAVE, paddingTop: 10, marginTop: 6 },
   pieEmpresa: { fontSize: 9.5, fontFamily: "Helvetica-Bold", color: NAVY, letterSpacing: 0.4, marginBottom: 3 },
@@ -116,8 +131,10 @@ function FilaDeFotosVista({ fila }: { fila: FilaDeFotos }) {
     <View style={styles.filaFotos}>
       {fila.map((f, j) => (
         <View key={j} style={{ width: f.anchoRender, marginRight: j < fila.length - 1 ? 6 : 0 }}>
-          {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image no acepta alt */}
-          <Image src={f.foto.url} style={{ width: f.anchoRender, height: f.altoRender, borderRadius: 3 }} />
+          <View style={styles.fotoMarco}>
+            {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image no acepta alt */}
+            <Image src={f.foto.url} style={{ width: f.anchoRender, height: f.altoRender }} />
+          </View>
           {f.foto.caption && <Text style={styles.fotoCaption}>{f.foto.caption}</Text>}
         </View>
       ))}

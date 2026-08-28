@@ -80,7 +80,7 @@ export type BloqueDocumento =
  *  ya vivían repetidos en los 4 `Documento<Tipo>.tsx` y los 4 `docx.ts`. */
 export const HEADER_VARIANTS: Record<string, { color: string; img: string }> = {
   teal: { color: "#00829C", img: "/header-teal.png" },
-  navy: { color: "#214D5A", img: "/header-navy.png" },
+  navy: { color: "#244B5A", img: "/header-navy.png" }, // Azul Institucional oficial (RGB 36,75,90)
 };
 
 export function varianteEncabezado(variacion: string): { color: string; img: string } {

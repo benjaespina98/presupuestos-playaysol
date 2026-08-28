@@ -24,7 +24,7 @@ import { FotosSeedGrid } from "@/components/calculadoras/FotosSeedGrid";
 
 const HEADER_VARIANTS: Record<string, { color: string; img: string }> = {
   teal: { color: "#00829C", img: "/header-teal.png" },
-  navy: { color: "#214D5A", img: "/header-navy.png" },
+  navy: { color: "#244B5A", img: "/header-navy.png" }, // Azul Institucional oficial (RGB 36,75,90)
 };
 
 function splitDimensionLines(text: string): string[] {
@@ -64,19 +64,20 @@ export function DocumentoPiscina({
     "&query_place_id=ChIJd1F4COdCzJURn7QoGKCkKXA";
 
   return (
-    <div id="documento-piscina" className="mx-auto max-w-2xl bg-white text-[#1C2B33] print:max-w-none">
-      {/* El asset YA es el lockup completo (aro+ola + "PLAYA & SOL" + "PISCINAS"),
-          no sólo un ícono — por eso va grande: a 64px el wordmark queda
-          ilegible. Banda alta y logo grande, igual criterio que el presupuesto
-          real (ver PDF de referencia: el header ocupa una banda visible, no un
-          ícono chico). */}
-      <div className="flex h-40 items-center justify-center print:h-32" style={{ background: variante.color }}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- documento imprimible, no la app */}
-        <img src={variante.img} alt="Playa &amp; Sol" className="h-32 w-32 object-contain print:h-28 print:w-28" />
-      </div>
+    <div
+      id="documento-piscina"
+      className="mx-auto max-w-2xl bg-white text-[#1C2B33] print:max-w-none"
+      style={{ fontFamily: 'Calibri, "Carlito", Arial, sans-serif' }} // manual de marca: Calibri para todo el texto de comunicación/lectura
+    >
+      {/* El asset YA es el banner de marca completo, a todo lo ancho (2745×778,
+          aro+ola + "PLAYA & SOL" + "PISCINAS") — no un ícono cuadrado a
+          recentrar: por eso simplemente ocupa el 100% del ancho, con su
+          propia altura real, igual que el membrete del presupuesto modelo. */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- documento imprimible, no la app */}
+      <img src={variante.img} alt="Playa & Sol" className="block h-auto w-full" />
 
       <div className="space-y-6 p-6 print:p-0 print:pt-4">
-        <h1 className="border-b-2 border-[#00829C] pb-1 text-center text-lg font-bold uppercase tracking-wide text-[#1B3A5C]">
+        <h1 className="border-b-2 border-[#00829C] pb-1 text-center text-lg font-bold uppercase tracking-wide text-[#244B5A]">
           Presupuesto de construcción piscina
         </h1>
 
@@ -90,11 +91,11 @@ export function DocumentoPiscina({
         </dl>
 
         <section>
-          <h2 className="mb-2 border-b border-[#00829C] pb-1 text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">
+          <h2 className="mb-2 border-b border-[#00829C] pb-1 text-xs font-bold uppercase tracking-wide text-[#244B5A]">
             Dimensión piscina
           </h2>
           {lineasDimension.length > 0 && (
-            <ul className="list-disc space-y-1 border-l-4 border-[#1B3A5C] pl-6 text-sm">
+            <ul className="list-disc space-y-1 border-l-4 border-[#244B5A] pl-6 text-sm">
               {lineasDimension.map((linea, i) => (
                 <li key={i}>{linea}</li>
               ))}
@@ -102,8 +103,8 @@ export function DocumentoPiscina({
           )}
         </section>
 
-        <div data-testid="totales" className="space-y-1 border-t-2 border-[#1B3A5C] pt-3">
-          <div className="flex justify-between text-base font-bold text-[#1B3A5C]">
+        <div data-testid="totales" className="space-y-1 border-t-2 border-[#244B5A] pt-3">
+          <div className="flex justify-between text-base font-bold text-[#244B5A]">
             <span>SUBTOTAL</span>
             <span>{formatARS(subtotal)}</span>
           </div>
@@ -115,7 +116,7 @@ export function DocumentoPiscina({
               </div>
             ))}
           {hayAdicionales && total !== undefined && (
-            <div className="flex justify-between text-base font-bold text-[#1B3A5C]">
+            <div className="flex justify-between text-base font-bold text-[#244B5A]">
               <span>TOTAL</span>
               <span>{formatARS(total)}</span>
             </div>
@@ -124,7 +125,7 @@ export function DocumentoPiscina({
 
         {opcionales.length > 0 && (
           <section>
-            <h2 className="mb-2 border-b border-[#00829C] pb-1 text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">
+            <h2 className="mb-2 border-b border-[#00829C] pb-1 text-xs font-bold uppercase tracking-wide text-[#244B5A]">
               Opcionales
             </h2>
             <div className="space-y-2 text-sm">
@@ -135,7 +136,7 @@ export function DocumentoPiscina({
                   <div key={i} className="break-inside-avoid rounded-md border border-[#E1E7EC] bg-[#FAFBFC] p-3 print:break-inside-avoid">
                     <div className="flex justify-between font-semibold">
                       <span>{op.descripcion}</span>
-                      <span className={precio === null ? "text-gray-400" : "text-[#1B3A5C]"}>
+                      <span className={precio === null ? "text-gray-400" : "text-[#244B5A]"}>
                         {precio === null ? "No incluye" : formatARS(precio)}
                       </span>
                     </div>
@@ -155,7 +156,7 @@ export function DocumentoPiscina({
 
         {fotos.length > 0 && (
           <section>
-            <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">Fotos ilustrativas</h2>
+            <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#244B5A]">Fotos ilustrativas</h2>
             <div className="grid grid-cols-2 gap-3">
               {fotos.map((foto) => (
                 <figure key={foto.id} className="break-inside-avoid print:break-inside-avoid">
@@ -168,7 +169,7 @@ export function DocumentoPiscina({
           </section>
         )}
 
-        <footer className="break-inside-avoid space-y-1 border-t border-[#E1E7EC] pt-4 text-xs text-[#1B3A5C] print:break-inside-avoid">
+        <footer className="break-inside-avoid space-y-1 border-t border-[#E1E7EC] pt-4 text-xs text-[#244B5A] print:break-inside-avoid">
           <p className="font-bold tracking-wide">{f.empresa}</p>
           {f.direccion && (
             <p>
@@ -196,7 +197,7 @@ export function DocumentoPiscina({
             — mismo lugar que en un presupuesto real ya entregado (no es un
             error de orden, es la posición que el negocio ya usaba). */}
         <section className="break-inside-avoid print:break-inside-avoid">
-          <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">Modelos de referencia</h2>
+          <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#244B5A]">Modelos de referencia</h2>
           <FotosSeedGrid fotos={FOTOS_GENERALES_PISCINAS} columnas={3} />
         </section>
       </div>

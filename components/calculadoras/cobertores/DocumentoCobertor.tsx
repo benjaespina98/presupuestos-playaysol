@@ -15,7 +15,7 @@ import { FotosSeedGrid } from "@/components/calculadoras/FotosSeedGrid";
 
 const HEADER_VARIANTS: Record<string, { color: string; img: string }> = {
   teal: { color: "#00829C", img: "/header-teal.png" },
-  navy: { color: "#214D5A", img: "/header-navy.png" },
+  navy: { color: "#244B5A", img: "/header-navy.png" }, // Azul Institucional oficial (RGB 36,75,90)
 };
 
 function splitDimensionLines(text: string): string[] {
@@ -69,17 +69,18 @@ export function DocumentoCobertor({
     "&query_place_id=ChIJd1F4COdCzJURn7QoGKCkKXA";
 
   return (
-    <div id="documento-cobertor" className="mx-auto max-w-2xl bg-white text-[#1C2B33] print:max-w-none">
-      {/* El asset YA es el lockup completo (aro+ola + "PLAYA & SOL" +
-          "PISCINAS"), no sólo un ícono — va grande para que el wordmark se
-          lea (ver DocumentoPiscina.tsx). */}
-      <div className="flex h-40 items-center justify-center print:h-32" style={{ background: variante.color }}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- documento imprimible, no la app */}
-        <img src={variante.img} alt="Playa &amp; Sol" className="h-32 w-32 object-contain print:h-28 print:w-28" />
-      </div>
+    <div
+      id="documento-cobertor"
+      className="mx-auto max-w-2xl bg-white text-[#1C2B33] print:max-w-none"
+      style={{ fontFamily: 'Calibri, "Carlito", Arial, sans-serif' }} // manual de marca: Calibri para todo el texto de comunicación/lectura
+    >
+      {/* El asset YA es el banner de marca completo, a todo lo ancho (ver
+          DocumentoPiscina.tsx) — no un ícono cuadrado a recentrar. */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- documento imprimible, no la app */}
+      <img src={variante.img} alt="Playa & Sol" className="block h-auto w-full" />
 
       <div className="space-y-6 p-6 print:p-0 print:pt-4">
-        <h1 className="border-b-2 border-[#00829C] pb-1 text-center text-lg font-bold uppercase tracking-wide text-[#1B3A5C]">
+        <h1 className="border-b-2 border-[#00829C] pb-1 text-center text-lg font-bold uppercase tracking-wide text-[#244B5A]">
           Presupuesto de cobertor para piscina
         </h1>
 
@@ -96,16 +97,16 @@ export function DocumentoCobertor({
         </dl>
 
         <section className="break-inside-avoid print:break-inside-avoid">
-          <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">Fotos de referencia</h2>
+          <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#244B5A]">Fotos de referencia</h2>
           <FotosSeedGrid fotos={FOTOS_REFERENCIA_COBERTORES} columnas={2} />
         </section>
 
         {lineasDimension.length > 0 && (
           <section>
-            <h2 className="mb-2 border-b border-[#00829C] pb-1 text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">
+            <h2 className="mb-2 border-b border-[#00829C] pb-1 text-xs font-bold uppercase tracking-wide text-[#244B5A]">
               Notas de la pileta
             </h2>
-            <ul className="list-disc space-y-1 border-l-4 border-[#1B3A5C] pl-6 text-sm">
+            <ul className="list-disc space-y-1 border-l-4 border-[#244B5A] pl-6 text-sm">
               {lineasDimension.map((linea, i) => (
                 <li key={i}>{linea}</li>
               ))}
@@ -115,7 +116,7 @@ export function DocumentoCobertor({
 
         {adicionales.length > 0 && (
           <section>
-            <h2 className="mb-2 border-b border-[#00829C] pb-1 text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">
+            <h2 className="mb-2 border-b border-[#00829C] pb-1 text-xs font-bold uppercase tracking-wide text-[#244B5A]">
               Adicionales
             </h2>
             <div className="space-y-1 text-sm">
@@ -129,9 +130,9 @@ export function DocumentoCobertor({
           </section>
         )}
 
-        <div data-testid="totales" className="space-y-1 border-t-2 border-[#1B3A5C] pt-3">
+        <div data-testid="totales" className="space-y-1 border-t-2 border-[#244B5A] pt-3">
           {snapshot.totales.map((t, i) => (
-            <div key={etiquetas[i]} className="flex justify-between text-base font-bold text-[#1B3A5C]">
+            <div key={etiquetas[i]} className="flex justify-between text-base font-bold text-[#244B5A]">
               <span>{etiquetas[i]}</span>
               <span>{formatARS(t)}</span>
             </div>
@@ -140,7 +141,7 @@ export function DocumentoCobertor({
 
         {opcionalesIncluidos.length > 0 && (
           <section>
-            <h2 className="mb-2 border-b border-[#00829C] pb-1 text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">
+            <h2 className="mb-2 border-b border-[#00829C] pb-1 text-xs font-bold uppercase tracking-wide text-[#244B5A]">
               Opcionales
             </h2>
             <div className="space-y-2 text-sm">
@@ -148,7 +149,7 @@ export function DocumentoCobertor({
                 <div key={i} className="break-inside-avoid rounded-md border border-[#E1E7EC] bg-[#FAFBFC] p-3 print:break-inside-avoid">
                   <div className="flex justify-between font-semibold">
                     <span>{op.descripcion}</span>
-                    <span className={op.precioUnitario === null ? "text-gray-400" : "text-[#1B3A5C]"}>
+                    <span className={op.precioUnitario === null ? "text-gray-400" : "text-[#244B5A]"}>
                       {op.precioUnitario === null ? "No incluye" : formatARS(op.precioUnitario)}
                     </span>
                   </div>
@@ -166,7 +167,7 @@ export function DocumentoCobertor({
 
         {fotos.length > 0 && (
           <section>
-            <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">Fotos ilustrativas</h2>
+            <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#244B5A]">Fotos ilustrativas</h2>
             <div className="grid grid-cols-2 gap-3">
               {fotos.map((foto) => (
                 <figure key={foto.id} className="break-inside-avoid print:break-inside-avoid">
@@ -179,7 +180,7 @@ export function DocumentoCobertor({
           </section>
         )}
 
-        <footer className="break-inside-avoid space-y-1 border-t border-[#E1E7EC] pt-4 text-xs text-[#1B3A5C] print:break-inside-avoid">
+        <footer className="break-inside-avoid space-y-1 border-t border-[#E1E7EC] pt-4 text-xs text-[#244B5A] print:break-inside-avoid">
           <p className="font-bold tracking-wide">{f.empresa}</p>
           {f.direccion && (
             <p>
