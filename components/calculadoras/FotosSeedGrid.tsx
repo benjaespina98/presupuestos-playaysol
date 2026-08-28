@@ -9,7 +9,7 @@ export function FotosSeedGrid({ fotos, columnas = 3 }: { fotos: FotoSeed[]; colu
     <div className={`mt-2 grid gap-2 break-inside-avoid print:break-inside-avoid ${columnas === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
       {fotos.map((foto) => (
         // eslint-disable-next-line @next/next/no-img-element -- foto de referencia estática (public/seeds), no puede depender de next/image
-        <img key={foto.url} src={foto.url} alt="" className="aspect-square w-full rounded object-cover" />
+        <img key={foto.url} src={foto.url} alt="" loading="lazy" decoding="async" className="aspect-square w-full rounded object-cover" />
       ))}
     </div>
   );

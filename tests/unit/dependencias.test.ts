@@ -24,6 +24,7 @@ const pkg = JSON.parse(leer("package.json"));
 const VERSIONES_ESPERADAS = {
   docx: "8.6.0",
   html2canvas: "1.4.1",
+  "@react-pdf/renderer": "4.8.1",
 } as const;
 
 // Las 5 calculadoras ya se migraron a React (Fase 5) y sus public/*-calc.js
@@ -76,6 +77,27 @@ describe("las librerías pesadas se piden por import() dinámico, no por CDN", (
       expect(src, `lib/documentos/${tipo}/docx.ts importa "docx" de forma estática`).not.toMatch(
         /^import\s+.*from\s+["']docx["']/m
       );
+    });
+  }
+
+  // @react-pdf/renderer sigue el mismo criterio que docx: vive detrás de un
+  // import() perezoso (lib/documentos/pdfGenerator.tsx), no estático en
+  // ninguna de las 4 calculadoras — sólo el módulo hoja
+  // (PresupuestoPdfDocument.tsx, nunca importado directo por una
+  // calculadora) lo importa de forma estática, y ESE módulo se resuelve
+  // recién cuando pdfGenerator.tsx hace su propio import() al generar el PDF.
+  it("pdfGenerator.tsx pide @react-pdf/renderer y el documento PDF dinámicamente", () => {
+    const src = leer("lib/documentos/pdfGenerator.tsx");
+    expect(src).toMatch(/import\(\s*["']@react-pdf\/renderer["']\s*\)/);
+    expect(src).toMatch(/import\(\s*["']@\/components\/documentos\/pdf\/PresupuestoPdfDocument["']\s*\)/);
+  });
+
+  for (const tipo of ["cercos", "cobertores", "piscinas", "revestimientos"]) {
+    it(`${tipo}: la calculadora no importa @react-pdf/renderer de forma estática`, () => {
+      const archivo = { cercos: "CercosCalculadora", cobertores: "CobertorCalculadora", piscinas: "PiscinaCalculadora", revestimientos: "RevestimientoCalculadora" }[tipo];
+      const src = leer(`components/calculadoras/${tipo}/${archivo}.tsx`);
+      expect(src).not.toMatch(/from\s+["']@react-pdf\/renderer["']/);
+      expect(src).not.toMatch(/from\s+["']@\/components\/documentos\/pdf\/PresupuestoPdfDocument["']/);
     });
   }
 });

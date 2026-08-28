@@ -12,16 +12,20 @@ import { guardarPresupuesto, actualizarPresupuesto, subirFotoPresupuesto } from 
 import { formatARS } from "@/lib/format/ars";
 import type { CatalogoRow } from "@/lib/catalogo";
 import { esTextoCompartido } from "@/lib/domain/catalogo/categorias";
+import { adicionalesDesdeLineas } from "@/lib/domain/presupuesto/formulario";
 import { leerTextosCompartidos } from "@/lib/documentos/textosCompartidos";
 import { TEXTOS_POR_DEFECTO_CERCOS, generarDocxCercos } from "@/lib/documentos/cercos/docx";
+import { armarBloquesCerco } from "@/lib/documentos/cercos/bloques";
+import { generarPdfPresupuesto } from "@/lib/documentos/pdfGenerator";
+import { compartirOdescargarArchivo } from "@/lib/documentos/compartir";
 import { armarNombreArchivo } from "@/lib/documentos/nombreArchivo";
-import { imprimirConNombre } from "@/lib/documentos/imprimir";
 import { redimensionarImagen, MAX_DIM_SUBIDA, CALIDAD_SUBIDA } from "@/lib/documentos/imagenes";
 import { DocumentoCerco } from "./DocumentoCerco";
 import { CercosFormSchema, formularioVacio, type CercosForm } from "./schema";
 import { AccionesDocumento } from "@/components/calculadoras/AccionesDocumento";
 import { FloatingSaveBar } from "@/components/calculadoras/FloatingSaveBar";
 import { CamposObligatoriosHint } from "@/components/calculadoras/CamposObligatoriosHint";
+import { VistaPreviaMovil } from "@/components/calculadoras/VistaPreviaMovil";
 
 const CLAVE_PRECIO_SIN = "precioSin";
 const CLAVE_PRECIO_CON = "precioCon";
@@ -79,6 +83,7 @@ function formularioDesdePresupuesto(leido: PresupuestoLeido, catalogo: CatalogoR
     return {
       ...base,
       ...comunes,
+      adicionales: adicionalesDesdeLineas(presupuesto.lineas),
       opcionales: base.opcionales.map((o) => ({
         ...o,
         incluida: clavesIncluidas.includes(o.clave),
@@ -168,6 +173,8 @@ export function CercosCalculadora({
   const [guardadoOk, setGuardadoOk] = useState(false);
   const [generandoWord, setGenerandoWord] = useState(false);
   const [errorWord, setErrorWord] = useState<string | null>(null);
+  const [generandoPdf, setGenerandoPdf] = useState(false);
+  const [errorPdf, setErrorPdf] = useState<string | null>(null);
   const [fotos, setFotos] = useState<FotoEnEdicion[]>([]);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
 
@@ -429,14 +436,28 @@ export function CercosCalculadora({
     }
   }
 
-  function onImprimir() {
-    imprimirConNombre(armarNombreArchivo("Cerco", snapshotEnVivo.cliente.nombre, snapshotEnVivo.fecha));
+  async function onGenerarPdf() {
+    setGenerandoPdf(true);
+    setErrorPdf(null);
+    try {
+      const fotosParaPdf = fotos.map((f) => ({ url: f.url, width: f.width ?? 1200, height: f.height ?? 900, caption: f.caption }));
+      const bloques = armarBloquesCerco(snapshotEnVivo, textos, fotosParaPdf);
+      const nombreArchivo = armarNombreArchivo("Cerco", snapshotEnVivo.cliente.nombre, snapshotEnVivo.fecha);
+      const blob = await generarPdfPresupuesto(bloques, nombreArchivo);
+      await compartirOdescargarArchivo(blob, nombreArchivo, "application/pdf");
+    } catch (err) {
+      setErrorPdf(err instanceof Error ? err.message : String(err));
+    } finally {
+      setGenerandoPdf(false);
+    }
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 gap-6 pb-20 sm:pb-0 lg:grid-cols-[minmax(0,1fr)_420px] print:block print:pb-0">
-      <div data-print-hide="" className="space-y-6">
-        <CamposObligatoriosHint />
+      <VistaPreviaMovil
+        formulario={
+          <>
+            <CamposObligatoriosHint />
         {presupuestoInicial && !presupuestoInicial.preciosCongelados && (
           <p role="status" className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-800">
             Este presupuesto es de antes de que se empezaran a guardar los precios. Los importes se
@@ -447,13 +468,13 @@ export function CercosCalculadora({
 
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Datos del cliente</h2>
-          <TextField register={register} errors={errors} name="cliente.nombre" label="Señor/Sra" placeholder="Apellido, Nombre" />
-          <TextField register={register} errors={errors} name="cliente.domicilio" label="Domicilio" />
+          <TextField register={register} errors={errors} name="cliente.nombre" label="Señor/Sra" placeholder="Apellido, Nombre" autoComplete="name" />
+          <TextField register={register} errors={errors} name="cliente.domicilio" label="Domicilio" autoComplete="street-address" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <TextField register={register} errors={errors} name="cliente.localidad" label="Localidad" />
-            <TextField register={register} errors={errors} name="cliente.telefono" label="Teléfono" type="tel" />
+            <TextField register={register} errors={errors} name="cliente.localidad" label="Localidad" autoComplete="address-level2" />
+            <TextField register={register} errors={errors} name="cliente.telefono" label="Teléfono" type="tel" autoComplete="tel" />
           </div>
-          <TextField register={register} errors={errors} name="cliente.email" label="Email" type="email" />
+          <TextField register={register} errors={errors} name="cliente.email" label="Email" type="email" autoComplete="email" />
           <TextField
             register={register}
             errors={errors}
@@ -598,22 +619,23 @@ export function CercosCalculadora({
           errorGuardado={errorGuardado}
           guardadoOk={guardadoOk}
           errorWord={errorWord}
+          errorPdf={errorPdf}
           guardando={guardando}
           generandoWord={generandoWord}
+          generandoPdf={generandoPdf}
           onDescargarWord={onDescargarWord}
-          onImprimir={onImprimir}
+          onGenerarPdf={onGenerarPdf}
         />
-      </div>
-
-      <div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm print:border-0 print:p-0 print:shadow-none">
+          </>
+        }
+        documento={
           <DocumentoCerco
             snapshot={snapshotEnVivo}
             textos={textos}
             fotos={fotos.map((f) => ({ id: f.id, url: f.url, caption: f.caption }))}
           />
-        </div>
-      </div>
+        }
+      />
 
       <FloatingSaveBar guardando={guardando} />
     </form>

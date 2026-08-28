@@ -12,16 +12,20 @@ import { guardarPresupuesto, actualizarPresupuesto, subirFotoPresupuesto } from 
 import { formatARS } from "@/lib/format/ars";
 import type { CatalogoRow } from "@/lib/catalogo";
 import { esTextoCompartido } from "@/lib/domain/catalogo/categorias";
+import { adicionalesDesdeLineas } from "@/lib/domain/presupuesto/formulario";
 import { leerTextosCompartidos } from "@/lib/documentos/textosCompartidos";
 import { TEXTOS_POR_DEFECTO_REVESTIMIENTOS, generarDocxRevestimientos } from "@/lib/documentos/revestimientos/docx";
+import { armarBloquesRevestimiento } from "@/lib/documentos/revestimientos/bloques";
+import { generarPdfPresupuesto } from "@/lib/documentos/pdfGenerator";
+import { compartirOdescargarArchivo } from "@/lib/documentos/compartir";
 import { armarNombreArchivo } from "@/lib/documentos/nombreArchivo";
-import { imprimirConNombre } from "@/lib/documentos/imprimir";
 import { redimensionarImagen, MAX_DIM_SUBIDA, CALIDAD_SUBIDA } from "@/lib/documentos/imagenes";
 import { DocumentoRevestimiento } from "./DocumentoRevestimiento";
 import { RevestimientoFormSchema, formularioVacio, type RevestimientoForm } from "./schema";
 import { AccionesDocumento } from "@/components/calculadoras/AccionesDocumento";
 import { FloatingSaveBar } from "@/components/calculadoras/FloatingSaveBar";
 import { CamposObligatoriosHint } from "@/components/calculadoras/CamposObligatoriosHint";
+import { VistaPreviaMovil } from "@/components/calculadoras/VistaPreviaMovil";
 
 /**
  * `porM2` no vive en `catalogo_items`: es fija por material, igual que
@@ -80,6 +84,7 @@ function formularioDesdePresupuesto(leido: PresupuestoLeido, catalogo: CatalogoR
     return {
       ...base,
       ...comunes,
+      adicionales: adicionalesDesdeLineas(presupuesto.lineas),
       materiales: base.materiales.map((m) => ({ ...m, incluida: clavesIncluidas.includes(m.clave) })),
     };
   }
@@ -184,6 +189,8 @@ export function RevestimientoCalculadora({
   const [guardadoOk, setGuardadoOk] = useState(false);
   const [generandoWord, setGenerandoWord] = useState(false);
   const [errorWord, setErrorWord] = useState<string | null>(null);
+  const [generandoPdf, setGenerandoPdf] = useState(false);
+  const [errorPdf, setErrorPdf] = useState<string | null>(null);
   const [fotos, setFotos] = useState<FotoEnEdicion[]>([]);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
 
@@ -429,14 +436,28 @@ export function RevestimientoCalculadora({
     }
   }
 
-  function onImprimir() {
-    imprimirConNombre(armarNombreArchivo("Revestimiento", snapshotEnVivo.cliente.nombre, snapshotEnVivo.fecha));
+  async function onGenerarPdf() {
+    setGenerandoPdf(true);
+    setErrorPdf(null);
+    try {
+      const fotosParaPdf = fotos.map((f) => ({ url: f.url, width: f.width ?? 1200, height: f.height ?? 900, caption: f.caption }));
+      const bloques = armarBloquesRevestimiento(snapshotEnVivo, textos, fotosParaPdf);
+      const nombreArchivo = armarNombreArchivo("Revestimiento", snapshotEnVivo.cliente.nombre, snapshotEnVivo.fecha);
+      const blob = await generarPdfPresupuesto(bloques, nombreArchivo);
+      await compartirOdescargarArchivo(blob, nombreArchivo, "application/pdf");
+    } catch (err) {
+      setErrorPdf(err instanceof Error ? err.message : String(err));
+    } finally {
+      setGenerandoPdf(false);
+    }
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 gap-6 pb-20 sm:pb-0 lg:grid-cols-[minmax(0,1fr)_420px] print:block print:pb-0">
-      <div data-print-hide="" className="space-y-6">
-        <CamposObligatoriosHint />
+      <VistaPreviaMovil
+        formulario={
+          <>
+            <CamposObligatoriosHint />
         {presupuestoInicial && !presupuestoInicial.preciosCongelados && (
           <p role="status" className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-800">
             Este presupuesto es de antes de que se empezaran a guardar los precios. Los importes se
@@ -447,13 +468,13 @@ export function RevestimientoCalculadora({
 
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Datos del cliente</h2>
-          <TextField register={register} errors={errors} name="cliente.nombre" label="Señor/Sra" placeholder="Apellido, Nombre" />
-          <TextField register={register} errors={errors} name="cliente.domicilio" label="Domicilio" />
+          <TextField register={register} errors={errors} name="cliente.nombre" label="Señor/Sra" placeholder="Apellido, Nombre" autoComplete="name" />
+          <TextField register={register} errors={errors} name="cliente.domicilio" label="Domicilio" autoComplete="street-address" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <TextField register={register} errors={errors} name="cliente.localidad" label="Localidad" />
-            <TextField register={register} errors={errors} name="cliente.telefono" label="Teléfono" type="tel" />
+            <TextField register={register} errors={errors} name="cliente.localidad" label="Localidad" autoComplete="address-level2" />
+            <TextField register={register} errors={errors} name="cliente.telefono" label="Teléfono" type="tel" autoComplete="tel" />
           </div>
-          <TextField register={register} errors={errors} name="cliente.email" label="Email" type="email" />
+          <TextField register={register} errors={errors} name="cliente.email" label="Email" type="email" autoComplete="email" />
           <TextField register={register} errors={errors} name="detalle" label="Notas de la pileta" multiline rows={3} />
           <TextField register={register} errors={errors} name="fecha" label="Fecha" />
           <TextField register={register} errors={errors} name="validezDias" label="Validez (días)" />
@@ -603,22 +624,23 @@ export function RevestimientoCalculadora({
           errorGuardado={errorGuardado}
           guardadoOk={guardadoOk}
           errorWord={errorWord}
+          errorPdf={errorPdf}
           guardando={guardando}
           generandoWord={generandoWord}
+          generandoPdf={generandoPdf}
           onDescargarWord={onDescargarWord}
-          onImprimir={onImprimir}
+          onGenerarPdf={onGenerarPdf}
         />
-      </div>
-
-      <div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm print:border-0 print:p-0 print:shadow-none">
+          </>
+        }
+        documento={
           <DocumentoRevestimiento
             snapshot={snapshotEnVivo}
             textos={textos}
             fotos={fotos.map((f) => ({ id: f.id, url: f.url, caption: f.caption }))}
           />
-        </div>
-      </div>
+        }
+      />
 
       <FloatingSaveBar guardando={guardando} />
     </form>

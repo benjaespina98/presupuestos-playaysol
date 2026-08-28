@@ -212,16 +212,24 @@ export function leerPresupuesto(
 }
 
 /**
- * Duplicar es crear uno NUEVO: se conservan cliente, medidas y detalle, y se
- * descartan los precios congelados para que tome los del catálogo vigente.
+ * Duplicar es crear uno NUEVO: se conservan cliente, medidas, detalle Y
+ * `lineas` — se descartan `preciosBase`/`totales` para que todo se cotice
+ * de nuevo con el catálogo vigente, nunca con precios de hace seis meses.
  *
- * Aplica también a los v1: duplicar un presupuesto de hace seis meses tiene que
- * cotizar a precio de hoy, no al de entonces.
+ * Por qué se conserva `lineas` (y antes no): es donde viven tanto los
+ * adicionales manuales como qué opcionales/materiales estaban tildados. El
+ * llamador (cada `formularioDesdePresupuesto`) siempre trata el resultado
+ * como "no congelado" (ver `preciosCongelados: false` en cada
+ * `app/dashboard/<tipo>/page.tsx`), así que los PRECIOS de esas líneas se
+ * recalculan solos contra el catálogo de hoy — conservar `lineas` sólo le
+ * da al vendedor el punto de partida real (qué había, no una hoja en
+ * blanco) en vez de obligarlo a retildar todo desde cero. No afecta a un
+ * v0 real: `leerPresupuesto` ya le da `lineas: []`, así que duplicar uno no
+ * inventa nada que no estuviera guardado.
  */
 export function paraDuplicar(p: PresupuestoV1): PresupuestoV1 {
   return PresupuestoV1.parse({
     ...p,
-    lineas: [],
     preciosBase: {},
     totales: [],
   });

@@ -15,14 +15,23 @@ import { fotosSeedDeOpcional, type FotoSeed } from "../fotosSeed";
 
 const HEADER_VARIANTS: Record<string, { color: string; img: string }> = {
   teal: { color: "#00829C", img: "/header-teal.png" },
-  navy: { color: "#214D5A", img: "/header-navy.png" },
+  navy: { color: "#244B5A", img: "/header-navy.png" },
 };
 
-const DOCX_NAVY = "1B3A5C";
+// Azul Institucional del manual de marca (RGB 36,75,90 / Pantone 7477 C) — el
+// mismo valor que HEADER_VARIANTS.navy, unificado con el resto de generadores.
+const DOCX_NAVY = "244B5A";
 const DOCX_TEAL = "00829C";
 const DOCX_TEXT = "1C2B33";
 const DOCX_NAVY_SOFT = "EEF2F6";
+const DOCX_BORDER_SOFT = "E1E7EC";
 const DOCX_PAGE_WIDTH_MM = 160;
+
+// header-navy.png/header-teal.png son un banner ancho (2745×778) ya recortado
+// para ocupar todo el ancho de la hoja, no un ícono cuadrado — ver el
+// comentario en el bloque que arma el header más abajo.
+const HEADER_ASPECT = 2745 / 778;
+const A4_WIDTH_MM = 210;
 
 export interface FotoParaDocx {
   id: string;
@@ -97,7 +106,9 @@ export async function generarDocxRevestimientos(
     PositionalTabAlignment,
     PositionalTabRelativeTo,
     PositionalTabLeader,
-    VerticalAlign,
+    HorizontalPositionRelativeFrom,
+    VerticalPositionRelativeFrom,
+    TextWrappingType,
     convertMillimetersToTwip,
   } = docx;
 
@@ -151,6 +162,7 @@ export async function generarDocxRevestimientos(
                 type: "jpg",
                 data: seedBytesByUrl[f.url],
                 transformation: { width, height: Math.round(width * (f.height / f.width)) },
+                outline: { type: "solidFill", solidFillType: "rgb", value: DOCX_BORDER_SOFT, width: 6350 }, // marco fino, mismo borde suave que las tarjetas
                 altText: { title: "Foto de referencia", description: "Foto de referencia", name: "Foto de referencia" },
               }),
             ],
@@ -314,6 +326,7 @@ export async function generarDocxRevestimientos(
                 type: "jpg",
                 data: info.bytes,
                 transformation: { width: w, height: h },
+                outline: { type: "solidFill", solidFillType: "rgb", value: DOCX_BORDER_SOFT, width: 6350 }, // marco fino, mismo borde suave que las tarjetas
                 altText: { title: "Foto", description: "Foto ilustrativa", name: "Foto" },
               }),
             ],
@@ -388,33 +401,25 @@ export async function generarDocxRevestimientos(
 
   const children = [];
 
+  // Banner de marca a todo el ancho de la HOJA (no de la columna de texto,
+  // 25mm más angosta): se ancla "flotante" relativo a la página en (0,0) y
+  // con wrap "arriba y abajo" para que el resto del contenido arranque debajo,
+  // igual que el membrete real (ver Presupuesto Modelo, header a sangre).
+  const headerWidthPx = Math.round((A4_WIDTH_MM / 25.4) * 96);
+  const headerHeightPx = Math.round(headerWidthPx / HEADER_ASPECT);
   children.push(
-    new Table({
-      width: { size: DOCX_CONTENT_WIDTH_TWIP, type: WidthType.DXA },
-      columnWidths: [DOCX_CONTENT_WIDTH_TWIP],
-      rows: [
-        new TableRow({
-          children: [
-            new TableCell({
-              width: { size: DOCX_CONTENT_WIDTH_TWIP, type: WidthType.DXA },
-              shading: { fill: v.color.replace("#", ""), type: ShadingType.CLEAR },
-              verticalAlign: VerticalAlign.CENTER,
-              margins: { top: 300, bottom: 300 },
-              children: [
-                new Paragraph({
-                  alignment: AlignmentType.CENTER,
-                  children: [
-                    new ImageRun({
-                      type: "png",
-                      data: headerBytes,
-                      transformation: { width: 130, height: 130 },
-                      altText: { title: "Logo", description: "Playa y Sol", name: "Logo" },
-                    }),
-                  ],
-                }),
-              ],
-            }),
-          ],
+    new Paragraph({
+      children: [
+        new ImageRun({
+          type: "png",
+          data: headerBytes,
+          transformation: { width: headerWidthPx, height: headerHeightPx },
+          floating: {
+            horizontalPosition: { relative: HorizontalPositionRelativeFrom.PAGE, offset: 0 },
+            verticalPosition: { relative: VerticalPositionRelativeFrom.PAGE, offset: 0 },
+            wrap: { type: TextWrappingType.TOP_AND_BOTTOM },
+          },
+          altText: { title: "Logo", description: "Playa y Sol", name: "Logo" },
         }),
       ],
     })
@@ -511,7 +516,7 @@ export async function generarDocxRevestimientos(
   children.push(...docxFooter());
 
   const doc = new Document({
-    styles: { default: { document: { run: { font: "Arial" } } } },
+    styles: { default: { document: { run: { font: "Calibri" } } } }, // manual de marca: Calibri para todo el texto de comunicación/lectura
     sections: [
       {
         properties: {

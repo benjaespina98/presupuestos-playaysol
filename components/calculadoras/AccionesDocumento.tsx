@@ -17,18 +17,22 @@ export function AccionesDocumento({
   errorGuardado,
   guardadoOk,
   errorWord,
+  errorPdf,
   guardando,
   generandoWord,
+  generandoPdf,
   onDescargarWord,
-  onImprimir,
+  onGenerarPdf,
 }: {
   errorGuardado: string | null;
   guardadoOk: boolean;
   errorWord: string | null;
+  errorPdf: string | null;
   guardando: boolean;
   generandoWord: boolean;
+  generandoPdf: boolean;
   onDescargarWord: () => void;
-  onImprimir: () => void;
+  onGenerarPdf: () => void;
 }) {
   return (
     <section className="space-y-3 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
@@ -45,6 +49,11 @@ export function AccionesDocumento({
       {errorWord && (
         <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
           No se pudo generar el Word: {errorWord}
+        </p>
+      )}
+      {errorPdf && (
+        <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          No se pudo generar el PDF: {errorPdf}
         </p>
       )}
       <button
@@ -67,11 +76,12 @@ export function AccionesDocumento({
         </button>
         <button
           type="button"
-          onClick={onImprimir}
-          className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#1B3A5C] px-4 text-sm font-medium text-[#1B3A5C] transition-colors hover:bg-[#1B3A5C]/5"
+          onClick={onGenerarPdf}
+          disabled={generandoPdf}
+          className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#1B3A5C] px-4 text-sm font-medium text-[#1B3A5C] transition-colors hover:bg-[#1B3A5C]/5 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <IconPrinter className="h-4 w-4" />
-          PDF / Imprimir
+          {generandoPdf ? "Generando..." : "PDF"}
         </button>
       </div>
     </section>

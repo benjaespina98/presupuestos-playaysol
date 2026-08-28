@@ -48,7 +48,7 @@ function LosetasContenido() {
         const leido = leerPresupuesto("losetas", fila.datos);
         setPresupuestoInicial(
           duplicarParam
-            ? { presupuesto: paraDuplicar(leido.presupuesto), preciosCongelados: false, clavesIncluidas: [] }
+            ? { presupuesto: paraDuplicar(leido.presupuesto), preciosCongelados: false, clavesIncluidas: leido.clavesIncluidas }
             : leido
         );
       } catch (err) {
