@@ -1,10 +1,14 @@
 import type { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { TextosCompartidos } from "@/lib/documentos/textosCompartidos";
-import type { BloqueDocumento, FotoDocumentoModelo } from "@/lib/documentos/modelo";
+import type { BloqueDocumento, FotoDocumentoModelo, ResolverFotosSeed } from "@/lib/documentos/modelo";
 import { paresCliente, splitDimensionLines, varianteEncabezado } from "@/lib/documentos/modelo";
 import { calcularRevestimiento } from "@/lib/domain/precios/revestimientos";
 import { formatARS, formatNumero } from "@/lib/format/ars";
 import { fotosSeedDeOpcional } from "@/lib/documentos/fotosSeed";
+
+/** Sin resolver (el caso normal: PDF sin edición de fotos precargadas para
+ *  esta exportación), las fotos de catálogo van tal cual. */
+const sinEdicion: ResolverFotosSeed = (_grupo, base) => base;
 
 /**
  * Bloques del documento de Revestimientos para el PDF. Port 1:1 de
@@ -39,7 +43,8 @@ type Medidas = {
 export function armarBloquesRevestimiento(
   snapshot: PresupuestoV1,
   textos: TextosCompartidos,
-  fotosUsuario: FotoDocumentoModelo[]
+  fotosUsuario: FotoDocumentoModelo[],
+  resolverFotosSeed: ResolverFotosSeed = sinEdicion
 ): BloqueDocumento[] {
   const medidas = snapshot.medidas as Medidas;
   const adicionalesM2 = medidas.adicionalesM2 ?? [];
@@ -99,7 +104,7 @@ export function armarBloquesRevestimiento(
           m.precioUnitario !== null && m.total !== null
             ? `${formatARS(m.precioUnitario)} por m² × ${formatNumero(r.m2Total)} m²`
             : undefined,
-        fotos: fotosSeedDeOpcional(m.clave),
+        fotos: resolverFotosSeed(m.clave ?? "sin-clave", fotosSeedDeOpcional(m.clave)),
       });
     }
   }

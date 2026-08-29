@@ -552,18 +552,23 @@ export function LosetasCalculadora({
         style={{ position: "fixed", top: -99999, left: -99999, width: 1100 }}
         className="bg-[#ffffff] p-12 font-sans"
       >
-        <div className="mb-7 flex items-center justify-between border-b border-[#E1E7EC] pb-4">
+        {/* #244B5A/#00829C: mismo Azul Institucional + teal que el resto de los
+            documentos (ver PresupuestoPdfDocument.tsx) — antes esta imagen
+            usaba el navy de la UI de la app (#1B3A5C), un tono distinto al
+            de marca, así que no hacía juego con el PDF/Word que sale de las
+            otras 4 calculadoras. */}
+        <div className="mb-7 flex items-center justify-between border-b-2 border-[#00829C] pb-4">
           <div>
-            <div className="text-xl font-bold text-[#1B3A5C]">Plano de Piscina</div>
+            <div className="text-xl font-bold uppercase tracking-wide text-[#244B5A]">Plano de Piscina</div>
             <div className="mt-1 text-sm text-[#6B7680]">{valoresForm.nombre || ""}</div>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element -- capturada por html2canvas, no puede depender de next/image */}
           <img ref={logoRef} src="/logo-mark.png" alt="Playa y Sol" className="h-14" />
         </div>
-        <div className="rounded-lg border border-[#E1E7EC] bg-[#FAFBFC] p-7">
+        <div className="rounded-lg border border-[#E1E7EC] bg-[#EEF2F6] p-7">
           <PlanoLosetasSvg geometria={geometriaCliente} interactive={false} ariaLabel="Plano de la piscina para el cliente" />
         </div>
-        <div className="mt-6 border-t border-[#E1E7EC] pt-4 text-xs text-[#1B3A5C]">
+        <div className="mt-6 border-t-2 border-[#00829C] pt-4 text-xs font-bold tracking-wide text-[#244B5A]">
           Playa y Sol S.A.S. — Corrientes 1210, Villa María
         </div>
       </div>

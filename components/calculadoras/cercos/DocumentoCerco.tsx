@@ -1,8 +1,11 @@
 import type { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { TextosCompartidos } from "@/lib/documentos/textosCompartidos";
+import type { ResolverFotosSeed } from "@/lib/documentos/modelo";
 import { formatARS } from "@/lib/format/ars";
-import { FOTOS_REFERENCIA_CERCOS } from "@/lib/documentos/fotosSeed";
+import { FOTOS_REFERENCIA_CERCOS, GRUPO_SEED_GENERAL } from "@/lib/documentos/fotosSeed";
 import { FotosSeedGrid } from "@/components/calculadoras/FotosSeedGrid";
+
+const sinEdicion: ResolverFotosSeed = (_grupo, base) => base;
 
 /**
  * El documento en pantalla — lo que se ve en el panel de vista previa y lo
@@ -47,10 +50,12 @@ export function DocumentoCerco({
   snapshot,
   textos,
   fotos,
+  resolverFotosSeed = sinEdicion,
 }: {
   snapshot: PresupuestoV1;
   textos: TextosCompartidos;
   fotos: FotoDocumento[];
+  resolverFotosSeed?: ResolverFotosSeed;
 }) {
   const medidas = snapshot.medidas as { metrosLineales?: number };
   const ml = Number(medidas.metrosLineales ?? 0);
@@ -95,7 +100,7 @@ export function DocumentoCerco({
 
         <section className="break-inside-avoid print:break-inside-avoid">
           <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#244B5A]">Fotos de referencia</h2>
-          <FotosSeedGrid fotos={FOTOS_REFERENCIA_CERCOS} columnas={2} />
+          <FotosSeedGrid fotos={resolverFotosSeed(GRUPO_SEED_GENERAL, FOTOS_REFERENCIA_CERCOS)} columnas={2} />
         </section>
 
         {lineasDimension.length > 0 && (

@@ -20,6 +20,9 @@ import { generarPdfPresupuesto } from "@/lib/documentos/pdfGenerator";
 import { compartirOdescargarArchivo } from "@/lib/documentos/compartir";
 import { armarNombreArchivo } from "@/lib/documentos/nombreArchivo";
 import { redimensionarImagen, MAX_DIM_SUBIDA, CALIDAD_SUBIDA } from "@/lib/documentos/imagenes";
+import { FOTOS_REFERENCIA_CERCOS, GRUPO_SEED_GENERAL } from "@/lib/documentos/fotosSeed";
+import { useEditorFotosSeed } from "@/lib/documentos/useEditorFotosSeed";
+import { EditorFotosSeed } from "@/components/calculadoras/EditorFotosSeed";
 import { DocumentoCerco } from "./DocumentoCerco";
 import { CercosFormSchema, formularioVacio, type CercosForm } from "./schema";
 import { AccionesDocumento } from "@/components/calculadoras/AccionesDocumento";
@@ -214,6 +217,10 @@ export function CercosCalculadora({
   const modoPrecio = valoresForm.modoPrecio ?? "ambos";
   const adicionalesEnVivo = valoresForm.adicionales;
   const opcionalesEnVivo = valoresForm.opcionales;
+
+  // Cercos no tiene fotos de catálogo por opcional (ver bloques.ts) — sólo el
+  // set fijo "Fotos de referencia".
+  const editorSeed = useEditorFotosSeed();
 
   // Recalcula en cada tecla con el motor puro — nunca con una cuenta propia
   // acá adentro. Si mañana cambia la fórmula, cambia en lib/domain/precios y
@@ -441,7 +448,7 @@ export function CercosCalculadora({
     setErrorPdf(null);
     try {
       const fotosParaPdf = fotos.map((f) => ({ url: f.url, width: f.width ?? 1200, height: f.height ?? 900, caption: f.caption }));
-      const bloques = armarBloquesCerco(snapshotEnVivo, textos, fotosParaPdf);
+      const bloques = armarBloquesCerco(snapshotEnVivo, textos, fotosParaPdf, editorSeed.resolver);
       const nombreArchivo = armarNombreArchivo("Cerco", snapshotEnVivo.cliente.nombre, snapshotEnVivo.fecha);
       const blob = await generarPdfPresupuesto(bloques, nombreArchivo);
       await compartirOdescargarArchivo(blob, nombreArchivo, "application/pdf");
@@ -576,6 +583,15 @@ export function CercosCalculadora({
         )}
 
         <section className="space-y-3 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-gray-900">Fotos precargadas</h2>
+          <p className="text-xs text-gray-500">
+            Las de catálogo de “Fotos de referencia”. Sacar o agregar acá vale sólo para el PDF que generes ahora — no
+            se guarda ni afecta al catálogo.
+          </p>
+          <EditorFotosSeed clave={GRUPO_SEED_GENERAL} etiqueta="Fotos de referencia" base={FOTOS_REFERENCIA_CERCOS} editor={editorSeed} />
+        </section>
+
+        <section className="space-y-3 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Fotos</h2>
           <p className="text-xs text-gray-500">Van al final del documento.</p>
           <input
@@ -633,6 +649,7 @@ export function CercosCalculadora({
             snapshot={snapshotEnVivo}
             textos={textos}
             fotos={fotos.map((f) => ({ id: f.id, url: f.url, caption: f.caption }))}
+            resolverFotosSeed={editorSeed.resolver}
           />
         }
       />

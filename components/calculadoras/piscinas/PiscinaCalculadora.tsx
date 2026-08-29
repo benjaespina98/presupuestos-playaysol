@@ -20,6 +20,9 @@ import { generarPdfPresupuesto } from "@/lib/documentos/pdfGenerator";
 import { compartirOdescargarArchivo } from "@/lib/documentos/compartir";
 import { armarNombreArchivo } from "@/lib/documentos/nombreArchivo";
 import { redimensionarImagen, MAX_DIM_SUBIDA, CALIDAD_SUBIDA } from "@/lib/documentos/imagenes";
+import { FOTOS_GENERALES_PISCINAS, GRUPO_SEED_GENERAL, fotosSeedDeOpcional } from "@/lib/documentos/fotosSeed";
+import { useEditorFotosSeed } from "@/lib/documentos/useEditorFotosSeed";
+import { EditorFotosSeed } from "@/components/calculadoras/EditorFotosSeed";
 import { DocumentoPiscina } from "./DocumentoPiscina";
 import { PiscinaFormSchema, formularioVacio, type PiscinaForm } from "./schema";
 import { AccionesDocumento } from "@/components/calculadoras/AccionesDocumento";
@@ -208,6 +211,14 @@ export function PiscinaCalculadora({
   const subtotal = valoresForm.subtotal;
   const adicionalesEnVivo = valoresForm.adicionales;
   const opcionalesEnVivo = valoresForm.opcionales;
+
+  // Sólo los opcionales tildados/no tildados que SÍ tienen foto de catálogo
+  // asociada valen la pena mostrar en "Fotos precargadas" — el resto
+  // (la mayoría) no tiene nada para editar ahí.
+  const editorSeed = useEditorFotosSeed();
+  const opcionalesConFotosSeed = (opcionalesEnVivo ?? []).filter(
+    (o): o is NonNullable<typeof o> => !!o && fotosSeedDeOpcional(o.clave ?? null).length > 0
+  );
 
   // Autocompleta "Dimensión piscina" con Largo/Ancho — sólo mientras el texto
   // sigue siendo lo que nosotros mismos completamos la última vez (o está
@@ -425,7 +436,7 @@ export function PiscinaCalculadora({
     setErrorPdf(null);
     try {
       const fotosParaPdf = fotos.map((f) => ({ url: f.url, width: f.width ?? 1200, height: f.height ?? 900, caption: f.caption }));
-      const bloques = armarBloquesPiscina(snapshotEnVivo, textos, fotosParaPdf);
+      const bloques = armarBloquesPiscina(snapshotEnVivo, textos, fotosParaPdf, editorSeed.resolver);
       const nombreArchivo = armarNombreArchivo("Piscina", snapshotEnVivo.cliente.nombre, snapshotEnVivo.fecha);
       const blob = await generarPdfPresupuesto(bloques, nombreArchivo);
       await compartirOdescargarArchivo(blob, nombreArchivo, "application/pdf");
@@ -544,6 +555,24 @@ export function PiscinaCalculadora({
         )}
 
         <section className="space-y-3 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-gray-900">Fotos precargadas</h2>
+          <p className="text-xs text-gray-500">
+            Las de catálogo que ya vienen con “Modelos de referencia” y con cada opcional. Sacar o agregar acá vale
+            sólo para el PDF que generes ahora — no se guarda ni afecta al catálogo.
+          </p>
+          <EditorFotosSeed clave={GRUPO_SEED_GENERAL} etiqueta="Modelos de referencia" base={FOTOS_GENERALES_PISCINAS} editor={editorSeed} />
+          {opcionalesConFotosSeed.map((o) => (
+            <EditorFotosSeed
+              key={o.clave}
+              clave={o.clave ?? GRUPO_SEED_GENERAL}
+              etiqueta={o.descripcion || "Opcional"}
+              base={fotosSeedDeOpcional(o.clave ?? null)}
+              editor={editorSeed}
+            />
+          ))}
+        </section>
+
+        <section className="space-y-3 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Fotos</h2>
           <p className="text-xs text-gray-500">Van al final del documento.</p>
           <input
@@ -601,6 +630,7 @@ export function PiscinaCalculadora({
             snapshot={snapshotEnVivo}
             textos={textos}
             fotos={fotos.map((f) => ({ id: f.id, url: f.url, caption: f.caption }))}
+            resolverFotosSeed={editorSeed.resolver}
           />
         }
       />

@@ -23,6 +23,11 @@ export interface FotoSeed {
   height: number;
 }
 
+/** Clave de "grupo" para las fotos de referencia fijas (las que NO cuelgan
+ *  de un opcional/material puntual: "Modelos de referencia" de Piscinas,
+ *  "Fotos de referencia" de Cercos/Cobertores) — ver `useEditorFotosSeed`. */
+export const GRUPO_SEED_GENERAL = "__general__";
+
 const TRAVERTINO: FotoSeed[] = [
   { url: "/seeds/travertino-1-ac1fe49e.jpg", width: 413, height: 392 },
   { url: "/seeds/travertino-2-89179844.jpg", width: 403, height: 392 },

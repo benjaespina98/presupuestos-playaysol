@@ -1,9 +1,12 @@
 import type { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { TextosCompartidos } from "@/lib/documentos/textosCompartidos";
+import type { ResolverFotosSeed } from "@/lib/documentos/modelo";
 import { precioDeOpcional } from "@/lib/domain/precios/piscinas";
 import { formatARS } from "@/lib/format/ars";
-import { FOTOS_GENERALES_PISCINAS, fotosSeedDeOpcional } from "@/lib/documentos/fotosSeed";
+import { FOTOS_GENERALES_PISCINAS, GRUPO_SEED_GENERAL, fotosSeedDeOpcional } from "@/lib/documentos/fotosSeed";
 import { FotosSeedGrid } from "@/components/calculadoras/FotosSeedGrid";
+
+const sinEdicion: ResolverFotosSeed = (_grupo, base) => base;
 
 /**
  * El documento en pantalla de Piscinas. Mismo contenido/orden que
@@ -45,10 +48,12 @@ export function DocumentoPiscina({
   snapshot,
   textos,
   fotos,
+  resolverFotosSeed = sinEdicion,
 }: {
   snapshot: PresupuestoV1;
   textos: TextosCompartidos;
   fotos: FotoDocumento[];
+  resolverFotosSeed?: ResolverFotosSeed;
 }) {
   const variante = HEADER_VARIANTS[snapshot.variacionEncabezado] ?? HEADER_VARIANTS.teal;
   const adicionales = snapshot.lineas.filter((l) => l.naturaleza === "cotiza");
@@ -131,7 +136,7 @@ export function DocumentoPiscina({
             <div className="space-y-2 text-sm">
               {opcionales.map((op, i) => {
                 const precio = precioDeOpcional({ incluida: op.incluida, precioUnitario: op.precioUnitario });
-                const fotos = fotosSeedDeOpcional(op.clave);
+                const fotos = resolverFotosSeed(op.clave ?? GRUPO_SEED_GENERAL, fotosSeedDeOpcional(op.clave));
                 return (
                   <div key={i} className="break-inside-avoid rounded-md border border-[#E1E7EC] bg-[#FAFBFC] p-3 print:break-inside-avoid">
                     <div className="flex justify-between font-semibold">
@@ -198,7 +203,7 @@ export function DocumentoPiscina({
             error de orden, es la posición que el negocio ya usaba). */}
         <section className="break-inside-avoid print:break-inside-avoid">
           <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#244B5A]">Modelos de referencia</h2>
-          <FotosSeedGrid fotos={FOTOS_GENERALES_PISCINAS} columnas={3} />
+          <FotosSeedGrid fotos={resolverFotosSeed(GRUPO_SEED_GENERAL, FOTOS_GENERALES_PISCINAS)} columnas={3} />
         </section>
       </div>
     </div>
