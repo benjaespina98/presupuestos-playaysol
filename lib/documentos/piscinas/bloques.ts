@@ -1,10 +1,14 @@
 import type { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { TextosCompartidos } from "@/lib/documentos/textosCompartidos";
-import type { BloqueDocumento, FotoDocumentoModelo } from "@/lib/documentos/modelo";
+import type { BloqueDocumento, FotoDocumentoModelo, ResolverFotosSeed } from "@/lib/documentos/modelo";
 import { paresCliente, splitDimensionLines, varianteEncabezado } from "@/lib/documentos/modelo";
 import { precioDeOpcional } from "@/lib/domain/precios/piscinas";
 import { formatARS } from "@/lib/format/ars";
-import { FOTOS_GENERALES_PISCINAS, fotosSeedDeOpcional } from "@/lib/documentos/fotosSeed";
+import { FOTOS_GENERALES_PISCINAS, GRUPO_SEED_GENERAL, fotosSeedDeOpcional } from "@/lib/documentos/fotosSeed";
+
+/** Sin resolver (el caso normal: PDF sin edición de fotos precargadas para
+ *  esta exportación), las fotos de catálogo van tal cual. */
+const sinEdicion: ResolverFotosSeed = (_grupo, base) => base;
 
 /**
  * Bloques del documento de Piscinas para el PDF. Port 1:1 de las reglas que
@@ -17,7 +21,8 @@ import { FOTOS_GENERALES_PISCINAS, fotosSeedDeOpcional } from "@/lib/documentos/
 export function armarBloquesPiscina(
   snapshot: PresupuestoV1,
   textos: TextosCompartidos,
-  fotosUsuario: FotoDocumentoModelo[]
+  fotosUsuario: FotoDocumentoModelo[],
+  resolverFotosSeed: ResolverFotosSeed = sinEdicion
 ): BloqueDocumento[] {
   const variante = varianteEncabezado(snapshot.variacionEncabezado);
   const adicionales = snapshot.lineas.filter((l) => l.naturaleza === "cotiza");
@@ -54,7 +59,7 @@ export function armarBloquesPiscina(
         tipo: "tarjetaOpcional",
         descripcion: op.descripcion,
         monto: precio === null ? null : formatARS(precio),
-        fotos: fotosSeedDeOpcional(op.clave),
+        fotos: resolverFotosSeed(op.clave ?? GRUPO_SEED_GENERAL, fotosSeedDeOpcional(op.clave)),
       });
     }
   }
@@ -70,7 +75,11 @@ export function armarBloquesPiscina(
 
   // "Modelos de referencia": van al final, después del pie de la empresa —
   // mismo lugar que en un presupuesto real ya entregado (ver DocumentoPiscina.tsx).
-  bloques.push({ tipo: "galeriaSeeds", titulo: "Modelos de referencia", fotos: FOTOS_GENERALES_PISCINAS });
+  bloques.push({
+    tipo: "galeriaSeeds",
+    titulo: "Modelos de referencia",
+    fotos: resolverFotosSeed(GRUPO_SEED_GENERAL, FOTOS_GENERALES_PISCINAS),
+  });
 
   return bloques;
 }

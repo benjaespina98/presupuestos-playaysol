@@ -1,7 +1,8 @@
 import type { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { TextosCompartidos } from "@/lib/documentos/textosCompartidos";
 import { formatARS, formatNumero } from "@/lib/format/ars";
-import { FOTOS_REFERENCIA_COBERTORES } from "@/lib/documentos/fotosSeed";
+import type { ResolverFotosSeed } from "@/lib/documentos/modelo";
+import { FOTOS_REFERENCIA_COBERTORES, GRUPO_SEED_GENERAL } from "@/lib/documentos/fotosSeed";
 import { FotosSeedGrid } from "@/components/calculadoras/FotosSeedGrid";
 
 /**
@@ -38,14 +39,18 @@ export interface FotoDocumento {
   caption: string;
 }
 
+const sinEdicion: ResolverFotosSeed = (_grupo, base) => base;
+
 export function DocumentoCobertor({
   snapshot,
   textos,
   fotos,
+  resolverFotosSeed = sinEdicion,
 }: {
   snapshot: PresupuestoV1;
   textos: TextosCompartidos;
   fotos: FotoDocumento[];
+  resolverFotosSeed?: ResolverFotosSeed;
 }) {
   const medidas = snapshot.medidas as { largo?: number; ancho?: number; adicionalM2?: number };
   const largo = Number(medidas.largo ?? 0);
@@ -98,7 +103,7 @@ export function DocumentoCobertor({
 
         <section className="break-inside-avoid print:break-inside-avoid">
           <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#244B5A]">Fotos de referencia</h2>
-          <FotosSeedGrid fotos={FOTOS_REFERENCIA_COBERTORES} columnas={2} />
+          <FotosSeedGrid fotos={resolverFotosSeed(GRUPO_SEED_GENERAL, FOTOS_REFERENCIA_COBERTORES)} columnas={2} />
         </section>
 
         {lineasDimension.length > 0 && (

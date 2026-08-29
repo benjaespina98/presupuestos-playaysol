@@ -20,6 +20,9 @@ import { generarPdfPresupuesto } from "@/lib/documentos/pdfGenerator";
 import { compartirOdescargarArchivo } from "@/lib/documentos/compartir";
 import { armarNombreArchivo } from "@/lib/documentos/nombreArchivo";
 import { redimensionarImagen, MAX_DIM_SUBIDA, CALIDAD_SUBIDA } from "@/lib/documentos/imagenes";
+import { fotosSeedDeOpcional } from "@/lib/documentos/fotosSeed";
+import { useEditorFotosSeed } from "@/lib/documentos/useEditorFotosSeed";
+import { EditorFotosSeed } from "@/components/calculadoras/EditorFotosSeed";
 import { DocumentoRevestimiento } from "./DocumentoRevestimiento";
 import { RevestimientoFormSchema, formularioVacio, type RevestimientoForm } from "./schema";
 import { AccionesDocumento } from "@/components/calculadoras/AccionesDocumento";
@@ -224,6 +227,13 @@ export function RevestimientoCalculadora({
   const materiales = useFieldArray({ control, name: "materiales" });
 
   const valoresForm = useWatch({ control });
+
+  // Revestimientos no tiene un set fijo de "fotos de referencia": sólo las
+  // que cuelgan de cada material tildado (ver bloques.ts).
+  const editorSeed = useEditorFotosSeed();
+  const materialesConFotosSeed = (valoresForm.materiales ?? []).filter(
+    (m): m is NonNullable<typeof m> => !!m && !!m.incluida && fotosSeedDeOpcional(m.clave ?? null).length > 0
+  );
 
   const resultado = useMemo(() => {
     const m = (v: unknown) => (typeof v === "number" ? v : 0);
@@ -441,7 +451,7 @@ export function RevestimientoCalculadora({
     setErrorPdf(null);
     try {
       const fotosParaPdf = fotos.map((f) => ({ url: f.url, width: f.width ?? 1200, height: f.height ?? 900, caption: f.caption }));
-      const bloques = armarBloquesRevestimiento(snapshotEnVivo, textos, fotosParaPdf);
+      const bloques = armarBloquesRevestimiento(snapshotEnVivo, textos, fotosParaPdf, editorSeed.resolver);
       const nombreArchivo = armarNombreArchivo("Revestimiento", snapshotEnVivo.cliente.nombre, snapshotEnVivo.fecha);
       const blob = await generarPdfPresupuesto(bloques, nombreArchivo);
       await compartirOdescargarArchivo(blob, nombreArchivo, "application/pdf");
@@ -580,6 +590,25 @@ export function RevestimientoCalculadora({
           </section>
         )}
 
+        {materialesConFotosSeed.length > 0 && (
+          <section className="space-y-3 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+            <h2 className="text-sm font-semibold text-gray-900">Fotos precargadas</h2>
+            <p className="text-xs text-gray-500">
+              Las de catálogo de cada material tildado. Sacar o agregar acá vale sólo para el PDF que generes ahora —
+              no se guarda ni afecta al catálogo.
+            </p>
+            {materialesConFotosSeed.map((m) => (
+              <EditorFotosSeed
+                key={m.clave}
+                clave={m.clave ?? "sin-clave"}
+                etiqueta={m.descripcion || "Material"}
+                base={fotosSeedDeOpcional(m.clave ?? null)}
+                editor={editorSeed}
+              />
+            ))}
+          </section>
+        )}
+
         <section className="space-y-3 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Fotos</h2>
           <p className="text-xs text-gray-500">Van al final del documento.</p>
@@ -638,6 +667,7 @@ export function RevestimientoCalculadora({
             snapshot={snapshotEnVivo}
             textos={textos}
             fotos={fotos.map((f) => ({ id: f.id, url: f.url, caption: f.caption }))}
+            resolverFotosSeed={editorSeed.resolver}
           />
         }
       />

@@ -1,9 +1,12 @@
 import type { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { TextosCompartidos } from "@/lib/documentos/textosCompartidos";
+import type { ResolverFotosSeed } from "@/lib/documentos/modelo";
 import { calcularRevestimiento } from "@/lib/domain/precios/revestimientos";
 import { formatARS, formatNumero } from "@/lib/format/ars";
 import { fotosSeedDeOpcional } from "@/lib/documentos/fotosSeed";
 import { FotosSeedGrid } from "@/components/calculadoras/FotosSeedGrid";
+
+const sinEdicion: ResolverFotosSeed = (_grupo, base) => base;
 
 /**
  * El documento en pantalla de Revestimientos. Mismo contenido/orden que
@@ -68,10 +71,12 @@ export function DocumentoRevestimiento({
   snapshot,
   textos,
   fotos,
+  resolverFotosSeed = sinEdicion,
 }: {
   snapshot: PresupuestoV1;
   textos: TextosCompartidos;
   fotos: FotoDocumento[];
+  resolverFotosSeed?: ResolverFotosSeed;
 }) {
   const medidas = snapshot.medidas as Medidas;
   const adicionalesM2 = medidas.adicionalesM2 ?? [];
@@ -171,7 +176,7 @@ export function DocumentoRevestimiento({
                       {formatARS(m.precioUnitario)} por m² × {formatNumero(r.m2Total)} m²
                     </p>
                   )}
-                  <FotosSeedGrid fotos={fotosSeedDeOpcional(m.clave)} />
+                  <FotosSeedGrid fotos={resolverFotosSeed(m.clave ?? "sin-clave", fotosSeedDeOpcional(m.clave))} />
                 </div>
               ))}
             </div>

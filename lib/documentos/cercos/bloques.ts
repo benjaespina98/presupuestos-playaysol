@@ -1,9 +1,13 @@
 import type { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { TextosCompartidos } from "@/lib/documentos/textosCompartidos";
-import type { BloqueDocumento, FotoDocumentoModelo } from "@/lib/documentos/modelo";
+import type { BloqueDocumento, FotoDocumentoModelo, ResolverFotosSeed } from "@/lib/documentos/modelo";
 import { paresCliente, splitDimensionLines, varianteEncabezado } from "@/lib/documentos/modelo";
 import { formatARS } from "@/lib/format/ars";
-import { FOTOS_REFERENCIA_CERCOS } from "@/lib/documentos/fotosSeed";
+import { FOTOS_REFERENCIA_CERCOS, GRUPO_SEED_GENERAL } from "@/lib/documentos/fotosSeed";
+
+/** Sin resolver (el caso normal: PDF sin edición de fotos precargadas para
+ *  esta exportación), las fotos de catálogo van tal cual. */
+const sinEdicion: ResolverFotosSeed = (_grupo, base) => base;
 
 /**
  * Bloques del documento de Cercos para el PDF. Port 1:1 de
@@ -21,7 +25,8 @@ function etiquetasTotal(modo: PresupuestoV1["modoPrecio"]): string[] {
 export function armarBloquesCerco(
   snapshot: PresupuestoV1,
   textos: TextosCompartidos,
-  fotosUsuario: FotoDocumentoModelo[]
+  fotosUsuario: FotoDocumentoModelo[],
+  resolverFotosSeed: ResolverFotosSeed = sinEdicion
 ): BloqueDocumento[] {
   const medidas = snapshot.medidas as { metrosLineales?: number };
   const ml = Number(medidas.metrosLineales ?? 0);
@@ -35,7 +40,7 @@ export function armarBloquesCerco(
     { tipo: "encabezado", color: variante.color, logoUrl: variante.img },
     { tipo: "titulo", texto: "Presupuesto de cerco perimetral" },
     { tipo: "meta", pares: [...paresCliente(snapshot), { label: "Metros lineales a cercar:", value: `${ml.toLocaleString("es-AR")} ml` }] },
-    { tipo: "galeriaSeeds", titulo: "Fotos de referencia", fotos: FOTOS_REFERENCIA_CERCOS },
+    { tipo: "galeriaSeeds", titulo: "Fotos de referencia", fotos: resolverFotosSeed(GRUPO_SEED_GENERAL, FOTOS_REFERENCIA_CERCOS) },
   ];
 
   if (lineasDimension.length > 0) {

@@ -1,4 +1,5 @@
 import type { FooterFijo } from "./textosCompartidos";
+import type { FotoSeed } from "./fotosSeed";
 
 /**
  * EL MODELO DE BLOQUES DEL DOCUMENTO.
@@ -42,6 +43,20 @@ export interface FotoDocumentoModelo {
   height: number;
   caption?: string;
 }
+
+/**
+ * Cómo cada `armarBloques<Tipo>()` resuelve las fotos PRECARGADAS de
+ * catálogo (`FotoSeed[]`, ver fotosSeed.ts) a lo que efectivamente va en el
+ * documento. Por defecto es la identidad (las fotos de catálogo tal cual);
+ * `useEditorFotosSeed` (componentes/calculadoras) devuelve un resolver que
+ * saca las que el vendedor tildó "Quitar" y suma las que agregó a mano —
+ * SÓLO para esa exportación puntual, nunca se persiste (ver el hook).
+ *
+ * `grupo` es `GRUPO_SEED_GENERAL` para el set fijo ("Modelos de
+ * referencia"/"Fotos de referencia") o la `clave` del opcional/material para
+ * las fotos que cuelgan de uno puntual.
+ */
+export type ResolverFotosSeed = (grupo: string, base: FotoSeed[]) => FotoDocumentoModelo[];
 
 export type BloqueDocumento =
   | { tipo: "encabezado"; color: string; logoUrl: string }

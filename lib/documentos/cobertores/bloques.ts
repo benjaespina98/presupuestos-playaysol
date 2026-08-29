@@ -1,9 +1,13 @@
 import type { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { TextosCompartidos } from "@/lib/documentos/textosCompartidos";
-import type { BloqueDocumento, FotoDocumentoModelo } from "@/lib/documentos/modelo";
+import type { BloqueDocumento, FotoDocumentoModelo, ResolverFotosSeed } from "@/lib/documentos/modelo";
 import { paresCliente, splitDimensionLines, varianteEncabezado } from "@/lib/documentos/modelo";
 import { formatARS, formatNumero } from "@/lib/format/ars";
-import { FOTOS_REFERENCIA_COBERTORES } from "@/lib/documentos/fotosSeed";
+import { FOTOS_REFERENCIA_COBERTORES, GRUPO_SEED_GENERAL } from "@/lib/documentos/fotosSeed";
+
+/** Sin resolver (el caso normal: PDF sin edición de fotos precargadas para
+ *  esta exportación), las fotos de catálogo van tal cual. */
+const sinEdicion: ResolverFotosSeed = (_grupo, base) => base;
 
 /**
  * Bloques del documento de Cobertores para el PDF. Estructura idéntica a
@@ -21,7 +25,8 @@ function etiquetasTotal(modo: PresupuestoV1["modoPrecio"]): string[] {
 export function armarBloquesCobertor(
   snapshot: PresupuestoV1,
   textos: TextosCompartidos,
-  fotosUsuario: FotoDocumentoModelo[]
+  fotosUsuario: FotoDocumentoModelo[],
+  resolverFotosSeed: ResolverFotosSeed = sinEdicion
 ): BloqueDocumento[] {
   const medidas = snapshot.medidas as { largo?: number; ancho?: number; adicionalM2?: number };
   const largo = Number(medidas.largo ?? 0);
@@ -46,7 +51,7 @@ export function armarBloquesCobertor(
       tipo: "meta",
       pares: [...paresCliente(snapshot), { label: "Medidas:", value: `${medidasTexto.join(" + ")} = ${formatNumero(m2)} m² a cubrir` }],
     },
-    { tipo: "galeriaSeeds", titulo: "Fotos de referencia", fotos: FOTOS_REFERENCIA_COBERTORES },
+    { tipo: "galeriaSeeds", titulo: "Fotos de referencia", fotos: resolverFotosSeed(GRUPO_SEED_GENERAL, FOTOS_REFERENCIA_COBERTORES) },
   ];
 
   if (lineasDimension.length > 0) {
