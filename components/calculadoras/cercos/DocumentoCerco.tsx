@@ -8,8 +8,14 @@ import { FotosSeedGrid } from "@/components/calculadoras/FotosSeedGrid";
 const sinEdicion: ResolverFotosSeed = (_grupo, base) => base;
 
 /**
- * El documento en pantalla — lo que se ve en el panel de vista previa y lo
- * que efectivamente se imprime/exporta a PDF con `window.print()`.
+ * El documento en pantalla — lo que se ve en el panel de "Vista previa" y lo
+ * que sale si el usuario imprime esa pantalla a mano (Ctrl+P del navegador).
+ * El botón "PDF" de la calculadora NO pasa por acá: genera el PDF real con
+ * `@react-pdf/renderer` a partir de `armarBloquesCerco()` (ver
+ * lib/documentos/pdfGenerator.tsx / components/documentos/pdf/
+ * PresupuestoPdfDocument.tsx) — un renderer aparte, sin DOM ni CSS de por
+ * medio. Este componente y ese PDF muestran el mismo contenido porque los
+ * dos leen el mismo `PresupuestoV1`, no porque uno derive del otro.
  *
  * Mismo contenido y mismo orden que `buildDocumentBody()` en
  * `public/cercos-calc.js` (no se reinventa el documento — Lote 1 de la Fase 5
