@@ -29,6 +29,7 @@ import { AccionesDocumento } from "@/components/calculadoras/AccionesDocumento";
 import { FloatingSaveBar } from "@/components/calculadoras/FloatingSaveBar";
 import { CamposObligatoriosHint } from "@/components/calculadoras/CamposObligatoriosHint";
 import { VistaPreviaMovil } from "@/components/calculadoras/VistaPreviaMovil";
+import { VarianteEncabezadoField } from "@/components/calculadoras/VarianteEncabezadoField";
 
 const CLAVE_PRECIO_MENOS15 = "precioMenos15";
 const CLAVE_PRECIO_MAS15 = "precioMas15";
@@ -71,6 +72,7 @@ function formularioDesdePresupuesto(leido: PresupuestoLeido, catalogo: CatalogoR
     ancho: Number(medidas.ancho ?? 0),
     adicionalM2: Number(medidas.adicionalM2 ?? 0),
     modoPrecio: presupuesto.modoPrecio,
+    variacionEncabezado: presupuesto.variacionEncabezado === "navy" ? ("navy" as const) : ("teal" as const),
   };
 
   if (!preciosCongelados) {
@@ -269,7 +271,7 @@ export function CobertorCalculadora({
       },
       totales,
       detalle: valoresForm.detalle ?? "",
-      variacionEncabezado: "teal",
+      variacionEncabezado: valoresForm.variacionEncabezado ?? "teal",
       modoPrecio,
       fotos: fotos.map((f) => ({ id: f.id, caption: f.caption, width: f.width, height: f.height, storageUrl: f.storageUrl })),
     });
@@ -356,7 +358,7 @@ export function CobertorCalculadora({
         },
         totales: totalesFinales,
         detalle: valores.detalle,
-        variacionEncabezado: "teal",
+        variacionEncabezado: valores.variacionEncabezado,
         modoPrecio: valores.modoPrecio,
         fotos: fotosSubidas.map((f) => ({
           id: f.id,
@@ -483,6 +485,7 @@ export function CobertorCalculadora({
           />
           <TextField register={register} errors={errors} name="fecha" label="Fecha" />
           <TextField register={register} errors={errors} name="validezDias" label="Validez (días)" />
+          <VarianteEncabezadoField register={register} name="variacionEncabezado" />
         </section>
 
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">

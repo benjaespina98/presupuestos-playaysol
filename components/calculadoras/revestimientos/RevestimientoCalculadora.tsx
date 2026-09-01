@@ -29,6 +29,7 @@ import { AccionesDocumento } from "@/components/calculadoras/AccionesDocumento";
 import { FloatingSaveBar } from "@/components/calculadoras/FloatingSaveBar";
 import { CamposObligatoriosHint } from "@/components/calculadoras/CamposObligatoriosHint";
 import { VistaPreviaMovil } from "@/components/calculadoras/VistaPreviaMovil";
+import { VarianteEncabezadoField } from "@/components/calculadoras/VarianteEncabezadoField";
 
 /**
  * `porM2` no vive en `catalogo_items`: es fija por material, igual que
@@ -81,6 +82,7 @@ function formularioDesdePresupuesto(leido: PresupuestoLeido, catalogo: CatalogoR
     escalera: Number(medidas.escalera ?? 0),
     desperdicio: Number(medidas.desperdicio ?? 0),
     adicionalesM2: medidas.adicionalesM2 ?? [],
+    variacionEncabezado: presupuesto.variacionEncabezado === "navy" ? ("navy" as const) : ("teal" as const),
   };
 
   if (!preciosCongelados) {
@@ -300,7 +302,7 @@ export function RevestimientoCalculadora({
       preciosBase: {},
       totales: resultado.alternativas.length >= 2 ? resultado.alternativas.map((a) => a.total + resultado.adicionales) : [resultado.totalUnico],
       detalle: valoresForm.detalle ?? "",
-      variacionEncabezado: "teal",
+      variacionEncabezado: valoresForm.variacionEncabezado ?? "teal",
       modoPrecio: "ambos",
       fotos: fotos.map((f) => ({ id: f.id, caption: f.caption, width: f.width, height: f.height, storageUrl: f.storageUrl })),
     });
@@ -369,7 +371,7 @@ export function RevestimientoCalculadora({
         preciosBase: {},
         totales: totalesFinales,
         detalle: valores.detalle,
-        variacionEncabezado: "teal",
+        variacionEncabezado: valores.variacionEncabezado,
         modoPrecio: "ambos",
         fotos: fotosSubidas.map((f) => ({
           id: f.id,
@@ -488,6 +490,7 @@ export function RevestimientoCalculadora({
           <TextField register={register} errors={errors} name="detalle" label="Notas de la pileta" multiline rows={3} />
           <TextField register={register} errors={errors} name="fecha" label="Fecha" />
           <TextField register={register} errors={errors} name="validezDias" label="Validez (días)" />
+          <VarianteEncabezadoField register={register} name="variacionEncabezado" />
         </section>
 
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">

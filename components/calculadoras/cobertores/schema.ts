@@ -36,6 +36,10 @@ export const CobertorFormSchema = z.object({
   modoPrecio: ModoPrecio,
   adicionales: z.array(Adicional).default([]),
   opcionales: z.array(OpcionalCatalogo).default([]),
+  /** Qué banner de marca lleva el documento — ver HEADER_VARIANTS en
+   *  DocumentoCobertor.tsx. Elegible por el vendedor, "teal" por default
+   *  porque es la variante que se venía usando siempre. */
+  variacionEncabezado: z.enum(["teal", "navy"]).default("teal"),
 });
 export type CobertorForm = z.infer<typeof CobertorFormSchema>;
 
@@ -54,5 +58,6 @@ export function formularioVacio(): CobertorForm {
     modoPrecio: "ambos",
     adicionales: [],
     opcionales: [],
+    variacionEncabezado: "teal",
   };
 }
