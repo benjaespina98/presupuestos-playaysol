@@ -48,6 +48,10 @@ export const CercosFormSchema = z.object({
   modoPrecio: ModoPrecio,
   adicionales: z.array(Adicional).default([]),
   opcionales: z.array(OpcionalCatalogo).default([]),
+  /** Qué banner de marca lleva el documento — ver HEADER_VARIANTS en
+   *  DocumentoCerco.tsx. Elegible por el vendedor, "teal" por default
+   *  porque es la variante que se venía usando siempre. */
+  variacionEncabezado: z.enum(["teal", "navy"]).default("teal"),
 });
 export type CercosForm = z.infer<typeof CercosFormSchema>;
 
@@ -63,5 +67,6 @@ export function formularioVacio(): CercosForm {
     modoPrecio: "ambos",
     adicionales: [],
     opcionales: [],
+    variacionEncabezado: "teal",
   };
 }

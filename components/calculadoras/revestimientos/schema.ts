@@ -49,6 +49,10 @@ export const RevestimientoFormSchema = z.object({
   adicionalesM2: z.array(AdicionalM2).default([]),
   adicionales: z.array(Adicional).default([]),
   materiales: z.array(MaterialCatalogo).default([]),
+  /** Qué banner de marca lleva el documento — ver HEADER_VARIANTS en
+   *  DocumentoRevestimiento.tsx. Elegible por el vendedor, "teal" por
+   *  default porque es la variante que se venía usando siempre. */
+  variacionEncabezado: z.enum(["teal", "navy"]).default("teal"),
 });
 export type RevestimientoForm = z.infer<typeof RevestimientoFormSchema>;
 
@@ -67,5 +71,6 @@ export function formularioVacio(): RevestimientoForm {
     adicionalesM2: [],
     adicionales: [],
     materiales: [],
+    variacionEncabezado: "teal",
   };
 }

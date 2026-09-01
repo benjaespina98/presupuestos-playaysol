@@ -45,6 +45,10 @@ export const PiscinaFormSchema = z.object({
   subtotal: z.number({ error: "Ingresá el subtotal" }),
   adicionales: z.array(Adicional).default([]),
   opcionales: z.array(OpcionalCatalogo).default([]),
+  /** Qué banner de marca lleva el documento — ver HEADER_VARIANTS en
+   *  DocumentoPiscina.tsx. Elegible por el vendedor, "teal" por default
+   *  porque es la variante que se venía usando siempre. */
+  variacionEncabezado: z.enum(["teal", "navy"]).default("teal"),
 });
 export type PiscinaForm = z.infer<typeof PiscinaFormSchema>;
 
@@ -59,5 +63,6 @@ export function formularioVacio(): PiscinaForm {
     subtotal: 0,
     adicionales: [],
     opcionales: [],
+    variacionEncabezado: "teal",
   };
 }

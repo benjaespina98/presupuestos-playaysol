@@ -28,6 +28,7 @@ import { PiscinaFormSchema, formularioVacio, type PiscinaForm } from "./schema";
 import { AccionesDocumento } from "@/components/calculadoras/AccionesDocumento";
 import { FloatingSaveBar } from "@/components/calculadoras/FloatingSaveBar";
 import { CamposObligatoriosHint } from "@/components/calculadoras/CamposObligatoriosHint";
+import { VarianteEncabezadoField } from "@/components/calculadoras/VarianteEncabezadoField";
 import { VistaPreviaMovil } from "@/components/calculadoras/VistaPreviaMovil";
 
 function esOpcionalCatalogo(r: CatalogoRow): boolean {
@@ -85,6 +86,7 @@ function formularioDesdePresupuesto(leido: PresupuestoLeido, catalogo: CatalogoR
     detalle: presupuesto.detalle,
     largo: num(medidas.largo),
     ancho: num(medidas.ancho),
+    variacionEncabezado: presupuesto.variacionEncabezado === "navy" ? ("navy" as const) : ("teal" as const),
   };
 
   if (!preciosCongelados) {
@@ -292,7 +294,7 @@ export function PiscinaCalculadora({
       preciosBase: {},
       totales: importes,
       detalle: valoresForm.detalle ?? "",
-      variacionEncabezado: "teal",
+      variacionEncabezado: valoresForm.variacionEncabezado ?? "teal",
       modoPrecio: "ambos",
       fotos: fotos.map((f) => ({ id: f.id, caption: f.caption, width: f.width, height: f.height, storageUrl: f.storageUrl })),
     });
@@ -354,7 +356,7 @@ export function PiscinaCalculadora({
         preciosBase: {},
         totales: importesFinales,
         detalle: valores.detalle,
-        variacionEncabezado: "teal",
+        variacionEncabezado: valores.variacionEncabezado,
         modoPrecio: "ambos",
         fotos: fotosSubidas.map((f) => ({
           id: f.id,
@@ -495,6 +497,7 @@ export function PiscinaCalculadora({
 
           <TextField register={register} errors={errors} name="fecha" label="Fecha" />
           <TextField register={register} errors={errors} name="validezDias" label="Validez (días)" />
+          <VarianteEncabezadoField register={register} name="variacionEncabezado" />
         </section>
 
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">

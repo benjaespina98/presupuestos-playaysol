@@ -13,21 +13,21 @@ import fs from "fs";
  *   3. No aparece ningún botón/texto de WhatsApp (verifica que el punto 1 del pedido
  *      se aplicó bien en las 5 — solo se había llegado a implementar en piscinas).
  *   4. No aparece el tab "Guardados" en ninguna (punto 2).
- *   5. El botón de descarga real de cada una (que sí genera un archivo de forma
- *      programática, a diferencia del botón "PDF" que abre el diálogo nativo de
- *      impresión del navegador — ESE no se puede verificar por automatización, ver
- *      nota abajo) descarga un archivo cuyo nombre sigue el formato
- *      Presupuesto_<Tipo>_<Cliente>_<Fecha>.docx en las 4 tradicionales (botón
- *      "Word"), o Presupuesto_<Tipo>_<Cliente>_<Fecha>_cliente.png en losetas
+ *   5. El botón de descarga real de cada una descarga un archivo cuyo nombre sigue
+ *      el formato Presupuesto_<Tipo>_<Cliente>_<Fecha>.docx en las 4 tradicionales
+ *      (botón "Word"), o Presupuesto_<Tipo>_<Cliente>_<Fecha>_cliente.png en losetas
  *      (botón "Imagen para el cliente" — losetas no genera Word, su salida es un
  *      plano PNG) (punto 4).
+ *   6. En las 4 tradicionales, el botón "PDF" descarga
+ *      Presupuesto_<Tipo>_<Cliente>_<Fecha>.pdf.
  *
- * Nota importante sobre el botón "PDF": dispara window.print(), que abre el diálogo
- * nativo del navegador. No genera un archivo de forma programática — no hay ningún
- * evento de descarga que Playwright (ni ningún test automatizado) pueda interceptar,
- * porque el archivo final lo arma el sistema operativo/navegador fuera del control de
- * la página. Por eso este test verifica el botón de descarga real de cada calculadora
- * para el punto 4 (naming), no el botón "PDF".
+ * Nota sobre el botón "PDF": genera el archivo de forma programática con
+ * `@react-pdf/renderer` (ver lib/documentos/pdfGenerator.tsx) y lo entrega con
+ * `compartirOdescargarArchivo` — mismo mecanismo `<a download>` que "Word", así que
+ * Playwright lo intercepta con `page.waitForEvent("download")` igual que a
+ * cualquier otro. No dispara `window.print()`: eso quedó atrás cuando el PDF pasó a
+ * generarse con react-pdf en vez del diálogo de impresión del navegador. Losetas no
+ * tiene botón "PDF", así que queda fuera del punto 6.
  */
 
 const E2E_EMAIL = process.env.E2E_EMAIL;
@@ -114,9 +114,8 @@ for (const { tipo, nombreEsperado, encabezado } of CALCULADORAS) {
     await expect(page.getByRole("heading", { name: encabezado })).toBeVisible({ timeout: 15_000 });
 
     // Botón de descarga real de cada una: "Word" en las 4 tradicionales,
-    // "Imagen para el cliente" (PNG) en losetas — el botón "PDF" dispara
-    // window.print() y no genera un archivo interceptable (ver comentario
-    // arriba del archivo).
+    // "Imagen para el cliente" (PNG) en losetas. El botón "PDF" (sólo en las
+    // 4 tradicionales) se verifica aparte, más abajo (punto 6).
     const botonDescarga =
       tipo !== "losetas"
         ? page.getByRole("button", { name: "Word", exact: true })
@@ -154,6 +153,26 @@ for (const { tipo, nombreEsperado, encabezado } of CALCULADORAS) {
     const destino = path.join(test.info().outputDir, nombreArchivo);
     await download.saveAs(destino);
     expect(fs.existsSync(destino)).toBe(true);
+
+    // --- Punto 6: el botón "PDF" (sólo en las 4 tradicionales) también
+    // descarga un archivo real, con el mismo naming que Word/PNG salvo la
+    // extensión — genera el PDF con react-pdf, no con window.print(). ---
+    if (tipo !== "losetas") {
+      const botonPdf = page.getByRole("button", { name: "PDF", exact: true });
+      const [downloadPdf] = await Promise.all([
+        // 30s por el mismo motivo que el import() dinámico de docx: react-pdf
+        // también se pide recién al apretar el botón.
+        page.waitForEvent("download", { timeout: 30_000 }),
+        botonPdf.click(),
+      ]);
+      const nombrePdf = downloadPdf.suggestedFilename();
+      expect(nombrePdf).toMatch(
+        new RegExp(`^Presupuesto_${nombreEsperado}_Perez_Maria_Jose_\\d{4}-\\d{2}-\\d{2}\\.pdf$`)
+      );
+      const destinoPdf = path.join(test.info().outputDir, nombrePdf);
+      await downloadPdf.saveAs(destinoPdf);
+      expect(fs.existsSync(destinoPdf)).toBe(true);
+    }
 
     // --- Sin errores de consola durante toda la carga/interacción ---
     expect(erroresConsola, `Errores de consola en ${tipo}: ${erroresConsola.join("\n")}`).toEqual([]);
