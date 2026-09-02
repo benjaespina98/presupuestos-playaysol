@@ -532,7 +532,7 @@ El valor por m² varía según la superficie total a cubrir. La instalación es 
 
 IMPORTANTE: Las medidas especificadas son libres, no de fabricación. El presupuesto puede variar levemente una vez tomadas las medidas exactas en el lugar.
 
-El presente presupuesto tiene una validez de 7 días hábiles, sujeto a modificación de costos de materiales.`;
+Los precios están sujetos a modificación según variación en el costo de los materiales.`;
 
 export const FOOTER_POR_DEFECTO = {
   empresa: "PLAYA Y SOL S.A.S.",

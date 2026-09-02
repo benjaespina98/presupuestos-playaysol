@@ -548,7 +548,7 @@ Si la pileta ya cuenta con un revestimiento anterior en mal estado, es necesario
 
 IMPORTANTE: Las medidas especificadas son libres, no de fabricación. La superficie real puede variar levemente una vez tomadas las medidas exactas en el lugar.
 
-El presente presupuesto tiene una validez de 7 días hábiles, sujeto a modificación de costos de materiales.`;
+Los precios están sujetos a modificación según variación en el costo de los materiales.`;
 
 export const FOOTER_POR_DEFECTO = {
   empresa: "PLAYA Y SOL S.A.S.",
