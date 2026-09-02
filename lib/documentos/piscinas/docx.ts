@@ -519,13 +519,13 @@ Ejecutada con materiales de primera calidad y construcción de:
 
 1. - Toda la estructura será de hormigón de cemento portland con una mezcla homogénea de cementos áridos y agua (resistencia característica de H21), sin aplicación de otro material adicionado y compuesta de:
 
-2. - Una losa de hormigón de 15 cm de espesor con armadura de hierros del 6 mm de diámetro cada 20 cm en ambos sentidos y de un solo tipo de acero en toda la obra.
+2. - Una losa de hormigón de 15 cm de espesor con armadura de hierros del 4.2/6 mm de diámetro cada 20 cm en ambos sentidos y de un solo tipo de acero en toda la obra.
 
 3. - Muros laterales de hormigón de las mismas características que el anterior y encofrado entre el laminado vertical y un muro de mampostería de ladrillos comunes de 13 cm de espesor.
 
 4. - Encadenados perimetral tanto superior e inferior incorporado en los laterales para soportar cambios de dilatación de materiales.
 
-5. - Una losa perimetral de hormigón de 0.50 cm de ancho y 10 cm de espesor, formando una vereda en continuidad con el muro lateral.
+5. - Una losa perimetral de hormigón de 50 cm de ancho y 10 cm de espesor, formando una vereda en continuidad con el muro lateral.
 
 6. - Todo el conjunto será terminado con revoque grueso y fino con agregado hidrófugo y sellado con elastómero en juntas y orificios entre el hormigón e instalación hidráulica.
 
@@ -535,8 +535,8 @@ Ejecutada con materiales de primera calidad y construcción de:
 
 B) SISTEMA HIDRÁULICO:
 
-1. - Electro bomba monofásica autocebante 1/2 HP con trampa de pelo incorporada.
-2. - Filtro VC30 de Poliuretano (apto para hasta 60.000 lts.), con multiválvulas de 6 funciones, colector de 6 picos, difusor ABS y visor para retro lavado. Incluye el manto filtrante.
+1. - Electro bomba monofásica autocebante 1/3 – 1/2 HP marca Vulcano con trampa de pelo incorporada.
+2. - Filtro VC20/VC30 Vulcano de Poliuretano, con multiválvulas de 6 funciones, colector de 6 picos, difusor ABS y visor para retro lavado. Incluye el manto filtrante.
 3. - Hidromasajes zonificados, sistema embutido con toma de aire exterior.
 4. - Toma de fondo, toma de limpia fondo y Skimmer o barre superficie.
 5. - Toda la cañería de la conexión hidráulica será en PVC 3,2 reforzada de 10 kg. de presión.
