@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { listarItemsCatalogo } from "@/lib/catalogo";
+import { listarItemsCatalogo, actualizarItemCatalogo } from "@/lib/catalogo";
 import {
   agruparPorCategoria,
   filtrarCatalogo,
@@ -14,8 +14,9 @@ import { formatARS } from "@/lib/format/ars";
 import { formatFechaRelativa, formatFechaCompleta } from "@/lib/format/fecha";
 import { copiarAlPortapapeles } from "@/lib/clipboard";
 import { PanelPortal } from "@/components/PanelPortal";
-import { IconEdit, IconCopy, IconSearch } from "@/components/icons";
+import { IconEdit, IconCopy, IconSearch, IconPlus, IconPower } from "@/components/icons";
 import { EditarItemModal } from "@/components/catalogo/EditarItemModal";
+import { CrearItemModal } from "@/components/catalogo/CrearItemModal";
 import { TITULOS_TIPO } from "@/components/catalogo/titulos-tipo";
 
 export default function CatalogoPage() {
@@ -26,8 +27,11 @@ export default function CatalogoPage() {
   const [incluirInactivos, setIncluirInactivos] = useState(false);
   const [modoConsulta, setModoConsulta] = useState(false);
   const [editando, setEditando] = useState<ItemCatalogo | null>(null);
+  const [creando, setCreando] = useState(false);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
   const [copiadoId, setCopiadoId] = useState<string | null>(null);
+  const [cambiandoEstadoId, setCambiandoEstadoId] = useState<string | null>(null);
+  const [errorEstado, setErrorEstado] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -74,12 +78,57 @@ export default function CatalogoPage() {
     setTimeout(() => setCopiadoId((actual) => (actual === item.id ? null : actual)), 2000);
   }
 
+  function itemCreado(nuevo: ItemCatalogo) {
+    setItems((prev) => (prev ? [...prev, nuevo] : [nuevo]));
+    setCreando(false);
+    setMensajeExito(`Se creó "${nuevo.descripcion || nuevo.clave}".`);
+  }
+
+  /** Dar de alta/baja rápido, sin abrir el modal completo — nunca borra la
+   *  fila (no hay `.delete()` sobre catalogo_items, ver lib/catalogo.test.ts):
+   *  sólo prende/apaga el mismo flag `activo` que ya ofrece EditarItemModal,
+   *  con un solo click desde el listado. */
+  async function alternarActivo(item: ItemCatalogo) {
+    setErrorEstado(null);
+    setCambiandoEstadoId(item.id);
+    try {
+      const { error } = await actualizarItemCatalogo(item.id, {
+        descripcion: item.descripcion,
+        precio: item.precio,
+        categoria: item.categoria,
+        unidad: item.unidad,
+        activo: !item.activo,
+      });
+      if (error) {
+        setErrorEstado(error);
+        return;
+      }
+      setItems((prev) => (prev ? prev.map((it) => (it.id === item.id ? { ...it, activo: !it.activo } : it)) : prev));
+    } finally {
+      setCambiandoEstadoId(null);
+    }
+  }
+
   return (
     <PanelPortal>
-      <h1 className="text-2xl font-semibold text-gray-900">Catálogo</h1>
-      <p className="mb-6 mt-1 text-sm text-gray-500">
-        Precios y descripciones de materiales y opcionales, compartidos por todo el equipo.
-      </p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Catálogo</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Precios y descripciones de materiales y opcionales, compartidos por todo el equipo.
+          </p>
+        </div>
+        {!modoConsulta && (
+          <button
+            type="button"
+            onClick={() => setCreando(true)}
+            className="flex min-h-11 items-center gap-1.5 rounded-md bg-[#1B3A5C] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46]"
+          >
+            <IconPlus className="h-4 w-4" />
+            Nuevo ítem
+          </button>
+        )}
+      </div>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <select
@@ -139,6 +188,12 @@ export default function CatalogoPage() {
       {error && (
         <p role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
+        </p>
+      )}
+
+      {errorEstado && (
+        <p role="alert" className="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+          No se pudo cambiar el estado: {errorEstado}
         </p>
       )}
 
@@ -214,14 +269,17 @@ export default function CatalogoPage() {
                                 {copiadoId === item.id ? "¡Copiado!" : "Copiar"}
                               </button>
                             ) : (
-                              <button
-                                type="button"
-                                onClick={() => abrirEdicion(item)}
-                                className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
-                              >
-                                <IconEdit className="h-4 w-4" />
-                                Editar
-                              </button>
+                              <div className="inline-flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => abrirEdicion(item)}
+                                  className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                                >
+                                  <IconEdit className="h-4 w-4" />
+                                  Editar
+                                </button>
+                                <BotonAlternarActivo item={item} enCurso={cambiandoEstadoId === item.id} onClick={() => alternarActivo(item)} />
+                              </div>
                             )}
                           </td>
                         </tr>
@@ -262,14 +320,17 @@ export default function CatalogoPage() {
                               {copiadoId === item.id ? "¡Copiado!" : "Copiar"}
                             </button>
                           ) : (
-                            <button
-                              type="button"
-                              onClick={() => abrirEdicion(item)}
-                              className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
-                            >
-                              <IconEdit className="h-4 w-4" />
-                              Editar
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => abrirEdicion(item)}
+                                className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                              >
+                                <IconEdit className="h-4 w-4" />
+                                Editar
+                              </button>
+                              <BotonAlternarActivo item={item} enCurso={cambiandoEstadoId === item.id} onClick={() => alternarActivo(item)} />
+                            </div>
                           )}
                         </div>
                       </div>
@@ -290,7 +351,36 @@ export default function CatalogoPage() {
           onGuardado={guardarEdicion}
         />
       )}
+
+      {creando && <CrearItemModal onClose={() => setCreando(false)} onCreado={itemCreado} />}
     </PanelPortal>
+  );
+}
+
+/** Dar de alta/baja con un solo click, sin abrir el modal completo — mismo
+ *  flag `activo` que ya ofrece EditarItemModal, nunca un borrado real (no
+ *  hay `.delete()` sobre catalogo_items, ver lib/catalogo.test.ts). */
+function BotonAlternarActivo({
+  item,
+  enCurso,
+  onClick,
+}: {
+  item: ItemCatalogo;
+  enCurso: boolean;
+  onClick: () => void;
+}) {
+  const label = item.activo ? "Dar de baja" : "Reactivar";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={enCurso}
+      title={label}
+      aria-label={`${label} "${item.descripcion || item.clave}"`}
+      className="inline-flex min-h-11 items-center rounded-md px-2.5 py-1.5 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <IconPower className="h-4 w-4" />
+    </button>
   );
 }
 

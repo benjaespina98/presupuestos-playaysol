@@ -211,3 +211,58 @@ export async function actualizarItemCatalogo(
     return { error: ERROR_DE_RED };
   }
 }
+
+/** Lo que hace falta para dar de alta un ítem nuevo — a diferencia de
+ *  `CambiosItemCatalogo`, acá `tipo`/`clave` sí van: recién se están
+ *  eligiendo, todavía no son la identidad de ninguna fila existente. */
+export interface NuevoItemCatalogo {
+  tipo: TipoCalculadora;
+  clave: string;
+  descripcion: string | null;
+  precio: number | null;
+  categoria: ItemCatalogo["categoria"];
+  unidad: string | null;
+  activo: boolean;
+}
+
+const CLAVE_DUPLICADA = "Ya existe un ítem con esa clave para esa calculadora — elegí otra.";
+
+/**
+ * Alta de un ítem nuevo. A diferencia de `actualizarCatalogoItem` (que hace
+ * upsert porque cablea un precio de una calculadora que puede o no tener fila
+ * previa), acá se inserta explícitamente: si `(tipo, clave)` ya existe, tiene
+ * que fallar con un mensaje claro, no pisar en silencio el ítem existente.
+ */
+export async function crearItemCatalogo(
+  nuevo: NuevoItemCatalogo
+): Promise<{ item: ItemCatalogo | null; error: string | null }> {
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const { data, error } = await supabase
+      .from("catalogo_items")
+      .insert({ ...nuevo, updated_by: user?.id })
+      .select(COLUMNAS_ITEM_CATALOGO)
+      .single();
+
+    if (error) {
+      if (esErrorMigracionPendiente(error)) return { item: null, error: ERROR_MIGRACION_PENDIENTE };
+      // 23505 = unique_violation (Postgres): ya existe (tipo, clave).
+      if (error.code === "23505") return { item: null, error: CLAVE_DUPLICADA };
+      return { item: null, error: error.message };
+    }
+
+    const resultado = ItemCatalogo.safeParse(data);
+    if (!resultado.success) {
+      console.error("El ítem se creó pero no valida contra ItemCatalogo", resultado.error);
+      return { item: null, error: "El ítem se creó, pero no se pudo leer de vuelta — recargá la página." };
+    }
+    return { item: resultado.data, error: null };
+  } catch (err) {
+    console.error("No se pudo crear el ítem de catálogo", err);
+    return { item: null, error: ERROR_DE_RED };
+  }
+}

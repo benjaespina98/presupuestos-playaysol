@@ -6,11 +6,12 @@ import type { ItemCatalogo } from "@/lib/domain/catalogo/item";
 import { CATEGORIAS } from "@/lib/domain/catalogo/categorias";
 import CatalogoPage from "./page";
 
-const { listarItemsCatalogo, actualizarItemCatalogo } = vi.hoisted(() => ({
+const { listarItemsCatalogo, actualizarItemCatalogo, crearItemCatalogo } = vi.hoisted(() => ({
   listarItemsCatalogo: vi.fn(),
   actualizarItemCatalogo: vi.fn(),
+  crearItemCatalogo: vi.fn(),
 }));
-vi.mock("@/lib/catalogo", () => ({ listarItemsCatalogo, actualizarItemCatalogo }));
+vi.mock("@/lib/catalogo", () => ({ listarItemsCatalogo, actualizarItemCatalogo, crearItemCatalogo }));
 
 const { copiarAlPortapapeles } = vi.hoisted(() => ({ copiarAlPortapapeles: vi.fn() }));
 vi.mock("@/lib/clipboard", () => ({ copiarAlPortapapeles }));
@@ -308,6 +309,70 @@ describe("CatalogoPage · edición", () => {
     );
     // La columna Categoría del listado sigue mostrando la original.
     expect(screen.getAllByText("Iluminación")[0]).toBeInTheDocument();
+  });
+});
+
+describe("CatalogoPage · alta de un ítem nuevo", () => {
+  beforeEach(() => {
+    crearItemCatalogo.mockReset();
+  });
+
+  it("crear un ítem lo agrega al listado con feedback de éxito", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: [item({ id: "a", descripcion: "Luces LED" })],
+      error: null,
+    });
+    crearItemCatalogo.mockResolvedValue({
+      item: item({ id: "nuevo", clave: "cerco_reforzado", descripcion: "Cerco reforzado" }),
+      error: null,
+    });
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+    await screen.findAllByText("Luces LED");
+
+    await user.click(screen.getByRole("button", { name: "Nuevo ítem" }));
+    await user.type(await screen.findByLabelText("Clave"), "Cerco Reforzado");
+    await user.type(screen.getByLabelText("Descripción"), "Cerco reforzado");
+    await user.click(screen.getByRole("button", { name: "Crear ítem" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getAllByText("Cerco reforzado")[0]).toBeInTheDocument();
+    expect(await screen.findByText('Se creó "Cerco reforzado".')).toBeInTheDocument();
+  });
+
+  it("en modo consulta rápida no se puede dar de alta un ítem nuevo", async () => {
+    listarItemsCatalogo.mockResolvedValue({ items: [], error: null });
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+    await user.click(screen.getByLabelText("Modo consulta rápida"));
+
+    expect(screen.queryByRole("button", { name: "Nuevo ítem" })).not.toBeInTheDocument();
+  });
+});
+
+describe("CatalogoPage · dar de baja/reactivar rápido", () => {
+  beforeEach(() => {
+    actualizarItemCatalogo.mockReset();
+  });
+
+  it("dar de baja llama a actualizarItemCatalogo con activo:false y el resto de los datos intactos", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: [item({ id: "a", descripcion: "Luces LED", precio: 240000, categoria: "Iluminación", activo: true })],
+      error: null,
+    });
+    actualizarItemCatalogo.mockResolvedValue({ error: null });
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+    await screen.findAllByText("Luces LED");
+
+    await user.click(screen.getAllByRole("button", { name: 'Dar de baja "Luces LED"' })[0]);
+
+    await waitFor(() => expect(actualizarItemCatalogo).toHaveBeenCalledWith(
+      "a",
+      { descripcion: "Luces LED", precio: 240000, categoria: "Iluminación", unidad: null, activo: false }
+    ));
+    // Sin "Mostrar dados de baja" tildado, desaparece del listado.
+    await waitFor(() => expect(screen.queryByText("Luces LED")).not.toBeInTheDocument());
   });
 });
 

@@ -16,12 +16,14 @@ vi.mock("@/lib/supabase", () => ({ createClient }));
 function clienteFalso(overrides: {
   select?: () => Promise<{ data: unknown; error: unknown }>;
   update?: () => { eq: () => { select: () => Promise<{ data: unknown; error: unknown }> } };
+  insert?: () => { select: () => { single: () => Promise<{ data: unknown; error: unknown }> } };
 }) {
   return {
     auth: { getUser: () => Promise.resolve({ data: { user: { id: "u1" } } }) },
     from: () => ({
       select: overrides.select ?? (() => Promise.resolve({ data: [], error: null })),
       update: overrides.update,
+      insert: overrides.insert,
     }),
   };
 }
@@ -184,6 +186,99 @@ describe("actualizarItemCatalogo", () => {
     const resultado = await actualizarItemCatalogo("id-1", cambios);
 
     expect(resultado.error).toBeNull();
+  });
+});
+
+describe("crearItemCatalogo", () => {
+  const nuevo = {
+    tipo: "cercos" as const,
+    clave: "cerco_reforzado",
+    descripcion: "Cerco reforzado",
+    precio: 90000,
+    categoria: null,
+    unidad: null,
+    activo: true,
+  };
+  const filaCreada = {
+    id: "nuevo-1",
+    tipo: "cercos",
+    clave: "cerco_reforzado",
+    descripcion: "Cerco reforzado",
+    precio: 90000,
+    categoria: null,
+    unidad: null,
+    activo: true,
+    orden: null,
+    updated_at: "2026-01-01T00:00:00.000Z",
+  };
+
+  it("un fallo de red no rechaza la promesa", async () => {
+    createClient.mockReturnValue({
+      auth: { getUser: () => Promise.resolve({ data: { user: null } }) },
+      from: () => ({
+        insert: () => ({ select: () => ({ single: () => Promise.reject(new TypeError("Failed to fetch")) }) }),
+      }),
+    });
+    const { crearItemCatalogo } = await import("./catalogo");
+
+    const resultado = await crearItemCatalogo(nuevo);
+
+    expect(resultado.item).toBeNull();
+    expect(resultado.error).toMatch(/no se pudo conectar/i);
+  });
+
+  it("clave duplicada (tipo, clave) da un mensaje claro, no el error crudo de Postgres", async () => {
+    createClient.mockReturnValue(
+      clienteFalso({
+        insert: () => ({
+          select: () => ({
+            single: () =>
+              Promise.resolve({
+                data: null,
+                error: { code: "23505", message: 'duplicate key value violates unique constraint "catalogo_items_tipo_clave_key"' },
+              }),
+          }),
+        }),
+      })
+    );
+    const { crearItemCatalogo } = await import("./catalogo");
+
+    const resultado = await crearItemCatalogo(nuevo);
+
+    expect(resultado.item).toBeNull();
+    expect(resultado.error).toMatch(/ya existe/i);
+  });
+
+  it("detecta la migración pendiente igual que el resto de las operaciones", async () => {
+    createClient.mockReturnValue(
+      clienteFalso({
+        insert: () => ({
+          select: () => ({
+            single: () =>
+              Promise.resolve({ data: null, error: { code: "42703", message: "column catalogo_items.categoria does not exist" } }),
+          }),
+        }),
+      })
+    );
+    const { crearItemCatalogo, ERROR_MIGRACION_PENDIENTE } = await import("./catalogo");
+
+    const resultado = await crearItemCatalogo(nuevo);
+
+    expect(resultado.error).toBe(ERROR_MIGRACION_PENDIENTE);
+  });
+
+  it("una fila creada válida se devuelve ya parseada", async () => {
+    createClient.mockReturnValue(
+      clienteFalso({
+        insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: filaCreada, error: null }) }) }),
+      })
+    );
+    const { crearItemCatalogo } = await import("./catalogo");
+
+    const resultado = await crearItemCatalogo(nuevo);
+
+    expect(resultado.error).toBeNull();
+    expect(resultado.item).toEqual(filaCreada);
   });
 });
 
