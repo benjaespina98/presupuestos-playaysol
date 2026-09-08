@@ -8,11 +8,10 @@ import { LosetasCalculadora } from "@/components/calculadoras/losetas/LosetasCal
 
 /**
  * Losetas ("Plano de Piscina") — editor SVG en React + el motor de dominio
- * (lib/domain/precios/losetas.ts, lib/domain/plano/losetas.ts) + exportación
- * a imagen/PDF rasterizando ese mismo SVG con Canvas nativo (ver
- * lib/documentos/losetas/imagenCliente.tsx). Reemplaza a
- * `app/dashboard/losetas/{calculator,markup,script,styles}.ts` (Fase 5,
- * última calculadora — Lote 7).
+ * (lib/domain/plano/losetas.ts) + exportación a imagen/PDF rasterizando ese
+ * mismo SVG con Canvas nativo (ver lib/documentos/losetas/imagenCliente.tsx).
+ * Reemplaza a `app/dashboard/losetas/{calculator,markup,script,styles}.ts`
+ * (Fase 5, última calculadora — Lote 7).
  *
  * A diferencia de las otras 4, no lee el catálogo compartido: el legacy
  * nunca sembró materiales de losetas ahí (ver comentario en

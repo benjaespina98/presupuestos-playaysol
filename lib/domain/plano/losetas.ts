@@ -39,11 +39,16 @@ export const PlanoLosetasEntrada = z.object({
   solarHumedoAncho: z.number().min(0).default(0),
   escalera: z.boolean().default(false),
   escaleraPos: EscaleraPos.default("solar"),
-  /** Profundidad de la escalera hacia adentro de la pileta, en metros. La
-   *  escalera se dibuja como una franja a todo lo ancho/largo del lado
-   *  elegido (no un cuadrado en una esquina) — es como suele construirse en
-   *  la práctica: corrida completa, a menudo pegada al solar húmedo. */
+  /** Profundidad de la escalera (modo franja) o lado del cuadrado (modo
+   *  objeto libre), en metros — ver `escaleraMovible`. */
   escaleraAncho: z.number().min(0).default(0.5),
+  /** false (default) = franja a todo lo ancho/largo del lado elegido en
+   *  `escaleraPos` — así se construye la mayoría de las veces: corrida
+   *  completa, a menudo pegada al solar húmedo. true = un objeto chico que
+   *  se arrastra a mano en el plano, igual que una luz (`escaleraPosLibre`) —
+   *  para escaleras de esquina, tipo "romana", que no ocupan todo el lado. */
+  escaleraMovible: z.boolean().default(false),
+  escaleraPosLibre: LuzPos.default({ x: 0.5, y: 0.5 }),
   tipoPileta: TipoPileta.default("hormigon"),
   labios: z.number().min(0).default(0.2),
   luces: z.boolean().default(false),
@@ -123,6 +128,9 @@ export type PrimCircle = {
   fill: string; stroke?: string; strokeWidth?: number; opacity?: number;
   /** Presente sólo en el círculo de agarre interactivo de una luz. */
   luzIndex?: number;
+  /** Presente sólo en el círculo de agarre de la escalera en modo "objeto
+   *  libre" (`escaleraMovible`) — a diferencia de las luces, sólo hay una. */
+  escaleraDrag?: boolean;
 };
 export type PrimText = {
   t: "text";
@@ -224,7 +232,23 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
     }
   }
 
-  if (s.escalera && s.escaleraAncho > 0) {
+  if (s.escalera && s.escaleraMovible) {
+    // Objeto chico que se arrastra a mano, igual que una luz — para
+    // escaleras de esquina que no ocupan todo el lado (tipo "romana").
+    const lado = Math.max(20, Math.min(s.escaleraAncho * pxPerM, poolW * 0.4, poolH * 0.4));
+    const p = s.escaleraPosLibre;
+    const centroX = poolX + Math.max(0, Math.min(1, p.x)) * poolW;
+    const centroY = poolY + Math.max(0, Math.min(1, p.y)) * poolH;
+    const ex = centroX - lado / 2;
+    const ey = centroY - lado / 2;
+    extras.push({ t: "rect", x: ex, y: ey, w: lado, h: lado, fill: "#fff", stroke: "#1B3A5C", strokeWidth: 1.2, dash: "3 2" });
+    if (lado > 30) {
+      extras.push({ t: "text", x: centroX, y: centroY, text: "Escalera", fontSize: 9, fill: "#1B3A5C", anchor: "middle", central: true });
+    }
+    if (interactive) {
+      extras.push({ t: "circle", cx: centroX, cy: centroY, r: 28, fill: "transparent", escaleraDrag: true });
+    }
+  } else if (s.escalera && s.escaleraAncho > 0) {
     // Franja completa a lo ancho/largo del lado elegido — no un cuadrado en
     // una esquina (así se construye en la práctica: la escalera suele correr
     // toda la pared, a menudo pegada al solar húmedo). Cuando comparte el
@@ -304,10 +328,19 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
         }
       }
     }
-    if (interactive) {
+  }
+
+  // Un solo cartel de ayuda para todo lo arrastrable — si hubiera uno por
+  // objeto (luces + escalera libre) se pisarían en el mismo renglón, debajo
+  // del plano.
+  if (interactive) {
+    const arrastrables: string[] = [];
+    if (s.luces && s.cantLuces > 0) arrastrables.push(s.cantLuces > 1 ? "las luces" : "la luz");
+    if (s.escalera && s.escaleraMovible) arrastrables.push("la escalera");
+    if (arrastrables.length > 0) {
       extras.push({
         t: "text", x: ox + (totalW * pxPerM) / 2, y: oy + totalH * pxPerM + 34,
-        text: "Arrastrá las luces para ubicarlas donde quieras",
+        text: `Arrastrá ${arrastrables.join(" y ")} para ubicarla${arrastrables.length > 1 || s.cantLuces > 1 ? "s" : ""} donde quieras`,
         fontSize: 11, fill: "#B98A1E", anchor: "middle",
       });
     }

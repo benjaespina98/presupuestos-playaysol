@@ -5,7 +5,6 @@ import { useWatch } from "react-hook-form";
 import { useZodForm } from "@/lib/forms/useZodForm";
 import { NumberField, TextField, CheckboxField, SelectField } from "@/components/form";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { calcularLoseta } from "@/lib/domain/precios/losetas";
 import { calcularGeometriaPlano, ajustarLucesPos, type LuzPos } from "@/lib/domain/plano/losetas";
 import { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { PresupuestoLeido } from "@/lib/domain/presupuesto/adaptadores";
@@ -17,17 +16,15 @@ import { PlanoLosetasSvg } from "./PlanoLosetasSvg";
 import { LosetasFormSchema, formularioVacio, type LosetasForm } from "./schema";
 import { IconCloudUpload, IconImage, IconPrinter } from "@/components/icons";
 import { FloatingSaveBar } from "@/components/calculadoras/FloatingSaveBar";
-import { VarianteEncabezadoField } from "@/components/calculadoras/VarianteEncabezadoField";
 
 /**
  * Losetas — "Plano de Piscina": editor SVG interactivo, no un documento con
- * líneas de precio. Reemplaza a app/dashboard/losetas/{calculator,markup,
- * script,styles}.ts (Fase 5, Lote 6).
+ * líneas de precio ni un presupuesto de marca. Reemplaza a
+ * app/dashboard/losetas/{calculator,markup,script,styles}.ts (Fase 5, Lote 6).
  *
- * El costeo por material (nombre + precio $/m²) que tenía este tab se sacó a
- * pedido: acá se genera el plano para el cliente, no se cotizan losetas —
- * esa mezcla confundía las dos cosas. Los m² (que sí son geometría, no
- * precio) se mantienen.
+ * Acá sólo se genera el plano para el cliente — nunca se cotiza ni se
+ * cotejan m² (eso vivía acá antes y se sacó a pedido, junto con el banner de
+ * marca de los presupuestos: este plano no lleva ninguno de los dos).
  */
 
 function medidasDesdePresupuesto(leido: PresupuestoLeido): LosetasForm {
@@ -64,6 +61,8 @@ function medidasDesdePresupuesto(leido: PresupuestoLeido): LosetasForm {
     escalera: bool(m.escalera),
     escaleraPos,
     escaleraAncho: num(m.escaleraAncho, 0.5),
+    escaleraMovible: bool(m.escaleraMovible),
+    escaleraPosLibre: { x: num((m.escaleraPosLibre as { x?: unknown })?.x, 0.5), y: num((m.escaleraPosLibre as { y?: unknown })?.y, 0.5) },
     tipoPileta,
     labios: num(m.labios, 0.2),
     luces: bool(m.luces),
@@ -77,7 +76,6 @@ function medidasDesdePresupuesto(leido: PresupuestoLeido): LosetasForm {
     lblOpuesto: str(m.lblOpuesto, "Opuesto"),
     lblLateral1: str(m.lblLateral1, "Lateral 1"),
     lblLateral2: str(m.lblLateral2, "Lateral 2"),
-    variacionEncabezado: leido.presupuesto.variacionEncabezado === "navy" ? "navy" : "teal",
   };
 }
 
@@ -95,6 +93,8 @@ function medidasParaSnapshot(v: LosetasForm) {
     escalera: v.escalera,
     escaleraPos: v.escaleraPos,
     escaleraAncho: v.escaleraAncho,
+    escaleraMovible: v.escaleraMovible,
+    escaleraPosLibre: v.escaleraPosLibre,
     tipoPileta: v.tipoPileta,
     labios: v.labios,
     luces: v.luces,
@@ -177,20 +177,6 @@ export function LosetasCalculadora({
 
   const num = (v: unknown) => (typeof v === "number" ? v : 0);
 
-  const resultado = useMemo(
-    () =>
-      calcularLoseta({
-        largo: num(valoresForm.largo),
-        ancho: num(valoresForm.ancho),
-        bordeIncluido: num(valoresForm.incluido),
-        solar: num(valoresForm.solar),
-        opuesto: num(valoresForm.opuesto),
-        lateral1: num(valoresForm.lateral1),
-        lateral2: num(valoresForm.lateral2),
-      }),
-    [valoresForm]
-  );
-
   const geometriaEntrada = useMemo(
     () => ({
       largo: num(valoresForm.largo),
@@ -204,6 +190,8 @@ export function LosetasCalculadora({
       escalera: !!valoresForm.escalera,
       escaleraPos: valoresForm.escaleraPos ?? "solar",
       escaleraAncho: num(valoresForm.escaleraAncho),
+      escaleraMovible: !!valoresForm.escaleraMovible,
+      escaleraPosLibre: { x: num(valoresForm.escaleraPosLibre?.x), y: num(valoresForm.escaleraPosLibre?.y) },
       tipoPileta: valoresForm.tipoPileta ?? "hormigon",
       labios: num(valoresForm.labios),
       luces: !!valoresForm.luces,
@@ -234,6 +222,10 @@ export function LosetasCalculadora({
     setValue(`lucesPos.${indice}`, pos, { shouldDirty: true });
   }
 
+  function onMoverEscalera(pos: LuzPos) {
+    setValue("escaleraPosLibre", pos, { shouldDirty: true });
+  }
+
   function snapshotDesdeValores(v: LosetasForm): PresupuestoV1 {
     return PresupuestoV1.parse({
       v: 1,
@@ -246,7 +238,6 @@ export function LosetasCalculadora({
       preciosBase: {},
       totales: [],
       detalle: "",
-      variacionEncabezado: v.variacionEncabezado,
       modoPrecio: "ambos",
       fotos: [],
     });
@@ -274,8 +265,7 @@ export function LosetasCalculadora({
     return {
       geometria: geometriaCliente,
       nombreCliente: getValues("nombre") || "",
-      variante: getValues("variacionEncabezado") ?? "teal",
-    } as const;
+    };
   }
 
   async function onExportarImagen() {
@@ -338,15 +328,14 @@ export function LosetasCalculadora({
             control={control}
             name="incluido"
             label="Borde que ya viene incluido (m)"
-            hint="Ancho de loseta perimetral que entra en el precio base, igual en los cuatro lados. Todo lo que exceda esta medida es lo que se cotiza aparte."
+            hint="Igual en los cuatro lados."
           />
         </section>
 
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Ancho final del borde, lado por lado</h2>
           <p className="text-xs text-gray-500">
-            Cargá la medida <b>terminada</b> de cada lado, incluyendo el borde que ya viene incluido. Un lado que
-            quede en la medida estándar lleva ese mismo valor.
+            Medida <b>terminada</b> de cada lado, incluyendo el borde de arriba.
           </p>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <NumberField control={control} name="solar" label="Solar (m)" />
@@ -384,12 +373,25 @@ export function LosetasCalculadora({
               <CheckboxField register={register} errors={errors} name="escalera" label="Escalera" />
               {valoresForm.escalera && (
                 <>
-                  <SelectField register={register} errors={errors} name="escaleraPos" label="Ubicación" options={ESCALERA_OPCIONES} />
+                  <CheckboxField
+                    register={register}
+                    errors={errors}
+                    name="escaleraMovible"
+                    label="Ubicarla a mano"
+                    hint="En vez de una franja fija, queda como un objeto chico que arrastrás en el plano — igual que las luces."
+                  />
+                  {!valoresForm.escaleraMovible && (
+                    <SelectField register={register} errors={errors} name="escaleraPos" label="Ubicación" options={ESCALERA_OPCIONES} />
+                  )}
                   <NumberField
                     control={control}
                     name="escaleraAncho"
-                    label="Ancho (m)"
-                    hint="Se dibuja de corrido, a todo el ancho de ese lado — no un cuadrado en la esquina. Si el solar húmedo está del mismo lado, arranca justo después."
+                    label={valoresForm.escaleraMovible ? "Tamaño (m)" : "Ancho (m)"}
+                    hint={
+                      valoresForm.escaleraMovible
+                        ? "Lado del cuadrado que representa la escalera."
+                        : "Va de corrido a todo ese lado. Si el solar húmedo está del mismo lado, arranca justo después."
+                    }
                   />
                 </>
               )}
@@ -408,7 +410,6 @@ export function LosetasCalculadora({
             Apariencia del plano <span className="font-normal text-gray-500">— colores y nombres de los lados</span>
           </summary>
           <div className="space-y-4 border-t border-gray-100 p-5">
-            <VarianteEncabezadoField register={register} name="variacionEncabezado" />
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="colorAgua" className="mb-1 block text-xs text-gray-500">Color del agua</label>
@@ -432,18 +433,13 @@ export function LosetasCalculadora({
       <div>
         <div className="space-y-4 lg:sticky lg:top-4">
           <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <PlanoLosetasSvg geometria={geometriaEditor} interactive ariaLabel="Editor del plano de la piscina" onMoverLuz={onMoverLuz} />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg border border-gray-200 bg-white p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">m² ya incluidos</div>
-              <div className="mt-1 text-2xl font-bold text-[#1B3A5C]">{resultado.m2Incluidos.toLocaleString("es-AR")} m²</div>
-            </div>
-            <div className="rounded-lg border border-[#C0522D] bg-[#FDF6F3] p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">m² extra a cotizar</div>
-              <div className="mt-1 text-2xl font-bold text-[#C0522D]">{resultado.m2ACotizar.toLocaleString("es-AR")} m²</div>
-            </div>
+            <PlanoLosetasSvg
+              geometria={geometriaEditor}
+              interactive
+              ariaLabel="Editor del plano de la piscina"
+              onMoverLuz={onMoverLuz}
+              onMoverEscalera={onMoverEscalera}
+            />
           </div>
 
           {/* Vista previa de lo que sale en "Imagen"/"PDF" — mismo contenido

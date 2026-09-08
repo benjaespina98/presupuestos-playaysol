@@ -18,33 +18,26 @@ import type { GeometriaPlano, LegendItem, Prim } from "@/lib/domain/plano/loseta
  * Acá no hay DOM que clonar ni medir: el plano YA es una lista de primitivas
  * (`GeometriaPlano`, en `lib/domain/plano/losetas.ts`) — lo mismo que pinta
  * `PlanoLosetasSvg.tsx` en pantalla. Este módulo arma un `<svg>` standalone
- * con esas mismas primitivas + el encabezado de marca + el pie, y lo
- * rasteriza con el Canvas nativo del navegador (`new Image()` + `<canvas>`),
- * que en cualquier celular mide exactamente lo que el `viewBox` dice que mide
- * — no hay reflow de un DOM ajeno de por medio. El PDF reusa ese mismo PNG
- * (mismo contenido, WYSIWYG entre "Imagen" y "PDF") envuelto en una página de
+ * con esas mismas primitivas + un título simple + el pie, y lo rasteriza con
+ * el Canvas nativo del navegador (`new Image()` + `<canvas>`), que en
+ * cualquier celular mide exactamente lo que el `viewBox` dice que mide — no
+ * hay reflow de un DOM ajeno de por medio. El PDF reusa ese mismo PNG (mismo
+ * contenido, WYSIWYG entre "Imagen" y "PDF") envuelto en una página de
  * `@react-pdf/renderer` con el tamaño de la imagen.
+ *
+ * Sin el banner de marca (header-teal/navy.png): ese banner es el membrete
+ * de un PRESUPUESTO (piscinas/revestimientos/cobertores/cercos) — acá el
+ * entregable es un plano técnico, no un presupuesto, y llevarlo lo hacía más
+ * pesado y ruidoso sin sumar nada (a pedido explícito, ver conversación).
+ * Por eso tampoco hay ninguna variante para elegir: un solo estilo, fijo.
  */
-
-const HEADER_VARIANTES = {
-  teal: { color: "#00829C", img: "/header-teal.png" },
-  navy: { color: "#244B5A", img: "/header-navy.png" }, // Azul Institucional oficial (RGB 36,75,90)
-} as const;
-export type VarianteEncabezadoPlano = keyof typeof HEADER_VARIANTES;
 
 export interface ParametrosImagenCliente {
   /** Geometría "completa" (showDims:true, interactive:false) — la misma que
    *  ya usa `geometriaCliente` en LosetasCalculadora.tsx. */
   geometria: GeometriaPlano;
   nombreCliente: string;
-  variante: VarianteEncabezadoPlano;
 }
-
-/* ─────────────────────── data URIs de los assets ─────────────────────── */
-
-// Cachea por URL: "Imagen" y "PDF" piden el mismo banner en la misma
-// sesión de exportación, no tiene sentido pedirlo dos veces por `fetch`.
-const cacheDataUri = new Map<string, Promise<string>>();
 
 function blobADataUri(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -52,31 +45,6 @@ function blobADataUri(blob: Blob): Promise<string> {
     reader.onload = () => resolve(String(reader.result));
     reader.onerror = () => reject(reader.error ?? new Error("No se pudo leer el archivo"));
     reader.readAsDataURL(blob);
-  });
-}
-
-function obtenerDataUri(url: string): Promise<string> {
-  let promesa = cacheDataUri.get(url);
-  if (!promesa) {
-    promesa = fetch(url)
-      .then((r) => {
-        if (!r.ok) throw new Error(`No se pudo cargar ${url} (HTTP ${r.status})`);
-        return r.blob();
-      })
-      .then(blobADataUri);
-    cacheDataUri.set(url, promesa);
-  }
-  return promesa;
-}
-
-/** Dimensiones reales de una imagen ya cargada como data URI — necesarias
- *  para calcular el alto del banner una vez escalado al ancho de la página. */
-function medirImagen(dataUri: string): Promise<{ width: number; height: number }> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-    img.onerror = () => reject(new Error("No se pudo leer el logo del presupuesto"));
-    img.src = dataUri;
   });
 }
 
@@ -157,6 +125,12 @@ function geometriaASvg(g: GeometriaPlano): string {
 
 /* ─────────────────────────── Layout de la página ─────────────────────────── */
 
+// Único estilo, fijo — mismo navy/teal de marca que el resto de la app
+// (ver PlanoLosetasSvg.tsx), sin variante para elegir (ver comentario de
+// arriba: acá no hay membrete de presupuesto).
+const COLOR_TITULO = "#244B5A";
+const COLOR_DIVISOR = "#00829C";
+
 const PAG_PAD = 40;
 const CARD_PAD = 24;
 
@@ -166,15 +140,10 @@ interface SvgClienteResultado {
   height: number;
 }
 
-async function construirSvgCliente({ geometria, nombreCliente, variante }: ParametrosImagenCliente): Promise<SvgClienteResultado> {
-  const { color: colorAcento, img: bannerUrl } = HEADER_VARIANTES[variante];
-  const bannerDataUri = await obtenerDataUri(bannerUrl);
-  const bannerDim = await medirImagen(bannerDataUri);
-
+function construirSvgCliente({ geometria, nombreCliente }: ParametrosImagenCliente): SvgClienteResultado {
   const pageW = geometria.viewW + PAG_PAD * 2;
-  const bannerH = Math.round((pageW * bannerDim.height) / bannerDim.width);
 
-  let y = bannerH + 28;
+  let y = PAG_PAD;
   const tituloY = y + 22;
   const nombreY = y + 42;
   const divisorY = y + 56;
@@ -199,16 +168,15 @@ async function construirSvgCliente({ geometria, nombreCliente, variante }: Param
     </radialGradient>
   </defs>
   <rect x="0" y="0" width="${pageW}" height="${pageH}" fill="#ffffff" />
-  <image x="0" y="0" width="${pageW}" height="${bannerH}" href="${bannerDataUri}" preserveAspectRatio="none" />
-  <text x="${PAG_PAD}" y="${tituloY}" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="bold" fill="${colorAcento}" letter-spacing="0.5">PLANO DE PISCINA</text>
+  <text x="${PAG_PAD}" y="${tituloY}" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="bold" fill="${COLOR_TITULO}" letter-spacing="0.5">PLANO DE PISCINA</text>
   <text x="${PAG_PAD}" y="${nombreY}" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#6B7680">${escaparXml(nombreCliente)}</text>
-  <line x1="${PAG_PAD}" y1="${divisorY}" x2="${pageW - PAG_PAD}" y2="${divisorY}" stroke="${colorAcento}" stroke-width="2" />
+  <line x1="${PAG_PAD}" y1="${divisorY}" x2="${pageW - PAG_PAD}" y2="${divisorY}" stroke="${COLOR_DIVISOR}" stroke-width="2" />
   <rect x="${PAG_PAD}" y="${cardY}" width="${geometria.viewW}" height="${cardH}" rx="8" fill="#EEF2F6" stroke="#E1E7EC" stroke-width="1" />
   <g transform="translate(${PAG_PAD + CARD_PAD}, ${cardY + CARD_PAD})">
     ${geometriaASvg(geometria)}
   </g>
-  <line x1="${PAG_PAD}" y1="${footerLineY}" x2="${pageW - PAG_PAD}" y2="${footerLineY}" stroke="${colorAcento}" stroke-width="2" />
-  <text x="${PAG_PAD}" y="${footerTextY}" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="${colorAcento}" letter-spacing="0.5">Playa y Sol S.A.S. — Corrientes 1210, Villa María</text>
+  <line x1="${PAG_PAD}" y1="${footerLineY}" x2="${pageW - PAG_PAD}" y2="${footerLineY}" stroke="${COLOR_DIVISOR}" stroke-width="2" />
+  <text x="${PAG_PAD}" y="${footerTextY}" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="${COLOR_TITULO}" letter-spacing="0.5">Playa y Sol S.A.S. — Corrientes 1210, Villa María</text>
 </svg>`;
 
   return { svg, width: pageW, height: pageH };
@@ -254,7 +222,7 @@ function rasterizarSvg(svg: string, width: number, height: number, escala: numbe
 }
 
 async function generarPngClientePlano(params: ParametrosImagenCliente): Promise<{ blob: Blob; width: number; height: number }> {
-  const { svg, width, height } = await construirSvgCliente(params);
+  const { svg, width, height } = construirSvgCliente(params);
   const blob = await rasterizarSvg(svg, width, height, ESCALA_RASTER);
   return { blob, width: width * ESCALA_RASTER, height: height * ESCALA_RASTER };
 }

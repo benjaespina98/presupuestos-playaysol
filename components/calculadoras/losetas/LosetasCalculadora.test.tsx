@@ -45,30 +45,6 @@ async function cargarMedidas(user: ReturnType<typeof userEvent.setup>, largo: st
   await user.type(anchoInput, ancho);
 }
 
-describe("LosetasCalculadora · m²", () => {
-  it("con medidas sin ampliar ningún lado, el extra a cotizar es 0", async () => {
-    const user = userEvent.setup();
-    render(<LosetasCalculadora />);
-    await cargarMedidas(user, "8", "4");
-
-    expect(screen.getByText("45 m²")).toBeInTheDocument(); // incluidos: 9×5
-    expect(screen.getByText("0 m²")).toBeInTheDocument(); // extra
-  });
-
-  it("un metro de más en los cuatro lados da 15 m² a cotizar", async () => {
-    const user = userEvent.setup();
-    render(<LosetasCalculadora />);
-    await cargarMedidas(user, "8", "4");
-    for (const label of ["Solar (m)", "Opuesto (m)", "Lateral 1 (m)", "Lateral 2 (m)"]) {
-      const campo = screen.getByLabelText(label);
-      await user.clear(campo);
-      await user.type(campo, "1");
-    }
-
-    expect(screen.getByText("15 m²")).toBeInTheDocument();
-  });
-});
-
 describe("LosetasCalculadora · luces arrastrables", () => {
   beforeEach(() => mockearRectDelSvg());
 
@@ -109,6 +85,32 @@ describe("LosetasCalculadora · luces arrastrables", () => {
 
     await waitFor(() => {
       const cyFinal = Number((editor.querySelector('[data-luz="0"]') as SVGCircleElement).getAttribute("cy"));
+      expect(cyFinal).not.toBe(cyInicial);
+    });
+  });
+
+  it("con la escalera en modo 'ubicarla a mano', se puede arrastrar igual que una luz", async () => {
+    const user = userEvent.setup();
+    render(<LosetasCalculadora />);
+    await cargarMedidas(user, "8", "4");
+    await user.click(screen.getByLabelText("Escalera"));
+    await user.click(screen.getByLabelText("Ubicarla a mano"));
+
+    // Sin "movible", "Ubicación" desaparece — sólo queda el tamaño.
+    expect(screen.queryByLabelText("Ubicación")).not.toBeInTheDocument();
+
+    const editor = screen.getByRole("img", { name: "Editor del plano de la piscina" });
+    await waitFor(() => expect(editor.querySelector("[data-escalera]")).toBeTruthy());
+    const cyInicial = Number((editor.querySelector("[data-escalera]") as SVGCircleElement).getAttribute("cy"));
+
+    fireEvent.pointerDown(editor.querySelector("[data-escalera]") as SVGCircleElement, {
+      clientX: 300, clientY: 300, pointerId: 1,
+    });
+    fireEvent.pointerMove(editor, { clientX: 300, clientY: 380, pointerId: 1 });
+    fireEvent.pointerUp(editor, { clientX: 300, clientY: 380, pointerId: 1 });
+
+    await waitFor(() => {
+      const cyFinal = Number((editor.querySelector("[data-escalera]") as SVGCircleElement).getAttribute("cy"));
       expect(cyFinal).not.toBe(cyInicial);
     });
   });
@@ -173,7 +175,6 @@ describe("LosetasCalculadora · exportar para el cliente", () => {
     await waitFor(() => expect(generarImagenClientePlano).toHaveBeenCalledTimes(1));
     expect(generarImagenClientePlano.mock.calls[0][0]).toMatchObject({
       nombreCliente: "Gómez, Martín",
-      variante: "teal",
     });
     expect(compartirOdescargarArchivo).toHaveBeenCalledWith(
       expect.any(Blob),
@@ -195,24 +196,6 @@ describe("LosetasCalculadora · exportar para el cliente", () => {
       expect.stringContaining("_cliente"),
       "application/pdf"
     );
-  });
-
-  it("permite elegir el banner navy y lo guarda en el snapshot y en la exportación", async () => {
-    guardarPresupuesto.mockReset();
-    guardarPresupuesto.mockResolvedValue({ error: null });
-    const user = userEvent.setup();
-    render(<LosetasCalculadora />);
-    await cargarMedidas(user, "8", "4");
-
-    await user.click(screen.getByRole("radio", { name: "Navy institucional" }));
-    await user.click(screen.getByRole("button", { name: "Imagen" }));
-    await waitFor(() => expect(generarImagenClientePlano).toHaveBeenCalledTimes(1));
-    expect(generarImagenClientePlano.mock.calls[0][0]).toMatchObject({ variante: "navy" });
-
-    await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
-    await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
-    const [, datos] = guardarPresupuesto.mock.calls[0];
-    expect(PresupuestoV1.parse(datos).variacionEncabezado).toBe("navy");
   });
 });
 
@@ -248,7 +231,6 @@ describe("LosetasCalculadora · abrir un plano guardado", () => {
     expect(screen.getByLabelText("Largo (m)")).toHaveValue("8");
     expect(screen.getByLabelText("Color del agua")).toHaveValue("#ff0000");
     expect(screen.getByLabelText("Nombre del lado solar")).toHaveValue("Frente");
-    expect(screen.getByText("15 m²")).toBeInTheDocument(); // extra a cotizar con estas medidas
   });
 
   it("un plano con luces guardadas las dibuja en su posición, no en la default", () => {
