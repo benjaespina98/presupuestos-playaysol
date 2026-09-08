@@ -13,7 +13,7 @@ import { formatARS } from "@/lib/format/ars";
 import type { CatalogoRow } from "@/lib/catalogo";
 import { esTextoCompartido } from "@/lib/domain/catalogo/categorias";
 import { adicionalesDesdeLineas } from "@/lib/domain/presupuesto/formulario";
-import { leerTextosCompartidos } from "@/lib/documentos/textosCompartidos";
+import { leerTextosCompartidos, type TextosCompartidos } from "@/lib/documentos/textosCompartidos";
 import { TEXTOS_POR_DEFECTO_CERCOS, generarDocxCercos } from "@/lib/documentos/cercos/docx";
 import { armarBloquesCerco } from "@/lib/documentos/cercos/bloques";
 import { generarPdfPresupuesto } from "@/lib/documentos/pdfGenerator";
@@ -30,6 +30,7 @@ import { FloatingSaveBar } from "@/components/calculadoras/FloatingSaveBar";
 import { CamposObligatoriosHint } from "@/components/calculadoras/CamposObligatoriosHint";
 import { VistaPreviaMovil } from "@/components/calculadoras/VistaPreviaMovil";
 import { VarianteEncabezadoField } from "@/components/calculadoras/VarianteEncabezadoField";
+import { EditorTextosCompartidos } from "@/components/calculadoras/EditorTextosCompartidos";
 
 const CLAVE_PRECIO_SIN = "precioSin";
 const CLAVE_PRECIO_CON = "precioCon";
@@ -183,7 +184,12 @@ export function CercosCalculadora({
   const [fotos, setFotos] = useState<FotoEnEdicion[]>([]);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
 
-  const textos = useMemo(() => leerTextosCompartidos(catalogo, TEXTOS_POR_DEFECTO_CERCOS), [catalogo]);
+  const textosBase = useMemo(() => leerTextosCompartidos(catalogo, TEXTOS_POR_DEFECTO_CERCOS), [catalogo]);
+  // Sólo se llena al guardar desde EditorTextosCompartidos — así el
+  // documento (y la tarjeta de "Guardado") reflejan el cambio al toque, sin
+  // esperar un refetch del catálogo para releer lo que ya se acaba de escribir.
+  const [textosOverride, setTextosOverride] = useState<TextosCompartidos | null>(null);
+  const textos = textosOverride ?? textosBase;
 
   useEffect(() => {
     if (!presupuestoInicial) return;
@@ -497,6 +503,8 @@ export function CercosCalculadora({
           <TextField register={register} errors={errors} name="validezDias" label="Validez (días)" />
           <VarianteEncabezadoField register={register} name="variacionEncabezado" />
         </section>
+
+        <EditorTextosCompartidos tipo="cercos" textos={textos} onGuardado={setTextosOverride} />
 
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Cálculo</h2>

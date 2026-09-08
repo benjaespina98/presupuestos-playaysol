@@ -4,14 +4,15 @@ import { formatARS, formatNumero } from "@/lib/format/ars";
 import type { ResolverFotosSeed } from "@/lib/documentos/modelo";
 import { FOTOS_REFERENCIA_COBERTORES, GRUPO_SEED_GENERAL } from "@/lib/documentos/fotosSeed";
 import { FotosSeedGrid } from "@/components/calculadoras/FotosSeedGrid";
+import { TextoLegal, PieDocumento } from "@/components/calculadoras/TextosDocumento";
 
 /**
  * El documento en pantalla de Cobertores. Mismo contenido/orden que
  * `buildDocumentBody()` en `public/cobertores-calc.js` (no se reinventa el
  * documento). Estructura idéntica a components/calculadoras/cercos/
- * DocumentoCerco.tsx salvo el título y la línea de "Medidas" — no se
- * extrajo un componente compartido todavía (Lote 8 de la Fase 5: recién
- * después de 2-3 calculadoras, para no adivinar la abstracción).
+ * DocumentoCerco.tsx salvo el título y la línea de "Medidas" — el texto
+ * legal y el pie sí se extrajeron a un componente compartido
+ * (TextosDocumento.tsx), el resto sigue sin extraer.
  */
 
 const HEADER_VARIANTS: Record<string, { color: string; img: string }> = {
@@ -67,11 +68,6 @@ export function DocumentoCobertor({
   const opcionalesIncluidos = snapshot.lineas.filter((l) => l.naturaleza === "informativa" && l.incluida);
   const etiquetas = etiquetasTotal(snapshot.modoPrecio);
   const lineasDimension = splitDimensionLines(snapshot.detalle);
-  const f = textos.footer;
-  const mapsUrl =
-    "https://www.google.com/maps/search/?api=1&query=" +
-    encodeURIComponent("Playa y Sol S.A.S.") +
-    "&query_place_id=ChIJd1F4COdCzJURn7QoGKCkKXA";
 
   return (
     <div
@@ -168,7 +164,7 @@ export function DocumentoCobertor({
           El presente presupuesto tiene una validez de {snapshot.validezDias} días.
         </p>
 
-        <p className="whitespace-pre-line text-xs leading-relaxed text-gray-700">{textos.legal}</p>
+        <TextoLegal texto={textos.legal} />
 
         {fotos.length > 0 && (
           <section>
@@ -185,29 +181,7 @@ export function DocumentoCobertor({
           </section>
         )}
 
-        <footer className="break-inside-avoid space-y-1 border-t border-[#E1E7EC] pt-4 text-xs text-[#244B5A] print:break-inside-avoid">
-          <p className="font-bold tracking-wide">{f.empresa}</p>
-          {f.direccion && (
-            <p>
-              Dirección:{" "}
-              <a href={mapsUrl} target="_blank" rel="noreferrer" className="underline">
-                {f.direccion}
-              </a>
-            </p>
-          )}
-          {f.telFijo && <p>Tel: {f.telFijo}</p>}
-          {(f.contactoNombre || f.contactoCel) && (
-            <p>
-              Contacto: {f.contactoNombre}
-              {f.contactoCel ? ` - Cel. ${f.contactoCel}` : ""}
-            </p>
-          )}
-          {f.whatsapp && <p>WhatsApp: {f.whatsapp}</p>}
-          {f.email && <p>E-mail: {f.email}</p>}
-          {f.web && <p>Web: {f.web}</p>}
-          {f.facebook && <p>Facebook: {f.facebook}</p>}
-          {f.instagram && <p>Instagram: {f.instagram}</p>}
-        </footer>
+        <PieDocumento textos={textos} />
       </div>
     </div>
   );
