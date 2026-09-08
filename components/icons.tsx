@@ -91,3 +91,25 @@ export function IconHistory({ className = "h-4 w-4" }: IconProps) {
     </svg>
   );
 }
+
+export function IconPlus({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+/** Dar de alta/baja un ítem del catálogo (`activo`) — nunca un borrado real:
+ *  no hay política de RLS que permita `.delete()` sobre catalogo_items (ver
+ *  lib/catalogo.test.ts), a propósito, porque presupuestos v0 sin congelar
+ *  todavía leen precios del catálogo por clave. */
+export function IconPower({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M12 2v10" />
+      <path d="M18.4 6.6a9 9 0 1 1-12.77 0" />
+    </svg>
+  );
+}
