@@ -13,7 +13,7 @@ import { formatARS } from "@/lib/format/ars";
 import type { CatalogoRow } from "@/lib/catalogo";
 import { esTextoCompartido } from "@/lib/domain/catalogo/categorias";
 import { adicionalesDesdeLineas } from "@/lib/domain/presupuesto/formulario";
-import { leerTextosCompartidos } from "@/lib/documentos/textosCompartidos";
+import { leerTextosCompartidos, type TextosCompartidos } from "@/lib/documentos/textosCompartidos";
 import { TEXTOS_POR_DEFECTO_COBERTORES, generarDocxCobertores } from "@/lib/documentos/cobertores/docx";
 import { armarBloquesCobertor } from "@/lib/documentos/cobertores/bloques";
 import { generarPdfPresupuesto } from "@/lib/documentos/pdfGenerator";
@@ -30,6 +30,7 @@ import { FloatingSaveBar } from "@/components/calculadoras/FloatingSaveBar";
 import { CamposObligatoriosHint } from "@/components/calculadoras/CamposObligatoriosHint";
 import { VistaPreviaMovil } from "@/components/calculadoras/VistaPreviaMovil";
 import { VarianteEncabezadoField } from "@/components/calculadoras/VarianteEncabezadoField";
+import { EditorTextosCompartidos } from "@/components/calculadoras/EditorTextosCompartidos";
 
 const CLAVE_PRECIO_MENOS15 = "precioMenos15";
 const CLAVE_PRECIO_MAS15 = "precioMas15";
@@ -167,7 +168,9 @@ export function CobertorCalculadora({
   const [fotos, setFotos] = useState<FotoEnEdicion[]>([]);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
 
-  const textos = useMemo(() => leerTextosCompartidos(catalogo, TEXTOS_POR_DEFECTO_COBERTORES), [catalogo]);
+  const textosBase = useMemo(() => leerTextosCompartidos(catalogo, TEXTOS_POR_DEFECTO_COBERTORES), [catalogo]);
+  const [textosOverride, setTextosOverride] = useState<TextosCompartidos | null>(null);
+  const textos = textosOverride ?? textosBase;
 
   useEffect(() => {
     if (!presupuestoInicial) return;
@@ -487,6 +490,8 @@ export function CobertorCalculadora({
           <TextField register={register} errors={errors} name="validezDias" label="Validez (días)" />
           <VarianteEncabezadoField register={register} name="variacionEncabezado" />
         </section>
+
+        <EditorTextosCompartidos tipo="cobertores" textos={textos} onGuardado={setTextosOverride} />
 
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Cálculo</h2>

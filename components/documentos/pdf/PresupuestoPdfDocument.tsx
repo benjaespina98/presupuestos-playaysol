@@ -158,7 +158,11 @@ const styles = StyleSheet.create({
   tarjetaMontoVacio: { fontSize: 9.5, fontFamily: "Helvetica-Bold", color: "#8B98A3" },
   tarjetaSubcaption: { fontSize: 8, color: "#666", marginTop: 2 },
   validez: { fontSize: 9.5, fontFamily: "Helvetica-Bold", marginBottom: 10, color: NAVY },
-  legal: { fontSize: 8, color: "#444", lineHeight: 1.4, marginBottom: 4 },
+  // 8pt (antes) es casi ilegible en una hoja A4 impresa — el mismo texto
+  // legal que en pantalla ya subió a text-sm (ver TextosDocumento.tsx);
+  // acá el equivalente es 9.5pt, un paso debajo del cuerpo del documento
+  // (10pt) pero lejos de la nota al pie que era antes.
+  legal: { fontSize: 9.5, color: "#444", lineHeight: 1.5, marginBottom: 4 },
   filaFotos: { flexDirection: "row", marginBottom: 6 },
   // Marco fino alrededor de cada foto (recorte de catálogo o subida por el
   // vendedor): sin esto, contra el fondo blanco de la página, una foto sin
@@ -166,9 +170,22 @@ const styles = StyleSheet.create({
   // que ya usan las tarjetas de opcionales.
   fotoMarco: { borderRadius: 4, borderWidth: 1, borderColor: BORDE_SUAVE, overflow: "hidden" },
   fotoCaption: { fontSize: 7.5, color: "#666", marginTop: 2, textAlign: "center" },
-  pie: { borderTopWidth: 2, borderTopColor: TEAL, paddingTop: 10, marginTop: 6 },
-  pieEmpresa: { fontSize: 10, fontFamily: "Helvetica-Bold", color: NAVY, letterSpacing: 0.4, marginBottom: 3 },
-  pieLinea: { fontSize: 8, color: NAVY, marginBottom: 2 },
+  // Antes era sólo un borde arriba + texto a 8pt, del mismo tamaño que
+  // cualquier nota al pie — se perdía contra el resto del documento (bug
+  // reportado: "el pie debería ser más prolijo y protagonista, casi no se
+  // ve"). Ahora es una tarjeta propia (fondo + franja superior de color),
+  // con la empresa más grande que el resto — mismo criterio que
+  // `PieDocumento` en TextosDocumento.tsx (la versión de esto en pantalla).
+  pie: {
+    backgroundColor: NAVY_SUAVE,
+    borderRadius: 6,
+    borderTopWidth: 3,
+    borderTopColor: TEAL,
+    padding: 12,
+    marginTop: 10,
+  },
+  pieEmpresa: { fontSize: 12, fontFamily: "Helvetica-Bold", color: NAVY, letterSpacing: 0.4, marginBottom: 5 },
+  pieLinea: { fontSize: 9.5, color: NAVY, marginBottom: 3 },
   // "bottom"/"right" se miden desde el borde de PADDING del Page (que ahora
   // ya está inset por MARGEN_VERTICAL/MARGEN_HORIZONTAL — ver `page` arriba),
   // no desde el borde físico de la hoja: por eso "right" queda en 0 (ya

@@ -13,7 +13,7 @@ import { formatARS } from "@/lib/format/ars";
 import type { CatalogoRow } from "@/lib/catalogo";
 import { esTextoCompartido } from "@/lib/domain/catalogo/categorias";
 import { adicionalesDesdeLineas } from "@/lib/domain/presupuesto/formulario";
-import { leerTextosCompartidos } from "@/lib/documentos/textosCompartidos";
+import { leerTextosCompartidos, type TextosCompartidos } from "@/lib/documentos/textosCompartidos";
 import { TEXTOS_POR_DEFECTO_PISCINAS, generarDocxPiscinas } from "@/lib/documentos/piscinas/docx";
 import { armarBloquesPiscina } from "@/lib/documentos/piscinas/bloques";
 import { generarPdfPresupuesto } from "@/lib/documentos/pdfGenerator";
@@ -30,6 +30,7 @@ import { FloatingSaveBar } from "@/components/calculadoras/FloatingSaveBar";
 import { CamposObligatoriosHint } from "@/components/calculadoras/CamposObligatoriosHint";
 import { VarianteEncabezadoField } from "@/components/calculadoras/VarianteEncabezadoField";
 import { VistaPreviaMovil } from "@/components/calculadoras/VistaPreviaMovil";
+import { EditorTextosCompartidos } from "@/components/calculadoras/EditorTextosCompartidos";
 
 function esOpcionalCatalogo(r: CatalogoRow): boolean {
   return !esTextoCompartido(r.clave);
@@ -179,7 +180,9 @@ export function PiscinaCalculadora({
   const [fotos, setFotos] = useState<FotoEnEdicion[]>([]);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
 
-  const textos = useMemo(() => leerTextosCompartidos(catalogo, TEXTOS_POR_DEFECTO_PISCINAS), [catalogo]);
+  const textosBase = useMemo(() => leerTextosCompartidos(catalogo, TEXTOS_POR_DEFECTO_PISCINAS), [catalogo]);
+  const [textosOverride, setTextosOverride] = useState<TextosCompartidos | null>(null);
+  const textos = textosOverride ?? textosBase;
 
   useEffect(() => {
     if (!presupuestoInicial) return;
@@ -499,6 +502,8 @@ export function PiscinaCalculadora({
           <TextField register={register} errors={errors} name="validezDias" label="Validez (días)" />
           <VarianteEncabezadoField register={register} name="variacionEncabezado" />
         </section>
+
+        <EditorTextosCompartidos tipo="piscinas" textos={textos} onGuardado={setTextosOverride} />
 
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Ítems</h2>
