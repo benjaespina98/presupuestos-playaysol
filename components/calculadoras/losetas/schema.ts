@@ -27,6 +27,8 @@ export const LosetasFormSchema = z.object({
   escalera: z.boolean().default(false),
   escaleraPos: EscaleraPos.default("solar"),
   escaleraAncho: z.number().nonnegative("No puede ser negativo").default(0.5),
+  escaleraMovible: z.boolean().default(false),
+  escaleraPosLibre: LuzPos.default({ x: 0.5, y: 0.5 }),
 
   tipoPileta: TipoPileta.default("hormigon"),
   labios: z.number().nonnegative("No puede ser negativo").default(0.2),
@@ -45,12 +47,6 @@ export const LosetasFormSchema = z.object({
   lblOpuesto: z.string().default("Opuesto"),
   lblLateral1: z.string().default("Lateral 1"),
   lblLateral2: z.string().default("Lateral 2"),
-
-  // Qué banner de marca lleva la imagen/PDF para el cliente — mismo campo
-  // (nombre y opciones) que ya eligen las otras 4 calculadoras vía
-  // VarianteEncabezadoField, acá agregado para que el plano tenga la misma
-  // flexibilidad de marca que el resto de los documentos.
-  variacionEncabezado: z.enum(["teal", "navy"]).default("teal"),
 });
 export type LosetasForm = z.infer<typeof LosetasFormSchema>;
 
@@ -69,6 +65,8 @@ export function formularioVacio(): LosetasForm {
     escalera: false,
     escaleraPos: "solar",
     escaleraAncho: 0.5,
+    escaleraMovible: false,
+    escaleraPosLibre: { x: 0.5, y: 0.5 },
     tipoPileta: "hormigon",
     labios: 0.2,
     luces: false,
@@ -82,6 +80,5 @@ export function formularioVacio(): LosetasForm {
     lblOpuesto: "Opuesto",
     lblLateral1: "Lateral 1",
     lblLateral2: "Lateral 2",
-    variacionEncabezado: "teal",
   };
 }

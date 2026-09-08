@@ -16,19 +16,23 @@ import type { GeometriaPlano, LuzPos, Prim } from "@/lib/domain/plano/losetas";
  * sigue capturado por el `<svg>`, así que el gesto no se corta a mitad de
  * camino. Mismo criterio que `initLuzDrag` en el legacy.
  */
+type Arrastre = { tipo: "luz"; indice: number } | { tipo: "escalera" };
+
 export function PlanoLosetasSvg({
   geometria,
   interactive,
   onMoverLuz,
+  onMoverEscalera,
   ariaLabel,
 }: {
   geometria: GeometriaPlano;
   interactive: boolean;
   onMoverLuz?: (indice: number, pos: LuzPos) => void;
+  onMoverEscalera?: (pos: LuzPos) => void;
   ariaLabel?: string;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const [arrastrando, setArrastrando] = useState<number | null>(null);
+  const [arrastrando, setArrastrando] = useState<Arrastre | null>(null);
 
   function normalizar(clientX: number, clientY: number): LuzPos | null {
     const svg = svgRef.current;
@@ -52,10 +56,11 @@ export function PlanoLosetasSvg({
 
   function onPointerDown(e: React.PointerEvent<SVGSVGElement>) {
     if (!interactive) return;
-    const target = (e.target as Element).closest?.("[data-luz]");
-    if (!target) return;
-    const indice = Number(target.getAttribute("data-luz"));
-    setArrastrando(indice);
+    const el = e.target as Element;
+    const luz = el.closest?.("[data-luz]");
+    const escalera = !luz && el.closest?.("[data-escalera]");
+    if (!luz && !escalera) return;
+    setArrastrando(luz ? { tipo: "luz", indice: Number(luz.getAttribute("data-luz")) } : { tipo: "escalera" });
     try {
       svgRef.current?.setPointerCapture(e.pointerId);
     } catch {
@@ -69,7 +74,8 @@ export function PlanoLosetasSvg({
     const pos = normalizar(e.clientX, e.clientY);
     if (!pos) return;
     e.preventDefault();
-    onMoverLuz?.(arrastrando, pos);
+    if (arrastrando.tipo === "luz") onMoverLuz?.(arrastrando.indice, pos);
+    else onMoverEscalera?.(pos);
   }
 
   function terminarArrastre(e: React.PointerEvent<SVGSVGElement>) {
@@ -126,7 +132,7 @@ export function PlanoLosetasSvg({
       {geometria.extras.map((p, i) => (
         <PrimSvg key={`extra-${i}`} p={p} />
       ))}
-      {arrastrando !== null && <LuzActivaResaltada extras={geometria.extras} indice={arrastrando} />}
+      {arrastrando !== null && <ArrastreActivoResaltado extras={geometria.extras} arrastrando={arrastrando} />}
       {geometria.dims.map((p, i) => (
         <PrimSvg key={`dim-${i}`} p={p} />
       ))}
@@ -145,13 +151,16 @@ export function PlanoLosetasSvg({
 }
 
 /**
- * Anillo de resalte alrededor de la luz que se está arrastrando. En touch no
- * hay hover/cursor que muestre cuál está "agarrada" — sin esto, en un
- * celular con varias luces cerca es fácil perder de vista cuál se está
- * moviendo mientras el dedo la tapa.
+ * Anillo de resalte alrededor de lo que se está arrastrando (una luz o la
+ * escalera libre). En touch no hay hover/cursor que muestre qué está
+ * "agarrado" — sin esto, con varios objetos cerca es fácil perder de vista
+ * cuál se está moviendo mientras el dedo lo tapa.
  */
-function LuzActivaResaltada({ extras, indice }: { extras: Prim[]; indice: number }) {
-  const activa = extras.find((p): p is Extract<Prim, { t: "circle" }> => p.t === "circle" && p.luzIndex === indice);
+function ArrastreActivoResaltado({ extras, arrastrando }: { extras: Prim[]; arrastrando: Arrastre }) {
+  const activa = extras.find(
+    (p): p is Extract<Prim, { t: "circle" }> =>
+      p.t === "circle" && (arrastrando.tipo === "luz" ? p.luzIndex === arrastrando.indice : !!p.escaleraDrag)
+  );
   if (!activa) return null;
   return <circle cx={activa.cx} cy={activa.cy} r={22} fill="none" stroke="#1B3A5C" strokeWidth={2} strokeDasharray="4 3" />;
 }
@@ -174,7 +183,8 @@ function PrimSvg({ p }: { p: Prim }) {
           cx={p.cx} cy={p.cy} r={p.r} fill={p.fill} stroke={p.stroke} strokeWidth={p.strokeWidth}
           opacity={p.opacity}
           data-luz={p.luzIndex !== undefined ? p.luzIndex : undefined}
-          className={p.luzIndex !== undefined ? "pys-luz-drag" : undefined}
+          data-escalera={p.escaleraDrag ? "" : undefined}
+          className={p.luzIndex !== undefined || p.escaleraDrag ? "pys-luz-drag" : undefined}
         />
       );
     case "text":
