@@ -19,14 +19,12 @@ import { z } from "zod";
  *
  * Transcrito de `calc()` en app/dashboard/losetas/script.ts y verificado contra
  * tests/unit/oraculo-losetas.test.ts.
+ *
+ * El costeo por material (nombre + precio $/m²) que existía acá se sacó a
+ * pedido: este tab es "generar el plano para el cliente", no "cotizar
+ * losetas" — esa combinación confundía las dos cosas. Sólo quedan los m²,
+ * que son geometría, no precio.
  */
-
-export const Material = z.object({
-  nombre: z.string(),
-  /** Precio por m². 0 significa "todavía no cargado", que es como arranca. */
-  precioPorM2: z.number().min(0),
-});
-export type Material = z.infer<typeof Material>;
 
 export const EntradaLosetas = z.object({
   largo: z.number().min(0),
@@ -38,7 +36,6 @@ export const EntradaLosetas = z.object({
   opuesto: z.number().min(0).default(0),
   lateral1: z.number().min(0).default(0),
   lateral2: z.number().min(0).default(0),
-  materiales: z.array(Material).default([]),
 });
 export type EntradaLosetas = z.input<typeof EntradaLosetas>;
 
@@ -49,7 +46,6 @@ export interface ResultadoLosetas {
   m2Finales: number;
   /** Lo que se cotiza aparte. Nunca negativo. */
   m2ACotizar: number;
-  costos: { nombre: string; total: number }[];
 }
 
 export function calcularLoseta(entrada: EntradaLosetas): ResultadoLosetas {
@@ -61,13 +57,5 @@ export function calcularLoseta(entrada: EntradaLosetas): ResultadoLosetas {
     (e.largo + e.solar + e.opuesto) * (e.ancho + e.lateral1 + e.lateral2);
   const m2ACotizar = Math.max(0, m2Finales - m2Incluidos);
 
-  return {
-    m2Incluidos,
-    m2Finales,
-    m2ACotizar,
-    costos: e.materiales.map((m) => ({
-      nombre: m.nombre,
-      total: m2ACotizar * m.precioPorM2,
-    })),
-  };
+  return { m2Incluidos, m2Finales, m2ACotizar };
 }

@@ -63,5 +63,6 @@ function descargarBlob(blob: Blob, nombreArchivo: string): void {
 function extensionDe(mimeType: string): string {
   if (mimeType === "application/pdf") return ".pdf";
   if (mimeType.includes("wordprocessingml")) return ".docx";
+  if (mimeType === "image/png") return ".png";
   return "";
 }

@@ -11,12 +11,6 @@ import { LuzPos, EscaleraPos, TipoPileta, Revestimiento } from "@/lib/domain/pla
  * `snapshot.ts` (la conversión hacia/desde PresupuestoV1) sea un mapeo
  * directo, sin traducciones que puedan introducir un desvío.
  */
-export const MaterialLoseta = z.object({
-  nombre: z.string(),
-  precioPorM2: z.number().min(0),
-});
-export type MaterialLosetaForm = z.infer<typeof MaterialLoseta>;
-
 export const LosetasFormSchema = z.object({
   nombre: z.string().default(""),
   largo: z.number({ error: "Ingresá el largo" }).nonnegative("No puede ser negativo"),
@@ -32,6 +26,7 @@ export const LosetasFormSchema = z.object({
 
   escalera: z.boolean().default(false),
   escaleraPos: EscaleraPos.default("solar"),
+  escaleraAncho: z.number().nonnegative("No puede ser negativo").default(0.5),
 
   tipoPileta: TipoPileta.default("hormigon"),
   labios: z.number().nonnegative("No puede ser negativo").default(0.2),
@@ -51,19 +46,13 @@ export const LosetasFormSchema = z.object({
   lblLateral1: z.string().default("Lateral 1"),
   lblLateral2: z.string().default("Lateral 2"),
 
-  // Materiales: uso interno (tarjetas de costo extra), nunca se persisten en
-  // el presupuesto guardado — igual que en el legacy, ver comentario en
-  // LosetasCalculadora.tsx.
-  materiales: z.array(MaterialLoseta).default([]),
+  // Qué banner de marca lleva la imagen/PDF para el cliente — mismo campo
+  // (nombre y opciones) que ya eligen las otras 4 calculadoras vía
+  // VarianteEncabezadoField, acá agregado para que el plano tenga la misma
+  // flexibilidad de marca que el resto de los documentos.
+  variacionEncabezado: z.enum(["teal", "navy"]).default("teal"),
 });
 export type LosetasForm = z.infer<typeof LosetasFormSchema>;
-
-export function materialesPorDefecto(): MaterialLosetaForm[] {
-  return [
-    { nombre: "Loseta común", precioPorM2: 0 },
-    { nombre: "Decks", precioPorM2: 0 },
-  ];
-}
 
 export function formularioVacio(): LosetasForm {
   return {
@@ -79,6 +68,7 @@ export function formularioVacio(): LosetasForm {
     solarHumedoAncho: 0,
     escalera: false,
     escaleraPos: "solar",
+    escaleraAncho: 0.5,
     tipoPileta: "hormigon",
     labios: 0.2,
     luces: false,
@@ -92,6 +82,6 @@ export function formularioVacio(): LosetasForm {
     lblOpuesto: "Opuesto",
     lblLateral1: "Lateral 1",
     lblLateral2: "Lateral 2",
-    materiales: materialesPorDefecto(),
+    variacionEncabezado: "teal",
   };
 }

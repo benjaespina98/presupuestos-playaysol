@@ -2,8 +2,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import fs from "node:fs";
-import path from "node:path";
 import { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { PresupuestoLeido } from "@/lib/domain/presupuesto/adaptadores";
 import { LosetasCalculadora } from "./LosetasCalculadora";
@@ -13,6 +11,21 @@ const { guardarPresupuesto, actualizarPresupuesto } = vi.hoisted(() => ({
   actualizarPresupuesto: vi.fn(),
 }));
 vi.mock("@/lib/presupuestos", () => ({ guardarPresupuesto, actualizarPresupuesto }));
+
+// La rasterización real (Canvas/Image) no existe en jsdom — acá sólo importa
+// que el botón llame a la función correcta con los datos correctos y que el
+// resultado se mande a compartir/descargar; la imagen/PDF en sí se prueba a
+// mano en un navegador real (ver comentario de tests/calculators.spec.ts).
+const { generarImagenClientePlano, generarPdfClientePlano } = vi.hoisted(() => ({
+  generarImagenClientePlano: vi.fn().mockResolvedValue(new Blob(["x"], { type: "image/png" })),
+  generarPdfClientePlano: vi.fn().mockResolvedValue(new Blob(["x"], { type: "application/pdf" })),
+}));
+vi.mock("@/lib/documentos/losetas/imagenCliente", () => ({ generarImagenClientePlano, generarPdfClientePlano }));
+
+const { compartirOdescargarArchivo } = vi.hoisted(() => ({
+  compartirOdescargarArchivo: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("@/lib/documentos/compartir", () => ({ compartirOdescargarArchivo }));
 
 // El plano del editor tiene viewBox "0 0 680 420": con un rect de pantalla del
 // mismo ancho, la escala clientX→coordenada de usuario es 1:1 y las cuentas
@@ -53,27 +66,6 @@ describe("LosetasCalculadora · m²", () => {
     }
 
     expect(screen.getByText("15 m²")).toBeInTheDocument();
-  });
-
-  it("el costo por material es m² a cotizar × precio cargado", async () => {
-    const user = userEvent.setup();
-    render(<LosetasCalculadora />);
-    await cargarMedidas(user, "8", "4");
-    for (const label of ["Solar (m)", "Opuesto (m)", "Lateral 1 (m)", "Lateral 2 (m)"]) {
-      const campo = screen.getByLabelText(label);
-      await user.clear(campo);
-      await user.type(campo, "1");
-    }
-    // Arranca con dos materiales por defecto: "Loseta común" y "Decks". No hay
-    // un label asociado al precio (ver comentario en el componente): se ubica
-    // por posición dentro de la fila del primer material.
-    const filaLosetaComun = screen.getByDisplayValue("Loseta común").closest(".grid") as HTMLElement;
-    const precioLosetaComun = filaLosetaComun.querySelector('input[inputmode="decimal"]') as HTMLInputElement;
-    await user.clear(precioLosetaComun);
-    await user.type(precioLosetaComun, "10000");
-    fireEvent.blur(precioLosetaComun);
-
-    expect(await screen.findByText("$150.000")).toBeInTheDocument();
   });
 });
 
@@ -163,6 +155,67 @@ describe("LosetasCalculadora · snapshot", () => {
   });
 });
 
+describe("LosetasCalculadora · exportar para el cliente", () => {
+  beforeEach(() => {
+    generarImagenClientePlano.mockClear();
+    generarPdfClientePlano.mockClear();
+    compartirOdescargarArchivo.mockClear();
+  });
+
+  it("el botón Imagen genera el PNG con el nombre del cliente y lo comparte/descarga", async () => {
+    const user = userEvent.setup();
+    render(<LosetasCalculadora />);
+    await cargarMedidas(user, "8", "4");
+    await user.type(screen.getByLabelText("Cliente o referencia"), "Gómez, Martín");
+
+    await user.click(screen.getByRole("button", { name: "Imagen" }));
+
+    await waitFor(() => expect(generarImagenClientePlano).toHaveBeenCalledTimes(1));
+    expect(generarImagenClientePlano.mock.calls[0][0]).toMatchObject({
+      nombreCliente: "Gómez, Martín",
+      variante: "teal",
+    });
+    expect(compartirOdescargarArchivo).toHaveBeenCalledWith(
+      expect.any(Blob),
+      expect.stringContaining("_cliente"),
+      "image/png"
+    );
+  });
+
+  it("el botón PDF genera el PDF y lo comparte/descarga", async () => {
+    const user = userEvent.setup();
+    render(<LosetasCalculadora />);
+    await cargarMedidas(user, "8", "4");
+
+    await user.click(screen.getByRole("button", { name: "PDF" }));
+
+    await waitFor(() => expect(generarPdfClientePlano).toHaveBeenCalledTimes(1));
+    expect(compartirOdescargarArchivo).toHaveBeenCalledWith(
+      expect.any(Blob),
+      expect.stringContaining("_cliente"),
+      "application/pdf"
+    );
+  });
+
+  it("permite elegir el banner navy y lo guarda en el snapshot y en la exportación", async () => {
+    guardarPresupuesto.mockReset();
+    guardarPresupuesto.mockResolvedValue({ error: null });
+    const user = userEvent.setup();
+    render(<LosetasCalculadora />);
+    await cargarMedidas(user, "8", "4");
+
+    await user.click(screen.getByRole("radio", { name: "Navy institucional" }));
+    await user.click(screen.getByRole("button", { name: "Imagen" }));
+    await waitFor(() => expect(generarImagenClientePlano).toHaveBeenCalledTimes(1));
+    expect(generarImagenClientePlano.mock.calls[0][0]).toMatchObject({ variante: "navy" });
+
+    await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
+    await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
+    const [, datos] = guardarPresupuesto.mock.calls[0];
+    expect(PresupuestoV1.parse(datos).variacionEncabezado).toBe("navy");
+  });
+});
+
 describe("LosetasCalculadora · abrir un plano guardado", () => {
   function leido(medidas: Record<string, unknown>, nombre = "Pérez"): PresupuestoLeido {
     return {
@@ -216,31 +269,5 @@ describe("LosetasCalculadora · abrir un plano guardado", () => {
     const poolY = Number(pool.getAttribute("y"));
     const poolH = Number(pool.getAttribute("height"));
     expect(Number(luz.getAttribute("cy"))).toBeCloseTo(poolY + 0.9 * poolH, 1);
-  });
-});
-
-describe("LosetasCalculadora · el div capturado por html2canvas no usa colores de paleta de Tailwind", () => {
-  // Tailwind v4 genera los tokens de paleta (bg-white, border-gray-200,
-  // text-gray-500, bg-red-50, etc.) en oklch(). html2canvas 1.4.1 no entiende
-  // oklch/lab/color() — con uno solo de estos en el árbol que se rasteriza,
-  // "Imagen para el cliente" tira "Attempting to parse an unsupported color
-  // function" y no exporta nada (bug real, visto en producción). Dentro de
-  // `clientCaptureRef` sólo pueden usarse colores hex explícitos
-  // (`bg-[#...]`/`text-[#...]`/`border-[#...]`) — este test lo congela para
-  // que nadie vuelva a colar un token de paleta ahí adentro sin darse cuenta.
-  it("sólo usa hex explícito (bg-[#..]/text-[#..]/border-[#..]) dentro de clientCaptureRef", () => {
-    const src = fs.readFileSync(path.join(__dirname, "LosetasCalculadora.tsx"), "utf8");
-    const inicio = src.indexOf("ref={clientCaptureRef}");
-    expect(inicio, "no se encontró el div capturado por html2canvas").toBeGreaterThan(-1);
-    // El bloque termina donde arranca el próximo elemento hermano del JSX
-    // (ConfirmDialog), que sigue inmediatamente después de este div en el árbol.
-    const fin = src.indexOf("<ConfirmDialog", inicio);
-    expect(fin, "no se encontró el fin del div capturado").toBeGreaterThan(inicio);
-    const bloque = src.slice(inicio, fin);
-
-    const TOKENS_DE_PALETA =
-      /\b(?:bg|text|border|from|via|to|ring|fill|stroke|decoration|outline|divide|placeholder|caret|accent)-(?:white|black|transparent|current|inherit|slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)(?:-\d{2,3})?\b/g;
-    const encontrados = bloque.match(TOKENS_DE_PALETA) ?? [];
-    expect(encontrados, "token(s) de paleta de Tailwind dentro del div capturado por html2canvas").toEqual([]);
   });
 });

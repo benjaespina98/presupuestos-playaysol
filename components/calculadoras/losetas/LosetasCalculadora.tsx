@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useFieldArray, useWatch } from "react-hook-form";
+import { useEffect, useMemo, useState } from "react";
+import { useWatch } from "react-hook-form";
 import { useZodForm } from "@/lib/forms/useZodForm";
 import { NumberField, TextField, CheckboxField, SelectField } from "@/components/form";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -11,20 +11,23 @@ import { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { PresupuestoLeido } from "@/lib/domain/presupuesto/adaptadores";
 import { guardarPresupuesto, actualizarPresupuesto } from "@/lib/presupuestos";
 import { armarNombreArchivo } from "@/lib/documentos/nombreArchivo";
+import { compartirOdescargarArchivo } from "@/lib/documentos/compartir";
+import { generarImagenClientePlano, generarPdfClientePlano } from "@/lib/documentos/losetas/imagenCliente";
 import { PlanoLosetasSvg } from "./PlanoLosetasSvg";
 import { LosetasFormSchema, formularioVacio, type LosetasForm } from "./schema";
-import { IconCloudUpload, IconImage } from "@/components/icons";
+import { IconCloudUpload, IconImage, IconPrinter } from "@/components/icons";
 import { FloatingSaveBar } from "@/components/calculadoras/FloatingSaveBar";
+import { VarianteEncabezadoField } from "@/components/calculadoras/VarianteEncabezadoField";
 
 /**
  * Losetas — "Plano de Piscina": editor SVG interactivo, no un documento con
  * líneas de precio. Reemplaza a app/dashboard/losetas/{calculator,markup,
  * script,styles}.ts (Fase 5, Lote 6).
  *
- * Los materiales (nombre + precio $/m²) son SOLO para la tarjeta de costo
- * extra en pantalla: el legacy nunca los guardó ni los leyó del catálogo —
- * cada presupuesto arranca con los mismos dos materiales en $0 — así que acá
- * se preserva exactamente ese comportamiento (ver `materialesPorDefecto`).
+ * El costeo por material (nombre + precio $/m²) que tenía este tab se sacó a
+ * pedido: acá se genera el plano para el cliente, no se cotizan losetas —
+ * esa mezcla confundía las dos cosas. Los m² (que sí son geometría, no
+ * precio) se mantienen.
  */
 
 function medidasDesdePresupuesto(leido: PresupuestoLeido): LosetasForm {
@@ -60,6 +63,7 @@ function medidasDesdePresupuesto(leido: PresupuestoLeido): LosetasForm {
     solarHumedoAncho: num(m.solarHumedoAncho, 0),
     escalera: bool(m.escalera),
     escaleraPos,
+    escaleraAncho: num(m.escaleraAncho, 0.5),
     tipoPileta,
     labios: num(m.labios, 0.2),
     luces: bool(m.luces),
@@ -73,6 +77,7 @@ function medidasDesdePresupuesto(leido: PresupuestoLeido): LosetasForm {
     lblOpuesto: str(m.lblOpuesto, "Opuesto"),
     lblLateral1: str(m.lblLateral1, "Lateral 1"),
     lblLateral2: str(m.lblLateral2, "Lateral 2"),
+    variacionEncabezado: leido.presupuesto.variacionEncabezado === "navy" ? "navy" : "teal",
   };
 }
 
@@ -89,6 +94,7 @@ function medidasParaSnapshot(v: LosetasForm) {
     solarHumedoAncho: v.solarHumedoAncho,
     escalera: v.escalera,
     escaleraPos: v.escaleraPos,
+    escaleraAncho: v.escaleraAncho,
     tipoPileta: v.tipoPileta,
     labios: v.labios,
     luces: v.luces,
@@ -133,11 +139,11 @@ export function LosetasCalculadora({
   const [guardando, setGuardando] = useState(false);
   const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
   const [guardadoOk, setGuardadoOk] = useState(false);
-  const [exportando, setExportando] = useState(false);
-  const [errorExport, setErrorExport] = useState<string | null>(null);
+  const [generandoImagen, setGenerandoImagen] = useState(false);
+  const [errorImagen, setErrorImagen] = useState<string | null>(null);
+  const [generandoPdf, setGenerandoPdf] = useState(false);
+  const [errorPdf, setErrorPdf] = useState<string | null>(null);
   const [confirmarLimpiar, setConfirmarLimpiar] = useState(false);
-  const clientCaptureRef = useRef<HTMLDivElement>(null);
-  const logoRef = useRef<HTMLImageElement>(null);
 
   const {
     control,
@@ -151,7 +157,6 @@ export function LosetasCalculadora({
     defaultValues: presupuestoInicial ? medidasDesdePresupuesto(presupuestoInicial) : formularioVacio(),
   });
 
-  const materiales = useFieldArray({ control, name: "materiales" });
   const valoresForm = useWatch({ control });
 
   // Ajusta lucesPos a la cantidad actual cada vez que se prende/apaga o
@@ -182,9 +187,6 @@ export function LosetasCalculadora({
         opuesto: num(valoresForm.opuesto),
         lateral1: num(valoresForm.lateral1),
         lateral2: num(valoresForm.lateral2),
-        materiales: (valoresForm.materiales ?? [])
-          .filter((m): m is NonNullable<typeof m> => !!m)
-          .map((m) => ({ nombre: m.nombre ?? "", precioPorM2: num(m.precioPorM2) })),
       }),
     [valoresForm]
   );
@@ -201,6 +203,7 @@ export function LosetasCalculadora({
       solarHumedoAncho: num(valoresForm.solarHumedoAncho),
       escalera: !!valoresForm.escalera,
       escaleraPos: valoresForm.escaleraPos ?? "solar",
+      escaleraAncho: num(valoresForm.escaleraAncho),
       tipoPileta: valoresForm.tipoPileta ?? "hormigon",
       labios: num(valoresForm.labios),
       luces: !!valoresForm.luces,
@@ -243,7 +246,7 @@ export function LosetasCalculadora({
       preciosBase: {},
       totales: [],
       detalle: "",
-      variacionEncabezado: "teal",
+      variacionEncabezado: v.variacionEncabezado,
       modoPrecio: "ambos",
       fotos: [],
     });
@@ -267,33 +270,39 @@ export function LosetasCalculadora({
     }
   }
 
-  async function onExportarCliente() {
-    setExportando(true);
-    setErrorExport(null);
+  function parametrosImagenCliente() {
+    return {
+      geometria: geometriaCliente,
+      nombreCliente: getValues("nombre") || "",
+      variante: getValues("variacionEncabezado") ?? "teal",
+    } as const;
+  }
+
+  async function onExportarImagen() {
+    setGenerandoImagen(true);
+    setErrorImagen(null);
     try {
-      const logo = logoRef.current;
-      if (logo && !logo.complete) {
-        try {
-          await logo.decode();
-        } catch {
-          /* si falla, se exporta igual sin logo */
-        }
-      }
-      await new Promise((res) => requestAnimationFrame(res));
-
-      const { default: html2canvas } = await import("html2canvas");
-      const target = clientCaptureRef.current;
-      if (!target) throw new Error("No se encontró el plano a exportar.");
-
-      const canvas = await html2canvas(target, { backgroundColor: "#ffffff", scale: 3, useCORS: true });
-      const link = document.createElement("a");
-      link.download = armarNombreArchivo("Loseta", getValues("nombre") || "", "") + "_cliente.png";
-      link.href = canvas.toDataURL("image/png");
-      link.click();
+      const blob = await generarImagenClientePlano(parametrosImagenCliente());
+      const nombreArchivo = armarNombreArchivo("Loseta", getValues("nombre") || "", "") + "_cliente";
+      await compartirOdescargarArchivo(blob, nombreArchivo, "image/png");
     } catch (err) {
-      setErrorExport(err instanceof Error ? err.message : String(err));
+      setErrorImagen(err instanceof Error ? err.message : String(err));
     } finally {
-      setExportando(false);
+      setGenerandoImagen(false);
+    }
+  }
+
+  async function onExportarPdf() {
+    setGenerandoPdf(true);
+    setErrorPdf(null);
+    try {
+      const blob = await generarPdfClientePlano(parametrosImagenCliente());
+      const nombreArchivo = armarNombreArchivo("Loseta", getValues("nombre") || "", "") + "_cliente";
+      await compartirOdescargarArchivo(blob, nombreArchivo, "application/pdf");
+    } catch (err) {
+      setErrorPdf(err instanceof Error ? err.message : String(err));
+    } finally {
+      setGenerandoPdf(false);
     }
   }
 
@@ -374,7 +383,15 @@ export function LosetasCalculadora({
             <div className="space-y-2">
               <CheckboxField register={register} errors={errors} name="escalera" label="Escalera" />
               {valoresForm.escalera && (
-                <SelectField register={register} errors={errors} name="escaleraPos" label="Ubicación" options={ESCALERA_OPCIONES} />
+                <>
+                  <SelectField register={register} errors={errors} name="escaleraPos" label="Ubicación" options={ESCALERA_OPCIONES} />
+                  <NumberField
+                    control={control}
+                    name="escaleraAncho"
+                    label="Ancho (m)"
+                    hint="Se dibuja de corrido, a todo el ancho de ese lado — no un cuadrado en la esquina. Si el solar húmedo está del mismo lado, arranca justo después."
+                  />
+                </>
               )}
             </div>
             <div className="space-y-2">
@@ -391,6 +408,7 @@ export function LosetasCalculadora({
             Apariencia del plano <span className="font-normal text-gray-500">— colores y nombres de los lados</span>
           </summary>
           <div className="space-y-4 border-t border-gray-100 p-5">
+            <VarianteEncabezadoField register={register} name="variacionEncabezado" />
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="colorAgua" className="mb-1 block text-xs text-gray-500">Color del agua</label>
@@ -409,57 +427,6 @@ export function LosetasCalculadora({
             </div>
           </div>
         </details>
-
-        <section className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-gray-900">
-            Materiales y precios <span className="font-normal text-gray-500">— uso interno, no sale en la imagen del cliente</span>
-          </h2>
-          <div className="grid grid-cols-[1fr_120px_auto] gap-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-            <span>Material</span>
-            <span>Precio $/m²</span>
-            <span />
-          </div>
-          <div className="space-y-2">
-            {materiales.fields.map((field, i) => (
-              <div key={field.id} className="grid grid-cols-[1fr_120px_auto] items-center gap-2">
-                <label className="sr-only" htmlFor={`materiales.${i}.nombre`}>
-                  Nombre del material
-                </label>
-                <input
-                  id={`materiales.${i}.nombre`}
-                  type="text"
-                  placeholder="Nombre del material"
-                  className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-                  {...register(`materiales.${i}.nombre` as const)}
-                />
-                <NumberField control={control} name={`materiales.${i}.precioPorM2`} label="" className="mt-0" />
-                <button
-                  type="button"
-                  onClick={() => materiales.remove(i)}
-                  disabled={materiales.fields.length <= 1}
-                  className="min-h-11 rounded-md px-3 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Quitar
-                </button>
-              </div>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => materiales.append({ nombre: "", precioPorM2: 0 })}
-            className="min-h-11 w-full rounded-md border border-dashed border-gray-400 text-sm font-medium text-gray-700 hover:bg-gray-100"
-          >
-            + Agregar material
-          </button>
-          <div className="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2">
-            {resultado.costos.map((c, i) => (
-              <div key={i} className="rounded-md border border-gray-200 bg-white p-3">
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Costo extra — {c.nombre || "Sin nombre"}</div>
-                <div className="mt-1 text-lg font-bold text-[#1B3A5C]">${c.total.toLocaleString("es-AR")}</div>
-              </div>
-            ))}
-          </div>
-        </section>
       </div>
 
       <div>
@@ -479,6 +446,29 @@ export function LosetasCalculadora({
             </div>
           </div>
 
+          {/* Vista previa de lo que sale en "Imagen"/"PDF" — mismo contenido
+              que arma lib/documentos/losetas/imagenCliente.tsx (nombre del
+              cliente incluido), visible en pantalla en vez de vivir sólo en
+              un <div> oculto: así se nota antes de exportar si falta cargar
+              el nombre o si una medida quedó mal, en vez de descubrirlo
+              recién en el archivo descargado. */}
+          <details className="rounded-lg border border-gray-200 bg-white shadow-sm" open>
+            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-gray-900">
+              Vista previa para el cliente
+            </summary>
+            <div className="space-y-3 border-t border-gray-100 p-4">
+              <div className="flex items-center justify-between border-b-2 border-[#00829C] pb-2">
+                <div>
+                  <div className="text-sm font-bold uppercase tracking-wide text-[#244B5A]">Plano de Piscina</div>
+                  <div className="text-xs text-gray-500">{valoresForm.nombre || "Sin nombre de cliente"}</div>
+                </div>
+              </div>
+              <div className="rounded-lg border border-[#E1E7EC] bg-[#EEF2F6] p-4">
+                <PlanoLosetasSvg geometria={geometriaCliente} interactive={false} ariaLabel="Vista previa del plano para el cliente" />
+              </div>
+            </div>
+          </details>
+
           <div className="space-y-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
             {errorGuardado && (
               <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">No se pudo guardar: {errorGuardado}</p>
@@ -486,8 +476,11 @@ export function LosetasCalculadora({
             {guardadoOk && !errorGuardado && (
               <p role="status" className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">Presupuesto guardado en la nube.</p>
             )}
-            {errorExport && (
-              <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">Error generando la imagen: {errorExport}</p>
+            {errorImagen && (
+              <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">No se pudo generar la imagen: {errorImagen}</p>
+            )}
+            {errorPdf && (
+              <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">No se pudo generar el PDF: {errorPdf}</p>
             )}
 
             {/* "Guardar" es la acción primaria (persiste el trabajo) en las 5
@@ -503,16 +496,30 @@ export function LosetasCalculadora({
               {guardando ? "Guardando..." : "Guardar en la nube"}
             </button>
 
-            <button
-              type="button"
-              onClick={onExportarCliente}
-              disabled={exportando}
-              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-[#1B3A5C] px-4 text-sm font-medium text-[#1B3A5C] transition-colors hover:bg-[#1B3A5C]/5 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <IconImage className="h-4 w-4" />
-              {exportando ? "Generando..." : "Imagen para el cliente"}
-            </button>
-            <p className="text-xs text-gray-500">La imagen sale a escala, con las medidas y sin precios: lista para mandar por chat.</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={onExportarImagen}
+                disabled={generandoImagen}
+                className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#1B3A5C] px-4 text-sm font-medium text-[#1B3A5C] transition-colors hover:bg-[#1B3A5C]/5 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <IconImage className="h-4 w-4" />
+                {generandoImagen ? "Generando..." : "Imagen"}
+              </button>
+              <button
+                type="button"
+                onClick={onExportarPdf}
+                disabled={generandoPdf}
+                className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#1B3A5C] px-4 text-sm font-medium text-[#1B3A5C] transition-colors hover:bg-[#1B3A5C]/5 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <IconPrinter className="h-4 w-4" />
+                {generandoPdf ? "Generando..." : "PDF"}
+              </button>
+            </div>
+            <p className="text-xs text-gray-500">
+              Salen a escala, con las medidas y el nombre del cliente, sin precios. En el celular, &quot;Imagen&quot; y
+              &quot;PDF&quot; abren directo la hoja para compartir por WhatsApp.
+            </p>
 
             <div className="grid grid-cols-2 gap-2 border-t border-gray-100 pt-3">
               <a href="/dashboard/historial?tipo=losetas" className="min-h-11 rounded-md px-4 py-2.5 text-center text-sm font-medium text-[#1B3A5C] hover:bg-gray-100">
@@ -527,49 +534,6 @@ export function LosetasCalculadora({
               </button>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/*
-        Capturado por html2canvas — fuera de pantalla, nunca visible.
-
-        SOLO colores hex explícitos acá adentro (`text-[#...]`/`bg-[#...]`/
-        `border-[#...]`), nunca los tokens de paleta de Tailwind (`bg-white`,
-        `border-gray-200`, `text-gray-500`, etc.): en Tailwind v4 esos tokens
-        se generan en `oklch()`, y html2canvas 1.4.1 sólo entiende
-        rgb/rgba/hex/hsl — con un color de paleta en este árbol, "Imagen para
-        el cliente" tira "Attempting to parse an unsupported color function
-        oklch/lab" y no exporta nada. El resto de la pantalla (fuera de este
-        div) no lo sufre porque nunca se rasteriza.
-
-        Los hex de acá son los mismos que usaba el plano legacy
-        (`app/dashboard/losetas/styles.ts`, ya borrado) — no son un cambio de
-        paleta, son ESOS MISMOS colores escritos a mano para esquivar oklch.
-      */}
-      <div
-        ref={clientCaptureRef}
-        aria-hidden="true"
-        style={{ position: "fixed", top: -99999, left: -99999, width: 1100 }}
-        className="bg-[#ffffff] p-12 font-sans"
-      >
-        {/* #244B5A/#00829C: mismo Azul Institucional + teal que el resto de los
-            documentos (ver PresupuestoPdfDocument.tsx) — antes esta imagen
-            usaba el navy de la UI de la app (#1B3A5C), un tono distinto al
-            de marca, así que no hacía juego con el PDF/Word que sale de las
-            otras 4 calculadoras. */}
-        <div className="mb-7 flex items-center justify-between border-b-2 border-[#00829C] pb-4">
-          <div>
-            <div className="text-xl font-bold uppercase tracking-wide text-[#244B5A]">Plano de Piscina</div>
-            <div className="mt-1 text-sm text-[#6B7680]">{valoresForm.nombre || ""}</div>
-          </div>
-          {/* eslint-disable-next-line @next/next/no-img-element -- capturada por html2canvas, no puede depender de next/image */}
-          <img ref={logoRef} src="/logo-mark.png" alt="Playa y Sol" className="h-14" />
-        </div>
-        <div className="rounded-lg border border-[#E1E7EC] bg-[#EEF2F6] p-7">
-          <PlanoLosetasSvg geometria={geometriaCliente} interactive={false} ariaLabel="Plano de la piscina para el cliente" />
-        </div>
-        <div className="mt-6 border-t-2 border-[#00829C] pt-4 text-xs font-bold tracking-wide text-[#244B5A]">
-          Playa y Sol S.A.S. — Corrientes 1210, Villa María
         </div>
       </div>
 

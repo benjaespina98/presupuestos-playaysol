@@ -126,6 +126,7 @@ export function PlanoLosetasSvg({
       {geometria.extras.map((p, i) => (
         <PrimSvg key={`extra-${i}`} p={p} />
       ))}
+      {arrastrando !== null && <LuzActivaResaltada extras={geometria.extras} indice={arrastrando} />}
       {geometria.dims.map((p, i) => (
         <PrimSvg key={`dim-${i}`} p={p} />
       ))}
@@ -141,6 +142,18 @@ export function PlanoLosetasSvg({
       )}
     </svg>
   );
+}
+
+/**
+ * Anillo de resalte alrededor de la luz que se está arrastrando. En touch no
+ * hay hover/cursor que muestre cuál está "agarrada" — sin esto, en un
+ * celular con varias luces cerca es fácil perder de vista cuál se está
+ * moviendo mientras el dedo la tapa.
+ */
+function LuzActivaResaltada({ extras, indice }: { extras: Prim[]; indice: number }) {
+  const activa = extras.find((p): p is Extract<Prim, { t: "circle" }> => p.t === "circle" && p.luzIndex === indice);
+  if (!activa) return null;
+  return <circle cx={activa.cx} cy={activa.cy} r={22} fill="none" stroke="#1B3A5C" strokeWidth={2} strokeDasharray="4 3" />;
 }
 
 function PrimSvg({ p }: { p: Prim }) {

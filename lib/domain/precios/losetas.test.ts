@@ -104,25 +104,6 @@ describe("reglas propias de losetas", () => {
     expect(r.m2ACotizar).toBe(0);
   });
 
-  it("el costo por material es m² a cotizar × precio", () => {
-    const r = calcularLoseta({
-      largo: 8,
-      ancho: 4,
-      bordeIncluido: 0.5,
-      solar: 1,
-      opuesto: 1,
-      lateral1: 1,
-      lateral2: 1,
-      materiales: [
-        { nombre: "Loseta común", precioPorM2: 10000 },
-        { nombre: "Decks", precioPorM2: 0 },
-      ],
-    });
-    expect(r.m2ACotizar).toBeCloseTo(15, 6);
-    expect(r.costos[0]).toEqual({ nombre: "Loseta común", total: 150000 });
-    expect(r.costos[1]).toEqual({ nombre: "Decks", total: 0 });
-  });
-
   it("el borde incluido se descuenta como perímetro completo, no por lado", () => {
     // 0,5 de borde agranda el rectángulo en 1 m en cada dimensión (0,5 de cada
     // lado), no en 0,5. Es la fuente de confusión más probable al reescribir.
