@@ -23,7 +23,6 @@ const pkg = JSON.parse(leer("package.json"));
  *  no un descuido: si actualizás la librería, actualizá también este número. */
 const VERSIONES_ESPERADAS = {
   docx: "8.6.0",
-  html2canvas: "1.4.1",
   "@react-pdf/renderer": "4.8.1",
 } as const;
 
@@ -33,9 +32,11 @@ const VERSIONES_ESPERADAS = {
 // <script src> de CDN" para las 5 componentes React vive en
 // tests/assets.spec.ts (no necesita vitest: es texto de archivo, igual que
 // acá, y así queda junto con el resto de los chequeos de assets/bundle).
-// Losetas nunca generó Word (su export es PNG vía html2canvas, pedido con
-// `await import("html2canvas")` directo desde LosetasCalculadora.tsx — sin
-// puente, ya no hace falta: ver el describe de abajo).
+// Losetas nunca generó Word (su export es imagen/PDF del plano — ver
+// lib/documentos/losetas/imagenCliente.tsx). Usó html2canvas hasta que ese
+// camino demostró ser poco confiable en el celular (medidas corridas, plano
+// cortado — ver el comentario al principio de imagenCliente.tsx): ya no
+// depende de esa librería, rasteriza su propio SVG con Canvas nativo.
 
 describe("dependencias del proyecto", () => {
   for (const [nombre, version] of Object.entries(VERSIONES_ESPERADAS)) {
@@ -63,9 +64,9 @@ describe("las librerías pesadas se piden por import() dinámico, no por CDN", (
   // prueba en lib/documentos/{cercos,cobertores,piscinas,revestimientos}/docx.ts
   // (cada uno usa `await import("docx")`, no un import estático) y se verifica
   // funcionalmente en sus propios docx.test.ts.
-  it("LosetasCalculadora pide html2canvas dinámicamente, recién al exportar", () => {
+  it("LosetasCalculadora ya no depende de html2canvas (rasteriza su propio SVG, ver imagenCliente.tsx)", () => {
     const src = leer("components/calculadoras/losetas/LosetasCalculadora.tsx");
-    expect(src).toMatch(/await import\(\s*["']html2canvas["']\s*\)/);
+    expect(src).not.toMatch(/html2canvas/);
   });
 
   for (const tipo of ["cercos", "cobertores", "piscinas", "revestimientos"]) {

@@ -39,6 +39,11 @@ export const PlanoLosetasEntrada = z.object({
   solarHumedoAncho: z.number().min(0).default(0),
   escalera: z.boolean().default(false),
   escaleraPos: EscaleraPos.default("solar"),
+  /** Profundidad de la escalera hacia adentro de la pileta, en metros. La
+   *  escalera se dibuja como una franja a todo lo ancho/largo del lado
+   *  elegido (no un cuadrado en una esquina) — es como suele construirse en
+   *  la práctica: corrida completa, a menudo pegada al solar húmedo. */
+  escaleraAncho: z.number().min(0).default(0.5),
   tipoPileta: TipoPileta.default("hormigon"),
   labios: z.number().min(0).default(0.2),
   luces: z.boolean().default(false),
@@ -219,15 +224,41 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
     }
   }
 
-  if (s.escalera) {
-    const stepSize = Math.min(pxPerM * 0.9, poolW * 0.18, poolH * 0.35, 46);
-    let sx: number, sy: number;
-    if (s.escaleraPos === "solar") { sx = poolX; sy = poolY + poolH / 2 - stepSize / 2; }
-    else if (s.escaleraPos === "opuesto") { sx = poolX + poolW - stepSize; sy = poolY + poolH / 2 - stepSize / 2; }
-    else if (s.escaleraPos === "lateral1") { sx = poolX + poolW / 2 - stepSize / 2; sy = poolY; }
-    else { sx = poolX + poolW / 2 - stepSize / 2; sy = poolY + poolH - stepSize; }
-    extras.push({ t: "rect", x: sx, y: sy, w: stepSize, h: stepSize, fill: "#fff", stroke: "#1B3A5C", strokeWidth: 1.2, dash: "3 2" });
-    extras.push({ t: "text", x: sx + stepSize / 2, y: sy + stepSize / 2, text: "Escalera", fontSize: 9, fill: "#1B3A5C", anchor: "middle", central: true });
+  if (s.escalera && s.escaleraAncho > 0) {
+    // Franja completa a lo ancho/largo del lado elegido — no un cuadrado en
+    // una esquina (así se construye en la práctica: la escalera suele correr
+    // toda la pared, a menudo pegada al solar húmedo). Cuando comparte el
+    // lado del solar con un solar húmedo activo, arranca justo después de
+    // ese, en fila, en vez de superponerse.
+    const horizontal = s.escaleraPos === "solar" || s.escaleraPos === "opuesto";
+    const anchoDisponible = horizontal ? s.largo : s.ancho;
+    const anchoPx = Math.min(s.escaleraAncho, anchoDisponible) * pxPerM;
+    let ex: number, ey: number, ew: number, eh: number;
+    if (horizontal) {
+      ew = anchoPx;
+      eh = poolH;
+      ey = poolY;
+      if (s.escaleraPos === "opuesto") {
+        ex = poolX + poolW - anchoPx;
+      } else {
+        const offsetSolarHumedo = s.solarHumedo ? Math.min(s.solarHumedoAncho, s.largo) * pxPerM : 0;
+        ex = poolX + offsetSolarHumedo;
+      }
+    } else {
+      ew = poolW;
+      eh = anchoPx;
+      ex = poolX;
+      ey = s.escaleraPos === "lateral2" ? poolY + poolH - anchoPx : poolY;
+    }
+    extras.push({ t: "rect", x: ex, y: ey, w: ew, h: eh, fill: "#fff", stroke: "#1B3A5C", strokeWidth: 1.2, dash: "3 2" });
+    const cabe = horizontal ? ew > 46 : eh > 32;
+    if (cabe) {
+      extras.push({
+        t: "text", x: ex + ew / 2, y: ey + eh / 2,
+        text: `Escalera${showDims ? " (" + fmtM(s.escaleraAncho) + "m)" : ""}`,
+        fontSize: 11, fill: "#1B3A5C", anchor: "middle", central: true,
+      });
+    }
   }
 
   let espejoW = s.largo;
@@ -262,7 +293,15 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
       extras.push({ t: "circle", cx, cy, r: bulbR, fill: "#FFEFA8", stroke: "#C99A2E", strokeWidth: 1.2 });
       extras.push({ t: "circle", cx: cx - bulbR * 0.32, cy: cy - bulbR * 0.32, r: bulbR * 0.32, fill: "#FFFDF3" });
       if (interactive) {
-        extras.push({ t: "circle", cx, cy, r: 16, fill: "transparent", luzIndex: i });
+        // r=28 (no 16): en un celular, el viewBox de 680 se ve achicado a
+        // ~340px de pantalla — un radio de agarre chico ahí es casi
+        // imposible de tocar con el dedo sin fallar. Con varias luces cerca,
+        // además, un número al lado de cada una ayuda a saber cuál es cuál
+        // mientras se arrastra (no hay cursor que la resalte en touch).
+        extras.push({ t: "circle", cx, cy, r: 28, fill: "transparent", luzIndex: i });
+        if (n > 1) {
+          extras.push({ t: "text", x: cx, y: cy - glowR - 9, text: String(i + 1), fontSize: 10, fill: "#7a4a2e", anchor: "middle", central: true, weight: "bold" });
+        }
       }
     }
     if (interactive) {

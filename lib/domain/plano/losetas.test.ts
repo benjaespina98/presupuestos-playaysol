@@ -126,6 +126,49 @@ describe("calcularGeometriaPlano — espejo de agua (pileta de fibra)", () => {
   });
 });
 
+describe("calcularGeometriaPlano — escalera", () => {
+  const rectEscalera = (extras: ReturnType<typeof calcularGeometriaPlano>["extras"]) =>
+    extras.find((p) => p.t === "rect" && p.dash === "3 2");
+
+  it("sin escalera activada, no dibuja nada", () => {
+    const g = calcularGeometriaPlano(BASE, CLIENTE);
+    expect(rectEscalera(g.extras)).toBeUndefined();
+  });
+
+  it("del lado del solar, la franja corre a todo el ancho de la pileta (alto = poolH)", () => {
+    const g = calcularGeometriaPlano({ ...BASE, escalera: true, escaleraPos: "solar", escaleraAncho: 0.6 }, CLIENTE);
+    const rect = rectEscalera(g.extras);
+    expect(rect).toBeTruthy();
+    if (rect && rect.t === "rect") {
+      expect(rect.h).toBeCloseTo(g.pool.h, 5);
+      expect(rect.x).toBeCloseTo(g.pool.x, 5);
+    }
+  });
+
+  it("con solar húmedo en el mismo lado, la escalera arranca después de esa franja, no superpuesta", () => {
+    const g = calcularGeometriaPlano(
+      { ...BASE, escalera: true, escaleraPos: "solar", escaleraAncho: 0.5, solarHumedo: true, solarHumedoAncho: 1 },
+      CLIENTE
+    );
+    const rect = rectEscalera(g.extras);
+    const pxPerM = g.pool.w / BASE.largo;
+    expect(rect).toBeTruthy();
+    if (rect && rect.t === "rect") {
+      expect(rect.x).toBeCloseTo(g.pool.x + 1 * pxPerM, 5);
+    }
+  });
+
+  it("del lado lateral2, la franja corre a todo el largo (ancho = poolW) y queda pegada abajo", () => {
+    const g = calcularGeometriaPlano({ ...BASE, escalera: true, escaleraPos: "lateral2", escaleraAncho: 0.5 }, CLIENTE);
+    const rect = rectEscalera(g.extras);
+    expect(rect).toBeTruthy();
+    if (rect && rect.t === "rect") {
+      expect(rect.w).toBeCloseTo(g.pool.w, 5);
+      expect(rect.y + rect.h).toBeCloseTo(g.pool.y + g.pool.h, 5);
+    }
+  });
+});
+
 describe("calcularGeometriaPlano — colores", () => {
   it("con el color de agua por defecto, el degradé usa el celeste claro original", () => {
     const g = calcularGeometriaPlano(BASE, EDITOR);

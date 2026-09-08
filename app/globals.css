@@ -41,3 +41,19 @@ body {
     max-width: none !important;
   }
 }
+
+/* Editor del plano de piscina (components/calculadoras/losetas/PlanoLosetasSvg.tsx).
+   Se usa mayormente desde el celular: sin `touch-action: none` el navegador
+   compite por el gesto de arrastre con su propio scroll/zoom táctil, así que
+   mover una luz se sentía "trabado" o directamente scrolleaba la página en
+   vez de arrastrarla. Con esto el <svg> le avisa al navegador que él mismo
+   maneja todo el gesto de puntero. */
+.pys-plano-editor {
+  touch-action: none;
+}
+.pys-luz-drag {
+  cursor: grab;
+}
+.pys-luz-drag:active {
+  cursor: grabbing;
+}

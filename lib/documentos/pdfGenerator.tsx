@@ -43,7 +43,7 @@ function resolverUrlsDeBloques(bloques: BloqueDocumento[]): BloqueDocumento[] {
 /**
  * Genera el PDF real de un presupuesto a partir de sus bloques (ver
  * lib/documentos/modelo.ts). `@react-pdf/renderer` se importa de forma
- * perezosa — mismo criterio que ya usan `docx.ts`/`html2canvas` (ver
+ * perezosa — mismo criterio que ya usa `docx.ts` (ver
  * tests/unit/dependencias.test.ts): no infla el bundle inicial de ninguna
  * calculadora con una librería que sólo hace falta al tocar "PDF".
  */

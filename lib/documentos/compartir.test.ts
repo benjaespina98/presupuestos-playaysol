@@ -43,6 +43,23 @@ describe("compartirOdescargarArchivo", () => {
     expect(click).toHaveBeenCalledTimes(1);
   });
 
+  it("una imagen PNG sin extensión en el nombre se descarga como .png", async () => {
+    // El plano de piscina (losetas) comparte PNG por acá desde que dejó de
+    // usar html2canvas + <a download> a mano — sin esta rama, `extensionDe`
+    // no reconocía "image/png" y el archivo se descargaba sin extensión.
+    vi.stubGlobal("navigator", { userAgentData: { mobile: false }, userAgent: "Windows NT 10.0" });
+    let nombreDescargado = "";
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+      nombreDescargado = this.download;
+    });
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:mock");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+
+    await compartirOdescargarArchivo(new Blob(["x"]), "Plano_cliente", "image/png");
+
+    expect(nombreDescargado).toBe("Plano_cliente.png");
+  });
+
   it("en celular (userAgentData.mobile=true) intenta navigator.share primero", async () => {
     const share = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", {

@@ -16,18 +16,20 @@ import fs from "fs";
  *   5. El botón de descarga real de cada una descarga un archivo cuyo nombre sigue
  *      el formato Presupuesto_<Tipo>_<Cliente>_<Fecha>.docx en las 4 tradicionales
  *      (botón "Word"), o Presupuesto_<Tipo>_<Cliente>_<Fecha>_cliente.png en losetas
- *      (botón "Imagen para el cliente" — losetas no genera Word, su salida es un
- *      plano PNG) (punto 4).
- *   6. En las 4 tradicionales, el botón "PDF" descarga
- *      Presupuesto_<Tipo>_<Cliente>_<Fecha>.pdf.
+ *      (botón "Imagen" — losetas no genera Word, su salida es un plano PNG/PDF)
+ *      (punto 4).
+ *   6. El botón "PDF" también descarga un archivo real: Presupuesto_<Tipo>_
+ *      <Cliente>_<Fecha>.pdf en las 4 tradicionales, o
+ *      Presupuesto_<Tipo>_<Cliente>_<Fecha>_cliente.pdf en losetas (mismo
+ *      plano que "Imagen", envuelto en una página PDF — ver
+ *      lib/documentos/losetas/imagenCliente.tsx).
  *
  * Nota sobre el botón "PDF": genera el archivo de forma programática con
- * `@react-pdf/renderer` (ver lib/documentos/pdfGenerator.tsx) y lo entrega con
- * `compartirOdescargarArchivo` — mismo mecanismo `<a download>` que "Word", así que
- * Playwright lo intercepta con `page.waitForEvent("download")` igual que a
- * cualquier otro. No dispara `window.print()`: eso quedó atrás cuando el PDF pasó a
- * generarse con react-pdf en vez del diálogo de impresión del navegador. Losetas no
- * tiene botón "PDF", así que queda fuera del punto 6.
+ * `@react-pdf/renderer` y lo entrega con `compartirOdescargarArchivo` — mismo
+ * mecanismo `<a download>` que "Word"/"Imagen", así que Playwright lo intercepta
+ * con `page.waitForEvent("download")` igual que a cualquier otro. No dispara
+ * `window.print()`: eso quedó atrás cuando el PDF pasó a generarse con react-pdf
+ * en vez del diálogo de impresión del navegador.
  */
 
 const E2E_EMAIL = process.env.E2E_EMAIL;
@@ -114,12 +116,12 @@ for (const { tipo, nombreEsperado, encabezado } of CALCULADORAS) {
     await expect(page.getByRole("heading", { name: encabezado })).toBeVisible({ timeout: 15_000 });
 
     // Botón de descarga real de cada una: "Word" en las 4 tradicionales,
-    // "Imagen para el cliente" (PNG) en losetas. El botón "PDF" (sólo en las
-    // 4 tradicionales) se verifica aparte, más abajo (punto 6).
+    // "Imagen" (PNG) en losetas. El botón "PDF" (las 5) se verifica aparte,
+    // más abajo (punto 6).
     const botonDescarga =
       tipo !== "losetas"
         ? page.getByRole("button", { name: "Word", exact: true })
-        : page.getByRole("button", { name: "Imagen para el cliente" });
+        : page.getByRole("button", { name: "Imagen", exact: true });
     await expect(botonDescarga).toBeVisible({ timeout: 15_000 });
 
     // --- Punto 1: sin botón de WhatsApp remanente ---
@@ -140,8 +142,9 @@ for (const { tipo, nombreEsperado, encabezado } of CALCULADORAS) {
 
     // --- Punto 4: naming del archivo descargado ---
     const [download] = await Promise.all([
-      // 30s: docx/html2canvas se piden con import() dinámico recién al
-      // apretar el botón, no al cargar la página (ver dependencias.test.ts).
+      // 30s: docx se pide con import() dinámico recién al apretar el botón,
+      // no al cargar la página (ver dependencias.test.ts) — y en losetas la
+      // imagen banner se trae con fetch() recién al exportar.
       page.waitForEvent("download", { timeout: 30_000 }),
       botonDescarga.click(),
     ]);
@@ -154,25 +157,24 @@ for (const { tipo, nombreEsperado, encabezado } of CALCULADORAS) {
     await download.saveAs(destino);
     expect(fs.existsSync(destino)).toBe(true);
 
-    // --- Punto 6: el botón "PDF" (sólo en las 4 tradicionales) también
-    // descarga un archivo real, con el mismo naming que Word/PNG salvo la
-    // extensión — genera el PDF con react-pdf, no con window.print(). ---
-    if (tipo !== "losetas") {
-      const botonPdf = page.getByRole("button", { name: "PDF", exact: true });
-      const [downloadPdf] = await Promise.all([
-        // 30s por el mismo motivo que el import() dinámico de docx: react-pdf
-        // también se pide recién al apretar el botón.
-        page.waitForEvent("download", { timeout: 30_000 }),
-        botonPdf.click(),
-      ]);
-      const nombrePdf = downloadPdf.suggestedFilename();
-      expect(nombrePdf).toMatch(
-        new RegExp(`^Presupuesto_${nombreEsperado}_Perez_Maria_Jose_\\d{4}-\\d{2}-\\d{2}\\.pdf$`)
-      );
-      const destinoPdf = path.join(test.info().outputDir, nombrePdf);
-      await downloadPdf.saveAs(destinoPdf);
-      expect(fs.existsSync(destinoPdf)).toBe(true);
-    }
+    // --- Punto 6: el botón "PDF" (las 5 calculadoras) también descarga un
+    // archivo real, con el mismo naming que Word/Imagen salvo la extensión
+    // — genera el PDF con react-pdf, no con window.print(). ---
+    const botonPdf = page.getByRole("button", { name: "PDF", exact: true });
+    const [downloadPdf] = await Promise.all([
+      // 30s por el mismo motivo que el import() dinámico de docx: react-pdf
+      // también se pide recién al apretar el botón.
+      page.waitForEvent("download", { timeout: 30_000 }),
+      botonPdf.click(),
+    ]);
+    const nombrePdf = downloadPdf.suggestedFilename();
+    const sufijoPdf = tipo !== "losetas" ? "\\.pdf" : "_cliente\\.pdf";
+    expect(nombrePdf).toMatch(
+      new RegExp(`^Presupuesto_${nombreEsperado}_Perez_Maria_Jose_\\d{4}-\\d{2}-\\d{2}${sufijoPdf}$`)
+    );
+    const destinoPdf = path.join(test.info().outputDir, nombrePdf);
+    await downloadPdf.saveAs(destinoPdf);
+    expect(fs.existsSync(destinoPdf)).toBe(true);
 
     // --- Sin errores de consola durante toda la carga/interacción ---
     expect(erroresConsola, `Errores de consola en ${tipo}: ${erroresConsola.join("\n")}`).toEqual([]);
