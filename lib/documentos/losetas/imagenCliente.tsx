@@ -94,6 +94,11 @@ function legendASvg(items: LegendItem[], losetaFill: string): string {
       else if (it.kind === "luz") {
         const cx = it.x + LEGEND_SW / 2;
         glifo = `<circle cx="${cx}" cy="${it.y}" r="9" fill="url(#luzGlow)" /><circle cx="${cx}" cy="${it.y}" r="4" fill="#FFEFA8" stroke="#C99A2E" stroke-width="1" />`;
+      } else if (it.kind === "skimmer") {
+        glifo = `<rect x="${it.x}" y="${sy + 2}" width="${LEGEND_SW}" height="${LEGEND_SW - 4}" rx="2" fill="#EAF0F3" stroke="#1B3A5C" stroke-width="1" /><rect x="${it.x + 3}" y="${it.y - 2}" width="${LEGEND_SW - 6}" height="4" rx="1" fill="#1B3A5C" opacity="0.55" />`;
+      } else if (it.kind === "hidromasaje") {
+        const cx = it.x + LEGEND_SW / 2;
+        glifo = `<circle cx="${cx}" cy="${it.y}" r="8" fill="#ffffff" stroke="#0C7A8C" stroke-width="1.4" /><circle cx="${cx}" cy="${it.y}" r="3.5" fill="#4FC7D9" stroke="#0C7A8C" stroke-width="1" />`;
       }
       const texto = `<text x="${it.x + LEGEND_SW + 8}" y="${it.y}" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#42525E" dominant-baseline="central">${escaparXml(it.label)}</text>`;
       return glifo + texto;

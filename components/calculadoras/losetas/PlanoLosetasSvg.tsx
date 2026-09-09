@@ -1,14 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
-import type { GeometriaPlano, LuzPos, Prim } from "@/lib/domain/plano/losetas";
+import type { GeometriaPlano, LuzPos, Prim, TipoArrastrable } from "@/lib/domain/plano/losetas";
 
 /**
  * Renderiza la geometría calculada por `calcularGeometriaPlano` como JSX de
  * `<svg>` — nunca como HTML armado a mano ni por `dangerouslySetInnerHTML`.
- * El estado (posición de cada luz) vive en el formulario del componente
- * padre; este componente sólo pinta lo que recibe y, si es interactivo,
- * avisa hacia arriba cuándo el usuario arrastró una luz.
+ * El estado (posición de cada objeto arrastrable) vive en el formulario del
+ * componente padre; este componente sólo pinta lo que recibe y, si es
+ * interactivo, avisa hacia arriba cuándo el usuario arrastró uno.
  *
  * El arrastre se captura sobre el propio `<svg>` (no sobre cada círculo)
  * porque cada movimiento vuelve a renderizar todo el árbol de primitivas: el
@@ -16,19 +16,26 @@ import type { GeometriaPlano, LuzPos, Prim } from "@/lib/domain/plano/losetas";
  * sigue capturado por el `<svg>`, así que el gesto no se corta a mitad de
  * camino. Mismo criterio que `initLuzDrag` en el legacy.
  */
-type Arrastre = { tipo: "luz"; indice: number } | { tipo: "escalera" };
+type Arrastre = { tipo: TipoArrastrable; indice: number };
 
+/** Un callback `(indice, pos) => void` por tipo de objeto arrastrable — la
+ *  escalera libre es la excepción (un solo objeto, `indice` siempre 0), así
+ *  que su callback no lo recibe. */
 export function PlanoLosetasSvg({
   geometria,
   interactive,
   onMoverLuz,
   onMoverEscalera,
+  onMoverSkimmer,
+  onMoverHidromasaje,
   ariaLabel,
 }: {
   geometria: GeometriaPlano;
   interactive: boolean;
   onMoverLuz?: (indice: number, pos: LuzPos) => void;
   onMoverEscalera?: (pos: LuzPos) => void;
+  onMoverSkimmer?: (indice: number, pos: LuzPos) => void;
+  onMoverHidromasaje?: (indice: number, pos: LuzPos) => void;
   ariaLabel?: string;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -57,10 +64,10 @@ export function PlanoLosetasSvg({
   function onPointerDown(e: React.PointerEvent<SVGSVGElement>) {
     if (!interactive) return;
     const el = e.target as Element;
-    const luz = el.closest?.("[data-luz]");
-    const escalera = !luz && el.closest?.("[data-escalera]");
-    if (!luz && !escalera) return;
-    setArrastrando(luz ? { tipo: "luz", indice: Number(luz.getAttribute("data-luz")) } : { tipo: "escalera" });
+    const handle = el.closest?.("[data-drag]");
+    if (!handle) return;
+    const [tipo, indiceStr] = handle.getAttribute("data-drag")!.split(":");
+    setArrastrando({ tipo: tipo as TipoArrastrable, indice: Number(indiceStr) });
     try {
       svgRef.current?.setPointerCapture(e.pointerId);
     } catch {
@@ -74,8 +81,11 @@ export function PlanoLosetasSvg({
     const pos = normalizar(e.clientX, e.clientY);
     if (!pos) return;
     e.preventDefault();
-    if (arrastrando.tipo === "luz") onMoverLuz?.(arrastrando.indice, pos);
-    else onMoverEscalera?.(pos);
+    const { tipo, indice } = arrastrando;
+    if (tipo === "luz") onMoverLuz?.(indice, pos);
+    else if (tipo === "escalera") onMoverEscalera?.(pos);
+    else if (tipo === "skimmer") onMoverSkimmer?.(indice, pos);
+    else onMoverHidromasaje?.(indice, pos);
   }
 
   function terminarArrastre(e: React.PointerEvent<SVGSVGElement>) {
@@ -129,15 +139,15 @@ export function PlanoLosetasSvg({
         strokeWidth={1}
         opacity={0.35}
       />
-      {/* Sólo lo decorativo acá — las manijas de arrastre (luzIndex/
-          escaleraDrag) van aparte, después de dims/leyenda (ver más abajo):
-          si quedaran mezcladas en este mismo paso, un texto que cayera
-          justo encima (p.ej. la medida "8 x 4 m", que se dibuja en el
-          centro de la pileta — el mismo lugar donde arranca la escalera
-          libre por defecto) tapa el círculo invisible y el click/touch le
-          pega al texto en vez de agarrar el objeto. Bug real, reportado. */}
+      {/* Sólo lo decorativo acá — las manijas de arrastre (`p.drag`) van
+          aparte, después de dims/leyenda (ver más abajo): si quedaran
+          mezcladas en este mismo paso, un texto que cayera justo encima
+          (p.ej. la medida "8 x 4 m", que se dibuja en el centro de la
+          pileta — el mismo lugar donde arranca la escalera libre por
+          defecto) tapa el círculo invisible y el click/touch le pega al
+          texto en vez de agarrar el objeto. Bug real, reportado. */}
       {geometria.extras
-        .filter((p) => !(p.t === "circle" && (p.luzIndex !== undefined || p.escaleraDrag)))
+        .filter((p) => !(p.t === "circle" && p.drag))
         .map((p, i) => (
           <PrimSvg key={`extra-${i}`} p={p} />
         ))}
@@ -159,7 +169,7 @@ export function PlanoLosetasSvg({
           elemento (por más que caiga en el mismo punto) puede taparla. */}
       {interactive &&
         geometria.extras
-          .filter((p) => p.t === "circle" && (p.luzIndex !== undefined || p.escaleraDrag))
+          .filter((p) => p.t === "circle" && p.drag)
           .map((p, i) => <PrimSvg key={`drag-${i}`} p={p} />)}
       {arrastrando !== null && <ArrastreActivoResaltado extras={geometria.extras} arrastrando={arrastrando} />}
     </svg>
@@ -167,15 +177,15 @@ export function PlanoLosetasSvg({
 }
 
 /**
- * Anillo de resalte alrededor de lo que se está arrastrando (una luz o la
- * escalera libre). En touch no hay hover/cursor que muestre qué está
- * "agarrado" — sin esto, con varios objetos cerca es fácil perder de vista
- * cuál se está moviendo mientras el dedo lo tapa.
+ * Anillo de resalte alrededor de lo que se está arrastrando. En touch no hay
+ * hover/cursor que muestre qué está "agarrado" — sin esto, con varios
+ * objetos cerca es fácil perder de vista cuál se está moviendo mientras el
+ * dedo lo tapa.
  */
 function ArrastreActivoResaltado({ extras, arrastrando }: { extras: Prim[]; arrastrando: Arrastre }) {
   const activa = extras.find(
     (p): p is Extract<Prim, { t: "circle" }> =>
-      p.t === "circle" && (arrastrando.tipo === "luz" ? p.luzIndex === arrastrando.indice : !!p.escaleraDrag)
+      p.t === "circle" && p.drag?.tipo === arrastrando.tipo && p.drag?.indice === arrastrando.indice
   );
   if (!activa) return null;
   return <circle cx={activa.cx} cy={activa.cy} r={22} fill="none" stroke="#1B3A5C" strokeWidth={2} strokeDasharray="4 3" />;
@@ -198,9 +208,10 @@ function PrimSvg({ p }: { p: Prim }) {
         <circle
           cx={p.cx} cy={p.cy} r={p.r} fill={p.fill} stroke={p.stroke} strokeWidth={p.strokeWidth}
           opacity={p.opacity}
-          data-luz={p.luzIndex !== undefined ? p.luzIndex : undefined}
-          data-escalera={p.escaleraDrag ? "" : undefined}
-          className={p.luzIndex !== undefined || p.escaleraDrag ? "pys-luz-drag" : undefined}
+          data-luz={p.drag?.tipo === "luz" ? p.drag.indice : undefined}
+          data-escalera={p.drag?.tipo === "escalera" ? "" : undefined}
+          data-drag={p.drag ? `${p.drag.tipo}:${p.drag.indice}` : undefined}
+          className={p.drag ? "pys-luz-drag" : undefined}
         />
       );
     case "text":
@@ -238,6 +249,18 @@ function LegendGlyph({
         <>
           <circle cx={item.x + LEGEND_SW / 2} cy={item.y} r={9} fill="url(#luzGlow)" />
           <circle cx={item.x + LEGEND_SW / 2} cy={item.y} r={4} fill="#FFEFA8" stroke="#C99A2E" strokeWidth={1} />
+        </>
+      )}
+      {item.kind === "skimmer" && (
+        <>
+          <rect x={item.x} y={sy + 2} width={LEGEND_SW} height={LEGEND_SW - 4} rx={2} fill="#EAF0F3" stroke="#1B3A5C" strokeWidth={1} />
+          <rect x={item.x + 3} y={item.y - 2} width={LEGEND_SW - 6} height={4} rx={1} fill="#1B3A5C" opacity={0.55} />
+        </>
+      )}
+      {item.kind === "hidromasaje" && (
+        <>
+          <circle cx={item.x + LEGEND_SW / 2} cy={item.y} r={8} fill="#ffffff" stroke="#0C7A8C" strokeWidth={1.4} />
+          <circle cx={item.x + LEGEND_SW / 2} cy={item.y} r={3.5} fill="#4FC7D9" stroke="#0C7A8C" strokeWidth={1} />
         </>
       )}
       <text x={item.x + LEGEND_SW + 8} y={item.y} dominantBaseline="central" fontSize={13} fill="#42525E">

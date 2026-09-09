@@ -89,7 +89,7 @@ describe("calcularGeometriaPlano — luces", () => {
     const g = calcularGeometriaPlano({ ...BASE, luces: true, cantLuces: 2 }, CLIENTE);
     const circulos = g.extras.filter((p) => p.t === "circle");
     expect(circulos).toHaveLength(2 * 3);
-    expect(circulos.some((c) => c.t === "circle" && c.luzIndex !== undefined)).toBe(false);
+    expect(circulos.some((c) => c.t === "circle" && c.drag !== undefined)).toBe(false);
   });
 
   it("la luz cae dentro del rectángulo de la pileta según su posición normalizada", () => {
@@ -97,12 +97,50 @@ describe("calcularGeometriaPlano — luces", () => {
       { ...BASE, luces: true, cantLuces: 1, lucesPos: [{ x: 0, y: 0 }] },
       EDITOR
     );
-    const agarre = g.extras.find((p) => p.t === "circle" && p.luzIndex === 0);
+    const agarre = g.extras.find((p) => p.t === "circle" && p.drag?.tipo === "luz" && p.drag.indice === 0);
     expect(agarre).toBeTruthy();
     if (agarre && agarre.t === "circle") {
       expect(agarre.cx).toBeCloseTo(g.pool.x, 5);
       expect(agarre.cy).toBeCloseTo(g.pool.y, 5);
     }
+  });
+});
+
+describe("calcularGeometriaPlano — skimmer e hidromasaje", () => {
+  it("sin activar ninguno, no agrega nada", () => {
+    const g = calcularGeometriaPlano(BASE, EDITOR);
+    expect(g.extras).toHaveLength(0);
+  });
+
+  it("cada skimmer agrega la caja + la ranura + 1 círculo de agarre si es interactivo", () => {
+    const g = calcularGeometriaPlano({ ...BASE, skimmer: true, cantSkimmers: 2 }, EDITOR);
+    const rects = g.extras.filter((p) => p.t === "rect");
+    const agarres = g.extras.filter((p) => p.t === "circle" && p.drag?.tipo === "skimmer");
+    expect(rects).toHaveLength(2 * 2); // 2 skimmers × (caja + ranura)
+    expect(agarres).toHaveLength(2);
+  });
+
+  it("cada hidromasaje agrega 2 círculos concéntricos + 1 de agarre si es interactivo", () => {
+    const g = calcularGeometriaPlano({ ...BASE, hidromasaje: true, cantHidromasajes: 2 }, EDITOR);
+    const circulos = g.extras.filter((p) => p.t === "circle");
+    expect(circulos).toHaveLength(2 * 3); // 2 hidromasajes × (externo+interno+agarre)
+  });
+
+  it("en el plano del cliente (no interactivo) ninguno de los dos agrega círculo de agarre", () => {
+    const g = calcularGeometriaPlano({ ...BASE, skimmer: true, cantSkimmers: 1, hidromasaje: true, cantHidromasajes: 1 }, CLIENTE);
+    expect(g.extras.some((p) => p.t === "circle" && p.drag !== undefined)).toBe(false);
+    // Los dos entran a la leyenda.
+    expect(g.legend.some((it) => it.kind === "skimmer")).toBe(true);
+    expect(g.legend.some((it) => it.kind === "hidromasaje")).toBe(true);
+  });
+
+  it("un skimmer se ubica según su posición normalizada", () => {
+    const g = calcularGeometriaPlano(
+      { ...BASE, skimmer: true, cantSkimmers: 1, skimmersPos: [{ x: 1, y: 1 }] },
+      EDITOR
+    );
+    const agarre = g.extras.find((p) => p.t === "circle" && p.drag?.tipo === "skimmer");
+    expect(agarre && agarre.t === "circle" ? agarre.cx : null).toBeCloseTo(g.pool.x + g.pool.w, 5);
   });
 });
 

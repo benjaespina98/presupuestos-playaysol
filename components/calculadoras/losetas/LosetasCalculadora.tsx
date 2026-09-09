@@ -33,9 +33,8 @@ function medidasDesdePresupuesto(leido: PresupuestoLeido): LosetasForm {
   const num = (v: unknown, def: number) => (typeof v === "number" && Number.isFinite(v) ? v : def);
   const str = (v: unknown, def: string) => (typeof v === "string" && v ? v : def);
   const bool = (v: unknown) => v === true;
-  const lucesPos: LuzPos[] = Array.isArray(m.lucesPos)
-    ? (m.lucesPos as { x?: unknown; y?: unknown }[]).map((p) => ({ x: num(p?.x, 0), y: num(p?.y, 0) }))
-    : [];
+  const posiciones = (v: unknown): LuzPos[] =>
+    Array.isArray(v) ? (v as { x?: unknown; y?: unknown }[]).map((p) => ({ x: num(p?.x, 0), y: num(p?.y, 0) })) : [];
   const escaleraPos = (["solar", "opuesto", "lateral1", "lateral2"] as const).includes(m.escaleraPos as never)
     ? (m.escaleraPos as LosetasForm["escaleraPos"])
     : base.escaleraPos;
@@ -69,7 +68,13 @@ function medidasDesdePresupuesto(leido: PresupuestoLeido): LosetasForm {
     labios: num(m.labios, 0.2),
     luces: bool(m.luces),
     cantLuces: num(m.cantLuces, 0),
-    lucesPos,
+    lucesPos: posiciones(m.lucesPos),
+    skimmer: bool(m.skimmer),
+    cantSkimmers: num(m.cantSkimmers, 1),
+    skimmersPos: posiciones(m.skimmersPos),
+    hidromasaje: bool(m.hidromasaje),
+    cantHidromasajes: num(m.cantHidromasajes, 2),
+    hidromasajesPos: posiciones(m.hidromasajesPos),
     revestimiento,
     revestimientoOtro: str(m.revestimientoOtro, ""),
     colorAgua: str(m.colorAgua, "#A6D1EC"),
@@ -104,6 +109,12 @@ function medidasParaSnapshot(v: LosetasForm) {
     luces: v.luces,
     cantLuces: v.cantLuces,
     lucesPos: v.lucesPos,
+    skimmer: v.skimmer,
+    cantSkimmers: v.cantSkimmers,
+    skimmersPos: v.skimmersPos,
+    hidromasaje: v.hidromasaje,
+    cantHidromasajes: v.cantHidromasajes,
+    hidromasajesPos: v.hidromasajesPos,
     revestimiento: v.revestimiento,
     revestimientoOtro: v.revestimientoOtro,
     colorAgua: v.colorAgua,
@@ -162,24 +173,27 @@ export function LosetasCalculadora({
   });
 
   const valoresForm = useWatch({ control });
-
-  // Ajusta lucesPos a la cantidad actual cada vez que se prende/apaga o
-  // cambia la cantidad — conservando las posiciones ya elegidas (mismo
-  // criterio que `ensureLucesPos` en el legacy). No depende de `lucesPos`
-  // en el array de dependencias a propósito: si dependiera, cada arrastre
-  // (que también cambia lucesPos) dispararía el efecto de nuevo.
-  const luces = valoresForm.luces;
-  const cantLuces = valoresForm.cantLuces;
-  useEffect(() => {
-    const actuales = getValues("lucesPos") ?? [];
-    const ajustadas = ajustarLucesPos(actuales, !!luces, cantLuces ?? 0);
-    const cambiaron =
-      ajustadas.length !== actuales.length || ajustadas.some((p, i) => p.x !== actuales[i]?.x || p.y !== actuales[i]?.y);
-    if (cambiaron) setValue("lucesPos", ajustadas, { shouldDirty: false });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [luces, cantLuces]);
-
   const num = (v: unknown) => (typeof v === "number" ? v : 0);
+
+  // Ajusta cada array de posiciones (luces, skimmers, hidromasajes) a su
+  // cantidad actual cada vez que se prende/apaga o cambia la cantidad —
+  // conservando las posiciones ya elegidas (mismo criterio que
+  // `ensureLucesPos` en el legacy). No depende del array de posiciones en
+  // las dependencias a propósito: si dependiera, cada arrastre (que también
+  // lo cambia) dispararía el efecto de nuevo.
+  function useAjustarPosiciones(campo: "lucesPos" | "skimmersPos" | "hidromasajesPos", on: boolean, cantidad: number) {
+    useEffect(() => {
+      const actuales = getValues(campo) ?? [];
+      const ajustadas = ajustarLucesPos(actuales, on, cantidad ?? 0);
+      const cambiaron =
+        ajustadas.length !== actuales.length || ajustadas.some((p, i) => p.x !== actuales[i]?.x || p.y !== actuales[i]?.y);
+      if (cambiaron) setValue(campo, ajustadas, { shouldDirty: false });
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [on, cantidad]);
+  }
+  useAjustarPosiciones("lucesPos", !!valoresForm.luces, num(valoresForm.cantLuces));
+  useAjustarPosiciones("skimmersPos", !!valoresForm.skimmer, num(valoresForm.cantSkimmers));
+  useAjustarPosiciones("hidromasajesPos", !!valoresForm.hidromasaje, num(valoresForm.cantHidromasajes));
 
   const geometriaEntrada = useMemo(
     () => ({
@@ -203,6 +217,12 @@ export function LosetasCalculadora({
       luces: !!valoresForm.luces,
       cantLuces: num(valoresForm.cantLuces),
       lucesPos: (valoresForm.lucesPos ?? []).map((p) => ({ x: num(p?.x), y: num(p?.y) })),
+      skimmer: !!valoresForm.skimmer,
+      cantSkimmers: num(valoresForm.cantSkimmers),
+      skimmersPos: (valoresForm.skimmersPos ?? []).map((p) => ({ x: num(p?.x), y: num(p?.y) })),
+      hidromasaje: !!valoresForm.hidromasaje,
+      cantHidromasajes: num(valoresForm.cantHidromasajes),
+      hidromasajesPos: (valoresForm.hidromasajesPos ?? []).map((p) => ({ x: num(p?.x), y: num(p?.y) })),
       revestimiento: valoresForm.revestimiento ?? "",
       revestimientoOtro: valoresForm.revestimientoOtro ?? "",
       colorAgua: valoresForm.colorAgua || "#A6D1EC",
@@ -230,6 +250,14 @@ export function LosetasCalculadora({
 
   function onMoverEscalera(pos: LuzPos) {
     setValue("escaleraPosLibre", pos, { shouldDirty: true });
+  }
+
+  function onMoverSkimmer(indice: number, pos: LuzPos) {
+    setValue(`skimmersPos.${indice}`, pos, { shouldDirty: true });
+  }
+
+  function onMoverHidromasaje(indice: number, pos: LuzPos) {
+    setValue(`hidromasajesPos.${indice}`, pos, { shouldDirty: true });
   }
 
   function snapshotDesdeValores(v: LosetasForm): PresupuestoV1 {
@@ -416,6 +444,18 @@ export function LosetasCalculadora({
                 <NumberField control={control} name="cantLuces" label="Cantidad" hint="Arrastralas en el plano para ubicarlas." />
               )}
             </div>
+            <div className="space-y-2">
+              <CheckboxField register={register} errors={errors} name="skimmer" label="Skimmer" />
+              {valoresForm.skimmer && (
+                <NumberField control={control} name="cantSkimmers" label="Cantidad" hint="Arrastralos en el plano para ubicarlos." />
+              )}
+            </div>
+            <div className="space-y-2">
+              <CheckboxField register={register} errors={errors} name="hidromasaje" label="Hidromasaje" />
+              {valoresForm.hidromasaje && (
+                <NumberField control={control} name="cantHidromasajes" label="Cantidad" hint="Arrastralos en el plano para ubicarlos." />
+              )}
+            </div>
           </div>
         </section>
 
@@ -453,6 +493,8 @@ export function LosetasCalculadora({
               ariaLabel="Editor del plano de la piscina"
               onMoverLuz={onMoverLuz}
               onMoverEscalera={onMoverEscalera}
+              onMoverSkimmer={onMoverSkimmer}
+              onMoverHidromasaje={onMoverHidromasaje}
             />
           </div>
 

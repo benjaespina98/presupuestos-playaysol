@@ -45,7 +45,7 @@ async function cargarMedidas(user: ReturnType<typeof userEvent.setup>, largo: st
   await user.type(anchoInput, ancho);
 }
 
-describe("LosetasCalculadora · luces arrastrables", () => {
+describe("LosetasCalculadora · objetos arrastrables", () => {
   beforeEach(() => mockearRectDelSvg());
 
   it("arrancan en la posición por defecto, contra la pared del solar", async () => {
@@ -129,6 +129,28 @@ describe("LosetasCalculadora · luces arrastrables", () => {
     await user.type(medida, "0,3");
 
     expect(await screen.findByText("Profundidad total: 0,9 m.")).toBeInTheDocument();
+  });
+
+  it("un skimmer y un hidromasaje también se pueden arrastrar", async () => {
+    const user = userEvent.setup();
+    render(<LosetasCalculadora />);
+    await cargarMedidas(user, "8", "4");
+    await user.click(screen.getByLabelText("Skimmer"));
+
+    const editor = screen.getByRole("img", { name: "Editor del plano de la piscina" });
+    await waitFor(() => expect(editor.querySelector('[data-drag^="skimmer"]')).toBeTruthy());
+    const cxInicial = Number((editor.querySelector('[data-drag^="skimmer"]') as SVGCircleElement).getAttribute("cx"));
+
+    fireEvent.pointerDown(editor.querySelector('[data-drag^="skimmer"]') as SVGCircleElement, {
+      clientX: 300, clientY: 300, pointerId: 1,
+    });
+    fireEvent.pointerMove(editor, { clientX: 380, clientY: 300, pointerId: 1 });
+    fireEvent.pointerUp(editor, { clientX: 380, clientY: 300, pointerId: 1 });
+
+    await waitFor(() => {
+      const cxFinal = Number((editor.querySelector('[data-drag^="skimmer"]') as SVGCircleElement).getAttribute("cx"));
+      expect(cxFinal).not.toBe(cxInicial);
+    });
   });
 });
 
