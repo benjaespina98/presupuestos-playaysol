@@ -61,6 +61,12 @@ export const PlanoLosetasEntrada = z.object({
   luces: z.boolean().default(false),
   cantLuces: z.number().min(0).default(0),
   lucesPos: z.array(LuzPos).default([]),
+  skimmer: z.boolean().default(false),
+  cantSkimmers: z.number().min(0).default(1),
+  skimmersPos: z.array(LuzPos).default([]),
+  hidromasaje: z.boolean().default(false),
+  cantHidromasajes: z.number().min(0).default(2),
+  hidromasajesPos: z.array(LuzPos).default([]),
   revestimiento: Revestimiento.default(""),
   revestimientoOtro: z.string().default(""),
   colorAgua: z.string().default("#A6D1EC"),
@@ -80,15 +86,19 @@ const REVEST_LABELS: Record<Exclude<Revestimiento, "">, string> = {
   otro: "Otro",
 };
 
-/** Posición por defecto de la luz i-ésima de n: contra la pared del solar,
- *  repartidas a lo largo. Normalizada (0..1) dentro del rectángulo de la pileta. */
+/** Posición por defecto del objeto i-ésimo de n (luz, skimmer o
+ *  hidromasaje): contra la pared del solar, repartidos a lo largo.
+ *  Normalizada (0..1) dentro del rectángulo de la pileta. El nombre quedó
+ *  de cuando sólo existían las luces — la función siempre fue genérica. */
 export function posicionLuzPorDefecto(i: number, n: number): LuzPos {
   return { x: 0.06, y: n <= 1 ? 0.5 : (i + 0.5) / n };
 }
 
-/** Ajusta el array de posiciones a la cantidad actual de luces: conserva las
- *  ya elegidas, agrega las que falten en su posición por defecto y descarta
- *  las sobrantes. Pura: devuelve un array nuevo, nunca muta el que recibe. */
+/** Ajusta un array de posiciones a la cantidad actual de objetos (luces,
+ *  skimmers, hidromasajes — cualquiera con la misma forma "on/cantidad/
+ *  posiciones"): conserva las ya elegidas, agrega las que falten en su
+ *  posición por defecto y descarta las sobrantes. Pura: devuelve un array
+ *  nuevo, nunca muta el que recibe. */
 export function ajustarLucesPos(lucesPos: LuzPos[], on: boolean, n: number): LuzPos[] {
   if (!on || n <= 0) return [];
   const resultado = lucesPos.slice(0, n);
@@ -129,15 +139,18 @@ export type PrimLine = {
   x1: number; y1: number; x2: number; y2: number;
   stroke: string; strokeWidth: number; opacity?: number;
 };
+/** Todo lo que se puede arrastrar en el editor. La escalera libre y el
+ *  espejo/etc. tienen un único objeto (`indice` siempre 0); luces/skimmers/
+ *  hidromasajes pueden tener varios. */
+export type TipoArrastrable = "luz" | "escalera" | "skimmer" | "hidromasaje";
+
 export type PrimCircle = {
   t: "circle";
   cx: number; cy: number; r: number;
   fill: string; stroke?: string; strokeWidth?: number; opacity?: number;
-  /** Presente sólo en el círculo de agarre interactivo de una luz. */
-  luzIndex?: number;
-  /** Presente sólo en el círculo de agarre de la escalera en modo "objeto
-   *  libre" (`escaleraMovible`) — a diferencia de las luces, sólo hay una. */
-  escaleraDrag?: boolean;
+  /** Presente sólo en el círculo de agarre interactivo de un objeto
+   *  arrastrable — nunca en el glow/foco/brillo puramente decorativos. */
+  drag?: { tipo: TipoArrastrable; indice: number };
 };
 export type PrimText = {
   t: "text";
@@ -153,7 +166,7 @@ export type Prim = PrimRect | PrimLine | PrimCircle | PrimText;
 
 export interface LegendItem {
   x: number; y: number;
-  kind: "loseta" | "pileta" | "solarhumedo" | "espejo" | "escalera" | "luz";
+  kind: "loseta" | "pileta" | "solarhumedo" | "espejo" | "escalera" | "luz" | "skimmer" | "hidromasaje";
   label: string;
 }
 
@@ -253,7 +266,7 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
       extras.push({ t: "text", x: centroX, y: centroY, text: "Escalera", fontSize: 9, fill: "#1B3A5C", anchor: "middle", central: true });
     }
     if (interactive) {
-      extras.push({ t: "circle", cx: centroX, cy: centroY, r: 28, fill: "transparent", escaleraDrag: true });
+      extras.push({ t: "circle", cx: centroX, cy: centroY, r: 28, fill: "transparent", drag: { tipo: "escalera", indice: 0 } });
     }
   } else if (s.escalera && s.escaleraEscalones > 0 && s.escaleraMedidaEscalon > 0) {
     // Franja completa a lo ancho/largo del lado elegido — no un cuadrado en
@@ -350,7 +363,7 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
         // imposible de tocar con el dedo sin fallar. Con varias luces cerca,
         // además, un número al lado de cada una ayuda a saber cuál es cuál
         // mientras se arrastra (no hay cursor que la resalte en touch).
-        extras.push({ t: "circle", cx, cy, r: 28, fill: "transparent", luzIndex: i });
+        extras.push({ t: "circle", cx, cy, r: 28, fill: "transparent", drag: { tipo: "luz", indice: i } });
         if (n > 1) {
           extras.push({ t: "text", x: cx, y: cy - glowR - 9, text: String(i + 1), fontSize: 10, fill: "#7a4a2e", anchor: "middle", central: true, weight: "bold" });
         }
@@ -358,17 +371,71 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
     }
   }
 
+  if (s.skimmer && s.cantSkimmers > 0) {
+    // Caja de pared chica y fija en pantalla (no escala con pxPerM, igual
+    // que el foco de las luces) — a esta escala un skimmer "a tamaño real"
+    // sería un punto invisible. La ranura oscura en el medio es lo que lo
+    // distingue (y en la leyenda) de cualquier otro cuadradito del plano.
+    const n = s.cantSkimmers;
+    const sw = showDims ? 24 : 20;
+    const sh = showDims ? 15 : 13;
+    for (let i = 0; i < n; i++) {
+      const p = s.skimmersPos[i] || posicionLuzPorDefecto(i, n);
+      const cx = poolX + Math.max(0, Math.min(1, p.x)) * poolW;
+      const cy = poolY + Math.max(0, Math.min(1, p.y)) * poolH;
+      extras.push({ t: "rect", x: cx - sw / 2, y: cy - sh / 2, w: sw, h: sh, rx: 2, fill: "#EAF0F3", stroke: "#1B3A5C", strokeWidth: 1 });
+      extras.push({ t: "rect", x: cx - sw / 2 + 3, y: cy - 2, w: sw - 6, h: 4, rx: 1, fill: "#1B3A5C", opacity: 0.55 });
+      if (interactive) {
+        extras.push({ t: "circle", cx, cy, r: 28, fill: "transparent", drag: { tipo: "skimmer", indice: i } });
+        if (n > 1) {
+          extras.push({ t: "text", x: cx, y: cy - sh / 2 - 9, text: String(i + 1), fontSize: 10, fill: "#3D5A6B", anchor: "middle", central: true, weight: "bold" });
+        }
+      }
+    }
+  }
+
+  if (s.hidromasaje && s.cantHidromasajes > 0) {
+    // Boquilla/jet: dos círculos concéntricos en tonos celeste-teal — a
+    // propósito bien distinto del amarillo de una luz, para no confundirlos
+    // de un vistazo en un plano con varios objetos chicos.
+    const n = s.cantHidromasajes;
+    const rExt = showDims ? 10 : 8;
+    const rInt = showDims ? 4.5 : 4;
+    for (let i = 0; i < n; i++) {
+      const p = s.hidromasajesPos[i] || posicionLuzPorDefecto(i, n);
+      const cx = poolX + Math.max(0, Math.min(1, p.x)) * poolW;
+      const cy = poolY + Math.max(0, Math.min(1, p.y)) * poolH;
+      extras.push({ t: "circle", cx, cy, r: rExt, fill: "#ffffff", stroke: "#0C7A8C", strokeWidth: 1.4 });
+      extras.push({ t: "circle", cx, cy, r: rInt, fill: "#4FC7D9", stroke: "#0C7A8C", strokeWidth: 1 });
+      if (interactive) {
+        extras.push({ t: "circle", cx, cy, r: 28, fill: "transparent", drag: { tipo: "hidromasaje", indice: i } });
+        if (n > 1) {
+          extras.push({ t: "text", x: cx, y: cy - rExt - 9, text: String(i + 1), fontSize: 10, fill: "#0C7A8C", anchor: "middle", central: true, weight: "bold" });
+        }
+      }
+    }
+  }
+
   // Un solo cartel de ayuda para todo lo arrastrable — si hubiera uno por
-  // objeto (luces + escalera libre) se pisarían en el mismo renglón, debajo
-  // del plano.
+  // objeto se pisarían en el mismo renglón, debajo del plano.
   if (interactive) {
     const arrastrables: string[] = [];
     if (s.luces && s.cantLuces > 0) arrastrables.push(s.cantLuces > 1 ? "las luces" : "la luz");
     if (s.escalera && s.escaleraMovible) arrastrables.push("la escalera");
+    if (s.skimmer && s.cantSkimmers > 0) arrastrables.push(s.cantSkimmers > 1 ? "los skimmers" : "el skimmer");
+    if (s.hidromasaje && s.cantHidromasajes > 0) arrastrables.push(s.cantHidromasajes > 1 ? "los hidromasajes" : "el hidromasaje");
     if (arrastrables.length > 0) {
+      // "Arrastrá X donde quieras" (sin "para ubicarla(s)/lo(s)") a
+      // propósito: mezclando luz/escalera (femenino) con skimmer/
+      // hidromasaje (masculino) no hay un pronombre que concuerde con
+      // todos a la vez — más simple sacarlo que forzar una concordancia.
+      const lista =
+        arrastrables.length === 1
+          ? arrastrables[0]
+          : `${arrastrables.slice(0, -1).join(", ")} y ${arrastrables[arrastrables.length - 1]}`;
       extras.push({
         t: "text", x: ox + (totalW * pxPerM) / 2, y: oy + totalH * pxPerM + 34,
-        text: `Arrastrá ${arrastrables.join(" y ")} para ubicarla${arrastrables.length > 1 || s.cantLuces > 1 ? "s" : ""} donde quieras`,
+        text: `Arrastrá ${lista} donde quieras`,
         fontSize: 11, fill: "#B98A1E", anchor: "middle",
       });
     }
@@ -468,6 +535,8 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
     if (s.tipoPileta === "fibra" && s.labios > 0) legItems.push({ kind: "espejo", label: "Espejo de agua" });
     if (s.escalera) legItems.push({ kind: "escalera", label: "Escalera" });
     if (s.luces && s.cantLuces > 0) legItems.push({ kind: "luz", label: "Luz" });
+    if (s.skimmer && s.cantSkimmers > 0) legItems.push({ kind: "skimmer", label: "Skimmer" });
+    if (s.hidromasaje && s.cantHidromasajes > 0) legItems.push({ kind: "hidromasaje", label: "Hidromasaje" });
 
     const swW = 18, swGap = 8, itemGap = 30, rowH = 28;
     const maxRight = ox + totalW * pxPerM;

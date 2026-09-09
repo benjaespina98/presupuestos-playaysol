@@ -39,6 +39,14 @@ export const LosetasFormSchema = z.object({
   cantLuces: z.number().min(0).default(0),
   lucesPos: z.array(LuzPos).default([]),
 
+  skimmer: z.boolean().default(false),
+  cantSkimmers: z.number().min(0).default(1),
+  skimmersPos: z.array(LuzPos).default([]),
+
+  hidromasaje: z.boolean().default(false),
+  cantHidromasajes: z.number().min(0).default(2),
+  hidromasajesPos: z.array(LuzPos).default([]),
+
   revestimiento: Revestimiento.default(""),
   revestimientoOtro: z.string().default(""),
 
@@ -76,6 +84,12 @@ export function formularioVacio(): LosetasForm {
     luces: false,
     cantLuces: 0,
     lucesPos: [],
+    skimmer: false,
+    cantSkimmers: 1,
+    skimmersPos: [],
+    hidromasaje: false,
+    cantHidromasajes: 2,
+    hidromasajesPos: [],
     revestimiento: "",
     revestimientoOtro: "",
     colorAgua: "#A6D1EC",
