@@ -129,10 +129,18 @@ export function PlanoLosetasSvg({
         strokeWidth={1}
         opacity={0.35}
       />
-      {geometria.extras.map((p, i) => (
-        <PrimSvg key={`extra-${i}`} p={p} />
-      ))}
-      {arrastrando !== null && <ArrastreActivoResaltado extras={geometria.extras} arrastrando={arrastrando} />}
+      {/* Sólo lo decorativo acá — las manijas de arrastre (luzIndex/
+          escaleraDrag) van aparte, después de dims/leyenda (ver más abajo):
+          si quedaran mezcladas en este mismo paso, un texto que cayera
+          justo encima (p.ej. la medida "8 x 4 m", que se dibuja en el
+          centro de la pileta — el mismo lugar donde arranca la escalera
+          libre por defecto) tapa el círculo invisible y el click/touch le
+          pega al texto en vez de agarrar el objeto. Bug real, reportado. */}
+      {geometria.extras
+        .filter((p) => !(p.t === "circle" && (p.luzIndex !== undefined || p.escaleraDrag)))
+        .map((p, i) => (
+          <PrimSvg key={`extra-${i}`} p={p} />
+        ))}
       {geometria.dims.map((p, i) => (
         <PrimSvg key={`dim-${i}`} p={p} />
       ))}
@@ -146,6 +154,14 @@ export function PlanoLosetasSvg({
           ))}
         </>
       )}
+
+      {/* Capa de arrastre: siempre la última en pintarse, así ningún otro
+          elemento (por más que caiga en el mismo punto) puede taparla. */}
+      {interactive &&
+        geometria.extras
+          .filter((p) => p.t === "circle" && (p.luzIndex !== undefined || p.escaleraDrag))
+          .map((p, i) => <PrimSvg key={`drag-${i}`} p={p} />)}
+      {arrastrando !== null && <ArrastreActivoResaltado extras={geometria.extras} arrastrando={arrastrando} />}
     </svg>
   );
 }

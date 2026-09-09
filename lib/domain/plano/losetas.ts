@@ -39,9 +39,16 @@ export const PlanoLosetasEntrada = z.object({
   solarHumedoAncho: z.number().min(0).default(0),
   escalera: z.boolean().default(false),
   escaleraPos: EscaleraPos.default("solar"),
-  /** Profundidad de la escalera (modo franja) o lado del cuadrado (modo
-   *  objeto libre), en metros — ver `escaleraMovible`. */
+  /** Lado del cuadrado en modo "objeto libre" (metros) — ver
+   *  `escaleraMovible`. En modo franja no se usa: la profundidad sale de
+   *  `escaleraEscalones × escaleraMedidaEscalon`. */
   escaleraAncho: z.number().min(0).default(0.5),
+  /** Modo franja (escaleraMovible=false): cantidad de escalones y la
+   *  profundidad de cada uno — la profundidad total de la franja es el
+   *  producto de los dos (3 × 0,30 m = 0,90 m), no un ancho suelto: así se
+   *  pide en obra ("escalones de 30") y así queda rotulada en el plano. */
+  escaleraEscalones: z.number().min(0).default(3),
+  escaleraMedidaEscalon: z.number().min(0).default(0.3),
   /** false (default) = franja a todo lo ancho/largo del lado elegido en
    *  `escaleraPos` — así se construye la mayoría de las veces: corrida
    *  completa, a menudo pegada al solar húmedo. true = un objeto chico que
@@ -248,15 +255,21 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
     if (interactive) {
       extras.push({ t: "circle", cx: centroX, cy: centroY, r: 28, fill: "transparent", escaleraDrag: true });
     }
-  } else if (s.escalera && s.escaleraAncho > 0) {
+  } else if (s.escalera && s.escaleraEscalones > 0 && s.escaleraMedidaEscalon > 0) {
     // Franja completa a lo ancho/largo del lado elegido — no un cuadrado en
     // una esquina (así se construye en la práctica: la escalera suele correr
     // toda la pared, a menudo pegada al solar húmedo). Cuando comparte el
     // lado del solar con un solar húmedo activo, arranca justo después de
     // ese, en fila, en vez de superponerse.
+    //
+    // La profundidad SALE de escalones × medida de escalón (no es un ancho
+    // suelto): así se pide en obra ("3 escalones de 30") y así queda
+    // rotulada — "Escalera (0,9m)" para 3 × 0,30.
+    const profundidad = s.escaleraEscalones * s.escaleraMedidaEscalon;
     const horizontal = s.escaleraPos === "solar" || s.escaleraPos === "opuesto";
     const anchoDisponible = horizontal ? s.largo : s.ancho;
-    const anchoPx = Math.min(s.escaleraAncho, anchoDisponible) * pxPerM;
+    const anchoPx = Math.min(profundidad, anchoDisponible) * pxPerM;
+    const medidaEscalonPx = s.escaleraMedidaEscalon * pxPerM;
     let ex: number, ey: number, ew: number, eh: number;
     if (horizontal) {
       ew = anchoPx;
@@ -275,11 +288,26 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
       ey = s.escaleraPos === "lateral2" ? poolY + poolH - anchoPx : poolY;
     }
     extras.push({ t: "rect", x: ex, y: ey, w: ew, h: eh, fill: "#fff", stroke: "#1B3A5C", strokeWidth: 1.2, dash: "3 2" });
+
+    // Líneas divisorias entre escalones — sólo si entran holgados (si no,
+    // queda un enrejado ilegible en vez de una ayuda visual).
+    if (medidaEscalonPx > 6) {
+      for (let i = 1; i < s.escaleraEscalones; i++) {
+        if (horizontal) {
+          const lx = ex + i * medidaEscalonPx;
+          extras.push({ t: "line", x1: lx, y1: ey, x2: lx, y2: ey + eh, stroke: "#1B3A5C", strokeWidth: 0.75, opacity: 0.5 });
+        } else {
+          const ly = ey + i * medidaEscalonPx;
+          extras.push({ t: "line", x1: ex, y1: ly, x2: ex + ew, y2: ly, stroke: "#1B3A5C", strokeWidth: 0.75, opacity: 0.5 });
+        }
+      }
+    }
+
     const cabe = horizontal ? ew > 46 : eh > 32;
     if (cabe) {
       extras.push({
         t: "text", x: ex + ew / 2, y: ey + eh / 2,
-        text: `Escalera${showDims ? " (" + fmtM(s.escaleraAncho) + "m)" : ""}`,
+        text: `Escalera${showDims ? " (" + fmtM(profundidad) + "m)" : ""}`,
         fontSize: 11, fill: "#1B3A5C", anchor: "middle", central: true,
       });
     }
