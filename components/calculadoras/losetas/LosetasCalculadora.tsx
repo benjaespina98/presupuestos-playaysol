@@ -5,7 +5,7 @@ import { useWatch } from "react-hook-form";
 import { useZodForm } from "@/lib/forms/useZodForm";
 import { NumberField, TextField, CheckboxField, SelectField } from "@/components/form";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { calcularGeometriaPlano, ajustarLucesPos, type LuzPos } from "@/lib/domain/plano/losetas";
+import { calcularGeometriaPlano, ajustarLucesPos, fmtM, type LuzPos } from "@/lib/domain/plano/losetas";
 import { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { PresupuestoLeido } from "@/lib/domain/presupuesto/adaptadores";
 import { guardarPresupuesto, actualizarPresupuesto } from "@/lib/presupuestos";
@@ -61,6 +61,8 @@ function medidasDesdePresupuesto(leido: PresupuestoLeido): LosetasForm {
     escalera: bool(m.escalera),
     escaleraPos,
     escaleraAncho: num(m.escaleraAncho, 0.5),
+    escaleraEscalones: num(m.escaleraEscalones, 3),
+    escaleraMedidaEscalon: num(m.escaleraMedidaEscalon, 0.3),
     escaleraMovible: bool(m.escaleraMovible),
     escaleraPosLibre: { x: num((m.escaleraPosLibre as { x?: unknown })?.x, 0.5), y: num((m.escaleraPosLibre as { y?: unknown })?.y, 0.5) },
     tipoPileta,
@@ -93,6 +95,8 @@ function medidasParaSnapshot(v: LosetasForm) {
     escalera: v.escalera,
     escaleraPos: v.escaleraPos,
     escaleraAncho: v.escaleraAncho,
+    escaleraEscalones: v.escaleraEscalones,
+    escaleraMedidaEscalon: v.escaleraMedidaEscalon,
     escaleraMovible: v.escaleraMovible,
     escaleraPosLibre: v.escaleraPosLibre,
     tipoPileta: v.tipoPileta,
@@ -190,6 +194,8 @@ export function LosetasCalculadora({
       escalera: !!valoresForm.escalera,
       escaleraPos: valoresForm.escaleraPos ?? "solar",
       escaleraAncho: num(valoresForm.escaleraAncho),
+      escaleraEscalones: num(valoresForm.escaleraEscalones),
+      escaleraMedidaEscalon: num(valoresForm.escaleraMedidaEscalon),
       escaleraMovible: !!valoresForm.escaleraMovible,
       escaleraPosLibre: { x: num(valoresForm.escaleraPosLibre?.x), y: num(valoresForm.escaleraPosLibre?.y) },
       tipoPileta: valoresForm.tipoPileta ?? "hormigon",
@@ -380,19 +386,27 @@ export function LosetasCalculadora({
                     label="Ubicarla a mano"
                     hint="En vez de una franja fija, queda como un objeto chico que arrastrás en el plano — igual que las luces."
                   />
-                  {!valoresForm.escaleraMovible && (
-                    <SelectField register={register} errors={errors} name="escaleraPos" label="Ubicación" options={ESCALERA_OPCIONES} />
+                  {valoresForm.escaleraMovible ? (
+                    <NumberField
+                      control={control}
+                      name="escaleraAncho"
+                      label="Tamaño (m)"
+                      hint="Lado del cuadrado que representa la escalera."
+                    />
+                  ) : (
+                    <>
+                      <SelectField register={register} errors={errors} name="escaleraPos" label="Ubicación" options={ESCALERA_OPCIONES} />
+                      <div className="grid grid-cols-2 gap-2">
+                        <NumberField control={control} name="escaleraEscalones" label="Escalones" />
+                        <NumberField control={control} name="escaleraMedidaEscalon" label="Medida (m)" />
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        {`Profundidad total: ${fmtM(num(valoresForm.escaleraEscalones) * num(valoresForm.escaleraMedidaEscalon))} m${
+                          valoresForm.solarHumedo ? " — arranca justo después del solar húmedo si están del mismo lado." : "."
+                        }`}
+                      </p>
+                    </>
                   )}
-                  <NumberField
-                    control={control}
-                    name="escaleraAncho"
-                    label={valoresForm.escaleraMovible ? "Tamaño (m)" : "Ancho (m)"}
-                    hint={
-                      valoresForm.escaleraMovible
-                        ? "Lado del cuadrado que representa la escalera."
-                        : "Va de corrido a todo ese lado. Si el solar húmedo está del mismo lado, arranca justo después."
-                    }
-                  />
                 </>
               )}
             </div>

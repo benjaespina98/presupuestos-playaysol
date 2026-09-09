@@ -27,6 +27,8 @@ export const LosetasFormSchema = z.object({
   escalera: z.boolean().default(false),
   escaleraPos: EscaleraPos.default("solar"),
   escaleraAncho: z.number().nonnegative("No puede ser negativo").default(0.5),
+  escaleraEscalones: z.number().nonnegative("No puede ser negativo").default(3),
+  escaleraMedidaEscalon: z.number().nonnegative("No puede ser negativo").default(0.3),
   escaleraMovible: z.boolean().default(false),
   escaleraPosLibre: LuzPos.default({ x: 0.5, y: 0.5 }),
 
@@ -65,6 +67,8 @@ export function formularioVacio(): LosetasForm {
     escalera: false,
     escaleraPos: "solar",
     escaleraAncho: 0.5,
+    escaleraEscalones: 3,
+    escaleraMedidaEscalon: 0.3,
     escaleraMovible: false,
     escaleraPosLibre: { x: 0.5, y: 0.5 },
     tipoPileta: "hormigon",

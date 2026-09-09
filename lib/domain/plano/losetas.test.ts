@@ -136,7 +136,10 @@ describe("calcularGeometriaPlano — escalera", () => {
   });
 
   it("del lado del solar, la franja corre a todo el ancho de la pileta (alto = poolH)", () => {
-    const g = calcularGeometriaPlano({ ...BASE, escalera: true, escaleraPos: "solar", escaleraAncho: 0.6 }, CLIENTE);
+    const g = calcularGeometriaPlano(
+      { ...BASE, escalera: true, escaleraPos: "solar", escaleraEscalones: 2, escaleraMedidaEscalon: 0.3 },
+      CLIENTE
+    );
     const rect = rectEscalera(g.extras);
     expect(rect).toBeTruthy();
     if (rect && rect.t === "rect") {
@@ -145,9 +148,28 @@ describe("calcularGeometriaPlano — escalera", () => {
     }
   });
 
+  it("la profundidad de la franja sale de escalones × medida de escalón, no de un ancho suelto", () => {
+    const g = calcularGeometriaPlano(
+      { ...BASE, escalera: true, escaleraPos: "solar", escaleraEscalones: 3, escaleraMedidaEscalon: 0.3 },
+      CLIENTE
+    );
+    const rect = rectEscalera(g.extras);
+    const pxPerM = g.pool.w / BASE.largo;
+    expect(rect).toBeTruthy();
+    if (rect && rect.t === "rect") {
+      expect(rect.w).toBeCloseTo(0.9 * pxPerM, 5); // 3 × 0,30 m
+    }
+    // Rotulado con el total calculado, no con un número suelto que alguien cargó.
+    const etiqueta = g.extras.find((p) => p.t === "text" && p.text.startsWith("Escalera"));
+    expect(etiqueta && etiqueta.t === "text" ? etiqueta.text : null).toBe("Escalera (0,9m)");
+    // 3 escalones → 2 líneas divisorias adentro de la franja.
+    const divisorias = g.extras.filter((p) => p.t === "line" && p.opacity === 0.5);
+    expect(divisorias).toHaveLength(2);
+  });
+
   it("con solar húmedo en el mismo lado, la escalera arranca después de esa franja, no superpuesta", () => {
     const g = calcularGeometriaPlano(
-      { ...BASE, escalera: true, escaleraPos: "solar", escaleraAncho: 0.5, solarHumedo: true, solarHumedoAncho: 1 },
+      { ...BASE, escalera: true, escaleraPos: "solar", escaleraEscalones: 2, escaleraMedidaEscalon: 0.25, solarHumedo: true, solarHumedoAncho: 1 },
       CLIENTE
     );
     const rect = rectEscalera(g.extras);
@@ -159,7 +181,10 @@ describe("calcularGeometriaPlano — escalera", () => {
   });
 
   it("del lado lateral2, la franja corre a todo el largo (ancho = poolW) y queda pegada abajo", () => {
-    const g = calcularGeometriaPlano({ ...BASE, escalera: true, escaleraPos: "lateral2", escaleraAncho: 0.5 }, CLIENTE);
+    const g = calcularGeometriaPlano(
+      { ...BASE, escalera: true, escaleraPos: "lateral2", escaleraEscalones: 2, escaleraMedidaEscalon: 0.25 },
+      CLIENTE
+    );
     const rect = rectEscalera(g.extras);
     expect(rect).toBeTruthy();
     if (rect && rect.t === "rect") {

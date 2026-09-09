@@ -114,6 +114,22 @@ describe("LosetasCalculadora · luces arrastrables", () => {
       expect(cyFinal).not.toBe(cyInicial);
     });
   });
+
+  it("en modo franja (sin 'ubicarla a mano'), la profundidad sale de escalones × medida del escalón", async () => {
+    const user = userEvent.setup();
+    render(<LosetasCalculadora />);
+    await cargarMedidas(user, "8", "4");
+    await user.click(screen.getByLabelText("Escalera"));
+
+    const escalones = screen.getByLabelText("Escalones");
+    const medida = screen.getByLabelText("Medida (m)");
+    await user.clear(escalones);
+    await user.type(escalones, "3");
+    await user.clear(medida);
+    await user.type(medida, "0,3");
+
+    expect(await screen.findByText("Profundidad total: 0,9 m.")).toBeInTheDocument();
+  });
 });
 
 describe("LosetasCalculadora · snapshot", () => {
