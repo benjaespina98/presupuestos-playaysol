@@ -112,11 +112,9 @@ function geometriaASvg(g: GeometriaPlano): string {
   partes.push(primASvg(g.fondo));
   for (const p of g.grid) partes.push(primASvg(p));
   partes.push(
-    `<rect x="${g.pool.x}" y="${g.pool.y}" width="${g.pool.w}" height="${g.pool.h}" rx="4" fill="url(#poolGrad)" stroke="#1B3A5C" stroke-width="1" />`
+    `<rect x="${g.pool.x}" y="${g.pool.y}" width="${g.pool.w}" height="${g.pool.h}" rx="4" fill="url(#poolGrad)" />`
   );
-  partes.push(
-    `<rect x="${g.pool.x + 2}" y="${g.pool.y + 2}" width="${Math.max(0, g.pool.w - 4)}" height="${Math.max(0, g.pool.h - 4)}" rx="3" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.35" />`
-  );
+  for (const p of g.borde) partes.push(primASvg(p));
   for (const p of g.extras) partes.push(primASvg(p));
   for (const p of g.dims) partes.push(primASvg(p));
   if (g.legend.length > 0) {

@@ -55,6 +55,10 @@ function medidasDesdePresupuesto(leido: PresupuestoLeido): LosetasForm {
     opuesto: num(m.opuesto, 0),
     lateral1: num(m.lateral1, 0),
     lateral2: num(m.lateral2, 0),
+    desbordeSolar: bool(m.desbordeSolar),
+    desbordeOpuesto: bool(m.desbordeOpuesto),
+    desbordeLateral1: bool(m.desbordeLateral1),
+    desbordeLateral2: bool(m.desbordeLateral2),
     solarHumedo: bool(m.solarHumedo),
     solarHumedoAncho: num(m.solarHumedoAncho, 0),
     escalera: bool(m.escalera),
@@ -95,6 +99,10 @@ function medidasParaSnapshot(v: LosetasForm) {
     opuesto: v.opuesto,
     lateral1: v.lateral1,
     lateral2: v.lateral2,
+    desbordeSolar: v.desbordeSolar,
+    desbordeOpuesto: v.desbordeOpuesto,
+    desbordeLateral1: v.desbordeLateral1,
+    desbordeLateral2: v.desbordeLateral2,
     solarHumedo: v.solarHumedo,
     solarHumedoAncho: v.solarHumedoAncho,
     escalera: v.escalera,
@@ -203,6 +211,10 @@ export function LosetasCalculadora({
       opuesto: num(valoresForm.opuesto),
       lateral1: num(valoresForm.lateral1),
       lateral2: num(valoresForm.lateral2),
+      desbordeSolar: !!valoresForm.desbordeSolar,
+      desbordeOpuesto: !!valoresForm.desbordeOpuesto,
+      desbordeLateral1: !!valoresForm.desbordeLateral1,
+      desbordeLateral2: !!valoresForm.desbordeLateral2,
       solarHumedo: !!valoresForm.solarHumedo,
       solarHumedoAncho: num(valoresForm.solarHumedoAncho),
       escalera: !!valoresForm.escalera,
@@ -372,11 +384,27 @@ export function LosetasCalculadora({
             Medida <b>terminada</b> de cada lado, incluyendo el borde de arriba.
           </p>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <NumberField control={control} name="solar" label="Solar (m)" />
-            <NumberField control={control} name="opuesto" label="Opuesto (m)" />
-            <NumberField control={control} name="lateral1" label="Lateral 1 (m)" />
-            <NumberField control={control} name="lateral2" label="Lateral 2 (m)" />
+            <div className="space-y-1.5">
+              {!valoresForm.desbordeSolar && <NumberField control={control} name="solar" label="Solar (m)" />}
+              <CheckboxField register={register} errors={errors} name="desbordeSolar" label="Desborde infinito" />
+            </div>
+            <div className="space-y-1.5">
+              {!valoresForm.desbordeOpuesto && <NumberField control={control} name="opuesto" label="Opuesto (m)" />}
+              <CheckboxField register={register} errors={errors} name="desbordeOpuesto" label="Desborde infinito" />
+            </div>
+            <div className="space-y-1.5">
+              {!valoresForm.desbordeLateral1 && <NumberField control={control} name="lateral1" label="Lateral 1 (m)" />}
+              <CheckboxField register={register} errors={errors} name="desbordeLateral1" label="Desborde infinito" />
+            </div>
+            <div className="space-y-1.5">
+              {!valoresForm.desbordeLateral2 && <NumberField control={control} name="lateral2" label="Lateral 2 (m)" />}
+              <CheckboxField register={register} errors={errors} name="desbordeLateral2" label="Desborde infinito" />
+            </div>
           </div>
+          <p className="text-xs text-gray-500">
+            Un lado con desborde infinito no lleva loseta — se dibuja más grueso y sin la medida (el agua cae a una
+            canaleta, no a un piso caminable).
+          </p>
         </section>
 
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
