@@ -21,6 +21,11 @@ export const LosetasFormSchema = z.object({
   lateral1: z.number().nonnegative("No puede ser negativo").default(0),
   lateral2: z.number().nonnegative("No puede ser negativo").default(0),
 
+  desbordeSolar: z.boolean().default(false),
+  desbordeOpuesto: z.boolean().default(false),
+  desbordeLateral1: z.boolean().default(false),
+  desbordeLateral2: z.boolean().default(false),
+
   solarHumedo: z.boolean().default(false),
   solarHumedoAncho: z.number().nonnegative("No puede ser negativo").default(0),
 
@@ -70,6 +75,10 @@ export function formularioVacio(): LosetasForm {
     opuesto: 0,
     lateral1: 0,
     lateral2: 0,
+    desbordeSolar: false,
+    desbordeOpuesto: false,
+    desbordeLateral1: false,
+    desbordeLateral2: false,
     solarHumedo: false,
     solarHumedoAncho: 0,
     escalera: false,

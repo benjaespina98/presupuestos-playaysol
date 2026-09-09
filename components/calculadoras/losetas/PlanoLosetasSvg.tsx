@@ -127,18 +127,14 @@ export function PlanoLosetasSvg({
       {geometria.grid.map((p, i) => (
         <PrimSvg key={`grid-${i}`} p={p} />
       ))}
-      <rect x={geometria.pool.x} y={geometria.pool.y} width={geometria.pool.w} height={geometria.pool.h} rx={4} fill="url(#poolGrad)" stroke="#1B3A5C" strokeWidth={1} />
-      <rect
-        x={geometria.pool.x + 2}
-        y={geometria.pool.y + 2}
-        width={Math.max(0, geometria.pool.w - 4)}
-        height={Math.max(0, geometria.pool.h - 4)}
-        rx={3}
-        fill="none"
-        stroke="#ffffff"
-        strokeWidth={1}
-        opacity={0.35}
-      />
+      {/* El agua va sin stroke propio — las 4 aristas (línea normal o
+          gruesa si ese lado tiene desborde infinito) se dibujan aparte,
+          en `geometria.borde`, para poder darle un estilo distinto a cada
+          lado. */}
+      <rect x={geometria.pool.x} y={geometria.pool.y} width={geometria.pool.w} height={geometria.pool.h} rx={4} fill="url(#poolGrad)" />
+      {geometria.borde.map((p, i) => (
+        <PrimSvg key={`borde-${i}`} p={p} />
+      ))}
       {/* Sólo lo decorativo acá — las manijas de arrastre (`p.drag`) van
           aparte, después de dims/leyenda (ver más abajo): si quedaran
           mezcladas en este mismo paso, un texto que cayera justo encima

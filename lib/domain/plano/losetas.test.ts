@@ -73,6 +73,45 @@ describe("calcularGeometriaPlano — geometría de la pileta", () => {
   });
 });
 
+describe("calcularGeometriaPlano — desborde infinito", () => {
+  it("sin ningún lado en desborde, las 4 aristas son finas y hay resalte blanco en las 4", () => {
+    const g = calcularGeometriaPlano(BASE, CLIENTE);
+    const aristas = g.borde.filter((p): p is Extract<typeof p, { t: "line" }> => p.t === "line");
+    // 4 aristas + 4 resaltes blancos = 8 líneas.
+    expect(aristas).toHaveLength(8);
+    expect(aristas.filter((l) => l.strokeWidth === 3)).toHaveLength(0);
+    expect(aristas.filter((l) => l.stroke === "#ffffff")).toHaveLength(4);
+  });
+
+  it("un lado en desborde: arista gruesa, sin resalte blanco en ESE lado, y con la etiqueta", () => {
+    const g = calcularGeometriaPlano({ ...BASE, desbordeOpuesto: true }, CLIENTE);
+    const aristas = g.borde.filter((p): p is Extract<typeof p, { t: "line" }> => p.t === "line");
+    expect(aristas.filter((l) => l.strokeWidth === 3)).toHaveLength(1);
+    // Sigue habiendo resalte blanco en los otros 3 lados, no en éste.
+    expect(aristas.filter((l) => l.stroke === "#ffffff")).toHaveLength(3);
+    const etiqueta = g.borde.find((p) => p.t === "text" && p.text === "Desborde infinito");
+    expect(etiqueta).toBeTruthy();
+  });
+
+  it("el lado en desborde no lleva loseta: la medida de ese lado se ignora, aunque venga cargada", () => {
+    const sinDesborde = calcularGeometriaPlano(BASE, CLIENTE); // opuesto: 1
+    const conDesborde = calcularGeometriaPlano({ ...BASE, desbordeOpuesto: true }, CLIENTE); // opuesto: 1, pero ignorado
+    // La pileta llega hasta el borde del terreno total del lado opuesto —
+    // no queda ningún margen de loseta ahí.
+    expect(conDesborde.pool.x + conDesborde.pool.w).toBeCloseTo(conDesborde.fondo.t === "rect" ? conDesborde.fondo.x + conDesborde.fondo.w : NaN, 5);
+    // En cambio sin desborde sí queda el margen de "opuesto" (1m) de loseta.
+    expect(sinDesborde.pool.x + sinDesborde.pool.w).toBeLessThan(sinDesborde.fondo.t === "rect" ? sinDesborde.fondo.x + sinDesborde.fondo.w : Infinity);
+  });
+
+  it("sin espacio suficiente, la etiqueta de desborde no se dibuja (no queda superpuesta)", () => {
+    // Lateral1 corre a lo ancho de poolW (el largo) — con un largo chico,
+    // el texto "Desborde infinito" no entra.
+    const g = calcularGeometriaPlano({ largo: 0.5, ancho: 4, solar: 1, opuesto: 1, lateral1: 1, lateral2: 1, desbordeLateral1: true }, CLIENTE);
+    const etiqueta = g.borde.find((p) => p.t === "text" && p.text === "Desborde infinito");
+    expect(etiqueta).toBeUndefined();
+  });
+});
+
 describe("calcularGeometriaPlano — luces", () => {
   it("sin luces activadas no agrega ningún círculo", () => {
     const g = calcularGeometriaPlano(BASE, EDITOR);

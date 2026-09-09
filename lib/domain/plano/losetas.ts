@@ -35,6 +35,15 @@ export const PlanoLosetasEntrada = z.object({
   opuesto: z.number().min(0).default(0),
   lateral1: z.number().min(0).default(0),
   lateral2: z.number().min(0).default(0),
+  /** Un lado con desborde infinito no lleva loseta — el agua cae directo a
+   *  una canaleta/pileta de compensación, no a un piso caminable. La medida
+   *  de ese lado (`solar`/`opuesto`/`lateral1`/`lateral2`) se ignora
+   *  mientras su desborde esté activo: no hace falta ponerla en 0 a mano,
+   *  el dibujo ya la trata como si lo estuviera. */
+  desbordeSolar: z.boolean().default(false),
+  desbordeOpuesto: z.boolean().default(false),
+  desbordeLateral1: z.boolean().default(false),
+  desbordeLateral2: z.boolean().default(false),
   solarHumedo: z.boolean().default(false),
   solarHumedoAncho: z.number().min(0).default(0),
   escalera: z.boolean().default(false),
@@ -179,6 +188,10 @@ export interface GeometriaPlano {
   colores: { aguaTop: string; aguaBottom: string; losetaFill: string };
   fondo: Prim; // el rectángulo grande de loseta
   grid: PrimLine[];
+  /** Las 4 aristas de la pileta (línea normal o gruesa + resalte blanco
+   *  interior si no tiene desborde infinito, etiqueta si lo tiene) — se
+   *  pintan encima del relleno de agua, que va sin stroke propio. */
+  borde: Prim[];
   extras: Prim[]; // solar húmedo, escalera, espejo, luces
   dims: Prim[]; // título, cotas, etiquetas de lado
   legend: LegendItem[];
@@ -207,7 +220,20 @@ function tickH(x: number, y: number, color: string): PrimLine {
  * (Lote 3 — paridad interactiva) sin levantar ningún DOM.
  */
 export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opciones: OpcionesPlano): GeometriaPlano {
-  const s = PlanoLosetasEntrada.parse(entradaCruda);
+  const sRaw = PlanoLosetasEntrada.parse(entradaCruda);
+  // Un lado con desborde infinito no lleva loseta — su medida se trata como
+  // 0 de acá en adelante (todo el resto de la función usa `s`, nunca
+  // `sRaw`, así que no hace falta tocar ningún otro cálculo: el lado ya
+  // "no está" para el ancho total, la posición de la pileta, la etiqueta de
+  // cota de ese lado, etc. `sRaw.desborde*` sigue disponible para decidir
+  // el estilo del borde en sí más abajo).
+  const s = {
+    ...sRaw,
+    solar: sRaw.desbordeSolar ? 0 : sRaw.solar,
+    opuesto: sRaw.desbordeOpuesto ? 0 : sRaw.opuesto,
+    lateral1: sRaw.desbordeLateral1 ? 0 : sRaw.lateral1,
+    lateral2: sRaw.desbordeLateral2 ? 0 : sRaw.lateral2,
+  };
   const { viewW, viewHmax, showDims, interactive } = opciones;
 
   const padTop = showDims ? 90 : 46;
@@ -225,6 +251,49 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
   const poolY = oy + s.lateral1 * pxPerM;
   const poolW = s.largo * pxPerM;
   const poolH = s.ancho * pxPerM;
+
+  // Borde de la pileta: 4 aristas independientes (no un solo <rect> con un
+  // stroke uniforme) para que un lado con desborde infinito pueda salir más
+  // grueso y sin la pared blanca interior que sí llevan los lados normales.
+  // El agua en sí (el <rect> con el degradé) va sin stroke — todo el borde
+  // sale de acá. `sRaw.desborde*`, no `s.desborde*`: son lo mismo, pero
+  // dejarlo explícito evita cualquier duda de que esto lee la bandera, no
+  // una medida ya puesta en 0.
+  const borde: Prim[] = [];
+  const BORDE_COLOR = "#1B3A5C";
+  const INSET = 2;
+  function arista(desborde: boolean, x1: number, y1: number, x2: number, y2: number) {
+    borde.push({ t: "line", x1, y1, x2, y2, stroke: BORDE_COLOR, strokeWidth: desborde ? 3 : 1 });
+  }
+  arista(sRaw.desbordeLateral1, poolX, poolY, poolX + poolW, poolY); // arriba
+  arista(sRaw.desbordeLateral2, poolX, poolY + poolH, poolX + poolW, poolY + poolH); // abajo
+  arista(sRaw.desbordeSolar, poolX, poolY, poolX, poolY + poolH); // izquierda
+  arista(sRaw.desbordeOpuesto, poolX + poolW, poolY, poolX + poolW, poolY + poolH); // derecha
+  if (!sRaw.desbordeLateral1) {
+    borde.push({ t: "line", x1: poolX + INSET, y1: poolY + INSET, x2: poolX + poolW - INSET, y2: poolY + INSET, stroke: "#ffffff", strokeWidth: 1, opacity: 0.35 });
+  }
+  if (!sRaw.desbordeLateral2) {
+    borde.push({ t: "line", x1: poolX + INSET, y1: poolY + poolH - INSET, x2: poolX + poolW - INSET, y2: poolY + poolH - INSET, stroke: "#ffffff", strokeWidth: 1, opacity: 0.35 });
+  }
+  if (!sRaw.desbordeSolar) {
+    borde.push({ t: "line", x1: poolX + INSET, y1: poolY + INSET, x2: poolX + INSET, y2: poolY + poolH - INSET, stroke: "#ffffff", strokeWidth: 1, opacity: 0.35 });
+  }
+  if (!sRaw.desbordeOpuesto) {
+    borde.push({ t: "line", x1: poolX + poolW - INSET, y1: poolY + INSET, x2: poolX + poolW - INSET, y2: poolY + poolH - INSET, stroke: "#ffffff", strokeWidth: 1, opacity: 0.35 });
+  }
+  const DESBORDE_LABEL = "Desborde infinito";
+  if (sRaw.desbordeLateral1 && poolW > 100) {
+    borde.push({ t: "text", x: poolX + poolW / 2, y: poolY + 15, text: DESBORDE_LABEL, fontSize: 10, fill: BORDE_COLOR, anchor: "middle", central: true, weight: "bold" });
+  }
+  if (sRaw.desbordeLateral2 && poolW > 100) {
+    borde.push({ t: "text", x: poolX + poolW / 2, y: poolY + poolH - 15, text: DESBORDE_LABEL, fontSize: 10, fill: BORDE_COLOR, anchor: "middle", central: true, weight: "bold" });
+  }
+  if (sRaw.desbordeSolar && poolH > 100) {
+    borde.push({ t: "text", x: poolX + 15, y: poolY + poolH / 2, text: DESBORDE_LABEL, fontSize: 10, fill: BORDE_COLOR, anchor: "middle", central: true, weight: "bold", rotateDeg: -90 });
+  }
+  if (sRaw.desbordeOpuesto && poolH > 100) {
+    borde.push({ t: "text", x: poolX + poolW - 15, y: poolY + poolH / 2, text: DESBORDE_LABEL, fontSize: 10, fill: BORDE_COLOR, anchor: "middle", central: true, weight: "bold", rotateDeg: -90 });
+  }
 
   const grid: PrimLine[] = [];
   if (showDims) {
@@ -558,6 +627,7 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
     colores: { aguaTop, aguaBottom, losetaFill },
     fondo: { t: "rect", x: ox, y: oy, w: totalW * pxPerM, h: totalH * pxPerM, rx: 6, fill: losetaFill, stroke: "#C0522D", strokeWidth: 1 },
     grid,
+    borde,
     extras,
     dims,
     legend,
