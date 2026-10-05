@@ -3,6 +3,7 @@ import { CATEGORIAS } from "./categorias";
 import {
   agruparPorCategoria,
   categoriaEfectiva,
+  disponibleEnCalculadora,
   filtrarCatalogo,
   ItemCatalogo,
   ordenarCatalogo,
@@ -191,5 +192,21 @@ describe("textoParaCopiar", () => {
   it("sin descripción, usa la clave", () => {
     const i = item({ descripcion: null, clave: "luces", precio: 240000, unidad: null });
     expect(textoParaCopiar(i, $)).toBe("luces: $240.000");
+  });
+});
+
+describe("disponibleEnCalculadora", () => {
+  it("ofrece los ítems activos, y también los que no traen el flag", () => {
+    expect(disponibleEnCalculadora({ clave: "luces", activo: true })).toBe(true);
+    expect(disponibleEnCalculadora({ clave: "luces" })).toBe(true);
+  });
+
+  it("no ofrece un ítem dado de baja en un presupuesto nuevo", () => {
+    expect(disponibleEnCalculadora({ clave: "luces", activo: false })).toBe(false);
+  });
+
+  it("conserva el dado de baja si el presupuesto reabierto ya lo incluía", () => {
+    expect(disponibleEnCalculadora({ clave: "luces", activo: false }, ["luces"])).toBe(true);
+    expect(disponibleEnCalculadora({ clave: "luces", activo: false }, ["otra"])).toBe(false);
   });
 });

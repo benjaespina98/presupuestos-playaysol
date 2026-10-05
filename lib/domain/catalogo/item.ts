@@ -29,13 +29,11 @@ export const ItemCatalogo = z.object({
    *  (no el enum `Unidad`): una fila cargada a mano en Supabase con otro
    *  valor no tiene que romper el listado, sólo se ve rara. */
   unidad: z.string().nullable(),
-  /** Si aparece en el listado de Catálogo. No afecta ningún cálculo ni a las
-   *  calculadoras: `obtenerCatalogo()` (lib/catalogo.ts) no filtra por esto,
-   *  como dice el comentario de la migración ("La pantalla lista por
-   *  categoría y filtra los inactivos"). Es puramente un flag de la pantalla
-   *  de administración, para dar de baja un material discontinuado sin
-   *  borrar su fila (que rompería presupuestos viejos que la referencian por
-   *  clave — ver PresupuestoV1). */
+  /** Si el ítem está vigente. Dado de baja (false) deja de ofrecerse en el
+   *  listado de Catálogo y como opcional/material de las calculadoras (ver
+   *  `disponibleEnCalculadora`). No se borra la fila: presupuestos viejos la
+   *  referencian por clave (ver PresupuestoV1) y siguen mostrándola. No
+   *  afecta ningún cálculo. */
   activo: z.boolean(),
   /** Posición manual dentro de su categoría. null = sin orden explícito, se
    *  ordena alfabéticamente. */
@@ -122,4 +120,21 @@ export function filtrarCatalogo(items: ItemCatalogo[], filtro: FiltroCatalogo): 
     }
     return true;
   });
+}
+
+/**
+ * ¿Se ofrece este ítem al armar un presupuesto NUEVO? Un ítem dado de baja
+ * (`activo === false`) deja de ofrecerse, pero se conserva si el presupuesto
+ * que se está reabriendo ya lo tenía incluido (`clavesAMantener`): dar de baja
+ * un material no puede hacer desaparecer una línea de un presupuesto viejo.
+ *
+ * `activo` undefined (fila leída por una versión que no lo traía) cuenta como
+ * activo. Sólo se aplica a opcionales/materiales: los precios base se leen por
+ * clave y no se filtran, así que dar de baja uno no los pone en $0.
+ */
+export function disponibleEnCalculadora(
+  fila: { clave: string; activo?: boolean },
+  clavesAMantener: readonly string[] = []
+): boolean {
+  return fila.activo !== false || clavesAMantener.includes(fila.clave);
 }
