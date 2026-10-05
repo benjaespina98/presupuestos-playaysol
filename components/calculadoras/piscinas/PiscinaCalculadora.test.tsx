@@ -193,3 +193,45 @@ describe("Fixture completa", () => {
     ]);
   });
 });
+
+describe("PiscinaCalculadora · precio de lista", () => {
+  const CATALOGO_CON_LISTAS: CatalogoRow[] = [
+    ...CATALOGO_ORACULO,
+    { clave: "lista_hormigon_8x4", precio: 15390000, descripcion: "Piscina de hormigón 8x4" },
+    { clave: "indusplast_caribe_550", precio: 8810000, descripcion: "Indusplast Caribe 550" },
+    { clave: "lista_hormigon_6_5x2_5", precio: null, descripcion: "Piscina de hormigón 6.5x2.5" },
+    { clave: "indusplast_spa_240", precio: 4715000, descripcion: "Indusplast Spa 240", activo: false },
+  ];
+
+  it("elegir una lista completa el subtotal, que sigue editable", async () => {
+    const user = userEvent.setup();
+    render(<PiscinaCalculadora catalogo={CATALOGO_CON_LISTAS} />);
+
+    await user.selectOptions(screen.getByLabelText(/Precio de lista/), "lista_hormigon_8x4");
+
+    expect(totales().getByText("$ 15.390.000")).toBeInTheDocument();
+    await cargarSubtotal(user, "14000000");
+    expect(totales().getByText("$ 14.000.000")).toBeInTheDocument();
+  });
+
+  it("las listas no aparecen como opcionales, y las dadas de baja o sin precio no se ofrecen", () => {
+    render(<PiscinaCalculadora catalogo={CATALOGO_CON_LISTAS} />);
+
+    expect(screen.queryByLabelText(/Piscina de hormigón 8x4 — \$/)).not.toBeInTheDocument();
+    const select = screen.getByLabelText(/Precio de lista/);
+    const opciones = within(select).getAllByRole("option").map((o) => o.textContent);
+    expect(opciones.join("|")).toContain("Indusplast Caribe 550");
+    expect(opciones.join("|")).not.toContain("Spa 240");
+    expect(opciones.join("|")).not.toContain("6.5x2.5");
+  });
+
+  it("un ítem dado de baja no se ofrece como opcional en un presupuesto nuevo", () => {
+    render(
+      <PiscinaCalculadora
+        catalogo={[...CATALOGO_ORACULO, { clave: "kit_limpieza", precio: 109000, descripcion: "Kit de limpieza", activo: false }]}
+      />
+    );
+    expect(screen.queryByLabelText(/Kit de limpieza/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Luces de acero inoxidable/)).toBeInTheDocument();
+  });
+});
