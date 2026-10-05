@@ -289,8 +289,22 @@ describe("Lote 6 · guardas de seguridad de la pantalla de Catálogo", () => {
     expect(src).not.toMatch(/COLUMNAS_ITEM_CATALOGO\s*=[^;]*updated_by/);
   });
 
-  it("no hay ningún .delete() sobre catalogo_items: no hay política de RLS que lo permita", () => {
-    expect(src).not.toMatch(/catalogo_items["']\)\s*\.delete\(/);
+  // Antes este test prohibía cualquier .delete(): no había policy de RLS que lo
+  // permitiera. Ahora se puede eliminar un ítem desde la pantalla (con
+  // confirmación), pero SÓLO de a uno por id: nunca un borrado masivo.
+  it("el único .delete() sobre catalogo_items es eliminarItemCatalogo, siempre acotado por id", () => {
+    const usos = src.match(/\.delete\(\)/g) ?? [];
+    expect(usos).toHaveLength(1);
+    expect(src).toMatch(/\.delete\(\)\.eq\("id", id\)/);
+  });
+
+  it("la migración habilita el delete sin tocar los textos compartidos (__legal, __footer_*)", () => {
+    const sql = fs.readFileSync(
+      path.join(process.cwd(), "supabase", "migration_catalogo_eliminar.sql"),
+      "utf8"
+    );
+    expect(sql).toMatch(/for delete/);
+    expect(sql).toMatch(/clave not like/);
   });
 
   // clave/tipo son la identidad de la fila (ver CambiosItemCatalogo): esto ya
@@ -326,5 +340,43 @@ describe("obtenerCatalogo", () => {
     await obtenerCatalogo("piscinas");
 
     expect(select).toHaveBeenCalledWith(expect.stringContaining("activo"));
+  });
+});
+
+describe("eliminarItemCatalogo", () => {
+  function clienteBorrado(resultado: { data: unknown; error: unknown }) {
+    const select = vi.fn(() => Promise.resolve(resultado));
+    const eq = vi.fn(() => ({ select }));
+    const del = vi.fn(() => ({ eq }));
+    return { cliente: { from: () => ({ delete: del }) }, del, eq };
+  }
+
+  it("borra por id y no dice 'listo' si no se afectó ninguna fila (policy ausente o ya borrado)", async () => {
+    const { cliente, eq } = clienteBorrado({ data: [], error: null });
+    createClient.mockReturnValue(cliente);
+    const { eliminarItemCatalogo } = await import("./catalogo");
+
+    const r = await eliminarItemCatalogo("id-1");
+
+    expect(eq).toHaveBeenCalledWith("id", "id-1");
+    expect(r.error).toMatch(/ya no existe/i);
+  });
+
+  it("devuelve error null cuando borró una fila", async () => {
+    const { cliente } = clienteBorrado({ data: [{ id: "id-1" }], error: null });
+    createClient.mockReturnValue(cliente);
+    const { eliminarItemCatalogo } = await import("./catalogo");
+
+    expect((await eliminarItemCatalogo("id-1")).error).toBeNull();
+  });
+
+  it("propaga el mensaje de Supabase y nunca rechaza la promesa", async () => {
+    const { cliente } = clienteBorrado({ data: null, error: { message: "permiso denegado" } });
+    createClient.mockReturnValue(cliente);
+    const { eliminarItemCatalogo } = await import("./catalogo");
+    expect((await eliminarItemCatalogo("id-1")).error).toBe("permiso denegado");
+
+    createClient.mockReturnValue({ from: () => ({ delete: () => { throw new TypeError("Failed to fetch"); } }) });
+    expect((await eliminarItemCatalogo("id-1")).error).toMatch(/no se pudo conectar/i);
   });
 });

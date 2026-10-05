@@ -271,3 +271,30 @@ export async function crearItemCatalogo(
     return { item: null, error: ERROR_DE_RED };
   }
 }
+
+const ELIMINAR_SIN_FILA =
+  "No se pudo eliminar: el ítem ya no existe (puede haberlo eliminado otra persona) o falta habilitar el borrado en Supabase (migration_catalogo_eliminar.sql).";
+
+/**
+ * Elimina un ítem del catálogo por id. Es un borrado real (a diferencia de
+ * "dar de baja", que sólo lo oculta): los presupuestos ya guardados no
+ * cambian porque congelan sus precios, pero un presupuesto viejo anterior a
+ * esa migración que lo incluía lo pierde al reabrirse.
+ *
+ * Mismo cuidado que `actualizarItemCatalogo`: pide `.select("id")` para
+ * distinguir "borré una fila" de "no matcheó ninguna" (PostgREST devuelve
+ * error null en los dos casos; con la policy de delete ausente también).
+ */
+export async function eliminarItemCatalogo(id: string): Promise<{ error: string | null }> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase.from("catalogo_items").delete().eq("id", id).select("id");
+
+    if (error) return { error: error.message };
+    if (!data || data.length === 0) return { error: ELIMINAR_SIN_FILA };
+    return { error: null };
+  } catch (err) {
+    console.error("No se pudo eliminar el ítem de catálogo", err);
+    return { error: ERROR_DE_RED };
+  }
+}
