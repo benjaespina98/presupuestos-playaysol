@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase-server";
 import { LOGO_URL } from "@/lib/brand";
 import { Wordmark } from "@/components/Wordmark";
 import LogoutButton from "./logout-button";
+import { NavLink } from "./nav-link";
 
 export default async function DashboardLayout({
   children,
@@ -37,24 +38,11 @@ export default async function DashboardLayout({
                 pantalla de inicio también se titulaba "Presupuestos". Dos cosas
                 distintas con el mismo nombre. */}
             <nav className="flex items-center gap-4 text-sm">
-              <Link
-                href="/dashboard"
-                className="font-medium text-[#1B3A5C] hover:underline"
-              >
+              <NavLink href="/dashboard" exacto>
                 Nuevo
-              </Link>
-              <Link
-                href="/dashboard/historial"
-                className="font-medium text-[#1B3A5C] hover:underline"
-              >
-                Historial
-              </Link>
-              <Link
-                href="/dashboard/catalogo"
-                className="font-medium text-[#1B3A5C] hover:underline"
-              >
-                Catálogo
-              </Link>
+              </NavLink>
+              <NavLink href="/dashboard/historial">Historial</NavLink>
+              <NavLink href="/dashboard/catalogo">Catálogo</NavLink>
               <span className="hidden text-gray-400 sm:inline">{user.email}</span>
               <LogoutButton />
             </nav>
