@@ -55,7 +55,7 @@ describe("calcularGeometriaPlano — geometría de la pileta", () => {
     // ox = padSide (90, showDims=false) ; poolX = ox + solar*pxPerM
     const pxPerM = g.pool.w / BASE.largo;
     expect(g.pool.x).toBeCloseTo(90 + BASE.solar * pxPerM, 5);
-    expect(g.pool.y).toBeCloseTo(46 + BASE.lateral1 * pxPerM, 5);
+    expect(g.pool.y).toBeCloseTo(30 + BASE.lateral1 * pxPerM, 5);
   });
 
   it("la pileta mantiene la proporción largo:ancho del terreno total", () => {

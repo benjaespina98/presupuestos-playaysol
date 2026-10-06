@@ -134,8 +134,12 @@ export function dibujarObjetoUbicado(c: CajaUbicada): Prim[] {
   }
   return [
     { t: "rect", x: c.x, y: c.y, w: c.w, h: c.h, rx: 3, fill: COLORES_UBICACION.casaFondo, stroke: COLORES_UBICACION.casaBorde, strokeWidth: 1.2, dash: "6 3" },
-    { t: "text", x: cx, y: cy - 8, text: "Casa /", fontSize: 12, fill: COLORES_UBICACION.casaTexto, anchor: "middle", central: true, weight: "bold" },
-    { t: "text", x: cx, y: cy + 8, text: "quincho", fontSize: 12, fill: COLORES_UBICACION.casaTexto, anchor: "middle", central: true, weight: "bold" },
+    // Una casita (techo y paredes) arriba del nombre.
+    { t: "poly", puntos: [[cx - 11, cy - 11], [cx, cy - 22], [cx + 11, cy - 11]], fill: COLORES_UBICACION.casaBorde },
+    { t: "rect", x: cx - 8, y: cy - 11, w: 16, h: 9, fill: COLORES_UBICACION.casaBorde, opacity: 0.75 },
+    { t: "rect", x: cx - 2, y: cy - 7, w: 4, h: 5, fill: COLORES_UBICACION.casaFondo },
+    { t: "text", x: cx, y: cy + 6, text: "Casa /", fontSize: 12, fill: COLORES_UBICACION.casaTexto, anchor: "middle", central: true, weight: "bold" },
+    { t: "text", x: cx, y: cy + 20, text: "quincho", fontSize: 12, fill: COLORES_UBICACION.casaTexto, anchor: "middle", central: true, weight: "bold" },
   ];
 }
 

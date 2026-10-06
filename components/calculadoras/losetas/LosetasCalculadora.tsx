@@ -240,6 +240,21 @@ export function LosetasCalculadora({
   const [generandoPdf, setGenerandoPdf] = useState(false);
   const [errorPdf, setErrorPdf] = useState<string | null>(null);
   const [confirmarLimpiar, setConfirmarLimpiar] = useState(false);
+  // "Ampliar": el editor ocupa toda la pantalla para ubicar luces, sala, casa, etc. con más lugar.
+  const [ampliado, setAmpliado] = useState(false);
+  useEffect(() => {
+    if (!ampliado) return;
+    const alTeclear = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setAmpliado(false);
+    };
+    window.addEventListener("keydown", alTeclear);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden"; // el fondo no se desplaza mientras se arrastra
+    return () => {
+      window.removeEventListener("keydown", alTeclear);
+      document.body.style.overflow = overflow;
+    };
+  }, [ampliado]);
 
   const {
     control,
@@ -743,7 +758,41 @@ export function LosetasCalculadora({
 
       <div>
         <div className="space-y-4 lg:sticky lg:top-4">
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          {/* Un solo editor: el mismo elemento se muestra en la columna o, ampliado, a pantalla completa. */}
+          <div
+            role={ampliado ? "dialog" : undefined}
+            aria-modal={ampliado ? true : undefined}
+            aria-label={ampliado ? "Editor del plano ampliado" : undefined}
+            className={
+              ampliado
+                ? "fixed inset-0 z-50 flex flex-col gap-3 bg-white p-3 sm:p-5"
+                : "rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+            }
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-gray-500">
+                {ampliado ? "Arrastrá los objetos para ubicarlos. Los cambios se guardan en el formulario." : "Editor del plano"}
+              </p>
+              <button
+                type="button"
+                onClick={() => setAmpliado((v) => !v)}
+                aria-pressed={ampliado}
+                className="min-h-11 shrink-0 rounded-md border border-[#1B3A5C] px-4 text-sm font-medium text-[#1B3A5C] transition-colors hover:bg-[#1B3A5C]/5"
+              >
+                {ampliado ? "Listo" : "Ampliar plano"}
+              </button>
+            </div>
+            <div
+              className={ampliado ? "mx-auto flex min-h-0 w-full flex-1 items-center justify-center overflow-auto" : undefined}
+            >
+              <div
+                style={
+                  ampliado
+                    ? { width: `min(100%, calc((100dvh - 7rem) * ${geometriaEditor.viewW / geometriaEditor.svgH}))` }
+                    : undefined
+                }
+                className={ampliado ? undefined : "w-full"}
+              >
             <PlanoLosetasSvg
               geometria={geometriaEditor}
               interactive
@@ -755,6 +804,8 @@ export function LosetasCalculadora({
               onMoverSala={onMoverSala}
               onMoverCasa={onMoverCasa}
             />
+              </div>
+            </div>
           </div>
 
           {/* Vista previa de lo que sale en "Imagen"/"PDF" — mismo contenido
