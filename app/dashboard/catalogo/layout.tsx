@@ -1,4 +1,5 @@
 import { CatalogoTabs } from "@/components/catalogo/CatalogoTabs";
+import { VolverArriba } from "@/components/catalogo/VolverArriba";
 
 /**
  * Marco común de las secciones del catálogo: las pestañas arriba y, abajo, la
@@ -11,6 +12,7 @@ export default function CatalogoLayout({ children }: { children: React.ReactNode
         <CatalogoTabs />
       </div>
       {children}
+      <VolverArriba />
     </>
   );
 }

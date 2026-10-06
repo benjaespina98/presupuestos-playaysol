@@ -21,6 +21,7 @@ import { formatARS } from "@/lib/format/ars";
 import { copiarAlPortapapeles } from "@/lib/clipboard";
 import { PanelPortal } from "@/components/PanelPortal";
 import { Interruptor } from "@/components/catalogo/FiltrosCatalogo";
+import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
 
 const CLASE_CAMPO =
   "min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20";
@@ -121,13 +122,11 @@ export default function PedidoPage() {
   const hayAjustes = Object.keys(ajustes).length > 0;
 
   return (
-    <PanelPortal>
-      <div data-print-hide="" className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Armar pedido</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Elegí el tamaño de la pileta y las opciones de la obra: te armo qué pedir, cuánto y a quién.
-        </p>
-      </div>
+    <PanelPortal compacto>
+      <EncabezadoPagina
+        titulo="Armar pedido"
+        descripcion="Elegí el tamaño de la pileta y las opciones de la obra: te armo qué pedir, cuánto y a quién."
+      />
 
       {error && (
         <p role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -247,7 +246,15 @@ export default function PedidoPage() {
             </div>
           ) : (
             <>
-              <div data-print-hide="" className="mb-4 flex flex-wrap items-center gap-2">
+              {/* Barra fija: al bajar por una tabla larga, el costo y los botones de exportar siguen a mano. */}
+              <div
+                data-print-hide=""
+                className="sticky top-0 z-20 -mx-4 mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-gray-200 bg-gray-50 px-4 py-2.5"
+              >
+                <p className="mr-auto text-sm tabular-nums text-gray-600">
+                  <b className="text-gray-900">{pedido.articulos}</b> artículos · <b className="text-gray-900">{pedido.proveedores}</b> proveedores ·{" "}
+                  <b className="text-gray-900">{formatARS(pedido.costo)}</b>
+                </p>
                 <Accion principal onClick={() => copiar("todo", mensajeWhatsApp(pedido, params, encabezado))}>
                   {copiado === "todo" ? "¡Copiado!" : "Copiar mensaje para WhatsApp"}
                 </Accion>
@@ -378,7 +385,15 @@ function GrupoTabla({
       </header>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        {/* Anchos fijos: así las columnas de todos los proveedores quedan alineadas entre sí. */}
+        <table className="w-full min-w-[40rem] table-fixed text-left text-sm">
+          <colgroup>
+            <col />
+            <col className="w-60" />
+            <col className="w-36" />
+            <col className="w-36" />
+            <col className="w-24" />
+          </colgroup>
           <thead>
             <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-500">
               <th className="px-4 py-2 font-medium">Artículo</th>
