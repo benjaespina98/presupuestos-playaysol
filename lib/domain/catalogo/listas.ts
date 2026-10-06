@@ -25,3 +25,40 @@ export function esListaDePrecios(clave: string): boolean {
 export function lineaDeClave(clave: string): LineaPiscina | null {
   return LINEAS_PISCINA.find((l) => clave.startsWith(l.prefijo))?.id ?? null;
 }
+
+/** Orden en que se muestran los modelos de fibra Indusplast (de la lista de precios). */
+export const MODELOS_INDUSPLAST = ["racionalista", "caribe", "finesa", "lagune", "spa"] as const;
+
+const mayuscula = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** "indusplast_caribe_550" → "Caribe"; null si no es una piscina Indusplast. */
+export function modeloIndusplast(clave: string): string | null {
+  const m = /^indusplast_([a-z]+)_/.exec(clave);
+  return m ? mayuscula(m[1]) : null;
+}
+
+/** La medida de una piscina de lista: "indusplast_caribe_550" → "550",
+ *  "lista_hormigon_7x3_50" → "7x3.50", "lista_hormigon_6_5x2.5" → "6.5x2.5". */
+export function medidaDeLista(clave: string): string | null {
+  const linea = LINEAS_PISCINA.find((l) => clave.startsWith(l.prefijo));
+  if (!linea) return null;
+  const resto = clave.slice(linea.prefijo.length);
+  if (linea.id === "indusplast") return resto.replace(/^[a-z]+_/, "");
+  return resto.replace(/(\d)_(\d)/g, "$1.$2");
+}
+
+/** Nombre corto para el listado: "Caribe 550", "Hormigón 7x3.50". */
+export function nombreCortoLista(clave: string): string | null {
+  const linea = lineaDeClave(clave);
+  const medida = medidaDeLista(clave);
+  if (!linea || !medida) return null;
+  if (linea === "indusplast") return `${modeloIndusplast(clave) ?? "Indusplast"} ${medida}`;
+  return `Hormigón ${medida}`;
+}
+
+/** Clave de orden por tamaño: 400 < 450 < 500; 5x3 < 6x3 < 7x3 < 7x3.50 < 7x4. */
+export function ordenMedida(clave: string): number {
+  const medida = medidaDeLista(clave) ?? "";
+  const [a, b] = medida.split("x").map((n) => parseFloat(n));
+  return Number.isFinite(b) ? a * 1000 + b : Number.isFinite(a) ? a : Number.POSITIVE_INFINITY;
+}

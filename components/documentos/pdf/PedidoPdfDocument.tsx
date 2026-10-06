@@ -1,7 +1,7 @@
 import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import { EMPRESA } from "@/lib/brand";
 import type { DocumentoPedido, SeccionProveedor } from "@/lib/domain/abastecimiento/pedidoDocumento";
-import { formatARS } from "@/lib/format/ars";
+import { formatARSExacto } from "@/lib/format/ars";
 
 /**
  * El pedido formal de materiales en PDF: logo y datos de la empresa, número y
@@ -137,15 +137,15 @@ function Tabla({ s, conTitulo }: { s: SeccionProveedor; conTitulo: boolean }) {
             </>
           ) : (
             <>
-              <Text style={styles.cPrecio}>{formatARS(l.precio)}</Text>
-              <Text style={styles.cSubtotal}>{formatARS(l.subtotal)}</Text>
+              <Text style={styles.cPrecio}>{formatARSExacto(l.precio)}</Text>
+              <Text style={styles.cSubtotal}>{formatARSExacto(l.subtotal)}</Text>
             </>
           )}
         </View>
       ))}
       <View style={styles.filaSubtotal} wrap={false}>
         <Text style={styles.negrita}>{conTitulo ? `Subtotal ${s.nombre}: ` : "Subtotal: "}</Text>
-        <Text style={[styles.negrita, { width: 88, textAlign: "right" }]}>{formatARS(s.subtotal)}</Text>
+        <Text style={[styles.negrita, { width: 88, textAlign: "right" }]}>{formatARSExacto(s.subtotal)}</Text>
       </View>
     </View>
   );
@@ -235,7 +235,7 @@ export function PedidoPdfDocument({
         <View style={styles.totalCaja} wrap={false}>
           <View style={styles.total}>
             <Text>{varios ? "TOTAL ESTIMADO" : "TOTAL"}</Text>
-            <Text>{formatARS(doc.total)}</Text>
+            <Text>{formatARSExacto(doc.total)}</Text>
           </View>
         </View>
         {doc.sinPrecio > 0 && (
