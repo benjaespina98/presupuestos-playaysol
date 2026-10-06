@@ -15,7 +15,7 @@ function resolverUrl(url: string): string {
  */
 export async function generarPdfPedido(
   doc: DocumentoPedido,
-  opciones: { titulo?: string; logoUrl?: string | null } = {}
+  opciones: { titulo?: string; logoUrl?: string | null; /** Con precios (uso interno) o sin ellos (para pedir). Por defecto, con. */ conPrecios?: boolean } = {}
 ): Promise<Blob> {
   const [{ pdf }, { PedidoPdfDocument }] = await Promise.all([
     import("@react-pdf/renderer"),
@@ -27,6 +27,7 @@ export async function generarPdfPedido(
       doc={doc}
       logoUrl={logo ? resolverUrl(logo) : null}
       titulo={opciones.titulo ?? `Pedido ${doc.numero}`}
+      conPrecios={opciones.conPrecios ?? true}
     />
   ).toBlob();
 }

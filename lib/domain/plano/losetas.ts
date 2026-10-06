@@ -170,7 +170,7 @@ export const PlanoLosetasEntrada = z.object({
    *  (null = todavía no se la movió: aparece en su lugar de fábrica). */
   salaFiltro: z.boolean().default(false),
   salaPosLibre: LuzPos.nullable().default(null),
-  /** Casa / quincho: para orientar dónde está respecto de la pileta. Mismo criterio que la sala. */
+  /** Casa (o quincho): para orientar dónde está respecto de la pileta. Mismo criterio que la sala. */
   casa: z.boolean().default(false),
   casaPosLibre: LuzPos.nullable().default(null),
 });
@@ -214,13 +214,42 @@ export function posicionPorDefecto(tipo: TipoObjetoPlano, i: number, n: number):
  *  posiciones"): conserva las ya elegidas, agrega las que falten en su
  *  posición por defecto y descarta las sobrantes. Pura: devuelve un array
  *  nuevo, nunca muta el que recibe. */
-export function ajustarLucesPos(lucesPos: LuzPos[], on: boolean, n: number, tipo: TipoObjetoPlano = "luz"): LuzPos[] {
+export function ajustarLucesPos(
+  lucesPos: LuzPos[],
+  on: boolean,
+  n: number,
+  tipo: TipoObjetoPlano = "luz",
+  /** Posiciones de los OTROS objetos del plano: lo nuevo no nace encima de ninguno. */
+  ocupadas: LuzPos[] = []
+): LuzPos[] {
   if (!on || n <= 0) return [];
   const resultado = lucesPos.slice(0, n);
   for (let i = 0; i < n; i++) {
-    if (!resultado[i]) resultado[i] = posicionPorDefecto(tipo, i, n);
+    if (!resultado[i]) {
+      const hechas = resultado.filter((p): p is LuzPos => !!p);
+      resultado[i] = evitarChoques(posicionPorDefecto(tipo, i, n), [...ocupadas, ...hechas], tipo === "skimmer" ? "x" : "y");
+    }
   }
   return resultado;
+}
+
+/** ¿Dos objetos del plano (en posición normalizada) quedan uno encima del otro? */
+export function seTocan(a: LuzPos, b: LuzPos): boolean {
+  return Math.abs(a.x - b.x) < 0.07 && Math.abs(a.y - b.y) < 0.13;
+}
+
+/** Corre una posición candidata, a lo largo de la pared (eje), hasta un lugar donde no pise a ninguna de `ocupadas`. */
+export function evitarChoques(candidata: LuzPos, ocupadas: LuzPos[], eje: "x" | "y"): LuzPos {
+  if (!ocupadas.some((o) => seTocan(candidata, o))) return candidata;
+  for (let paso = 1; paso <= 18; paso++) {
+    for (const signo of [1, -1]) {
+      const d = signo * paso * 0.05;
+      const prueba: LuzPos = eje === "x" ? { x: candidata.x + d, y: candidata.y } : { x: candidata.x, y: candidata.y + d };
+      const dentro = eje === "x" ? prueba.x >= 0.04 && prueba.x <= 0.96 : prueba.y >= 0.06 && prueba.y <= 0.94;
+      if (dentro && !ocupadas.some((o) => seTocan(prueba, o))) return prueba;
+    }
+  }
+  return candidata;
 }
 
 function hexToRgb(h: string): [number, number, number] {
@@ -906,6 +935,28 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
     }
   }
 
+  // Un lado angosto (o sin borde, medida 0) no tiene lugar para su medida adentro: va afuera, pegada
+  // a ese lado, así ninguno queda sin decir cuánto mide. (Arriba/abajo sólo en el editor: en el plano
+  // del cliente ahí van el título y las cotas.)
+  {
+    const fs = showDims ? 13 : 11;
+    const angosto = (px: number, min: number, desborde: boolean) => !desborde && px <= min;
+    if (angosto(s.solar * pxPerM, 22, sRaw.desbordeSolar)) {
+      dims.push({ t: "text", x: ox - 11, y: poolY + poolH / 2, text: `${s.lblSolar}: ${fmtM(s.solar)} m`, fontSize: fs, fill: labelColor, anchor: "middle", central: true, rotateDeg: -90 });
+    }
+    if (angosto(s.opuesto * pxPerM, 22, sRaw.desbordeOpuesto)) {
+      dims.push({ t: "text", x: ox + totalW * pxPerM + 11, y: poolY + poolH / 2, text: `${s.lblOpuesto}: ${fmtM(s.opuesto)} m`, fontSize: fs, fill: labelColor, anchor: "middle", central: true, rotateDeg: -90 });
+    }
+    if (!showDims) {
+      if (angosto(s.lateral1 * pxPerM, 16, sRaw.desbordeLateral1)) {
+        dims.push({ t: "text", x: poolX + poolW / 2, y: oy - 11, text: `${s.lblLateral1}: ${fmtM(s.lateral1)} m`, fontSize: fs, fill: labelColor, anchor: "middle", central: true });
+      }
+      if (angosto(s.lateral2 * pxPerM, 16, sRaw.desbordeLateral2)) {
+        dims.push({ t: "text", x: poolX + poolW / 2, y: oy + totalH * pxPerM + 11, text: `${s.lblLateral2}: ${fmtM(s.lateral2)} m`, fontSize: fs, fill: labelColor, anchor: "middle", central: true });
+      }
+    }
+  }
+
   // ── Que nada quede pisado ──────────────────────────────────────────────────
   // 1) Objetos (luces, skimmers, hidromasajes, escalera libre). En el plano del
   //    cliente (el que se entrega), si uno cae sobre otro o sobre un texto
@@ -956,7 +1007,7 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
     if (s.skimmer && s.cantSkimmers > 0) legItems.push({ kind: "skimmer", label: "Skimmer" });
     if (s.hidromasaje && s.cantHidromasajes > 0) legItems.push({ kind: "hidromasaje", label: "Hidromasaje" });
     if (s.salaFiltro) legItems.push({ kind: "sala", label: "Sala de filtro" });
-    if (s.casa) legItems.push({ kind: "casa", label: "Casa / quincho" });
+    if (s.casa) legItems.push({ kind: "casa", label: "Casa" });
 
     const swW = 18, swGap = 8, itemGap = 30, rowH = 28;
     const maxRight = derechaFuera;

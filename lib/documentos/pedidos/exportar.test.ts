@@ -110,3 +110,28 @@ describe("exportarPedido · por proveedor", () => {
     expect(await firma(r.blob, 2)).toBe("PK");
   });
 });
+
+describe("exportarPedido · con y sin precios", () => {
+  const celdas = async (blob: Blob) => {
+    const libro = new ExcelJS.Workbook();
+    await libro.xlsx.load(await blob.arrayBuffer());
+    const out: string[] = [];
+    libro.eachSheet((h) => h.eachRow((f) => f.eachCell((c) => out.push(String(c.value ?? "")))));
+    return out.join("|");
+  };
+
+  it("sin precios el Excel no los lleva; con precios, sí", async () => {
+    const sin = await exportarPedido(UNO, "xlsx", "junto", { ...sinLogo, conPrecios: false });
+    const con = await exportarPedido(UNO, "xlsx", "junto", { ...sinLogo, conPrecios: true });
+    expect(await celdas(sin.blob)).not.toMatch(/Precio unit|TOTAL/);
+    expect(await celdas(con.blob)).toMatch(/Precio unit/);
+  });
+
+  it("el ZIP por proveedor también respeta 'sin precios'", async () => {
+    const r = await exportarPedido(VARIOS, "xlsx", "por-proveedor", { ...sinLogo, conPrecios: false });
+    const zip = await JSZip.loadAsync(await r.blob.arrayBuffer());
+    for (const nombre of Object.keys(zip.files)) {
+      expect(await celdas(new Blob([await zip.files[nombre].async("arraybuffer")]))).not.toMatch(/Precio unit|Subtotal/);
+    }
+  });
+});
