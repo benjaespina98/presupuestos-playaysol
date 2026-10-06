@@ -1,3 +1,4 @@
+import { COLOR_BORDE_POR_DEFECTO } from "@/lib/domain/plano/losetas";
 import {
   DatosCliente,
   PresupuestoV1,
@@ -129,7 +130,7 @@ function medidasDesdeV0(
         revestimiento: revestimientoValido,
         revestimientoOtro: texto(d.revestimientoOtro),
         colorAgua: texto(d.colorAgua) || "#A6D1EC",
-        colorLoseta: texto(d.colorLoseta) || "#F7E6D3",
+        colorLoseta: texto(d.colorLoseta) || COLOR_BORDE_POR_DEFECTO,
         lblSolar: texto(d.lblSolar) || "Solar",
         lblOpuesto: texto(d.lblOpuesto) || "Opuesto",
         lblLateral1: texto(d.lblLateral1) || "Lateral 1",
