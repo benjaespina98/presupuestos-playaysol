@@ -9,6 +9,12 @@ actualiza sola a partir de él (cada 5 minutos, o al instante con un botón).
   y precios de venta
 ```
 
+## Cuánto escribe (poco)
+Cada 5 minutos el script **sólo consulta** si hay algo nuevo. Si el catálogo web no cambió, **no
+escribe nada** en la planilla. Si cambió, compara fila por fila y **reescribe únicamente las filas
+que son distintas** (un teléfono nuevo = una fila; el resto no se toca). "Actualizar ahora" también
+dice cuántas filas modificó.
+
 ## Qué se sincroniza
 
 | Hoja de la planilla | Qué se escribe | Qué NO se toca |
