@@ -561,7 +561,7 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Hierro del 6");
     expect(screen.queryByText(/Stock · /)).not.toBeInTheDocument();
-    expect(screen.queryByRole("group", { name: "Filtrar por stock" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Filtrar por stock")).not.toBeInTheDocument();
   });
 
   it("sumar una unidad se ve al instante y se guarda", async () => {
@@ -597,13 +597,13 @@ describe("CatalogoPage · stock", () => {
     const user = userEvent.setup();
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
-    const filtro = screen.getByRole("group", { name: "Filtrar por stock" });
+    const filtro = screen.getByLabelText("Filtrar por stock");
 
-    await user.click(within(filtro).getByRole("button", { name: /^Agotado/ }));
+    await user.selectOptions(filtro, "agotado");
     expect(screen.getAllByText("Caribe 650").length).toBeGreaterThan(0);
     expect(screen.queryByText("Caribe 550")).not.toBeInTheDocument();
 
-    await user.click(within(filtro).getByRole("button", { name: /^A pedido/ }));
+    await user.selectOptions(filtro, "sin-control");
     expect(screen.getAllByText("Hierro del 6").length).toBeGreaterThan(0);
     expect(screen.queryByText("Caribe 650")).not.toBeInTheDocument();
   });
