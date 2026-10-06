@@ -353,3 +353,25 @@ describe("LosetasCalculadora · ubicación en el terreno", () => {
     expect(abrir("#123456")).toBe("#123456");
   });
 });
+
+describe("LosetasCalculadora · editor ampliado", () => {
+  it("'Ampliar plano' muestra el mismo editor a pantalla completa y 'Listo' (o Escape) vuelve", async () => {
+    const user = userEvent.setup();
+    render(<LosetasCalculadora />);
+    await cargarMedidas(user, "8", "4");
+    expect(screen.queryByRole("dialog", { name: "Editor del plano ampliado" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Ampliar plano" }));
+    const dialogo = screen.getByRole("dialog", { name: "Editor del plano ampliado" });
+    expect(dialogo).toContainElement(screen.getByRole("img", { name: "Editor del plano de la piscina" }));
+    expect(screen.getAllByRole("img", { name: "Editor del plano de la piscina" })).toHaveLength(1); // no se duplica
+
+    await user.click(screen.getByRole("button", { name: "Listo" }));
+    expect(screen.queryByRole("dialog", { name: "Editor del plano ampliado" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Ampliar plano" }));
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Editor del plano ampliado" })).not.toBeInTheDocument();
+    expect(document.body.style.overflow).not.toBe("hidden");
+  });
+});
