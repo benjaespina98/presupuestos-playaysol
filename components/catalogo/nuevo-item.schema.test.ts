@@ -28,3 +28,36 @@ describe("aNuevoItem", () => {
     expect(resultado?.unidad).toBeNull();
   });
 });
+
+describe("aNuevoItem · piscinas", () => {
+  it("hormigón: clave, descripción, categoría y unidad salen de las medidas", () => {
+    const r = aNuevoItem({ ...nuevoItemFormVacio(), alta: "hormigon", largo: 8, ancho: 4.5, precio: 1000 });
+    expect(r).toMatchObject({ tipo: "piscinas", clave: "lista_hormigon_8x4_5", categoria: "Piscinas", unidad: "obra", precio: 1000 });
+    expect(r?.descripcion).toBe("Piscina de hormigón 8x4.5 — precio de lista, obra terminada");
+  });
+
+  it("Indusplast: clave con modelo y medida", () => {
+    const r = aNuevoItem({ ...nuevoItemFormVacio(), alta: "indusplast", modelo: "finesa", medida: 650 });
+    expect(r).toMatchObject({ clave: "indusplast_finesa_650", categoria: "Piscinas", unidad: "obra" });
+  });
+
+  it("sin medidas, o con un modelo que no existe, devuelve null", () => {
+    expect(aNuevoItem({ ...nuevoItemFormVacio(), alta: "hormigon", largo: 0, ancho: 4 })).toBeNull();
+    expect(aNuevoItem({ ...nuevoItemFormVacio(), alta: "indusplast", modelo: "inventado", medida: 500 })).toBeNull();
+    expect(aNuevoItem({ ...nuevoItemFormVacio(), alta: "indusplast", modelo: "spa", medida: 2.5 })).toBeNull();
+  });
+
+  it("el stock de una piscina se guarda (0 si se tilda sin número)", () => {
+    expect(aNuevoItem({ ...nuevoItemFormVacio(), alta: "indusplast", modelo: "spa", medida: 240, llevaStock: true, stock: null })?.stock).toBe(0);
+    expect(aNuevoItem({ ...nuevoItemFormVacio(), alta: "indusplast", modelo: "spa", medida: 240 })?.stock).toBeNull();
+  });
+});
+
+describe("aNuevoItem · otro ítem sin clave", () => {
+  it("la clave sale de la descripción", () => {
+    expect(aNuevoItem({ ...nuevoItemFormVacio(), clave: "", descripcion: "Cerco Reforzado Ñandú" })?.clave).toBe("cerco_reforzado_nandu");
+  });
+  it("sin clave ni descripción, null", () => {
+    expect(aNuevoItem({ ...nuevoItemFormVacio(), clave: "", descripcion: "  " })).toBeNull();
+  });
+});

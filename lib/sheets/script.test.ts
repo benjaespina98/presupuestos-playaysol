@@ -23,6 +23,16 @@ function crearHoja(inicial: Record<string, unknown> = {}) {
     if (typeof v === "string" && v.startsWith("=")) formulas.set(k, v);
     else valores.set(k, v);
   }
+  const desplazar = (desde: number) => {
+    for (const mapa of [valores, formulas, formatos] as Map<string, never>[]) {
+      const copia = [...mapa.entries()];
+      mapa.clear();
+      for (const [k, v] of copia) {
+        const [fila, col] = k.split(",").map(Number);
+        mapa.set(clave(fila >= desde ? fila + 1 : fila, col), v);
+      }
+    }
+  };
   const rango = (f: number, c: number, nf = 1, nc = 1) => ({
     getValues: () => Array.from({ length: nf }, (_, i) => Array.from({ length: nc }, (_, j) => valores.get(clave(f + i, c + j)) ?? "")),
     getFormulas: () => Array.from({ length: nf }, (_, i) => Array.from({ length: nc }, (_, j) => formulas.get(clave(f + i, c + j)) ?? "")),
@@ -43,8 +53,25 @@ function crearHoja(inicial: Record<string, unknown> = {}) {
         setValue: (v: unknown) => { escrituras++; return r.setValue(v); },
         setFormula: (fx: string) => { escrituras++; return r.setFormula(fx); },
         clearContent: () => { escrituras++; return r.clearContent(); },
+        // Copia formato o fórmulas de una fila a otra (las fórmulas con la referencia de fila ajustada, como Sheets).
+        copyTo: (destino: { _f: number }, tipo: string) => {
+          escrituras++;
+          for (let j = 0; j < nc; j++) {
+            if (tipo === "FORMAT") {
+              const fmt = formatos.get(clave(f, c + j));
+              if (fmt) formatos.set(clave(destino._f, c + j), fmt);
+            } else {
+              const fx = formulas.get(clave(f, c + j));
+              if (fx) formulas.set(clave(destino._f, c + j), fx.replace(new RegExp(`([A-Z]+)${f}\\b`, "g"), `$1${destino._f}`));
+            }
+          }
+        },
+        _f: f,
       };
     },
+    // Insertar una fila corre hacia abajo todo lo que está de ahí en adelante.
+    insertRowAfter: (n: number) => desplazar(n + 1),
+    insertRowBefore: (n: number) => desplazar(n),
     escrituras: () => escrituras,
     getLastRow: () => Math.max(0, ...[...valores.keys(), ...formulas.keys()].map((k) => Number(k.split(",")[0]))),
     getLastColumn: () => Math.max(0, ...[...valores.keys(), ...formulas.keys()].map((k) => Number(k.split(",")[1]))),
@@ -57,7 +84,7 @@ function cargarScript(opciones: { hojas: Record<string, Hoja>; respuesta: { codi
   const props: Record<string, string> = { URL: "https://ejemplo.test/api/sheets/catalogo", TOKEN: "t", ...opciones.props };
   const pedidos: { url: string; headers: Record<string, string> }[] = [];
   const entorno = {
-    SpreadsheetApp: { getActive: () => ({ getSheetByName: (n: string) => opciones.hojas[n] ?? null, insertSheet: (n: string) => (opciones.hojas[n] = crearHoja()) }), flush: () => undefined },
+    SpreadsheetApp: { getActive: () => ({ getSheetByName: (n: string) => opciones.hojas[n] ?? null, insertSheet: (n: string) => (opciones.hojas[n] = crearHoja()) }), flush: () => undefined, CopyPasteType: { PASTE_FORMAT: "FORMAT", PASTE_FORMULA: "FORMULA" } },
     PropertiesService: {
       getScriptProperties: () => ({
         getProperty: (k: string) => props[k] ?? null,
@@ -75,7 +102,7 @@ function cargarScript(opciones: { hojas: Record<string, Hoja>; respuesta: { codi
   };
   const fabrica = new Function(
     "module", "SpreadsheetApp", "PropertiesService", "LockService", "UrlFetchApp",
-    `${FUENTE}\nreturn { sincronizar_, claveDePrecio, valorDePrecio, validarDatos, valorDeStock, buscarEncabezadoStock };`
+    `${FUENTE}\nreturn { sincronizar_, etiquetaDePiscina, claveDePrecio, valorDePrecio, validarDatos, valorDeStock, buscarEncabezadoStock };`
   );
   const api = fabrica({}, entorno.SpreadsheetApp, entorno.PropertiesService, entorno.LockService, entorno.UrlFetchApp);
   return { ...api, props, pedidos };
@@ -499,5 +526,92 @@ describe("sólo se escribe lo que cambió", () => {
     hojas.Proveedores.valores.set("6,4", " 123 "); // la planilla lo muestra igual
     const r = sincronizar(hojas, base);
     expect(r.cambios.proveedores).toBe(0);
+  });
+});
+
+describe("piscinas nuevas: se agregan a 'Precios y margen' en su lugar", () => {
+  const catalogoCon = (...claves: string[]) =>
+    claves.map((c) => ["Piscinas", c, "x", "Piscinas", "obra", 1000, "", "Activo", "05/10/2026"]);
+  const hojaPrecios = () =>
+    crearHoja({
+      "1,1": "Modelo", "1,2": "Contado", "1,3": "Financiado",
+      "2,1": "8x3", "2,2": 100, "2,3": "=B2*1.15",
+      "3,1": "8x4", "3,2": 100, "3,3": "=B3*1.15",
+      "4,1": "9x3", "4,2": 100, "4,3": "=B4*1.15",
+      "5,1": "CARIBE 550", "5,2": 100, "5,3": "=B5*1.15",
+      "6,1": "CARIBE 650", "6,2": 100, "6,3": "=B6*1.15",
+      "7,1": "Algo que no se sincroniza", "7,2": 5,
+    });
+  const correr = (hoja: Hoja, items: string[], precios: Record<string, number | null> = {}) => {
+    const hojas = { ...hojasBase(), "Precios y margen": hoja } as Record<string, Hoja>;
+    const cuerpo = { ...DATOS, precios, catalogo: catalogoCon(...items) };
+    const r = cargarScript({ hojas, respuesta: { codigo: 200, cuerpo } }).sincronizar_(true);
+    return { r, hojas };
+  };
+
+  it("etiquetaDePiscina: sólo las que la planilla reconoce de vuelta con la misma clave", () => {
+    const { etiquetaDePiscina } = cargarScript({ hojas: {}, respuesta: { codigo: 200, cuerpo: {} } });
+    expect(etiquetaDePiscina("indusplast_caribe_750")).toBe("CARIBE 750");
+    expect(etiquetaDePiscina("lista_hormigon_8x4_5")).toBe("8x4.5");
+    expect(etiquetaDePiscina("lista_hormigon_7x3_50")).toBe("7x3.50");
+    expect(etiquetaDePiscina("lista_hormigon_6_5x2.5")).toBe("6.5x2.5");
+    expect(etiquetaDePiscina("indusplast_inventado_500")).toBeNull();
+    expect(etiquetaDePiscina("luces")).toBeNull();
+  });
+
+  it("una piscina de hormigón nueva queda entre las de su tamaño, con las fórmulas de la vecina y su precio", () => {
+    const hoja = hojaPrecios();
+    const { r } = correr(hoja, ["lista_hormigon_8x4_5"], { "piscinas:lista_hormigon_8x4_5": 13000000 });
+
+    expect(hoja.v(4, 1)).toBe("8x4.5"); // después de 8x4, antes de 9x3
+    expect(hoja.v(5, 1)).toBe("9x3");
+    expect(hoja.v(3, 1)).toBe("8x4");
+    expect(hoja.fx(4, 3)).toBe("=B4*1.15"); // la fórmula se copió con su fila
+    expect(hoja.v(4, 2)).toBe(13000000); // el precio lo completa el paso de precios
+    expect(hoja.v(7, 1)).toBe("CARIBE 650"); // lo de abajo se corrió una fila
+    expect(r.piscinasNuevas).toEqual(["8x4.5"]);
+  });
+
+  it("una Indusplast nueva va al final de su modelo; una más chica, al principio", () => {
+    const hoja = hojaPrecios();
+    correr(hoja, ["indusplast_caribe_750", "indusplast_caribe_500"]);
+    const etiquetas = [5, 6, 7, 8].map((f) => hoja.v(f, 1));
+    expect(etiquetas).toEqual(["CARIBE 500", "CARIBE 550", "CARIBE 650", "CARIBE 750"]);
+  });
+
+  it("no copia valores de la fila vecina (sólo fórmulas): lo que cargue el usuario queda vacío", () => {
+    const hoja = hojaPrecios();
+    hoja.valores.set("6,4", "COSTO DE LA VECINA"); // dato manual de CARIBE 650
+    correr(hoja, ["indusplast_caribe_750"]);
+    expect(hoja.v(7, 1)).toBe("CARIBE 750");
+    expect(hoja.v(7, 4)).toBeUndefined();
+  });
+
+  it("al sincronizar de nuevo no se vuelve a agregar", () => {
+    const hoja = hojaPrecios();
+    correr(hoja, ["lista_hormigon_8x4_5"]);
+    const filasAntes = hoja.getLastRow();
+    const { r } = correr(hoja, ["lista_hormigon_8x4_5"]);
+    expect(hoja.getLastRow()).toBe(filasAntes);
+    expect(r.piscinasNuevas).toEqual([]);
+  });
+
+  it("si no hay ninguna fila de ese modelo de donde copiar, no inserta y lo informa", () => {
+    const hoja = hojaPrecios();
+    const { r } = correr(hoja, ["indusplast_spa_240"]);
+    expect(r.piscinasSinFila).toEqual(["SPA 240"]);
+    expect(hoja.getLastRow()).toBe(7);
+  });
+
+  it("los dados de baja y los que no son piscinas no se agregan", () => {
+    const hoja = hojaPrecios();
+    const hojas = { ...hojasBase(), "Precios y margen": hoja } as Record<string, Hoja>;
+    const catalogo = [
+      ["Piscinas", "lista_hormigon_8x4_5", "x", "Piscinas", "obra", 1, "", "De baja", ""],
+      ["Cercos", "precioCon", "x", "Cercos", "ml", 1, "", "Activo", ""],
+    ];
+    const r = cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: { ...DATOS, catalogo } } }).sincronizar_(true);
+    expect(r.piscinasNuevas).toEqual([]);
+    expect(hoja.getLastRow()).toBe(7);
   });
 });
