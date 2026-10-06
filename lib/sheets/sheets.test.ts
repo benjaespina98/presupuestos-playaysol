@@ -184,3 +184,32 @@ describe("autorización", () => {
     expect(tokenDeEncabezado(null)).toBe("");
   });
 });
+
+describe("armarExportacion · stock", () => {
+  const entrada = (items: { tipo: string; clave: string; precio: number | null; activo?: boolean; stock?: number | null }[]) =>
+    armarExportacion({ proveedores: [], materiales: [], items });
+
+  it("manda el stock por tipo:clave sólo de lo que lo lleva (0 = agotado se conserva)", () => {
+    const e = entrada([
+      { tipo: "piscinas", clave: "indusplast_caribe_550", precio: 1, stock: 3 },
+      { tipo: "piscinas", clave: "indusplast_spa_240", precio: 1, stock: 0 },
+      { tipo: "piscinas", clave: "luces", precio: 1, stock: null },
+      { tipo: "piscinas", clave: "kit", precio: 1 },
+    ]);
+    expect(e.stock).toEqual({ "piscinas:indusplast_caribe_550": 3, "piscinas:indusplast_spa_240": 0 });
+  });
+
+  it("salta los dados de baja y los textos compartidos", () => {
+    const e = entrada([
+      { tipo: "piscinas", clave: "indusplast_caribe_550", precio: 1, stock: 3, activo: false },
+      { tipo: "piscinas", clave: "__legal", precio: null, stock: 1 },
+    ]);
+    expect(e.stock).toEqual({});
+  });
+
+  it("un cambio de stock cambia la versión (si no, el script no reescribiría la planilla)", () => {
+    const a = entrada([{ tipo: "piscinas", clave: "indusplast_caribe_550", precio: 1, stock: 3 }]);
+    const b = entrada([{ tipo: "piscinas", clave: "indusplast_caribe_550", precio: 1, stock: 4 }]);
+    expect(a.version).not.toBe(b.version);
+  });
+});

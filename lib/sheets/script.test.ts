@@ -35,6 +35,7 @@ function crearHoja(inicial: Record<string, unknown> = {}) {
     valores, formulas, formatos,
     getRange: rango,
     getLastRow: () => Math.max(0, ...[...valores.keys(), ...formulas.keys()].map((k) => Number(k.split(",")[0]))),
+    getLastColumn: () => Math.max(0, ...[...valores.keys(), ...formulas.keys()].map((k) => Number(k.split(",")[1]))),
     v: (f: number, c: number) => valores.get(clave(f, c)),
     fx: (f: number, c: number) => formulas.get(clave(f, c)),
   };
@@ -62,7 +63,7 @@ function cargarScript(opciones: { hojas: Record<string, Hoja>; respuesta: { codi
   };
   const fabrica = new Function(
     "module", "SpreadsheetApp", "PropertiesService", "LockService", "UrlFetchApp",
-    `${FUENTE}\nreturn { sincronizar_, claveDePrecio, valorDePrecio, validarDatos };`
+    `${FUENTE}\nreturn { sincronizar_, claveDePrecio, valorDePrecio, validarDatos, valorDeStock, buscarEncabezadoStock };`
   );
   const api = fabrica({}, entorno.SpreadsheetApp, entorno.PropertiesService, entorno.LockService, entorno.UrlFetchApp);
   return { ...api, props, pedidos };
@@ -238,5 +239,82 @@ describe("sincronizar_", () => {
     delete (hojas as Record<string, unknown>)["Artículos"];
     const s = cargarScript({ hojas: hojas as Record<string, Hoja>, respuesta: { codigo: 200, cuerpo: DATOS } });
     expect(() => s.sincronizar_(true)).toThrow(/Artículos/);
+  });
+});
+
+describe("stock en 'Precios y margen'", () => {
+  const conStock = { ...DATOS, stock: { "piscinas:indusplast_caribe_550": 3, "piscinas:indusplast_spa_240": 0 } as Record<string, number> };
+  const hojasConIndusplast = (extra: Record<string, unknown> = {}) => ({
+    ...hojasBase(),
+    "Precios y margen": crearHoja({
+      "1,1": "Concepto", "1,2": "Precio de venta", "1,3": "Costo",
+      "2,1": "CARIBE 550", "2,2": 1, "2,3": 100,
+      "3,1": "SPA 240", "3,2": 1, "3,3": 100,
+      "4,1": "RACIONALISTA 400", "4,2": 1, "4,3": 100, // no lleva stock
+      "5,1": "Algo que no se sincroniza", "5,2": 5,
+      ...extra,
+    }),
+  });
+
+  it("si la hoja no tiene columna 'Stock', la agrega a la derecha de todo, con su encabezado", () => {
+    const hojas = hojasConIndusplast();
+    const r = cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: conStock } }).sincronizar_(true);
+    const p = hojas["Precios y margen"];
+
+    expect(p.v(1, 4)).toBe("Stock"); // junto al encabezado de la tabla, en la primera columna libre
+    expect(p.v(2, 4)).toBe(3);
+    expect(p.v(3, 4)).toBe(0); // agotado se ve como 0, no vacío
+    expect(p.v(4, 4)).toBeUndefined(); // lo que no lleva stock queda vacío
+    expect(p.v(2, 3)).toBe(100); // no pisa la columna de costo
+    expect(r).toMatchObject({ stocks: 2 });
+  });
+
+  it("si ya hay una columna 'Stock', usa esa", () => {
+    const hojas = hojasConIndusplast({ "1,7": "Stock", "2,7": 99 });
+    cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: conStock } }).sincronizar_(true);
+    const p = hojas["Precios y margen"];
+
+    expect(p.v(2, 7)).toBe(3);
+    expect(p.v(1, 8)).toBeUndefined(); // no agregó otra
+  });
+
+  it("al volver a correr no repite escrituras, y si el stock cambia en la web, cambia en la planilla", () => {
+    const hojas = hojasConIndusplast();
+    cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: conStock } }).sincronizar_(true);
+    const otra = cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: conStock } }).sincronizar_(true);
+    expect(otra).toMatchObject({ stocks: 0 });
+
+    const cambio = { ...conStock, stock: { "piscinas:indusplast_caribe_550": 5 } };
+    cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: cambio } }).sincronizar_(true);
+    expect(hojas["Precios y margen"].v(2, 4)).toBe(5);
+    expect(hojas["Precios y margen"].v(3, 4)).toBe(""); // dejó de llevar stock
+  });
+
+  it("no pisa una fórmula en la columna de stock", () => {
+    const hojas = hojasConIndusplast({ "1,4": "Stock", "2,4": "=1+1" });
+    cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: conStock } }).sincronizar_(true);
+    expect(hojas["Precios y margen"].fx(2, 4)).toBe("=1+1");
+  });
+
+  it("un catálogo viejo, sin el campo stock, no toca la columna", () => {
+    const hojas = hojasConIndusplast({ "1,4": "Stock", "2,4": 7 });
+    const r = cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: DATOS } }).sincronizar_(true);
+    expect(hojas["Precios y margen"].v(2, 4)).toBe(7);
+    expect(r).toMatchObject({ stocks: 0 });
+  });
+
+  it("valida que el stock sea un objeto", () => {
+    const { validarDatos } = cargarScript({ hojas: {}, respuesta: { codigo: 200, cuerpo: {} } });
+    expect(validarDatos(conStock)).toBeNull();
+    expect(validarDatos({ ...DATOS, stock: [] })).toMatch(/stock/);
+    expect(validarDatos({ ...DATOS, stock: null })).toMatch(/stock/);
+  });
+
+  it("valorDeStock y buscarEncabezadoStock", () => {
+    const { valorDeStock, buscarEncabezadoStock } = cargarScript({ hojas: {}, respuesta: { codigo: 200, cuerpo: {} } });
+    expect(valorDeStock({ "a:b": 0 }, "a:b")).toBe(0);
+    expect(valorDeStock({}, "a:b")).toBe("");
+    expect(buscarEncabezadoStock([["x", " STOCK "]])).toEqual({ fila: 1, columna: 2 });
+    expect(buscarEncabezadoStock([["x", "y"]])).toBeNull();
   });
 });

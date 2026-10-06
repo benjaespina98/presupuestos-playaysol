@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { Proveedor } from "@/lib/domain/abastecimiento/proveedor";
 import { Material } from "@/lib/domain/abastecimiento/material";
 import { tokenDeEncabezado, tokenValido } from "@/lib/sheets/autorizacion";
@@ -24,6 +24,14 @@ function error(mensaje: string, status: number) {
   return Response.json({ error: mensaje }, { status, headers: SIN_CACHE });
 }
 
+/** Los ítems con su stock; si la columna todavía no existe (falta migration_stock_piscinas.sql) se leen sin él. */
+async function leerItems(supabase: SupabaseClient) {
+  const conStock = await supabase.from("catalogo_items").select("tipo, clave, precio, activo, stock");
+  if (!conStock.error) return conStock;
+  if (!/stock/i.test(conStock.error.message ?? "")) return conStock;
+  return supabase.from("catalogo_items").select("tipo, clave, precio, activo");
+}
+
 export async function GET(request: Request) {
   const tokenEsperado = process.env.SHEETS_SYNC_TOKEN;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -40,7 +48,7 @@ export async function GET(request: Request) {
   const [proveedores, materiales, items] = await Promise.all([
     supabase.from("proveedores").select("*"),
     supabase.from("materiales").select("*"),
-    supabase.from("catalogo_items").select("tipo, clave, precio, activo"),
+    leerItems(supabase),
   ]);
 
   const fallo = proveedores.error ?? materiales.error ?? items.error;
