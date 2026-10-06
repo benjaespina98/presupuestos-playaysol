@@ -96,7 +96,7 @@ describe("PlanoLosetasSvg — arrastrar la sala de filtro y la casa", () => {
 
   it("la manija queda al final del dibujo para que nada la tape", () => {
     const { container } = montar();
-    const leyenda = [...container.querySelectorAll("text")].find((t) => t.textContent === "Casa /")!;
+    const leyenda = [...container.querySelectorAll("text")].find((t) => t.textContent === "Casa")!;
     const manija = container.querySelector('[data-drag="casa:0"]')!;
     expect(leyenda.compareDocumentPosition(manija) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });

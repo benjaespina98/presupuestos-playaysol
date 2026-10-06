@@ -251,23 +251,20 @@ const celdaCsv = (v: string | number) => {
  * El pedido como CSV para abrir en Excel en español: separador `;`, decimales
  * con coma y BOM UTF-8 (sin el BOM, Excel rompe las tildes).
  */
-export function csvPedido(pedido: Pedido): string {
+export function csvPedido(pedido: Pedido, conPrecios = true): string {
   const filas: (string | number)[][] = [
-    ["Proveedor", "Teléfono", "Artículo", "Cantidad", "Unidad", "Precio unitario", "Subtotal"],
+    conPrecios
+      ? ["Proveedor", "Teléfono", "Artículo", "Cantidad", "Unidad", "Precio unitario", "Subtotal"]
+      : ["Proveedor", "Teléfono", "Artículo", "Cantidad", "Unidad"],
   ];
   for (const g of pedido.grupos) {
     for (const l of g.lineas) {
-      filas.push([
-        g.nombre,
-        g.telefono ?? "",
-        l.material.nombre,
-        coma(l.cantidad),
-        l.material.unidad ?? "",
-        l.precio === null ? "A confirmar" : coma(l.precio),
-        l.precio === null ? "" : coma(l.subtotal),
-      ]);
+      const base = [g.nombre, g.telefono ?? "", l.material.nombre, coma(l.cantidad), l.material.unidad ?? ""];
+      filas.push(
+        conPrecios ? [...base, l.precio === null ? "A confirmar" : coma(l.precio), l.precio === null ? "" : coma(l.subtotal)] : base
+      );
     }
   }
-  filas.push(["", "", "", "", "", "COSTO ESTIMADO", coma(pedido.costo)]);
+  if (conPrecios) filas.push(["", "", "", "", "", "COSTO ESTIMADO", coma(pedido.costo)]);
   return "﻿" + filas.map((f) => f.map(celdaCsv).join(";")).join("\r\n");
 }

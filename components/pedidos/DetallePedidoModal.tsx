@@ -73,11 +73,11 @@ export function DetallePedidoModal({
     setMensaje({ tipo: "ok", texto: `Estado: ${ETIQUETA_ESTADO[estado]}.` });
   }
 
-  async function exportar(formato: FormatoPedido, modo: ModoPedido) {
+  async function exportar(formato: FormatoPedido, modo: ModoPedido, conPrecios: boolean) {
     setOcupado(true);
     setMensaje(null);
     try {
-      const archivo = await exportarPedido(doc, formato, modo);
+      const archivo = await exportarPedido(doc, formato, modo, { conPrecios });
       await compartirOdescargarArchivo(archivo.blob, archivo.nombre, archivo.mime);
       setMensaje({ tipo: "ok", texto: `${archivo.nombre} generado.` });
     } catch (err) {

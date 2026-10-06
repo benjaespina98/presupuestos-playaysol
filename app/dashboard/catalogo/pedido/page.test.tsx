@@ -329,6 +329,17 @@ describe("Armar pedido", () => {
       expect(screen.getByRole("button", { name: "Guardar pedido" })).toBeEnabled();
     });
 
+    it("elegir 'Con precios' en el menú exporta con precios (uso interno)", async () => {
+      const user = userEvent.setup();
+      await cargar();
+      await abrirExportar(user);
+      await user.click(screen.getByRole("button", { name: /Con precios/ }));
+      await user.click(screen.getByRole("menuitem", { name: /PDF — todo junto/ }));
+
+      await waitFor(() => expect(mocks.exportarPedido).toHaveBeenCalledTimes(1));
+      expect(mocks.exportarPedido.mock.calls[0][3]).toEqual({ conPrecios: true });
+    });
+
     it("exportar un PDF guarda el pedido primero y el documento lleva su número", async () => {
       const user = userEvent.setup();
       await cargar();
@@ -339,9 +350,10 @@ describe("Armar pedido", () => {
 
       await waitFor(() => expect(mocks.exportarPedido).toHaveBeenCalledTimes(1));
       expect(mocks.guardarPedido).toHaveBeenCalledTimes(1);
-      const [doc, formato, modo] = mocks.exportarPedido.mock.calls[0];
+      const [doc, formato, modo, opciones] = mocks.exportarPedido.mock.calls[0];
       expect(formato).toBe("pdf");
       expect(modo).toBe("junto");
+      expect(opciones).toEqual({ conPrecios: false }); // por defecto, sin precios: es para pedirle al proveedor
       expect(doc).toMatchObject({ numero: "PED-0007", obra: "Familia Pérez", fecha: "05/10/2026" });
       expect(doc.proveedores.map((p: { nombre: string }) => p.nombre)).toEqual(["Corralón Uno", "Filtros SA"]);
       expect(mocks.compartirOdescargarArchivo).toHaveBeenCalledWith(expect.any(Blob), "Pedido_PED-0007.pdf", "application/pdf");

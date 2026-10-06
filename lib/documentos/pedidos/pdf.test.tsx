@@ -64,3 +64,16 @@ describe("generarPdfPedido", () => {
     expect(await firma(blob)).toBe("%PDF-");
   });
 });
+
+describe("generarPdfPedido · sin precios", () => {
+  it("sale igual (más corto: sin columnas de precio, subtotales, total ni firmas)", async () => {
+    const doc = armarDocumento(
+      [linea({ material_id: "a", nombre: "Hierro del 6" }), linea({ material_id: "b", nombre: "Filtro", precio: null, subtotal: 0 })],
+      datos()
+    );
+    const con = await generarPdfPedido(doc, { logoUrl: null, conPrecios: true });
+    const sin = await generarPdfPedido(doc, { logoUrl: null, conPrecios: false });
+    expect(await firma(sin)).toBe("%PDF-");
+    expect(sin.size).toBeLessThan(con.size);
+  });
+});
