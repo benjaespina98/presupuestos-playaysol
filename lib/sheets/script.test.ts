@@ -1,0 +1,242 @@
+import fs from "node:fs";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
+
+/**
+ * Prueba el script de Google Apps Script (docs/sheets-sync/Sincronizar.gs) sin
+ * Google: se carga el archivo tal cual y se le dan "planillas" falsas. Lo que se
+ * verifica es lo que más importa: que no pise fórmulas, que no borre la planilla
+ * si el catálogo viene vacío y que reconozca bien las filas por su nombre.
+ */
+
+const FUENTE = fs.readFileSync(path.join(process.cwd(), "docs", "sheets-sync", "Sincronizar.gs"), "utf8");
+
+// ── Una hoja falsa con la API mínima que usa el script ───────────────────────────
+type Hoja = ReturnType<typeof crearHoja>;
+function crearHoja(inicial: Record<string, unknown> = {}) {
+  const valores = new Map<string, unknown>();
+  const formulas = new Map<string, string>();
+  const formatos = new Map<string, string>();
+  const clave = (f: number, c: number) => `${f},${c}`;
+  for (const [k, v] of Object.entries(inicial)) {
+    if (typeof v === "string" && v.startsWith("=")) formulas.set(k, v);
+    else valores.set(k, v);
+  }
+  const rango = (f: number, c: number, nf = 1, nc = 1) => ({
+    getValues: () => Array.from({ length: nf }, (_, i) => Array.from({ length: nc }, (_, j) => valores.get(clave(f + i, c + j)) ?? "")),
+    getFormulas: () => Array.from({ length: nf }, (_, i) => Array.from({ length: nc }, (_, j) => formulas.get(clave(f + i, c + j)) ?? "")),
+    setValues: (m: unknown[][]) => m.forEach((fila, i) => fila.forEach((v, j) => { valores.set(clave(f + i, c + j), v); formulas.delete(clave(f + i, c + j)); })),
+    setValue: (v: unknown) => { valores.set(clave(f, c), v); formulas.delete(clave(f, c)); },
+    setFormula: (fx: string) => { formulas.set(clave(f, c), fx); valores.delete(clave(f, c)); },
+    clearContent: () => { for (let i = 0; i < nf; i++) for (let j = 0; j < nc; j++) { valores.delete(clave(f + i, c + j)); formulas.delete(clave(f + i, c + j)); } },
+    setNumberFormat: (fmt: string) => { for (let i = 0; i < nf; i++) formatos.set(clave(f + i, c), fmt); },
+  });
+  return {
+    valores, formulas, formatos,
+    getRange: rango,
+    getLastRow: () => Math.max(0, ...[...valores.keys(), ...formulas.keys()].map((k) => Number(k.split(",")[0]))),
+    v: (f: number, c: number) => valores.get(clave(f, c)),
+    fx: (f: number, c: number) => formulas.get(clave(f, c)),
+  };
+}
+
+function cargarScript(opciones: { hojas: Record<string, Hoja>; respuesta: { codigo: number; cuerpo: unknown }; props?: Record<string, string> }) {
+  const props: Record<string, string> = { URL: "https://ejemplo.test/api/sheets/catalogo", TOKEN: "t", ...opciones.props };
+  const pedidos: { url: string; headers: Record<string, string> }[] = [];
+  const entorno = {
+    SpreadsheetApp: { getActive: () => ({ getSheetByName: (n: string) => opciones.hojas[n] ?? null }), flush: () => undefined },
+    PropertiesService: {
+      getScriptProperties: () => ({
+        getProperty: (k: string) => props[k] ?? null,
+        setProperty: (k: string, v: string) => { props[k] = v; },
+        deleteProperty: (k: string) => { delete props[k]; },
+      }),
+    },
+    LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => undefined }) },
+    UrlFetchApp: {
+      fetch: (url: string, o: { headers: Record<string, string> }) => {
+        pedidos.push({ url, headers: o.headers });
+        return { getResponseCode: () => opciones.respuesta.codigo, getContentText: () => JSON.stringify(opciones.respuesta.cuerpo) };
+      },
+    },
+  };
+  const fabrica = new Function(
+    "module", "SpreadsheetApp", "PropertiesService", "LockService", "UrlFetchApp",
+    `${FUENTE}\nreturn { sincronizar_, claveDePrecio, valorDePrecio, validarDatos };`
+  );
+  const api = fabrica({}, entorno.SpreadsheetApp, entorno.PropertiesService, entorno.LockService, entorno.UrlFetchApp);
+  return { ...api, props, pedidos };
+}
+
+const fila = (nombre: string, precio: number | null, usd: number | null = null): (string | number | null)[] => [
+  nombre, "Ranco", "bolsa", precio, "18/06/2026", "Materiales", "Siempre",
+  50, "", "", "", "", "", "", "", "", "", "", usd, "una nota",
+];
+
+const DATOS = {
+  version: "abc123",
+  generado: "2026-10-05T00:00:00Z",
+  proveedores: [["Ranco", "Corralón", "Juan", "123", "", "", "nota"]],
+  articulos: [
+    { usd: false, fila: fila("Cemento", 6461) },
+    { usd: true, fila: fila("Filtro VC30", null, 114.68) },
+  ],
+  precios: { "piscinas:luces": 240000, "piscinas:cascada": null, "piscinas:lista_hormigon_8x4": 15390000 } as Record<string, number | null>,
+  tamanos: [],
+};
+
+function hojasBase() {
+  return {
+    Proveedores: crearHoja({ "6,1": "Viejo proveedor", "7,1": "Otro viejo" }),
+    "Artículos": crearHoja({ "6,1": "Material viejo", "7,1": "Otro", "3,2": 1450 }),
+    "Precios y margen": crearHoja({
+      "6,1": "8x4", "6,2": 1,
+      "7,1": "6.5x2.5", "7,2": "=SUMPRODUCT(1)", // una fórmula: nunca se pisa
+      "8,1": "Luces de acero inoxidable", "8,2": 1,
+      "9,1": "Cascada lámina de agua", "9,2": 1,
+      "10,1": "Algo que no se sincroniza", "10,2": 999,
+      "11,1": "Cerámico Bali Brasil", "11,2": 112000,
+    }),
+  };
+}
+
+describe("claveDePrecio", () => {
+  const { claveDePrecio } = cargarScript({ hojas: {}, respuesta: { codigo: 200, cuerpo: {} } });
+
+  it("reconoce los tamaños de piscina de hormigón, igual que la migración que los cargó", () => {
+    expect(claveDePrecio("8x4")).toBe("piscinas:lista_hormigon_8x4");
+    expect(claveDePrecio("7x3.50")).toBe("piscinas:lista_hormigon_7x3_50");
+    expect(claveDePrecio("6.5x2.5")).toBe("piscinas:lista_hormigon_6_5x2.5");
+  });
+
+  it("reconoce los modelos Indusplast", () => {
+    expect(claveDePrecio("RACIONALISTA 400")).toBe("piscinas:indusplast_racionalista_400");
+    expect(claveDePrecio("SPA 240")).toBe("piscinas:indusplast_spa_240");
+  });
+
+  it("reconoce los adicionales por su nombre, de cada calculadora", () => {
+    expect(claveDePrecio("Luces de acero inoxidable")).toBe("piscinas:luces");
+    expect(claveDePrecio("  Cobertor hasta 15 m²  ")).toBe("cobertores:precioMenos15");
+    expect(claveDePrecio("Cerco perimetral con instalación")).toBe("cercos:precioCon");
+    expect(claveDePrecio("Cerámico Bali Brasil")).toBe("revestimientos:revestimiento_ceramico_bali");
+  });
+
+  it("cualquier otra fila no se sincroniza", () => {
+    for (const t of ["", "Concepto", "COSTO TOTAL", "Equipamiento y servicios", "Piscina 8x4", null, undefined, 5]) {
+      expect(claveDePrecio(t as never)).toBeNull();
+    }
+  });
+});
+
+describe("valorDePrecio", () => {
+  const { valorDePrecio } = cargarScript({ hojas: {}, respuesta: { codigo: 200, cuerpo: {} } });
+  it("número, 'A cotizar' para null, y undefined si el catálogo no conoce el ítem", () => {
+    expect(valorDePrecio({ "a:b": 100 }, "a:b")).toBe(100);
+    expect(valorDePrecio({ "a:b": null }, "a:b")).toBe("A cotizar");
+    expect(valorDePrecio({}, "a:b")).toBeUndefined();
+  });
+});
+
+describe("validarDatos", () => {
+  const { validarDatos } = cargarScript({ hojas: {}, respuesta: { codigo: 200, cuerpo: {} } });
+  it("acepta lo bueno y rechaza un catálogo vacío, incompleto o con filas de otro largo", () => {
+    expect(validarDatos(DATOS)).toBeNull();
+    expect(validarDatos({ ...DATOS, articulos: [] })).toMatch(/no se actualiza/);
+    expect(validarDatos({ ...DATOS, proveedores: [] })).toMatch(/no se actualiza/);
+    expect(validarDatos({ proveedores: [] })).toMatch(/incompleta/);
+    expect(validarDatos(null)).toMatch(/no es válida/);
+    expect(validarDatos({ ...DATOS, articulos: [{ usd: false, fila: ["x"] }] })).toMatch(/columnas/);
+  });
+});
+
+describe("sincronizar_", () => {
+  it("manda el token en el encabezado y reemplaza proveedores y artículos", () => {
+    const hojas = hojasBase();
+    const s = cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: DATOS } });
+
+    const r = s.sincronizar_(true);
+
+    expect(s.pedidos[0].headers.Authorization).toBe("Bearer t");
+    expect(r).toMatchObject({ estado: "actualizada", proveedores: 1, materiales: 2 });
+    expect(hojas.Proveedores.v(6, 1)).toBe("Ranco");
+    expect(hojas.Proveedores.v(7, 1)).toBeUndefined(); // el sobrante se borra
+    expect(hojas["Artículos"].v(6, 1)).toBe("Cemento");
+    expect(hojas["Artículos"].v(7, 1)).toBe("Filtro VC30");
+    expect(hojas["Artículos"].v(8, 1)).toBeUndefined();
+  });
+
+  it("el precio en dólares queda como fórmula (USD × tipo de cambio), no como valor", () => {
+    const hojas = hojasBase();
+    cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: DATOS } }).sincronizar_(true);
+
+    expect(hojas["Artículos"].v(6, 4)).toBe(6461); // en pesos: el valor
+    expect(hojas["Artículos"].fx(7, 4)).toBe("=S7*$B$3"); // en dólares: la fórmula
+    expect(hojas["Artículos"].v(7, 19)).toBe(114.68);
+  });
+
+  it("no toca el tipo de cambio ni escribe 'Actualizado' como fecha", () => {
+    const hojas = hojasBase();
+    cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: DATOS } }).sincronizar_(true);
+
+    expect(hojas["Artículos"].v(3, 2)).toBe(1450);
+    expect(hojas["Artículos"].formatos.get("6,5")).toBe("@");
+    expect(hojas["Artículos"].v(6, 5)).toBe("18/06/2026");
+  });
+
+  it("actualiza los precios de venta por nombre de fila, 'A cotizar' para null, y respeta fórmulas y filas ajenas", () => {
+    const hojas = hojasBase();
+    const r = cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: DATOS } }).sincronizar_(true);
+    const p = hojas["Precios y margen"];
+
+    expect(p.v(6, 2)).toBe(15390000); // 8x4
+    expect(p.v(8, 2)).toBe(240000); // luces
+    expect(p.v(9, 2)).toBe("A cotizar"); // cascada
+    expect(p.fx(7, 2)).toBe("=SUMPRODUCT(1)"); // fórmula intacta
+    expect(p.v(10, 2)).toBe(999); // fila que no se sincroniza
+    expect(p.v(11, 2)).toBe(112000); // el catálogo no la conoce: queda como estaba
+    expect(r).toMatchObject({ precios: 3 });
+  });
+
+  it("un catálogo vacío NO borra la planilla", () => {
+    const hojas = hojasBase();
+    const s = cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: { ...DATOS, articulos: [] } } });
+
+    expect(() => s.sincronizar_(true)).toThrow(/no se actualiza/);
+    expect(hojas["Artículos"].v(6, 1)).toBe("Material viejo");
+    expect(hojas.Proveedores.v(6, 1)).toBe("Viejo proveedor");
+  });
+
+  it("si la versión no cambió y no se fuerza, no escribe nada", () => {
+    const hojas = hojasBase();
+    const s = cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: DATOS }, props: { VERSION: "abc123" } });
+
+    expect(s.sincronizar_(false)).toEqual({ estado: "sin cambios" });
+    expect(hojas["Artículos"].v(6, 1)).toBe("Material viejo");
+  });
+
+  it("guarda la versión y la hora de la última actualización", () => {
+    const s = cargarScript({ hojas: hojasBase(), respuesta: { codigo: 200, cuerpo: DATOS } });
+    s.sincronizar_(true);
+    expect(s.props.VERSION).toBe("abc123");
+    expect(s.props.ULTIMA).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it("explica con claridad un token rechazado, una web sin configurar y un error del servidor", () => {
+    const con = (codigo: number) => cargarScript({ hojas: hojasBase(), respuesta: { codigo, cuerpo: {} } });
+    expect(() => con(401).sincronizar_(true)).toThrow(/rechazó el token/);
+    expect(() => con(503).sincronizar_(true)).toThrow(/no tiene activada la sincronización/);
+    expect(() => con(500).sincronizar_(true)).toThrow(/respondió 500/);
+  });
+
+  it("sin URL o token configurados pide configurarlos", () => {
+    const s = cargarScript({ hojas: hojasBase(), respuesta: { codigo: 200, cuerpo: DATOS }, props: { URL: "" } });
+    expect(() => s.sincronizar_(true)).toThrow(/Configurar conexión/);
+  });
+
+  it("si falta una hoja lo dice por nombre", () => {
+    const hojas = hojasBase();
+    delete (hojas as Record<string, unknown>)["Artículos"];
+    const s = cargarScript({ hojas: hojas as Record<string, Hoja>, respuesta: { codigo: 200, cuerpo: DATOS } });
+    expect(() => s.sincronizar_(true)).toThrow(/Artículos/);
+  });
+});
