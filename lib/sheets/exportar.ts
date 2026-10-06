@@ -86,7 +86,9 @@ export function armarExportacion(entrada: EntradaExportacion, ahora: Date = new 
   ]);
 
   const articulos: ArticuloFila[] = porOrden(entrada.materiales.filter((m) => m.activo)).map((m) => {
-    const usd = m.usd_ref !== null;
+    // Cotizado en dólares sólo si hay un USD de referencia REAL (> 0). Un 0 (que el formulario guardaba al
+    // recorrer el campo vacío) no es una cotización: antes hacía que la planilla mostrara $0 en el precio.
+    const usd = m.usd_ref !== null && m.usd_ref > 0;
     return {
       usd,
       fila: [
@@ -98,7 +100,7 @@ export function armarExportacion(entrada: EntradaExportacion, ahora: Date = new 
         texto(m.rubro),
         texto(m.aplica),
         ...TAMANOS.map((t) => (typeof m.cantidades[t] === "number" ? m.cantidades[t] : "")),
-        m.usd_ref,
+        usd ? m.usd_ref : null,
         texto(m.notas),
       ],
     };
