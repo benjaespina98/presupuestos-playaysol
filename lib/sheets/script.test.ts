@@ -318,3 +318,18 @@ describe("stock en 'Precios y margen'", () => {
     expect(buscarEncabezadoStock([["x", "y"]])).toBeNull();
   });
 });
+
+describe("buscarEncabezadoStock · encabezados con otro texto", () => {
+  const { buscarEncabezadoStock } = cargarScript({ hojas: {}, respuesta: { codigo: 200, cuerpo: {} } });
+  it("acepta 'Stock actual' o 'Stock (unid.)', pero no una palabra que sólo lo contiene", () => {
+    expect(buscarEncabezadoStock([["a", "Stock actual"]])).toEqual({ fila: 1, columna: 2 });
+    expect(buscarEncabezadoStock([["a", "Stock (unid.)"]])).toEqual({ fila: 1, columna: 2 });
+    expect(buscarEncabezadoStock([["a", "Sin stock"]])).toBeNull();
+    expect(buscarEncabezadoStock([["a", "Stockeo"]])).toBeNull();
+  });
+
+  it("lo encuentra aunque esté más abajo de la fila 10", () => {
+    const filas = Array.from({ length: 25 }, (_, i) => (i === 24 ? ["x", "Stock"] : ["x", ""]));
+    expect(buscarEncabezadoStock(filas)).toEqual({ fila: 25, columna: 2 });
+  });
+});
