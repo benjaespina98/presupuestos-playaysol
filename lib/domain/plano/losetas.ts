@@ -39,15 +39,47 @@ export type Revestimiento = z.infer<typeof Revestimiento>;
 export const MaterialBorde = z.enum(["losetas", "decks", "travertino"]);
 export type MaterialBorde = z.infer<typeof MaterialBorde>;
 
+/** Las losetas y los decks vienen en dos colores: marfil y blanco. El travertino, en uno solo. */
+export const TonoBorde = z.enum(["marfil", "blanco"]);
+export type TonoBorde = z.infer<typeof TonoBorde>;
+
+export const TONOS_BORDE: Record<TonoBorde, string> = { marfil: "Marfil", blanco: "Blanco" };
+
 export const MATERIALES_BORDE: Record<
   MaterialBorde,
-  { etiqueta: string; singular: string; leyenda: string; color: string }
+  {
+    etiqueta: string;
+    singular: string;
+    leyenda: string;
+    /** true = se elige entre marfil y blanco. */
+    conTono: boolean;
+    /** Color de fábrica de cada tono (en los de un solo color, los dos valen lo mismo). */
+    colores: Record<TonoBorde, string>;
+  }
 > = {
-  // "Borde de loseta" es el texto de siempre: no cambia para los planos viejos.
-  losetas: { etiqueta: "Losetas", singular: "loseta", leyenda: "Borde de loseta", color: "#F7E6D3" },
-  decks: { etiqueta: "Decks", singular: "deck", leyenda: "Borde de deck", color: "#C9A27E" },
-  travertino: { etiqueta: "Travertino", singular: "travertino", leyenda: "Borde de travertino", color: "#E6DAC3" },
+  // El marfil de las losetas es el color de siempre de este plano: no cambia para los planos viejos.
+  losetas: { etiqueta: "Losetas", singular: "loseta", leyenda: "Borde de loseta", conTono: true, colores: { marfil: "#F7E6D3", blanco: "#F4F4F1" } },
+  decks: { etiqueta: "Decks", singular: "deck", leyenda: "Borde de deck", conTono: true, colores: { marfil: "#EBDDC0", blanco: "#F1F1EE" } },
+  travertino: { etiqueta: "Travertino", singular: "travertino", leyenda: "Borde de travertino", conTono: false, colores: { marfil: "#E6DAC3", blanco: "#E6DAC3" } },
 };
+
+/** El color de fábrica del borde para ese material y tono. */
+export function colorDeBorde(material: MaterialBorde, tono: TonoBorde): string {
+  const m = MATERIALES_BORDE[material];
+  return m.colores[m.conTono ? tono : "marfil"];
+}
+
+/** El texto de la leyenda del plano: "Borde de loseta marfil", "Borde de travertino". */
+export function leyendaDeBorde(material: MaterialBorde, tono: TonoBorde): string {
+  const m = MATERIALES_BORDE[material];
+  return m.conTono ? `${m.leyenda} ${tono}` : m.leyenda;
+}
+
+/** Cómo se nombra el borde en el formulario: "losetas marfil", "decks blanco", "travertino". */
+export function nombreDeBorde(material: MaterialBorde, tono: TonoBorde): string {
+  const m = MATERIALES_BORDE[material];
+  return m.conTono ? `${m.etiqueta.toLowerCase()} ${tono}` : m.etiqueta.toLowerCase();
+}
 
 export const PlanoLosetasEntrada = z.object({
   largo: z.number().min(0).default(0),
@@ -102,6 +134,7 @@ export const PlanoLosetasEntrada = z.object({
   colorAgua: z.string().default("#A6D1EC"),
   colorLoseta: z.string().default("#F7E6D3"),
   materialBorde: MaterialBorde.default("losetas"),
+  tonoBorde: TonoBorde.default("marfil"),
   /** Profundidad general de la pileta (m); 0 = sin cargar. Si hay tramos, es la
    *  del "resto" (lo que no cae en ningún tramo). */
   profundidad: z.number().min(0).default(0),
@@ -818,7 +851,7 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
 
   if (showDims) {
     const legItems: { kind: LegendItem["kind"]; label: string }[] = [
-      { kind: "loseta", label: MATERIALES_BORDE[s.materialBorde].leyenda },
+      { kind: "loseta", label: leyendaDeBorde(s.materialBorde, s.tonoBorde) },
       { kind: "pileta", label: "Pileta" },
     ];
     if (s.solarHumedo && s.solarHumedoAncho > 0) legItems.push({ kind: "solarhumedo", label: "Solar húmedo" });

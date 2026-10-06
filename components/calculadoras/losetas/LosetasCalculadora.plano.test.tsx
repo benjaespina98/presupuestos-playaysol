@@ -62,7 +62,7 @@ describe("LosetasCalculadora · material alrededor de la pileta", () => {
 
     expect(color()).toBe("#f7e6d3");
     await user.selectOptions(screen.getByLabelText("Material alrededor de la pileta"), "decks");
-    await waitFor(() => expect(color()).toBe("#c9a27e"));
+    await waitFor(() => expect(color()).toBe("#ebddc0")); // decks marfil
 
     fireEvent.input(screen.getByLabelText(/Color del borde/), { target: { value: "#123456" } });
     await user.selectOptions(screen.getByLabelText("Material alrededor de la pileta"), "travertino");
@@ -109,6 +109,95 @@ describe("LosetasCalculadora · material alrededor de la pileta", () => {
       />
     );
     expect((screen.getByLabelText("Material alrededor de la pileta") as HTMLSelectElement).value).toBe("losetas");
+  });
+});
+
+describe("LosetasCalculadora · marfil y blanco", () => {
+  const tono = () => screen.getByLabelText(/^Color de (losetas|decks)$/) as HTMLSelectElement;
+  const color = () => (screen.getByLabelText(/Color del borde/) as HTMLInputElement).value.toLowerCase();
+
+  beforeEach(() => {
+    guardarPresupuesto.mockReset();
+    guardarPresupuesto.mockResolvedValue({ error: null });
+  });
+
+  it("las losetas y los decks se eligen en marfil o blanco (marfil por defecto); el travertino no tiene tono", async () => {
+    const user = userEvent.setup();
+    render(<LosetasCalculadora />);
+    expect(tono().value).toBe("marfil");
+    expect([...tono().options].map((o) => o.textContent)).toEqual(["Marfil", "Blanco"]);
+
+    await user.selectOptions(screen.getByLabelText("Material alrededor de la pileta"), "decks");
+    expect(screen.getByLabelText("Color de decks")).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Material alrededor de la pileta"), "travertino");
+    expect(screen.queryByLabelText(/^Color de (losetas|decks|travertino)$/)).not.toBeInTheDocument();
+  });
+
+  it("elegir blanco cambia el color del borde y el nombre en la leyenda", async () => {
+    const user = userEvent.setup();
+    render(<LosetasCalculadora />);
+    await cargarMedidas(user, "8", "4");
+    expect(color()).toBe("#f7e6d3");
+    expect(vista().textContent).toContain("Borde de loseta marfil");
+
+    await user.selectOptions(tono(), "blanco");
+
+    await waitFor(() => expect(color()).toBe("#f4f4f1"));
+    expect(vista().textContent).toContain("Borde de loseta blanco");
+  });
+
+  it("los decks también: blanco y marfil, cada uno con su leyenda", async () => {
+    const user = userEvent.setup();
+    render(<LosetasCalculadora />);
+    await cargarMedidas(user, "8", "4");
+    await user.selectOptions(screen.getByLabelText("Material alrededor de la pileta"), "decks");
+    await user.selectOptions(tono(), "blanco");
+
+    await waitFor(() => expect(vista().textContent).toContain("Borde de deck blanco"));
+    expect(color()).toBe("#f1f1ee");
+  });
+
+  it("un color elegido a mano se respeta aunque se cambie el tono", async () => {
+    const user = userEvent.setup();
+    render(<LosetasCalculadora />);
+    fireEvent.input(screen.getByLabelText(/Color del borde/), { target: { value: "#123456" } });
+
+    await user.selectOptions(tono(), "blanco");
+
+    expect(color()).toBe("#123456");
+  });
+
+  it("el tono se guarda con el plano y se recupera; un plano viejo se abre en marfil", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<LosetasCalculadora />);
+    await cargarMedidas(user, "8", "4");
+    await user.selectOptions(tono(), "blanco");
+    await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
+
+    await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
+    const guardado = PresupuestoV1.parse(guardarPresupuesto.mock.calls[0][1]);
+    expect(guardado.medidas).toMatchObject({ materialBorde: "losetas", tonoBorde: "blanco" });
+    unmount();
+
+    const { unmount: unmount2 } = render(
+      <LosetasCalculadora
+        presupuestoId="x"
+        presupuestoInicial={{ presupuesto: guardado, preciosCongelados: true, clavesIncluidas: [] }}
+      />
+    );
+    expect(tono().value).toBe("blanco");
+    unmount2();
+
+    const viejo = PresupuestoV1.parse({
+      v: 1, tipo: "losetas", fecha: "", cliente: { nombre: "Viejo" },
+      medidas: { largo: 8, ancho: 4, solar: 1, opuesto: 1, lateral1: 1, lateral2: 1 },
+      lineas: [], totales: [],
+    });
+    render(
+      <LosetasCalculadora presupuestoInicial={{ presupuesto: viejo, preciosCongelados: true, clavesIncluidas: [] }} />
+    );
+    expect(tono().value).toBe("marfil");
   });
 });
 
