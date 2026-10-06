@@ -1,12 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { listarItemsCatalogo } from "@/lib/catalogo";
+import { guardarStockItem, listarItemsCatalogo } from "@/lib/catalogo";
 import {
   agruparPorCategoria,
   contarPorCategoria,
   contarPorLinea,
+  contarPorStock,
   filtrarCatalogo,
+  llevaStock,
+  resumenStock,
+  textoStock,
+  type FiltroStock,
   ordenarCatalogo,
   textoParaCopiar,
   type ItemCatalogo,
@@ -19,7 +24,7 @@ import { formatFechaRelativa, formatFechaCompleta } from "@/lib/format/fecha";
 import { copiarAlPortapapeles } from "@/lib/clipboard";
 import { PanelPortal } from "@/components/PanelPortal";
 import { IconEdit, IconCopy, IconPlus, IconTable } from "@/components/icons";
-import { PLANILLA_COSTOS_URL } from "@/lib/brand";
+import { LOCAL_STOCK, PLANILLA_COSTOS_URL } from "@/lib/brand";
 import { FiltrosCatalogo } from "@/components/catalogo/FiltrosCatalogo";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
 import { EditarItemModal } from "@/components/catalogo/EditarItemModal";
@@ -33,7 +38,9 @@ export default function CatalogoPage() {
   const [categoria, setCategoria] = useState<Categoria | "">("");
   const [tipo, setTipo] = useState<TipoCalculadora | "">("");
   const [linea, setLinea] = useState<LineaPiscina | "">("");
+  const [stock, setStock] = useState<FiltroStock | "">("");
   const [incluirInactivos, setIncluirInactivos] = useState(false);
+  const [errorStock, setErrorStock] = useState<string | null>(null);
   const [modoConsulta, setModoConsulta] = useState(false);
   const [editando, setEditando] = useState<ItemCatalogo | null>(null);
   const [creando, setCreando] = useState(false);
@@ -58,18 +65,25 @@ export default function CatalogoPage() {
       filtrarCatalogo(items, { busqueda, categoria: categoria || null,
         tipo: tipo || null,
         linea: linea || null,
+        stock: stock || null,
         incluirInactivos,
       })
     );
-  }, [items, busqueda, categoria, tipo, linea, incluirInactivos]);
+  }, [items, busqueda, categoria, tipo, linea, stock, incluirInactivos]);
 
   const conteos = useMemo(
-    () => contarPorCategoria(items ?? [], { busqueda, tipo: tipo || null, linea: linea || null, incluirInactivos }),
-    [items, busqueda, tipo, linea, incluirInactivos]
+    () => contarPorCategoria(items ?? [], { busqueda, tipo: tipo || null, linea: linea || null, stock: stock || null, incluirInactivos }),
+    [items, busqueda, tipo, linea, stock, incluirInactivos]
   );
+  const conteosStock = useMemo(
+    () => contarPorStock(items ?? [], { busqueda, categoria: categoria || null, tipo: tipo || null, linea: linea || null, incluirInactivos }),
+    [items, busqueda, categoria, tipo, linea, incluirInactivos]
+  );
+  // El stock total del local (de los ítems activos que lo llevan), sin filtros.
+  const resumen = useMemo(() => resumenStock((items ?? []).filter((i) => i.activo)), [items]);
   const conteosLinea = useMemo(
-    () => contarPorLinea(items ?? [], { busqueda, categoria: categoria || null, tipo: tipo || null, incluirInactivos }),
-    [items, busqueda, categoria, tipo, incluirInactivos]
+    () => contarPorLinea(items ?? [], { busqueda, categoria: categoria || null, tipo: tipo || null, stock: stock || null, incluirInactivos }),
+    [items, busqueda, categoria, tipo, stock, incluirInactivos]
   );
 
   // Un bloque por categoría en vez de repetir la columna "Categoría" en cada
@@ -77,13 +91,14 @@ export default function CatalogoPage() {
   // rápido encontrar algo escaneando encabezados que leyendo una tabla plana.
   const grupos = useMemo(() => (visibles ? agruparPorCategoria(visibles) : []), [visibles]);
 
-  const hayFiltros = !!(busqueda || categoria || tipo || linea || incluirInactivos);
+  const hayFiltros = !!(busqueda || categoria || tipo || linea || stock || incluirInactivos);
 
   function limpiarFiltros() {
     setBusqueda("");
     setCategoria("");
     setTipo("");
     setLinea("");
+    setStock("");
     setIncluirInactivos(false);
   }
 
@@ -104,6 +119,20 @@ export default function CatalogoPage() {
     if (!ok) return; // sin permiso de portapapeles: no hay feedback de "copiado", nada más que mostrar
     setCopiadoId(item.id);
     setTimeout(() => setCopiadoId((actual) => (actual === item.id ? null : actual)), 2000);
+  }
+
+  /** Suma o resta unidades de un ítem: se ve al instante y, si no se pudo
+   *  guardar, vuelve al valor anterior y avisa. */
+  async function cambiarStock(item: ItemCatalogo, nuevo: number) {
+    if (nuevo < 0 || item.stock === null) return;
+    const anterior = item.stock;
+    setErrorStock(null);
+    setItems((prev) => (prev ? prev.map((it) => (it.id === item.id ? { ...it, stock: nuevo } : it)) : prev));
+    const { error } = await guardarStockItem(item.id, nuevo);
+    if (error) {
+      setItems((prev) => (prev ? prev.map((it) => (it.id === item.id ? { ...it, stock: anterior } : it)) : prev));
+      setErrorStock(error);
+    }
   }
 
   function itemEliminado(eliminado: ItemCatalogo) {
@@ -155,6 +184,9 @@ export default function CatalogoPage() {
         linea={linea}
         onLinea={setLinea}
         conteosLinea={conteosLinea}
+        stock={stock}
+        onStock={setStock}
+        conteosStock={conteosStock}
         incluirInactivos={incluirInactivos}
         onIncluirInactivos={setIncluirInactivos}
         modoConsulta={modoConsulta}
@@ -174,6 +206,22 @@ export default function CatalogoPage() {
       {error && (
         <p role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
+        </p>
+      )}
+
+      {resumen.modelos > 0 && (
+        <p className="mb-3 rounded-md bg-[#EEF2F6] px-4 py-2.5 text-sm text-gray-700">
+          <span className="font-semibold text-[#1B3A5C]">Stock · {LOCAL_STOCK}:</span>{" "}
+          {resumen.unidades === 0
+            ? "todavía no hay unidades cargadas"
+            : `${resumen.unidades} ${resumen.unidades === 1 ? "unidad" : "unidades"} en ${resumen.conUnidades} ${resumen.conUnidades === 1 ? "modelo" : "modelos"}`}
+          <span className="text-gray-500"> · {resumen.modelos} modelos llevan stock</span>
+        </p>
+      )}
+
+      {errorStock && (
+        <p role="alert" className="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorStock}
         </p>
       )}
 
@@ -215,6 +263,7 @@ export default function CatalogoPage() {
                         <th className="px-4 py-3 font-medium">Producto</th>
                         <th className="px-4 py-3 font-medium">Calculadora</th>
                         <th className="px-4 py-3 text-right font-medium">Precio</th>
+                        <th className="px-4 py-3 text-center font-medium">Stock</th>
                         <th className="px-4 py-3 font-medium">Actualizado</th>
                         {!modoConsulta && <th className="px-4 py-3 font-medium">Estado</th>}
                         <th className="px-4 py-3 font-medium"></th>
@@ -236,6 +285,9 @@ export default function CatalogoPage() {
                           </td>
                           <td className="px-4 py-3 text-right tabular-nums text-gray-700">
                             <PrecioItem item={item} />
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <StockItem item={item} editable={!modoConsulta} onCambiar={cambiarStock} />
                           </td>
                           <td className="px-4 py-3 text-gray-500">
                             <FechaActualizacion updatedAt={item.updated_at} />
@@ -295,6 +347,11 @@ export default function CatalogoPage() {
                             <p className="mt-0.5 text-xs text-gray-400">
                               <FechaActualizacion updatedAt={item.updated_at} />
                             </p>
+                            {llevaStock(item) && (
+                              <div className="mt-1.5">
+                                <StockItem item={item} editable={!modoConsulta} onCambiar={cambiarStock} />
+                              </div>
+                            )}
                           </div>
                           {modoConsulta ? (
                             <button
@@ -401,6 +458,50 @@ function FechaActualizacion({ updatedAt }: { updatedAt: string }) {
   return <span title={formatFechaCompleta(updatedAt)}>{relativa}</span>;
 }
 
+/**
+ * El stock de un ítem. Los que no llevan stock (hierros, luces, cercos... se
+ * piden a pedido) dicen "A pedido"; los que sí, muestran las unidades con un
+ * − / + para ajustarlas rápido (el número exacto se carga desde Editar). En
+ * modo consulta es sólo lectura. Agotado (0) se ve en rojo para detectarlo.
+ */
+function StockItem({
+  item,
+  editable,
+  onCambiar,
+}: {
+  item: ItemCatalogo;
+  editable: boolean;
+  onCambiar: (item: ItemCatalogo, nuevo: number) => void;
+}) {
+  if (!llevaStock(item)) return <span className="text-xs text-gray-400">A pedido</span>;
+  const agotado = item.stock === 0;
+  const nombre = item.descripcion || item.clave;
+  const numero = (
+    <span
+      title={textoStock(item.stock)}
+      className={`inline-flex min-w-[2.75rem] justify-center rounded-full px-2.5 py-1 text-sm font-semibold tabular-nums ${
+        agotado ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"
+      }`}
+    >
+      {item.stock}
+    </span>
+  );
+  if (!editable) return numero;
+  const boton =
+    "inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-base leading-none text-gray-600 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1B3A5C] disabled:cursor-not-allowed disabled:opacity-40";
+  return (
+    <div className="inline-flex items-center gap-1.5">
+      <button type="button" aria-label={`Restar una unidad de ${nombre}`} disabled={agotado} onClick={() => onCambiar(item, item.stock - 1)} className={boton}>
+        −
+      </button>
+      {numero}
+      <button type="button" aria-label={`Sumar una unidad de ${nombre}`} onClick={() => onCambiar(item, item.stock + 1)} className={boton}>
+        +
+      </button>
+    </div>
+  );
+}
+
 function EstadoBadge({ activo }: { activo: boolean }) {
   return (
     <span
@@ -424,6 +525,7 @@ function CatalogoSkeleton() {
               <th className="px-4 py-3 font-medium">Producto</th>
               <th className="px-4 py-3 font-medium">Calculadora</th>
               <th className="px-4 py-3 font-medium">Precio</th>
+              <th className="px-4 py-3 font-medium">Stock</th>
               <th className="px-4 py-3 font-medium">Actualizado</th>
               <th className="px-4 py-3 font-medium">Estado</th>
               <th className="px-4 py-3 font-medium"></th>
@@ -435,6 +537,7 @@ function CatalogoSkeleton() {
                 <td className="px-4 py-3"><div className="h-3.5 w-40 rounded bg-gray-200" /></td>
                 <td className="px-4 py-3"><div className="h-3.5 w-20 rounded bg-gray-200" /></td>
                 <td className="px-4 py-3"><div className="h-3.5 w-16 rounded bg-gray-200" /></td>
+                <td className="px-4 py-3"><div className="h-3.5 w-12 rounded bg-gray-100" /></td>
                 <td className="px-4 py-3"><div className="h-3.5 w-16 rounded bg-gray-100" /></td>
                 <td className="px-4 py-3"><div className="h-3.5 w-14 rounded bg-gray-200" /></td>
                 <td className="px-4 py-3"><div className="h-3.5 w-14 rounded bg-gray-100" /></td>

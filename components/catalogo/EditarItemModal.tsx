@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useZodForm } from "@/lib/forms/useZodForm";
-import { MoneyField, TextField, SelectField, CheckboxField } from "@/components/form";
+import { MoneyField, NumberField, TextField, SelectField, CheckboxField } from "@/components/form";
 import { actualizarItemCatalogo, eliminarItemCatalogo } from "@/lib/catalogo";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { CATEGORIAS, UNIDADES } from "@/lib/domain/catalogo/categorias";
@@ -49,10 +49,13 @@ export function EditarItemModal({
   const protegido = esPrecioBase(item.clave);
   const {
     control,
+    watch,
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useZodForm(EditarItemSchema, { defaultValues: aFormulario(item) });
+
+  const llevaStock = watch("llevaStock");
 
   async function onSubmit(valores: EditarItemForm) {
     setErrorGuardado(null);
@@ -127,6 +130,18 @@ export function EditarItemModal({
             label="Unidad"
             options={OPCIONES_UNIDAD}
           />
+          <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50/60 p-3">
+            <CheckboxField
+              register={register}
+              errors={errors}
+              name="llevaStock"
+              label="Llevar stock"
+              hint="Para artículos que se guardan en el local (como las piscinas de fibra). Los que se piden a pedido no lo llevan."
+            />
+            {llevaStock && (
+              <NumberField control={control} name="stock" label="Unidades en stock" hint="0 = agotado" />
+            )}
+          </div>
           <CheckboxField
             register={register}
             errors={errors}

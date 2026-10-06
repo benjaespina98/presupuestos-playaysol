@@ -4,6 +4,11 @@ import {
   agruparPorCategoria,
   categoriaEfectiva,
   contarPorCategoria,
+  contarPorStock,
+  llevaStock,
+  resumenStock,
+  textoStock,
+  type FiltroStock,
   disponibleEnCalculadora,
   esPrecioBase,
   filtrarCatalogo,
@@ -257,5 +262,54 @@ describe("esPrecioBase", () => {
   it("un opcional común se puede eliminar", () => {
     expect(esPrecioBase("luces")).toBe(false);
     expect(esPrecioBase("cascada")).toBe(false);
+  });
+});
+
+describe("stock", () => {
+  const sinStock = item({ id: "a", clave: "hierro_6", descripcion: "Hierro del 6" });
+  const agotada = item({ id: "b", clave: "indusplast_caribe_550", descripcion: "Caribe 550", stock: 0 });
+  const conUnidades = item({ id: "c", clave: "indusplast_caribe_650", descripcion: "Caribe 650", stock: 3 });
+  const todos = [sinStock, agotada, conUnidades];
+
+  it("una fila sin la columna stock llega como null: no lleva stock", () => {
+    expect(sinStock.stock).toBeNull();
+    expect(llevaStock(sinStock)).toBe(false);
+    expect(llevaStock(agotada)).toBe(true); // 0 también es llevar stock
+  });
+
+  it("rechaza un stock negativo o con decimales", () => {
+    expect(() => item({ stock: -1 })).toThrow();
+    expect(() => item({ stock: 1.5 })).toThrow();
+  });
+
+  it("textoStock", () => {
+    expect(textoStock(0)).toBe("sin stock");
+    expect(textoStock(1)).toBe("1 en stock");
+    expect(textoStock(4)).toBe("4 en stock");
+  });
+
+  it("filtra por disponibilidad: con unidades, agotado, a pedido", () => {
+    const ids = (f: FiltroStock) => filtrarCatalogo(todos, { stock: f }).map((i) => i.id);
+    expect(ids("disponible")).toEqual(["c"]);
+    expect(ids("agotado")).toEqual(["b"]);
+    expect(ids("sin-control")).toEqual(["a"]);
+    expect(filtrarCatalogo(todos, {}).length).toBe(3);
+  });
+
+  it("cuenta por disponibilidad ignorando el propio filtro de stock", () => {
+    expect(contarPorStock(todos, {})).toEqual({ disponible: 1, agotado: 1, "sin-control": 1 });
+    expect(contarPorStock(todos, { busqueda: "caribe" })).toEqual({ disponible: 1, agotado: 1, "sin-control": 0 });
+  });
+
+  it("el resumen suma sólo los que llevan stock", () => {
+    expect(resumenStock(todos)).toEqual({ modelos: 2, conUnidades: 1, unidades: 3 });
+    expect(resumenStock([sinStock])).toEqual({ modelos: 0, conUnidades: 0, unidades: 0 });
+  });
+
+  it("el texto para WhatsApp suma el stock sólo si el ítem lo lleva", () => {
+    const f = (n: number) => `$${n}`;
+    expect(textoParaCopiar(conUnidades, f)).toBe("Caribe 650: $1000 · 3 en stock");
+    expect(textoParaCopiar(agotada, f)).toBe("Caribe 550: $1000 · sin stock");
+    expect(textoParaCopiar(sinStock, f)).toBe("Hierro del 6: $1000");
   });
 });

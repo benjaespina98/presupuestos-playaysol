@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useZodForm } from "@/lib/forms/useZodForm";
-import { MoneyField, TextField, SelectField, CheckboxField } from "@/components/form";
+import { MoneyField, NumberField, TextField, SelectField, CheckboxField } from "@/components/form";
 import { crearItemCatalogo } from "@/lib/catalogo";
 import { CATEGORIAS, UNIDADES } from "@/lib/domain/catalogo/categorias";
 import type { ItemCatalogo } from "@/lib/domain/catalogo/item";
@@ -45,11 +45,14 @@ export function CrearItemModal({
   const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
   const {
     control,
+    watch,
     register,
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
   } = useZodForm(NuevoItemSchema, { defaultValues: nuevoItemFormVacio() });
+
+  const llevaStock = watch("llevaStock");
 
   async function onSubmit(valores: NuevoItemForm) {
     setErrorGuardado(null);
@@ -124,6 +127,18 @@ export function CrearItemModal({
             label="Unidad"
             options={OPCIONES_UNIDAD}
           />
+          <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50/60 p-3">
+            <CheckboxField
+              register={register}
+              errors={errors}
+              name="llevaStock"
+              label="Llevar stock"
+              hint="Para artículos que se guardan en el local (como las piscinas de fibra). Los que se piden a pedido no lo llevan."
+            />
+            {llevaStock && (
+              <NumberField control={control} name="stock" label="Unidades en stock" hint="0 = agotado" />
+            )}
+          </div>
           <CheckboxField register={register} errors={errors} name="activo" label="Activo" />
 
           {errorGuardado && (
