@@ -5,6 +5,9 @@
  * (cada 5 minutos, o al instante con Catálogo web → Actualizar ahora). Lo que se
  * escriba a mano en las celdas que sincroniza se pisa en la próxima actualización.
  *
+ * Sólo escribe lo que cambió: si el catálogo web no cambió, no hace nada; si cambió, compara
+ * fila por fila con la planilla y reescribe únicamente las filas distintas.
+ *
  * Qué sincroniza:
  *   - Hoja "Proveedores":  columnas A..G desde la fila 6.
  *   - Hoja "Artículos":    columnas A..T desde la fila 6. La columna D (precio) NO se
@@ -175,26 +178,71 @@ function celdaVacia_(c) {
 
 // ───────────────────────────── Escritura en la planilla ─────────────────────────────
 
+/**
+ * Escribe SOLO lo que cambió: compara cada fila con lo que ya hay en la hoja y reescribe únicamente
+ * las filas distintas (y vacía las que sobran). Si no cambió nada, no escribe nada. `formulas`
+ * (opcional) es, por fila, la fórmula esperada de cada celda ("" = valor común): una celda con
+ * fórmula se compara por su fórmula, no por el número que da. `maxFilas` limita hasta dónde se
+ * mira (la planilla tiene fórmulas que leen un tramo fijo). Devuelve cuántas filas se modificaron.
+ */
+function escribirDiferencias_(hoja, filaInicio, columnas, filasNuevas, formulas, maxFilas) {
+  var existentes = Math.max(0, hoja.getLastRow() - filaInicio + 1);
+  if (maxFilas) existentes = Math.min(existentes, maxFilas);
+  var alto = Math.max(filasNuevas.length, existentes);
+  if (alto === 0) return 0;
+  var rango = hoja.getRange(filaInicio, 1, alto, columnas);
+  var actuales = rango.getValues();
+  var formulasActuales = rango.getFormulas();
+  var cambiadas = 0;
+  for (var i = 0; i < alto; i++) {
+    var nueva = i < filasNuevas.length ? filasNuevas[i] : null;
+    var distinta = false;
+    for (var j = 0; j < columnas && !distinta; j++) {
+      var esperada = formulas && formulas[i] && formulas[i][j] ? formulas[i][j] : "";
+      if (esperada) {
+        if (formulasActuales[i][j] !== esperada) distinta = true;
+      } else if (formulasActuales[i][j]) {
+        distinta = true;
+      } else if (!igualCelda_(actuales[i][j], nueva ? nueva[j] : "")) {
+        distinta = true;
+      }
+    }
+    if (!distinta) continue;
+    var fila = filaInicio + i;
+    if (!nueva) {
+      hoja.getRange(fila, 1, 1, columnas).clearContent();
+    } else {
+      hoja.getRange(fila, 1, 1, columnas).setValues([nueva.map(celdaVacia_)]);
+      for (var k = 0; k < columnas; k++) {
+        if (formulas && formulas[i] && formulas[i][k]) hoja.getRange(fila, k + 1).setFormula(formulas[i][k]);
+      }
+    }
+    cambiadas++;
+  }
+  return cambiadas;
+}
+
+/** Dos celdas son iguales si se ven igual (se ignora null/vacío y los espacios de los costados). */
+function igualCelda_(a, b) {
+  return String(celdaVacia_(a)).trim() === String(celdaVacia_(b)).trim();
+}
+
 function escribirProveedores_(hoja, filas) {
-  var ultima = Math.max(hoja.getLastRow(), FILA_INICIO + filas.length - 1);
-  hoja.getRange(FILA_INICIO, 1, ultima - FILA_INICIO + 1, COLUMNAS_PROVEEDORES).clearContent();
-  var valores = filas.map(function (f) { return f.map(celdaVacia_); });
-  hoja.getRange(FILA_INICIO, 1, valores.length, COLUMNAS_PROVEEDORES).setValues(valores);
+  return escribirDiferencias_(hoja, FILA_INICIO, COLUMNAS_PROVEEDORES, filas, null, MAX_FILAS_PROVEEDORES);
 }
 
 function escribirArticulos_(hoja, articulos) {
   // "Actualizado" es un texto ("18/06/2026"): sin formato de texto, Sheets lo convertiría en fecha.
   hoja.getRange(FILA_INICIO, COLUMNA_ACTUALIZADO, MAX_FILAS_ARTICULOS, 1).setNumberFormat("@");
-  hoja.getRange(FILA_INICIO, 1, MAX_FILAS_ARTICULOS, COLUMNAS_ARTICULOS).clearContent();
-  var valores = articulos.map(function (a) { return a.fila.map(celdaVacia_); });
-  hoja.getRange(FILA_INICIO, 1, valores.length, COLUMNAS_ARTICULOS).setValues(valores);
+  var filas = articulos.map(function (a) { return a.fila; });
   // Los cotizados en dólares: el precio en pesos es una fórmula (USD ref. × tipo de cambio).
-  articulos.forEach(function (a, i) {
-    if (a.usd) {
-      var fila = FILA_INICIO + i;
-      hoja.getRange(fila, COLUMNA_PRECIO).setFormula("=S" + fila + "*$B$3");
-    }
+  var formulas = articulos.map(function (a, i) {
+    var f = [];
+    for (var c = 0; c < COLUMNAS_ARTICULOS; c++) f.push("");
+    if (a.usd) f[COLUMNA_PRECIO - 1] = "=S" + (FILA_INICIO + i) + "*$B$3";
+    return f;
   });
+  return escribirDiferencias_(hoja, FILA_INICIO, COLUMNAS_ARTICULOS, filas, formulas, MAX_FILAS_ARTICULOS);
 }
 
 function escribirPrecios_(hoja, precios) {
@@ -262,16 +310,14 @@ function escribirStock_(hoja, stock) {
 function escribirCatalogo_(filas) {
   var ss = SpreadsheetApp.getActive();
   var hoja = ss.getSheetByName(HOJA_CATALOGO) || ss.insertSheet(HOJA_CATALOGO);
-  var ultima = Math.max(hoja.getLastRow(), filas.length + 1);
-  hoja.getRange(1, 1, ultima, COLUMNAS_CATALOGO).clearContent();
-  hoja.getRange(1, 1, 1, COLUMNAS_CATALOGO).setValues([ENCABEZADOS_CATALOGO]);
-  if (filas.length > 0) {
-    var valores = filas.map(function (f) { return f.map(celdaVacia_); });
-    hoja.getRange(2, 1, valores.length, COLUMNAS_CATALOGO).setValues(valores);
+  var todas = [ENCABEZADOS_CATALOGO].concat(filas);
+  var cambiadas = escribirDiferencias_(hoja, 1, COLUMNAS_CATALOGO, todas, null, 0);
+  if (cambiadas > 0) {
+    if (hoja.setFrozenRows) hoja.setFrozenRows(1);
+    var cabecera = hoja.getRange(1, 1, 1, COLUMNAS_CATALOGO);
+    if (cabecera.setFontWeight) cabecera.setFontWeight("bold");
   }
-  if (hoja.setFrozenRows) hoja.setFrozenRows(1);
-  if (hoja.getRange(1, 1, 1, COLUMNAS_CATALOGO).setFontWeight) hoja.getRange(1, 1, 1, COLUMNAS_CATALOGO).setFontWeight("bold");
-  return filas.length;
+  return { filas: filas.length, cambiadas: cambiadas };
 }
 
 function hoja_(nombre) {
@@ -307,13 +353,14 @@ function sincronizar_(forzar) {
 
     if (!forzar && datos.version === props.getProperty("VERSION")) return { estado: "sin cambios" };
 
-    escribirProveedores_(hoja_(HOJA_PROVEEDORES), datos.proveedores);
-    escribirArticulos_(hoja_(HOJA_ARTICULOS), datos.articulos);
+    // Sólo se escribe lo que cambió: lo demás queda intacto (y si nada cambió, no se toca la planilla).
+    var cambiosProveedores = escribirProveedores_(hoja_(HOJA_PROVEEDORES), datos.proveedores);
+    var cambiosArticulos = escribirArticulos_(hoja_(HOJA_ARTICULOS), datos.articulos);
     var precios = escribirPrecios_(hoja_(HOJA_PRECIOS), datos.precios);
     // Un catálogo viejo (sin el campo) no manda stock: en ese caso no se toca la columna.
     var stocks = datos.stock === undefined ? 0 : escribirStock_(hoja_(HOJA_PRECIOS), datos.stock);
     // Un catálogo viejo (sin el campo) no manda el listado: en ese caso no se toca la hoja.
-    var catalogo = datos.catalogo === undefined ? 0 : escribirCatalogo_(datos.catalogo);
+    var catalogo = datos.catalogo === undefined ? { filas: 0, cambiadas: 0 } : escribirCatalogo_(datos.catalogo);
     SpreadsheetApp.flush();
 
     props.setProperty("VERSION", datos.version);
@@ -325,7 +372,15 @@ function sincronizar_(forzar) {
       materiales: datos.articulos.length,
       precios: precios,
       stocks: stocks,
-      catalogo: catalogo
+      catalogo: catalogo.filas,
+      // Cuántas filas/celdas se escribieron de verdad (0 = la planilla ya estaba al día).
+      cambios: {
+        proveedores: cambiosProveedores,
+        articulos: cambiosArticulos,
+        catalogo: catalogo.cambiadas,
+        precios: precios,
+        stocks: stocks
+      }
     };
   } finally {
     candado.releaseLock();
@@ -372,7 +427,7 @@ function actualizarAhora() {
   try {
     var r = sincronizar_(true);
     if (r.estado === "ocupado") ui.alert("Ya hay una actualización en curso. Probá de nuevo en un momento.");
-    else ui.alert("Planilla actualizada: " + r.proveedores + " proveedores, " + r.materiales + " materiales y " + r.precios + " precios de venta y " + r.stocks + " stocks cambiados. Hoja Catálogo web: " + r.catalogo + " precios de venta.");
+    else ui.alert("Planilla actualizada: " + r.proveedores + " proveedores, " + r.materiales + " materiales y " + r.precios + " precios de venta y " + r.stocks + " stocks cambiados. Hoja Catálogo web: " + r.catalogo + " precios de venta.\n\nFilas modificadas: " + r.cambios.proveedores + " de proveedores, " + r.cambios.articulos + " de artículos y " + r.cambios.catalogo + " del catálogo web (lo que no cambió no se toca).");
   } catch (e) {
     ui.alert("No se pudo actualizar: " + e.message);
   }

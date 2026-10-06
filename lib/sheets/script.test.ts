@@ -17,6 +17,7 @@ function crearHoja(inicial: Record<string, unknown> = {}) {
   const valores = new Map<string, unknown>();
   const formulas = new Map<string, string>();
   const formatos = new Map<string, string>();
+  let escrituras = 0;
   const clave = (f: number, c: number) => `${f},${c}`;
   for (const [k, v] of Object.entries(inicial)) {
     if (typeof v === "string" && v.startsWith("=")) formulas.set(k, v);
@@ -33,7 +34,18 @@ function crearHoja(inicial: Record<string, unknown> = {}) {
   });
   return {
     valores, formulas, formatos,
-    getRange: rango,
+    // Cuenta las escrituras (para verificar que sólo se toca lo que cambió).
+    getRange: (f: number, c: number, nf = 1, nc = 1) => {
+      const r = rango(f, c, nf, nc);
+      return {
+        ...r,
+        setValues: (m: unknown[][]) => { escrituras++; return r.setValues(m); },
+        setValue: (v: unknown) => { escrituras++; return r.setValue(v); },
+        setFormula: (fx: string) => { escrituras++; return r.setFormula(fx); },
+        clearContent: () => { escrituras++; return r.clearContent(); },
+      };
+    },
+    escrituras: () => escrituras,
     getLastRow: () => Math.max(0, ...[...valores.keys(), ...formulas.keys()].map((k) => Number(k.split(",")[0]))),
     getLastColumn: () => Math.max(0, ...[...valores.keys(), ...formulas.keys()].map((k) => Number(k.split(",")[1]))),
     v: (f: number, c: number) => valores.get(clave(f, c)),
@@ -394,5 +406,98 @@ describe("proveedores nuevos o con datos nuevos llegan a la hoja Proveedores", (
     expect(hojas.Proveedores.v(6, 4)).toBe("+54 9 3534 111111");
     expect(hojas.Proveedores.v(7, 1)).toBe("Proveedor Nuevo");
     expect(hojas.Proveedores.v(7, 4)).toBe("+54 9 3534 222222");
+  });
+});
+
+describe("sólo se escribe lo que cambió", () => {
+  const sincronizar = (hojas: Record<string, Hoja>, cuerpo: unknown) =>
+    cargarScript({ hojas, respuesta: { codigo: 200, cuerpo } }).sincronizar_(true);
+  const escrituras = (hojas: Record<string, Hoja>) =>
+    Object.fromEntries(Object.entries(hojas).map(([n, h]) => [n, h.escrituras()]));
+
+  const base = {
+    ...DATOS,
+    proveedores: [
+      ["Ranco", "Corralón", "Juan", "123", "", "", ""],
+      ["Filtros SA", "Filtros", "Ana", "456", "", "", ""],
+    ],
+    catalogo: [
+      ["Piscinas", "indusplast_caribe_550", "Caribe 550", "Piscinas", "obra", 8810000, 3, "Activo", "05/10/2026"],
+      ["Cercos", "precioCon", "Cerco", "Cercos", "ml", 79500, "", "Activo", "04/10/2026"],
+    ],
+  };
+
+  it("si nada cambió, volver a sincronizar no escribe NADA en ninguna hoja", () => {
+    const hojas = hojasBase() as Record<string, Hoja>;
+    sincronizar(hojas, base);
+    const antes = escrituras(hojas);
+
+    const r = sincronizar(hojas, base);
+
+    expect(escrituras(hojas)).toEqual(antes);
+    expect(r.cambios).toEqual({ proveedores: 0, articulos: 0, catalogo: 0, precios: 0, stocks: 0 });
+  });
+
+  it("si cambia el teléfono de un proveedor, se reescribe esa fila y ninguna otra", () => {
+    const hojas = hojasBase() as Record<string, Hoja>;
+    sincronizar(hojas, base);
+    const antes = escrituras(hojas);
+
+    const cambiado = { ...base, proveedores: [base.proveedores[0], ["Filtros SA", "Filtros", "Ana", "999", "", "", ""]] };
+    const r = sincronizar(hojas, cambiado);
+
+    expect(r.cambios).toMatchObject({ proveedores: 1, articulos: 0, catalogo: 0 });
+    expect(hojas.Proveedores.v(7, 4)).toBe("999");
+    expect(hojas.Proveedores.v(6, 4)).toBe("123");
+    expect(hojas.Proveedores.escrituras() - antes.Proveedores).toBe(1); // una sola fila
+    expect(hojas["Artículos"].escrituras()).toBe(antes["Artículos"]); // no toca los artículos
+    expect(hojas["Catálogo web"].escrituras()).toBe(antes["Catálogo web"]);
+  });
+
+  it("un proveedor nuevo agrega sólo su fila; uno eliminado vacía sólo la suya", () => {
+    const hojas = hojasBase() as Record<string, Hoja>;
+    sincronizar(hojas, base);
+    const antes = hojas.Proveedores.escrituras();
+
+    sincronizar(hojas, { ...base, proveedores: [...base.proveedores, ["Nuevo", "Otro", "", "777", "", "", ""]] });
+    expect(hojas.Proveedores.v(8, 1)).toBe("Nuevo");
+    expect(hojas.Proveedores.escrituras() - antes).toBe(1);
+
+    sincronizar(hojas, base);
+    expect(hojas.Proveedores.v(8, 1)).toBeUndefined();
+  });
+
+  it("un cambio de precio en un artículo reescribe sólo esa fila; la fórmula en dólares no se repite", () => {
+    const hojas = hojasBase() as Record<string, Hoja>;
+    sincronizar(hojas, base);
+    const antes = hojas["Artículos"].escrituras();
+
+    sincronizar(hojas, { ...base, articulos: [{ usd: false, fila: fila("Cemento", 7000) }, base.articulos[1]] });
+
+    expect(hojas["Artículos"].v(6, 4)).toBe(7000);
+    expect(hojas["Artículos"].fx(7, 4)).toBe("=S7*$B$3");
+    expect(hojas["Artículos"].escrituras() - antes).toBe(1);
+  });
+
+  it("la hoja Catálogo web cambia sólo la fila del ítem modificado", () => {
+    const hojas = hojasBase() as Record<string, Hoja>;
+    sincronizar(hojas, base);
+    const antes = hojas["Catálogo web"].escrituras();
+
+    const filas = [[...base.catalogo[0]], base.catalogo[1]];
+    filas[0][6] = 2; // se vendió una unidad
+    const r = sincronizar(hojas, { ...base, catalogo: filas });
+
+    expect(hojas["Catálogo web"].v(2, 7)).toBe(2);
+    expect(r.cambios.catalogo).toBe(1);
+    expect(hojas["Catálogo web"].escrituras() - antes).toBe(1);
+  });
+
+  it("un número que la planilla guarda como texto (o con espacios) no cuenta como cambio", () => {
+    const hojas = hojasBase() as Record<string, Hoja>;
+    sincronizar(hojas, base);
+    hojas.Proveedores.valores.set("6,4", " 123 "); // la planilla lo muestra igual
+    const r = sincronizar(hojas, base);
+    expect(r.cambios.proveedores).toBe(0);
   });
 });
