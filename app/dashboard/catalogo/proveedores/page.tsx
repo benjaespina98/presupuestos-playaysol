@@ -266,10 +266,10 @@ function FilaProveedor({
         type="button"
         onClick={onEditar}
         aria-label={`Editar ${p.nombre}`}
-        className="ml-auto inline-flex min-h-11 items-center justify-end gap-1.5 rounded-md px-2 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8 md:ml-0 md:justify-center"
+        title="Editar"
+        className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-[#1B3A5C] hover:bg-[#1B3A5C]/8 md:ml-0"
       >
-        <IconEdit className="h-4 w-4" />
-        Editar
+        <IconEdit className="h-[18px] w-[18px]" />
       </button>
     </li>
   );
