@@ -12,7 +12,7 @@ import {
   type PedidoGuardado,
 } from "@/lib/domain/abastecimiento/pedidoDocumento";
 import { contarPorEstado, filtrarPedidos, proveedoresDePedido } from "@/lib/domain/abastecimiento/pedidosLista";
-import { formatARS } from "@/lib/format/ars";
+import { formatARSExacto } from "@/lib/format/ars";
 import { PanelPortal } from "@/components/PanelPortal";
 import { IconSearch } from "@/components/icons";
 import { BarraFiltros } from "@/components/catalogo/BarraFiltros";
@@ -191,7 +191,7 @@ function FilaPedido({ pedido: p, onAbrir }: { pedido: PedidoGuardado; onAbrir: (
       <p className="text-sm text-gray-700 md:text-right" title={proveedores.join(", ")}>
         {proveedores.length} {proveedores.length === 1 ? "proveedor" : "proveedores"}
       </p>
-      <p className="ml-auto whitespace-nowrap font-medium tabular-nums text-gray-900 md:ml-0 md:text-right">{formatARS(p.costo)}</p>
+      <p className="ml-auto whitespace-nowrap font-medium tabular-nums text-gray-900 md:ml-0 md:text-right">{formatARSExacto(p.costo)}</p>
       <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-medium ${CLASE_ESTADO[p.estado]}`}>
         {ETIQUETA_ESTADO[p.estado]}
       </span>

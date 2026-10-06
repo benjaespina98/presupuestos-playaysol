@@ -120,3 +120,19 @@ export function paraEditar(n: Monto | null | undefined): string {
   if (n === null || n === undefined || !Number.isFinite(n)) return "";
   return String(n);
 }
+
+const FORMATO_MONEDA_EXACTO = new Intl.NumberFormat("es-AR", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/**
+ * Como `formatARS`, pero un monto con centavos siempre lleva los dos decimales
+ * ("$ 4.326.972,10", no "$ 4.326.972,1"). Para pedidos y documentos, donde
+ * los totales salen de cantidad × precio y pueden no ser redondos.
+ */
+export function formatARSExacto(n: Monto | null | undefined): string {
+  if (n === null || n === undefined || !Number.isFinite(n)) return "";
+  const redondo = Math.round(n * 100) / 100;
+  return Number.isInteger(redondo) ? formatARS(redondo) : `$ ${FORMATO_MONEDA_EXACTO.format(redondo)}`;
+}

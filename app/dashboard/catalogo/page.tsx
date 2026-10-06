@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { guardarStockItem, listarItemsCatalogo } from "@/lib/catalogo";
 import {
-  agruparPorCategoria,
+  agruparParaListado,
   contarPorCategoria,
   contarPorLinea,
   contarPorStock,
@@ -12,12 +12,13 @@ import {
   resumenStock,
   textoStock,
   type FiltroStock,
+  type VistaCatalogo,
   ordenarCatalogo,
   textoParaCopiar,
   type ItemCatalogo,
 } from "@/lib/domain/catalogo/item";
 import type { Categoria } from "@/lib/domain/catalogo/categorias";
-import type { LineaPiscina } from "@/lib/domain/catalogo/listas";
+import { nombreCortoLista } from "@/lib/domain/catalogo/listas";
 import type { TipoCalculadora } from "@/lib/presupuestos";
 import { formatARS } from "@/lib/format/ars";
 import { formatFechaRelativa, formatFechaCompleta } from "@/lib/format/fecha";
@@ -37,7 +38,7 @@ export default function CatalogoPage() {
   const [busqueda, setBusqueda] = useState("");
   const [categoria, setCategoria] = useState<Categoria | "">("");
   const [tipo, setTipo] = useState<TipoCalculadora | "">("");
-  const [linea, setLinea] = useState<LineaPiscina | "">("");
+  const [linea, setLinea] = useState<VistaCatalogo | "">("");
   const [stock, setStock] = useState<FiltroStock | "">("");
   const [incluirInactivos, setIncluirInactivos] = useState(false);
   const [errorStock, setErrorStock] = useState<string | null>(null);
@@ -89,7 +90,11 @@ export default function CatalogoPage() {
   // Un bloque por categoría en vez de repetir la columna "Categoría" en cada
   // fila — con el catálogo lleno (varias decenas de ítems) es mucho más
   // rápido encontrar algo escaneando encabezados que leyendo una tabla plana.
-  const grupos = useMemo(() => (visibles ? agruparPorCategoria(visibles) : []), [visibles]);
+  const grupos = useMemo(() => (visibles ? agruparParaListado(visibles) : []), [visibles]);
+
+  // La columna "Calculadora" sobra cuando ya se filtró por una (o se miran sólo piscinas).
+  const mostrarTipo = !tipo && linea !== "indusplast" && linea !== "hormigon";
+  const mostrarEstado = incluirInactivos && !modoConsulta;
 
   const hayFiltros = !!(busqueda || categoria || tipo || linea || stock || incluirInactivos);
 
@@ -253,20 +258,20 @@ export default function CatalogoPage() {
 
           <div className="space-y-5">
             {grupos.map((grupo) => (
-              <div key={grupo.categoria}>
+              <div key={grupo.id}>
                 {/* Desktop / tablet: tabla por categoría */}
                 <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm sm:block">
-                  <CategoriaHeader categoria={grupo.categoria} cantidad={grupo.items.length} />
+                  <CategoriaHeader categoria={grupo.titulo} cantidad={grupo.items.length} />
                   <table className="w-full text-left text-sm">
                     <thead>
                       <tr className="border-b border-gray-200 bg-gray-50 text-gray-700">
                         <th className="px-4 py-3 font-medium">Producto</th>
-                        <th className="px-4 py-3 font-medium">Calculadora</th>
-                        <th className="px-4 py-3 text-right font-medium">Precio</th>
-                        <th className="px-4 py-3 text-center font-medium">Stock</th>
-                        <th className="px-4 py-3 font-medium">Actualizado</th>
-                        {!modoConsulta && <th className="px-4 py-3 font-medium">Estado</th>}
-                        <th className="px-4 py-3 font-medium"></th>
+                        {mostrarTipo && <th className="px-4 py-3 font-medium">Calculadora</th>}
+                        <th className="w-44 px-4 py-3 text-right font-medium">Precio</th>
+                        <th className="w-40 px-4 py-3 text-center font-medium">Stock</th>
+                        <th className="w-32 px-4 py-3 font-medium">Actualizado</th>
+                        {mostrarEstado && <th className="px-4 py-3 font-medium">Estado</th>}
+                        <th className="w-24 px-4 py-3 font-medium"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -278,11 +283,13 @@ export default function CatalogoPage() {
                           <td className="px-4 py-3 text-gray-900">
                             <ItemDescripcion item={item} />
                           </td>
-                          <td className="px-4 py-3">
-                            <span className="inline-flex rounded-md bg-[#EEF2F6] px-2 py-0.5 text-xs font-medium text-[#1B3A5C]">
-                              {TITULOS_TIPO[item.tipo]}
-                            </span>
-                          </td>
+                          {mostrarTipo && (
+                            <td className="px-4 py-3">
+                              <span className="inline-flex rounded-md bg-[#EEF2F6] px-2 py-0.5 text-xs font-medium text-[#1B3A5C]">
+                                {TITULOS_TIPO[item.tipo]}
+                              </span>
+                            </td>
+                          )}
                           <td className="px-4 py-3 text-right tabular-nums text-gray-700">
                             <PrecioItem item={item} />
                           </td>
@@ -292,7 +299,7 @@ export default function CatalogoPage() {
                           <td className="px-4 py-3 text-gray-500">
                             <FechaActualizacion updatedAt={item.updated_at} />
                           </td>
-                          {!modoConsulta && (
+                          {mostrarEstado && (
                             <td className="px-4 py-3">
                               <EstadoBadge activo={item.activo} />
                             </td>
@@ -328,20 +335,20 @@ export default function CatalogoPage() {
 
                 {/* Mobile: tarjetas por categoría */}
                 <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm sm:hidden">
-                  <CategoriaHeader categoria={grupo.categoria} cantidad={grupo.items.length} />
+                  <CategoriaHeader categoria={grupo.titulo} cantidad={grupo.items.length} />
                   <div className="flex flex-col divide-y divide-gray-100 p-3">
                     {grupo.items.map((item) => (
                       <div key={item.id} className="pt-3 first:pt-0">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <ItemDescripcion item={item} />
-                            <p className="mt-0.5 text-xs text-gray-400">{TITULOS_TIPO[item.tipo]}</p>
+                            {mostrarTipo && !nombreCortoLista(item.clave) && <p className="mt-0.5 text-xs text-gray-400">{TITULOS_TIPO[item.tipo]}</p>}
                           </div>
-                          {!modoConsulta && <EstadoBadge activo={item.activo} />}
+                          {!item.activo && !modoConsulta && <EstadoBadge activo={false} />}
                         </div>
                         <div className="mt-2 flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-gray-900">
+                            <p className="text-base font-semibold text-gray-900">
                               <PrecioItem item={item} />
                             </p>
                             <p className="mt-0.5 text-xs text-gray-400">
@@ -416,6 +423,18 @@ function CategoriaHeader({ categoria, cantidad }: { categoria: string; cantidad:
 }
 
 function ItemDescripcion({ item }: { item: ItemCatalogo }) {
+  // Las piscinas de lista se leen por modelo y medida ("Caribe 550"); lo que
+  // sigue a la raya larga ("contado, kit estándar instalado") va como detalle.
+  const corto = nombreCortoLista(item.clave);
+  if (corto) {
+    const detalle = item.descripcion?.split("—")[1]?.trim();
+    return (
+      <>
+        <p className="font-semibold">{corto}</p>
+        {detalle && <p className="text-xs text-gray-500">{detalle.charAt(0).toUpperCase() + detalle.slice(1)}</p>}
+      </>
+    );
+  }
   return (
     <>
       <p className="font-medium">{item.descripcion || item.clave}</p>

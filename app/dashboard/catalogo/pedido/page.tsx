@@ -27,7 +27,7 @@ import {
 import { exportarPedido, type FormatoPedido, type ModoPedido } from "@/lib/documentos/pedidos/exportar";
 import { compartirOdescargarArchivo } from "@/lib/documentos/compartir";
 import { guardarPedido, listarPedidos } from "@/lib/pedidos";
-import { formatARS } from "@/lib/format/ars";
+import { formatARSExacto } from "@/lib/format/ars";
 import { copiarAlPortapapeles } from "@/lib/clipboard";
 import { PanelPortal } from "@/components/PanelPortal";
 import { Interruptor } from "@/components/catalogo/FiltrosCatalogo";
@@ -351,7 +351,7 @@ function PedidoContenido() {
             <Resumen etiqueta="Proveedores a contactar" valor={String(pedido.proveedores)} />
             <Resumen
               etiqueta="Costo estimado"
-              valor={formatARS(pedido.costo)}
+              valor={formatARSExacto(pedido.costo)}
               nota={pedido.sinPrecio > 0 ? `Sin contar ${pedido.sinPrecio} ${pedido.sinPrecio === 1 ? "artículo" : "artículos"} con precio a confirmar` : undefined}
             />
           </section>
@@ -369,11 +369,11 @@ function PedidoContenido() {
               {/* Barra fija: al bajar por una tabla larga, el costo y los botones de exportar siguen a mano. */}
               <div
                 data-print-hide=""
-                className="sticky top-0 z-20 -mx-4 mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-gray-200 bg-gray-50 px-4 py-2.5"
+                className="-mx-4 mb-4 flex flex-wrap md:sticky md:top-0 md:z-20 items-center gap-x-4 gap-y-2 border-b border-gray-200 bg-gray-50 px-4 py-2.5"
               >
                 <p className="mr-auto text-sm tabular-nums text-gray-600">
                   <b className="text-gray-900">{pedido.articulos}</b> artículos · <b className="text-gray-900">{pedido.proveedores}</b> proveedores ·{" "}
-                  <b className="text-gray-900">{formatARS(pedido.costo)}</b>
+                  <b className="text-gray-900">{formatARSExacto(pedido.costo)}</b>
                 </p>
                 <Accion principal onClick={onGuardar} deshabilitado={ocupado || !!vigente}>
                   {vigente ? `Guardado · ${numeroFormateado(vigente.numero)}` : "Guardar pedido"}
@@ -507,6 +507,9 @@ function Accion({
   );
 }
 
+/** Columnas desde md: artículo · cantidad · precio unit. · subtotal · quitar. */
+const COLUMNAS = "md:grid-cols-[minmax(0,1fr)_15rem_8rem_8rem_5.5rem]";
+
 function GrupoTabla({
   grupo,
   copiado,
@@ -529,7 +532,7 @@ function GrupoTabla({
         </div>
         <p className="text-sm tabular-nums text-gray-700">
           {grupo.lineas.length} {grupo.lineas.length === 1 ? "artículo" : "artículos"} ·{" "}
-          <span className="font-semibold text-gray-900">{formatARS(grupo.subtotal)}</span>
+          <span className="font-semibold text-gray-900">{formatARSExacto(grupo.subtotal)}</span>
         </p>
         <button
           type="button"
@@ -542,89 +545,89 @@ function GrupoTabla({
         </button>
       </header>
 
-      <div className="overflow-x-auto">
-        {/* Anchos fijos: así las columnas de todos los proveedores quedan alineadas entre sí. */}
-        <table className="w-full min-w-[40rem] table-fixed text-left text-sm">
-          <colgroup>
-            <col />
-            <col className="w-60" />
-            <col className="w-36" />
-            <col className="w-36" />
-            <col className="w-24" />
-          </colgroup>
-          <thead>
-            <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-500">
-              <th className="px-4 py-2 font-medium">Artículo</th>
-              <th className="px-4 py-2 font-medium">Cantidad</th>
-              <th className="px-4 py-2 text-right font-medium">Precio unit.</th>
-              <th className="px-4 py-2 text-right font-medium">Subtotal</th>
-              <th data-print-hide="" className="px-2 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {grupo.lineas.map((l) => {
-              const ajustada = ajustes[l.material.id]?.cantidad !== undefined;
-              return (
-                <tr key={l.material.id} className="border-b border-gray-100 last:border-0">
-                  <td className="px-4 py-2.5 text-gray-900">{l.material.nombre}</td>
-                  <td className="whitespace-nowrap px-4 py-2.5">
-                    {/* Se confirma al salir del campo (o con Enter): si cada tecla recalculara el pedido, borrar
-                        el número para escribir otro sacaría la fila de la tabla en el medio. */}
-                    <input
-                      key={`${l.material.id}-${l.cantidad}`}
-                      type="number"
-                      min={0}
-                      step="any"
-                      aria-label={`Cantidad de ${l.material.nombre}`}
-                      defaultValue={l.cantidad}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") e.currentTarget.blur();
-                      }}
-                      onBlur={(e) => {
-                        const n = numero(e.target.value);
-                        if (n <= 0) {
-                          e.target.value = String(l.cantidad); // vacío o 0: se deja la que estaba
-                          return;
-                        }
-                        onAjustar(l.material.id, n === l.calculada ? null : { cantidad: n });
-                      }}
-                      className={`w-20 rounded-md border px-2 py-1.5 text-sm tabular-nums focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 ${
-                        ajustada ? "border-amber-300 bg-amber-50" : "border-gray-200 bg-white"
-                      }`}
-                    />{" "}
-                    <span className="text-gray-500">{l.material.unidad ?? ""}</span>
-                    {ajustada && (
-                      <span data-print-hide="" className="ml-2 text-xs text-amber-700">
-                        calculado: {coma(l.calculada)}
-                      </span>
-                    )}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums text-gray-700">
-                    {l.precio === null ? (
-                      <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">A confirmar</span>
-                    ) : (
-                      formatARS(l.precio)
-                    )}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-right font-medium tabular-nums text-gray-900">
-                    {l.precio === null ? "—" : formatARS(l.subtotal)}
-                  </td>
-                  <td data-print-hide="" className="px-2 py-1.5 text-right">
-                    <button
-                      type="button"
-                      onClick={() => onAjustar(l.material.id, { excluido: true })}
-                      aria-label={`Quitar ${l.material.nombre} del pedido`}
-                      className="min-h-11 rounded-md px-3 text-sm text-gray-500 hover:bg-gray-100 hover:text-red-600"
-                    >
-                      Quitar
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      {/* Una grilla en vez de <table>: en el celular cada artículo es una tarjeta (nombre arriba, cantidad
+          y subtotal abajo) y desde md las columnas quedan alineadas entre todos los proveedores. */}
+      <div
+        aria-hidden="true"
+        className={`hidden border-b border-gray-100 px-4 py-2 text-xs font-medium uppercase tracking-wide text-gray-500 md:grid md:items-center md:gap-x-4 ${COLUMNAS}`}
+      >
+        <span>Artículo</span>
+        <span>Cantidad</span>
+        <span className="text-right">Precio unit.</span>
+        <span className="text-right">Subtotal</span>
+        <span data-print-hide="" />
       </div>
+      <ul className="divide-y divide-gray-100">
+        {grupo.lineas.map((l) => {
+          const ajustada = ajustes[l.material.id]?.cantidad !== undefined;
+          return (
+            <li
+              key={l.material.id}
+              className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-3 md:gap-x-4 md:py-2.5 ${COLUMNAS}`}
+            >
+              <p className="col-start-1 row-start-1 min-w-0 break-words text-gray-900 md:col-auto md:row-auto">{l.material.nombre}</p>
+
+              <div className="col-start-1 row-start-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 md:col-auto md:row-auto">
+                {/* Se confirma al salir del campo (o con Enter): si cada tecla recalculara el pedido, borrar
+                    el número para escribir otro sacaría la fila de la tabla en el medio. */}
+                <input
+                  key={`${l.material.id}-${l.cantidad}`}
+                  type="number"
+                  min={0}
+                  step="any"
+                  inputMode="decimal"
+                  aria-label={`Cantidad de ${l.material.nombre}`}
+                  defaultValue={l.cantidad}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.currentTarget.blur();
+                  }}
+                  onBlur={(e) => {
+                    const n = numero(e.target.value);
+                    if (n <= 0) {
+                      e.target.value = String(l.cantidad); // vacío o 0: se deja la que estaba
+                      return;
+                    }
+                    onAjustar(l.material.id, n === l.calculada ? null : { cantidad: n });
+                  }}
+                  className={`min-h-10 w-24 rounded-md border px-2 py-1.5 text-sm tabular-nums focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 ${
+                    ajustada ? "border-amber-300 bg-amber-50" : "border-gray-200 bg-white"
+                  }`}
+                />
+                <span className="text-gray-500">{l.material.unidad ?? ""}</span>
+                {ajustada && (
+                  <span data-print-hide="" className="text-xs text-amber-700">
+                    calculado: {coma(l.calculada)}
+                  </span>
+                )}
+              </div>
+
+              <p className="col-span-2 row-start-3 whitespace-nowrap text-xs tabular-nums text-gray-500 md:col-auto md:row-auto md:text-right md:text-sm md:text-gray-700">
+                <span className="md:hidden">Precio unit. </span>
+                {l.precio === null ? (
+                  <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">A confirmar</span>
+                ) : (
+                  formatARSExacto(l.precio)
+                )}
+              </p>
+
+              <p className="col-start-2 row-start-2 whitespace-nowrap text-right font-medium tabular-nums text-gray-900 md:col-auto md:row-auto">
+                {l.precio === null ? "—" : formatARSExacto(l.subtotal)}
+              </p>
+
+              <div data-print-hide="" className="col-start-2 row-start-1 text-right md:col-auto md:row-auto">
+                <button
+                  type="button"
+                  onClick={() => onAjustar(l.material.id, { excluido: true })}
+                  aria-label={`Quitar ${l.material.nombre} del pedido`}
+                  className="min-h-11 rounded-md px-3 text-sm text-gray-500 hover:bg-gray-100 hover:text-red-600"
+                >
+                  Quitar
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

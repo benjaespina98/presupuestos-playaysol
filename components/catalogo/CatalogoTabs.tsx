@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -17,9 +18,16 @@ const SECCIONES = [
  */
 export function CatalogoTabs() {
   const pathname = usePathname();
+  const nav = useRef<HTMLElement>(null);
+
+  // En el celular las pestañas no entran todas: la activa se acerca al centro para que no quede oculta.
+  useEffect(() => {
+    const activa = nav.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    activa?.scrollIntoView?.({ inline: "center", block: "nearest" });
+  }, [pathname]);
 
   return (
-    <nav aria-label="Secciones del catálogo" className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0">
+    <nav ref={nav} aria-label="Secciones del catálogo" className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0">
       <ul className="flex gap-1 border-b border-gray-200">
         {SECCIONES.map((s) => {
           const activa = "exacto" in s && s.exacto

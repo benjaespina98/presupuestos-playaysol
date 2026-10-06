@@ -436,7 +436,7 @@ describe("CatalogoPage · las 9 categorías", () => {
       .getAllByRole("button")
       .map((b) => b.textContent?.replace(/\d+$/, ""));
 
-    expect(chips).toEqual(["Todas", ...CATEGORIAS]);
+    expect(chips).toEqual(["Todos", ...CATEGORIAS]);
   });
 
   it("los chips muestran sólo las categorías que tienen ítems, con su contador", async () => {
@@ -451,7 +451,7 @@ describe("CatalogoPage · las 9 categorías", () => {
     render(<CatalogoPage />);
     const grupo = await screen.findByRole("group", { name: "Filtrar por categoría" });
 
-    expect(within(grupo).getByRole("button", { name: /^Todass*3$/ })).toBeInTheDocument();
+    expect(within(grupo).getByRole("button", { name: /^Todoss*3$/ })).toBeInTheDocument();
     expect(within(grupo).getByRole("button", { name: /^Cercoss*2$/ })).toBeInTheDocument();
     expect(within(grupo).getByRole("button", { name: /^Piscinass*1$/ })).toBeInTheDocument();
     expect(within(grupo).queryByRole("button", { name: /Mano de obra/ })).not.toBeInTheDocument();
@@ -602,5 +602,47 @@ describe("CatalogoPage · stock", () => {
 
     expect(screen.queryByRole("button", { name: /Sumar una unidad/ })).not.toBeInTheDocument();
     expect(screen.getAllByTitle("2 en stock").length).toBeGreaterThan(0);
+  });
+});
+
+describe("CatalogoPage · piscinas de lista", () => {
+  const LISTA = [
+    item({ id: "c650", clave: "indusplast_caribe_650", descripcion: "Piscina de fibra Indusplast Caribe 650 — contado, kit estándar instalado", categoria: "Piscinas", precio: 9965000 }),
+    item({ id: "r400", clave: "indusplast_racionalista_400", descripcion: "Piscina de fibra Indusplast Racionalista 400 — contado, kit estándar instalado", categoria: "Piscinas", precio: 6490000 }),
+    item({ id: "r450", clave: "indusplast_racionalista_450", descripcion: "Piscina de fibra Indusplast Racionalista 450 — contado, kit estándar instalado", categoria: "Piscinas", precio: 6950000 }),
+    item({ id: "kit", clave: "kit_limpieza", descripcion: "Kit de limpieza", categoria: "Piscinas" }),
+  ];
+
+  it("muestra un bloque por modelo, en orden, con nombre corto y el detalle debajo", async () => {
+    listarItemsCatalogo.mockResolvedValue({ items: LISTA, error: null });
+    render(<CatalogoPage />);
+    await screen.findAllByText("Racionalista 400");
+
+    const titulos = [...new Set(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent))];
+    expect(titulos.slice(0, 2)).toEqual(["Indusplast · Racionalista", "Indusplast · Caribe"]);
+    expect(screen.getAllByText("Contado, kit estándar instalado").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Kit de limpieza").length).toBeGreaterThan(0);
+  });
+
+  it("el chip 'Piscinas Indusplast' deja sólo esas y oculta los rubros", async () => {
+    const user = userEvent.setup();
+    listarItemsCatalogo.mockResolvedValue({ items: LISTA, error: null });
+    render(<CatalogoPage />);
+    await screen.findAllByText("Racionalista 400");
+    const tipo = screen.getByRole("group", { name: "Filtrar por tipo de producto" });
+    expect(within(tipo).getByRole("button", { name: /^Piscinas Indusplast\s*3$/ })).toBeInTheDocument();
+    expect(within(tipo).getByRole("button", { name: /^Opcionales y otros\s*1$/ })).toBeInTheDocument();
+
+    await user.click(within(tipo).getByRole("button", { name: /Piscinas Indusplast/ }));
+
+    expect(screen.queryByText("Kit de limpieza")).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Filtrar por categoría" })).not.toBeInTheDocument();
+  });
+
+  it("sin piscinas de lista no hay filtro de tipo", async () => {
+    listarItemsCatalogo.mockResolvedValue({ items: [LISTA[3]], error: null });
+    render(<CatalogoPage />);
+    await screen.findAllByText("Kit de limpieza");
+    expect(screen.queryByRole("group", { name: "Filtrar por tipo de producto" })).not.toBeInTheDocument();
   });
 });

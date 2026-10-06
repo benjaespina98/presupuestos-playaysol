@@ -1,8 +1,7 @@
 "use client";
 
 import { CATEGORIAS, type Categoria } from "@/lib/domain/catalogo/categorias";
-import type { FiltroStock } from "@/lib/domain/catalogo/item";
-import { LINEAS_PISCINA, type LineaPiscina } from "@/lib/domain/catalogo/listas";
+import type { FiltroStock, VistaCatalogo } from "@/lib/domain/catalogo/item";
 import type { TipoCalculadora } from "@/lib/presupuestos";
 import { IconSearch } from "@/components/icons";
 import { BarraFiltros } from "./BarraFiltros";
@@ -15,10 +14,10 @@ export interface FiltrosCatalogoProps {
   onCategoria: (v: Categoria | "") => void;
   tipo: TipoCalculadora | "";
   onTipo: (v: TipoCalculadora | "") => void;
-  linea: LineaPiscina | "";
-  onLinea: (v: LineaPiscina | "") => void;
-  /** Piscinas completas por línea; vacío = no hay ninguna, se oculta el filtro. */
-  conteosLinea: Partial<Record<LineaPiscina, number>>;
+  linea: VistaCatalogo | "";
+  onLinea: (v: VistaCatalogo | "") => void;
+  /** Ítems por clase (Indusplast / Hormigón / otros), con el resto de los filtros aplicados. */
+  conteosLinea: Partial<Record<VistaCatalogo, number>>;
   stock: FiltroStock | "";
   onStock: (v: FiltroStock | "") => void;
   /** Ítems por disponibilidad; si ninguno lleva stock, el filtro se oculta. */
@@ -70,7 +69,18 @@ export function FiltrosCatalogo({
   // Sólo las categorías con algo adentro (más la elegida, para poder des-elegirla).
   const categoriasVisibles = CATEGORIAS.filter((c) => (conteos.porCategoria[c] ?? 0) > 0 || c === categoria);
   const hayStock = conteosStock.disponible + conteosStock.agotado > 0 || stock !== "";
-  const lineasVisibles = LINEAS_PISCINA.filter((l) => (conteosLinea[l.id] ?? 0) > 0 || l.id === linea);
+  // "Qué ver" sólo aparece si hay piscinas completas cargadas.
+  const hayListas = (conteosLinea.indusplast ?? 0) + (conteosLinea.hormigon ?? 0) > 0 || linea === "indusplast" || linea === "hormigon";
+  const vistas = (
+    [
+      ["indusplast", "Piscinas Indusplast"],
+      ["hormigon", "Piscinas de hormigón"],
+      ["otros", "Opcionales y otros"],
+    ] as const
+  ).filter(([id]) => (conteosLinea[id] ?? 0) > 0 || id === linea);
+  const totalVistas = Object.values(conteosLinea).reduce((a, b) => a + (b ?? 0), 0);
+  // Las categorías no aplican a las piscinas de lista (todas son "Piscinas"): se ocultan al mirarlas.
+  const mostrarCategorias = linea !== "indusplast" && linea !== "hormigon";
 
   return (
     <>
@@ -107,21 +117,6 @@ export function FiltrosCatalogo({
             ))}
           </select>
 
-          {lineasVisibles.length > 0 && (
-            <select
-              value={linea}
-              onChange={(e) => onLinea(e.target.value as LineaPiscina | "")}
-              aria-label="Filtrar piscinas completas por línea"
-              className={CLASE_SELECT}
-            >
-              <option value="">Piscinas completas: todas</option>
-              {lineasVisibles.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.etiqueta} ({conteosLinea[l.id] ?? 0})
-                </option>
-              ))}
-            </select>
-          )}
 
           {hayStock && (
             <select value={stock} onChange={(e) => onStock(e.target.value as FiltroStock | "")} aria-label="Filtrar por stock" className={CLASE_SELECT}>
@@ -133,20 +128,39 @@ export function FiltrosCatalogo({
           )}
         </div>
 
-        <div
+        {hayListas && (
+          <div
+            role="group"
+            aria-label="Filtrar por tipo de producto"
+            className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0"
+          >
+            <EtiquetaFila>Tipo</EtiquetaFila>
+            <Chip activo={linea === ""} onClick={() => onLinea("")} cantidad={totalVistas}>
+              Todo
+            </Chip>
+            {vistas.map(([id, etiqueta]) => (
+              <Chip key={id} activo={linea === id} onClick={() => onLinea(linea === id ? "" : id)} cantidad={conteosLinea[id] ?? 0}>
+                {etiqueta}
+              </Chip>
+            ))}
+          </div>
+        )}
+
+        {mostrarCategorias && <div
           role="group"
           aria-label="Filtrar por categoría"
           className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0"
         >
+          <EtiquetaFila>Rubro</EtiquetaFila>
           <Chip activo={categoria === ""} onClick={() => onCategoria("")} cantidad={conteos.total}>
-            Todas
+            Todos
           </Chip>
           {categoriasVisibles.map((c) => (
             <Chip key={c} activo={categoria === c} onClick={() => onCategoria(categoria === c ? "" : c)} cantidad={conteos.porCategoria[c] ?? 0}>
               {c}
             </Chip>
           ))}
-        </div>
+        </div>}
       </BarraFiltros>
 
       <div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-0.5">
@@ -168,6 +182,11 @@ export function FiltrosCatalogo({
       </div>
     </>
   );
+}
+
+/** Rótulo al comienzo de una fila de chips, para que se entienda qué filtra cada una. */
+function EtiquetaFila({ children }: { children: React.ReactNode }) {
+  return <span className="w-12 shrink-0 self-center text-[11px] font-semibold uppercase tracking-wide text-gray-400">{children}</span>;
 }
 
 export function Chip({

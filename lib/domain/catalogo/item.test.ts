@@ -4,6 +4,8 @@ import {
   agruparPorCategoria,
   categoriaEfectiva,
   contarPorCategoria,
+  agruparParaListado,
+  contarPorLinea,
   contarPorStock,
   llevaStock,
   resumenStock,
@@ -311,5 +313,46 @@ describe("stock", () => {
     expect(textoParaCopiar(conUnidades, f)).toBe("Caribe 650: $1000 · 3 en stock");
     expect(textoParaCopiar(agotada, f)).toBe("Caribe 550: $1000 · sin stock");
     expect(textoParaCopiar(sinStock, f)).toBe("Hierro del 6: $1000");
+  });
+});
+
+describe("piscinas de lista en el listado", () => {
+  const fibra = (clave: string) => item({ id: clave, clave, descripcion: `Piscina de fibra Indusplast X — contado` });
+  const todos = [
+    item({ id: "kit", clave: "kit_limpieza", descripcion: "Kit", categoria: "Piscinas" }),
+    fibra("indusplast_caribe_650"),
+    fibra("indusplast_racionalista_450"),
+    fibra("indusplast_caribe_550"),
+    fibra("indusplast_racionalista_400"),
+    item({ id: "h2", clave: "lista_hormigon_7x3_50", categoria: "Piscinas" }),
+    item({ id: "h1", clave: "lista_hormigon_6x3", categoria: "Piscinas" }),
+    item({ id: "h3", clave: "lista_hormigon_6_5x2.5", categoria: "Piscinas" }),
+    item({ id: "cerco", clave: "cerco", categoria: "Cercos" }),
+  ];
+
+  it("las piscinas van primero, un bloque por modelo y ordenadas por tamaño; lo demás por categoría", () => {
+    const grupos = agruparParaListado(ordenarCatalogo(todos));
+    expect(grupos.map((g) => g.titulo)).toEqual([
+      "Indusplast · Racionalista",
+      "Indusplast · Caribe",
+      "Hormigón · precio de lista",
+      "Piscinas",
+      "Cercos",
+    ]);
+    expect(grupos[0].items.map((i) => i.clave)).toEqual(["indusplast_racionalista_400", "indusplast_racionalista_450"]);
+    expect(grupos[1].items.map((i) => i.clave)).toEqual(["indusplast_caribe_550", "indusplast_caribe_650"]);
+    expect(grupos[2].items.map((i) => i.clave)).toEqual(["lista_hormigon_6x3", "lista_hormigon_6_5x2.5", "lista_hormigon_7x3_50"]);
+    expect(grupos[3].items.map((i) => i.id)).toEqual(["kit"]); // el kit ya no se mezcla con las piscinas
+  });
+
+  it("filtra por clase: Indusplast, hormigón u otros", () => {
+    const claves = (linea: "indusplast" | "hormigon" | "otros") => filtrarCatalogo(todos, { linea }).map((i) => i.id);
+    expect(claves("indusplast")).toHaveLength(4);
+    expect(claves("hormigon")).toEqual(["h2", "h1", "h3"]);
+    expect(claves("otros")).toEqual(["kit", "cerco"]);
+  });
+
+  it("cuenta por clase, con 'otros' incluido", () => {
+    expect(contarPorLinea(todos, {})).toEqual({ indusplast: 4, hormigon: 3, otros: 2 });
   });
 });
