@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calcularGeometriaPlano, type Prim } from "./losetas";
-import { dibujarBrujula, reservaPorLado, ubicarObjetos, vectoresCardinales, etiquetaPosicion } from "./ubicacion";
+import { centroPorDefecto, colocarObjeto, dibujarBrujula, reservaUbicacion, separarObjetos, vectoresCardinales } from "./ubicacion";
 
 const base = { largo: 8, ancho: 4, solar: 1.5, opuesto: 1.5, lateral1: 1.5, lateral2: 1.5 };
 const editor = { viewW: 680, viewHmax: 420, showDims: false, interactive: true };
@@ -52,92 +52,100 @@ describe("puntos cardinales", () => {
   });
 });
 
-describe("sala de filtro y casa", () => {
-  it("reserva lugar sólo en el lado elegido, y se apilan en el mismo lado", () => {
-    expect(reservaPorLado([{ tipo: "sala", lado: "opuesto", pos: "fin" }])).toEqual({ solar: 0, opuesto: 56, lateral1: 0, lateral2: 0 });
-    const juntas = reservaPorLado([
-      { tipo: "sala", lado: "solar", pos: "inicio" },
-      { tipo: "casa", lado: "solar", pos: "centro" },
-    ]);
-    expect(juntas.solar).toBe(56 + 88);
+describe("sala de filtro y casa (se arrastran, pero quedan siempre afuera del borde)", () => {
+  const borde = { x: 200, y: 150, w: 400, h: 200 };
+  const R = reservaUbicacion(["sala", "casa"]);
+  const adentro = (c: { x: number; y: number; w: number; h: number }) =>
+    c.x < borde.x + borde.w && c.x + c.w > borde.x && c.y < borde.y + borde.h && c.y + c.h > borde.y;
+
+  it("reserva sólo si hay algo, y lo que pide el más grande", () => {
+    expect(reservaUbicacion([])).toBe(0);
+    expect(reservaUbicacion(["sala"])).toBeLessThan(reservaUbicacion(["casa"]));
+    expect(reservaUbicacion(["sala", "casa"])).toBe(reservaUbicacion(["casa"]));
   });
 
-  it("la sala va afuera del borde, del lado pedido y nunca encima", () => {
-    const borde = { x: 100, y: 100, w: 400, h: 200 };
-    const lados = {
-      lateral1: (c: { y: number; h: number }) => c.y + c.h <= borde.y,
-      lateral2: (c: { y: number }) => c.y >= borde.y + borde.h,
-      solar: (c: { x: number; w: number }) => c.x + c.w <= borde.x,
-      opuesto: (c: { x: number }) => c.x >= borde.x + borde.w,
-    } as const;
-    for (const lado of ["lateral1", "lateral2", "solar", "opuesto"] as const) {
-      const [c] = ubicarObjetos([{ tipo: "sala", lado, pos: "centro" }], borde);
-      expect(lados[lado](c)).toBe(true);
-    }
-  });
-
-  it("la posición sobre el lado: inicio, centro o fin", () => {
-    const borde = { x: 0, y: 100, w: 400, h: 200 };
-    const x = (pos: "inicio" | "centro" | "fin") => ubicarObjetos([{ tipo: "sala", lado: "lateral1", pos }], borde)[0].x;
-    expect(x("inicio")).toBe(0);
-    expect(x("centro")).toBe((400 - 84) / 2);
-    expect(x("fin")).toBe(400 - 84);
-  });
-
-  it("si comparten lado, la casa queda detrás de la sala (más lejos del borde)", () => {
-    const [sala, casa] = ubicarObjetos(
-      [{ tipo: "sala", lado: "lateral2", pos: "fin" }, { tipo: "casa", lado: "lateral2", pos: "centro" }],
-      { x: 0, y: 0, w: 400, h: 200 }
-    );
-    expect(casa.y).toBeGreaterThanOrEqual(sala.y + sala.h);
-  });
-
-  it("en el plano: se dibujan con su nombre, en la leyenda y dentro del dibujo, sin tocar la pileta", () => {
-    const g = calcularGeometriaPlano({ ...base, salaFiltro: true, salaLado: "opuesto", casa: true, casaLado: "lateral1" }, cliente);
-    expect(textos(g.extras)).toEqual(expect.arrayContaining(["Sala de", "filtro", "Casa /", "quincho"]));
-    expect(g.legend.map((l) => l.label)).toEqual(expect.arrayContaining(["Sala de filtro", "Casa / quincho"]));
-    const fondo = g.fondo as Extract<Prim, { t: "rect" }>;
-    const sala = rects(g.extras).find((r) => r.fill === "#4B5563")!;
-    expect(sala.x).toBeGreaterThanOrEqual(fondo.x + fondo.w); // fuera del borde, a la derecha
-    for (const r of rects(g.extras).filter((r) => r.fill === "#4B5563" || r.fill === "#E4DED2")) {
-      expect(r.x).toBeGreaterThanOrEqual(0);
-      expect(r.y).toBeGreaterThanOrEqual(0);
-      expect(r.x + r.w).toBeLessThanOrEqual(g.viewW);
-      expect(r.y + r.h).toBeLessThanOrEqual(g.svgH);
-    }
-  });
-
-  it("reservar lugar achica el plano pero el borde y la pileta siguen proporcionales", () => {
-    const sin = calcularGeometriaPlano(base, cliente);
-    const con = calcularGeometriaPlano({ ...base, casa: true, casaLado: "solar", salaFiltro: true, salaLado: "lateral2" }, cliente);
-    expect(con.pool.w / con.pool.h).toBeCloseTo(sin.pool.w / sin.pool.h, 5);
-    expect(con.pool.w).toBeLessThanOrEqual(sin.pool.w);
-  });
-
-  it("las cotas y el título quedan por fuera de lo reservado (no se pisan con la casa)", () => {
-    const g = calcularGeometriaPlano({ ...base, casa: true, casaLado: "lateral1" }, cliente);
-    const casa = rects(g.extras).find((r) => r.fill === "#E4DED2")!;
-    const titulo = g.dims.find((p) => p.t === "text" && p.text.startsWith("Pileta")) as Extract<Prim, { t: "text" }>;
-    expect(titulo.y).toBeLessThan(casa.y);
-  });
-
-  it("en cada lado: ninguna combinación se sale del dibujo ni de la leyenda", () => {
-    for (const lado of ["solar", "opuesto", "lateral1", "lateral2"] as const) {
-      for (const op of [editor, cliente]) {
-        const g = calcularGeometriaPlano({ ...base, salaFiltro: true, salaLado: lado, casa: true, casaLado: lado, puntosCardinales: true }, op);
-        for (const r of rects(g.extras).filter((r) => r.fill === "#4B5563" || r.fill === "#E4DED2")) {
-          expect(r.x).toBeGreaterThanOrEqual(-0.5);
-          expect(r.y).toBeGreaterThanOrEqual(-0.5);
-          expect(r.x + r.w).toBeLessThanOrEqual(g.viewW + 0.5);
-          expect(r.y + r.h).toBeLessThanOrEqual(g.svgH + 0.5);
+  it("soltarla en cualquier punto (incluso encima de la pileta) la deja afuera del borde y dentro de lo reservado", () => {
+    for (const tipo of ["sala", "casa"] as const) {
+      for (let fx = -0.4; fx <= 1.4; fx += 0.1) {
+        for (let fy = -0.6; fy <= 1.6; fy += 0.15) {
+          const c = colocarObjeto(tipo, { x: borde.x + fx * borde.w, y: borde.y + fy * borde.h }, borde, R);
+          expect(adentro(c)).toBe(false);
+          expect(c.x).toBeGreaterThanOrEqual(borde.x - R - 0.001);
+          expect(c.y).toBeGreaterThanOrEqual(borde.y - R - 0.001);
+          expect(c.x + c.w).toBeLessThanOrEqual(borde.x + borde.w + R + 0.001);
+          expect(c.y + c.h).toBeLessThanOrEqual(borde.y + borde.h + R + 0.001);
         }
       }
     }
   });
 
-  it("etiquetas de posición según el lado", () => {
-    expect(etiquetaPosicion("lateral1", "inicio")).toBe("Hacia la izquierda");
-    expect(etiquetaPosicion("solar", "fin")).toBe("Hacia abajo");
-    expect(etiquetaPosicion("opuesto", "centro")).toBe("Centrada");
+  it("queda pegada al lado donde se la soltó, con su lado largo a lo largo de ese lado", () => {
+    const arriba = colocarObjeto("casa", { x: 400, y: 100 }, borde, R);
+    expect(arriba.y + arriba.h).toBeLessThanOrEqual(borde.y);
+    expect(arriba.w).toBeGreaterThan(arriba.h);
+    const izquierda = colocarObjeto("casa", { x: 150, y: 250 }, borde, R);
+    expect(izquierda.x + izquierda.w).toBeLessThanOrEqual(borde.x);
+    expect(izquierda.h).toBeGreaterThan(izquierda.w);
+    const derecha = colocarObjeto("sala", { x: 650, y: 250 }, borde, R);
+    expect(derecha.x).toBeGreaterThanOrEqual(borde.x + borde.w);
+    const abajo = colocarObjeto("sala", { x: 400, y: 400 }, borde, R);
+    expect(abajo.y).toBeGreaterThanOrEqual(borde.y + borde.h);
+  });
+
+  it("de fábrica: la sala del lado opuesto y la casa del lado del solar", () => {
+    expect(colocarObjeto("sala", centroPorDefecto("sala", borde), borde, R).x).toBeGreaterThanOrEqual(borde.x + borde.w);
+    expect(colocarObjeto("casa", centroPorDefecto("casa", borde), borde, R).x + 64).toBeLessThanOrEqual(borde.x);
+  });
+
+  it("si la casa queda encima de la sala, se corre a lo largo del lado", () => {
+    const sala = colocarObjeto("sala", { x: 650, y: 330 }, borde, R);
+    const casa = colocarObjeto("casa", { x: 650, y: 300 }, borde, R);
+    const corrida = separarObjetos(sala, casa, borde, R);
+    const chocan = corrida.x < sala.x + sala.w && sala.x < corrida.x + corrida.w && corrida.y < sala.y + sala.h && sala.y < corrida.y + corrida.h;
+    expect(chocan).toBe(false);
+  });
+
+  it("en el plano: sale con su nombre, en la leyenda, y la posición guardada (en metros) la mueve", () => {
+    const g0 = calcularGeometriaPlano({ ...base, salaFiltro: true, casa: true }, cliente);
+    expect(textos(g0.extras)).toEqual(expect.arrayContaining(["Sala de", "filtro", "Casa /", "quincho"]));
+    expect(g0.legend.map((l) => l.label)).toEqual(expect.arrayContaining(["Sala de filtro", "Casa / quincho"]));
+
+    const salaDe = (g: typeof g0) => rects(g.extras).find((r) => r.fill === "#4B5563")!;
+    const g1 = calcularGeometriaPlano({ ...base, salaFiltro: true, salaPosLibre: { x: 5, y: -1 } }, cliente);
+    expect(salaDe(g1).y + salaDe(g1).h).toBeLessThanOrEqual(g1.caja.y); // arriba del borde
+    const g2 = calcularGeometriaPlano({ ...base, salaFiltro: true, salaPosLibre: { x: 5, y: 4 } }, cliente);
+    expect(salaDe(g2).y).toBeGreaterThanOrEqual(g2.caja.y + g2.caja.h);
+  });
+
+  it("en el editor se puede agarrar (hay manija); en el plano del cliente no", () => {
+    const manijas = (g: ReturnType<typeof calcularGeometriaPlano>) =>
+      g.extras.filter((p) => p.t === "circle" && p.drag && (p.drag.tipo === "sala" || p.drag.tipo === "casa")).length;
+    expect(manijas(calcularGeometriaPlano({ ...base, salaFiltro: true, casa: true }, editor))).toBe(2);
+    expect(manijas(calcularGeometriaPlano({ ...base, salaFiltro: true, casa: true }, cliente))).toBe(0);
+  });
+
+  it("expone el borde y la escala para convertir el puntero a metros", () => {
+    const g = calcularGeometriaPlano(base, editor);
+    expect(g.caja.w / g.caja.pxPerM).toBeCloseTo(11, 5); // 8 + 1,5 + 1,5
+    expect(g.caja.h / g.caja.pxPerM).toBeCloseTo(7, 5);
+  });
+
+  it("reservar lugar achica el plano pero la pileta sigue proporcionada", () => {
+    const sin = calcularGeometriaPlano(base, cliente);
+    const con = calcularGeometriaPlano({ ...base, casa: true, salaFiltro: true }, cliente);
+    expect(con.pool.w / con.pool.h).toBeCloseTo(sin.pool.w / sin.pool.h, 5);
+    expect(con.pool.w).toBeLessThanOrEqual(sin.pool.w);
+  });
+
+  it("las cotas y el título quedan por fuera de lo reservado: nada se pisa con la casa arrastrada arriba", () => {
+    const g = calcularGeometriaPlano({ ...base, casa: true, casaPosLibre: { x: 5.5, y: -3 } }, cliente);
+    const casa = rects(g.extras).find((r) => r.fill === "#E4DED2")!;
+    const titulo = g.dims.find((p) => p.t === "text" && p.text.startsWith("Pileta")) as Extract<Prim, { t: "text" }>;
+    expect(titulo.y).toBeLessThan(casa.y);
+  });
+
+  it("el cartel de ayuda del editor nombra la sala y la casa", () => {
+    const g = calcularGeometriaPlano({ ...base, salaFiltro: true, casa: true }, editor);
+    expect(textos(g.extras).some((t) => t.includes("la sala de filtro") && t.includes("la casa"))).toBe(true);
   });
 });

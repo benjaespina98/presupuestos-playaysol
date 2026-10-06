@@ -1,30 +1,16 @@
-import { z } from "zod";
 import type { Prim } from "./losetas";
 
 /**
  * Ubicación de la pileta en el terreno: puntos cardinales, sala de filtro y casa.
  *
  * Motor puro (sin DOM): devuelve primitivas de dibujo, igual que el resto de
- * `lib/domain/plano`. La sala de filtro y la casa se dibujan FUERA del borde
- * (losetas, decks, travertino), pegadas a uno de los cuatro lados: el plano
- * reserva ese lugar, así que nunca pisan la pileta ni el borde ni las cotas.
+ * `lib/domain/plano`. La sala de filtro y la casa se ubican a mano (se arrastran
+ * como las luces) pero siempre quedan FUERA del borde (losetas, decks,
+ * travertino), pegadas a uno de los cuatro lados: el plano reserva ese lugar,
+ * así que nunca pisan la pileta ni el borde ni las cotas.
  */
 
-/** Los cuatro lados del plano: solar = izquierda, opuesto = derecha, lateral 1 = arriba, lateral 2 = abajo. */
-export const LadoPlano = z.enum(["solar", "opuesto", "lateral1", "lateral2"]);
-export type LadoPlano = z.infer<typeof LadoPlano>;
-
-/** Dónde queda sobre ese lado: al comienzo, centrada o al final. */
-export const PosicionLado = z.enum(["inicio", "centro", "fin"]);
-export type PosicionLado = z.infer<typeof PosicionLado>;
-
 export type TipoUbicacion = "sala" | "casa";
-
-export interface Ubicacion {
-  tipo: TipoUbicacion;
-  lado: LadoPlano;
-  pos: PosicionLado;
-}
 
 /** Hacia dónde apunta el norte en el plano (grados en sentido horario; 0 = arriba). */
 export const DIRECCIONES_NORTE = [
@@ -38,22 +24,6 @@ export const DIRECCIONES_NORTE = [
   { grados: 315, etiqueta: "Arriba a la izquierda" },
 ] as const;
 
-/** Cómo se llama cada lado en el formulario, con dónde cae en el dibujo. */
-export const ETIQUETA_LADO: Record<LadoPlano, string> = {
-  lateral1: "Arriba (lateral 1)",
-  lateral2: "Abajo (lateral 2)",
-  solar: "A la izquierda (solar)",
-  opuesto: "A la derecha (opuesto)",
-};
-
-/** Las etiquetas de la posición cambian según el lado: sobre uno horizontal se dice izquierda/derecha. */
-export function etiquetaPosicion(lado: LadoPlano, pos: PosicionLado): string {
-  if (pos === "centro") return "Centrada";
-  const horizontal = lado === "lateral1" || lado === "lateral2";
-  if (horizontal) return pos === "inicio" ? "Hacia la izquierda" : "Hacia la derecha";
-  return pos === "inicio" ? "Hacia arriba" : "Hacia abajo";
-}
-
 export const COLORES_UBICACION = {
   salaFondo: "#4B5563",
   salaBorde: "#2F3742",
@@ -62,53 +32,93 @@ export const COLORES_UBICACION = {
   casaTexto: "#5B5240",
 } as const;
 
-/** Profundidad (hacia afuera del borde) de cada objeto, y separación con lo anterior. */
-const PROFUNDIDAD: Record<TipoUbicacion, number> = { sala: 46, casa: 78 };
-const SEPARACION = 10;
+/** Tamaño de cada objeto en el dibujo (px): `largo` a lo largo del lado, `prof` hacia afuera del borde. */
+const TAMANO: Record<TipoUbicacion, { largo: number; prof: number }> = {
+  sala: { largo: 84, prof: 44 },
+  casa: { largo: 130, prof: 64 },
+};
+/** Separación mínima entre el borde del plano y el objeto. */
+const SEPARACION = 8;
 
-/** Lo que hay que reservar fuera del borde, por lado, para que entren los objetos que se apilan ahí. */
-export function reservaPorLado(ubicaciones: Ubicacion[]): Record<LadoPlano, number> {
-  const reserva: Record<LadoPlano, number> = { solar: 0, opuesto: 0, lateral1: 0, lateral2: 0 };
-  for (const u of ubicaciones) reserva[u.lado] += SEPARACION + PROFUNDIDAD[u.tipo];
-  return reserva;
-}
-
-/** El largo del objeto a lo largo del lado: la sala es chica; la casa ocupa buena parte del lado. */
-function largoSobreLado(tipo: TipoUbicacion, lado: number): number {
-  if (tipo === "sala") return Math.min(84, lado);
-  return Math.min(lado, Math.max(110, lado * 0.6));
-}
-
-export interface CajaUbicada {
-  tipo: TipoUbicacion;
+export interface Caja2 {
   x: number;
   y: number;
   w: number;
   h: number;
 }
 
+export interface CajaUbicada extends Caja2 {
+  tipo: TipoUbicacion;
+}
+
+/** Lo que hay que reservar alrededor del borde, en los cuatro lados, para que los objetos activos entren. */
+export function reservaUbicacion(activos: TipoUbicacion[]): number {
+  if (activos.length === 0) return 0;
+  return SEPARACION + Math.max(...activos.map((t) => TAMANO[t].prof));
+}
+
+const acotar = (v: number, min: number, max: number) => Math.max(min, Math.min(v, Math.max(min, max)));
+
+/** Dónde nace cada objeto si todavía no se lo movió: la sala del lado opuesto (abajo a la derecha), la casa del lado del solar. */
+export function centroPorDefecto(tipo: TipoUbicacion, borde: Caja2): { x: number; y: number } {
+  const { largo, prof } = TAMANO[tipo];
+  if (tipo === "sala") return { x: borde.x + borde.w + SEPARACION + prof / 2, y: borde.y + borde.h - largo / 2 };
+  return { x: borde.x - SEPARACION - prof / 2, y: borde.y + borde.h / 2 };
+}
+
 /**
- * Dónde cae cada objeto, dado el rectángulo del borde (el del plano, sin
- * contar lo reservado). Sobre un mismo lado se apilan hacia afuera en el orden
- * recibido: lo primero queda pegado al borde.
+ * Coloca un objeto de modo que quede SIEMPRE afuera del borde, pegado al lado
+ * al que corresponde su centro (el que más lo "saca" del borde), con su lado
+ * largo a lo largo de ese lado y dentro de la zona reservada. Es lo que hace que
+ * arrastrarlo a cualquier parte nunca lo meta sobre las losetas ni sobre las cotas.
  */
-export function ubicarObjetos(ubicaciones: Ubicacion[], borde: { x: number; y: number; w: number; h: number }): CajaUbicada[] {
-  const usado: Record<LadoPlano, number> = { solar: 0, opuesto: 0, lateral1: 0, lateral2: 0 };
-  return ubicaciones.map((u) => {
-    const prof = PROFUNDIDAD[u.tipo];
-    const desde = usado[u.lado] + SEPARACION;
-    usado[u.lado] = desde + prof;
-    const horizontal = u.lado === "lateral1" || u.lado === "lateral2";
-    const lado = horizontal ? borde.w : borde.h;
-    const largo = largoSobreLado(u.tipo, lado);
-    const corrimiento = u.pos === "inicio" ? 0 : u.pos === "fin" ? lado - largo : (lado - largo) / 2;
-    if (horizontal) {
-      const y = u.lado === "lateral1" ? borde.y - desde - prof : borde.y + borde.h + desde;
-      return { tipo: u.tipo, x: borde.x + corrimiento, y, w: largo, h: prof };
-    }
-    const x = u.lado === "solar" ? borde.x - desde - prof : borde.x + borde.w + desde;
-    return { tipo: u.tipo, x, y: borde.y + corrimiento, w: prof, h: largo };
-  });
+export function colocarObjeto(tipo: TipoUbicacion, centro: { x: number; y: number }, borde: Caja2, reserva: number): CajaUbicada {
+  const { largo, prof } = TAMANO[tipo];
+  const izq = borde.x;
+  const der = borde.x + borde.w;
+  const arr = borde.y;
+  const aba = borde.y + borde.h;
+  const afuera = {
+    solar: izq - centro.x,
+    opuesto: centro.x - der,
+    lateral1: arr - centro.y,
+    lateral2: centro.y - aba,
+  };
+  // El lado más "afuera"; si el centro cayó adentro del borde, el más cercano.
+  const lado = (Object.keys(afuera) as (keyof typeof afuera)[]).reduce((a, b) => (afuera[b] > afuera[a] ? b : a));
+  const x0 = izq - reserva;
+  const x1 = der + reserva;
+  const y0 = arr - reserva;
+  const y1 = aba + reserva;
+
+  if (lado === "solar" || lado === "opuesto") {
+    const x = lado === "solar" ? acotar(centro.x - prof / 2, x0, izq - SEPARACION - prof) : acotar(centro.x - prof / 2, der + SEPARACION, x1 - prof);
+    return { tipo, x, y: acotar(centro.y - largo / 2, y0, y1 - largo), w: prof, h: largo };
+  }
+  const y = lado === "lateral1" ? acotar(centro.y - prof / 2, y0, arr - SEPARACION - prof) : acotar(centro.y - prof / 2, aba + SEPARACION, y1 - prof);
+  return { tipo, x: acotar(centro.x - largo / 2, x0, x1 - largo), y, w: largo, h: prof };
+}
+
+function seSuperponen(a: Caja2, b: Caja2, margen = 4): boolean {
+  return a.x < b.x + b.w + margen && b.x < a.x + a.w + margen && a.y < b.y + b.h + margen && b.y < a.y + a.h + margen;
+}
+
+/** Si dos objetos quedaron uno encima del otro, corre el segundo a lo largo de su lado hasta dejar libre el primero. */
+export function separarObjetos(fijo: CajaUbicada, movil: CajaUbicada, borde: Caja2, reserva: number): CajaUbicada {
+  if (!seSuperponen(fijo, movil)) return movil;
+  const horizontal = movil.w >= movil.h; // sobre arriba/abajo se corre en x; sobre un lateral, en y
+  const min = horizontal ? borde.x - reserva : borde.y - reserva;
+  const max = horizontal ? borde.x + borde.w + reserva : borde.y + borde.h + reserva;
+  const largo = horizontal ? movil.w : movil.h;
+  const ini = horizontal ? fijo.x : fijo.y;
+  const fin = ini + (horizontal ? fijo.w : fijo.h);
+  const antes = ini - 4 - largo;
+  const despues = fin + 4;
+  const actual = horizontal ? movil.x : movil.y;
+  const opciones = [antes >= min ? antes : null, despues + largo <= max ? despues : null].filter((v): v is number => v !== null);
+  if (opciones.length === 0) return movil;
+  const elegido = opciones.reduce((a, b) => (Math.abs(a - actual) <= Math.abs(b - actual) ? a : b));
+  return horizontal ? { ...movil, x: elegido } : { ...movil, y: elegido };
 }
 
 /** Dibuja la sala de filtro (cuadrado gris oscuro) o la casa/quincho. */

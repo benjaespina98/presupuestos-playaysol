@@ -1,14 +1,14 @@
 import { z } from "zod";
 import { TramoProfundidad, cortesProfundidad, fmtProfundidad, resumenProfundidad, zonasProfundidad } from "./profundidad";
 import {
-
-  LadoPlano,
-  PosicionLado,
+  centroPorDefecto,
+  colocarObjeto,
   dibujarBrujula,
   dibujarObjetoUbicado,
-  reservaPorLado,
-  ubicarObjetos,
-  type Ubicacion,
+  reservaUbicacion,
+  separarObjetos,
+  type CajaUbicada,
+  type TipoUbicacion,
 } from "./ubicacion";
 import { buscarLugarLibre, cajaDeTexto, trasladarCaja, unirCajas, type Caja } from "./solapes";
 
@@ -165,14 +165,14 @@ export const PlanoLosetasEntrada = z.object({
    *  (en sentido horario; 0 = el norte está arriba). */
   puntosCardinales: z.boolean().default(false),
   norteGrados: z.number().default(0),
-  /** Sala de filtro: un cuadrado gris oscuro FUERA del borde, pegado a un lado. */
+  /** Sala de filtro: un cuadrado gris oscuro FUERA del borde. Se arrastra a mano; `salaPosLibre` es el
+   *  centro donde se la soltó, en METROS desde la esquina de arriba a la izquierda del borde
+   *  (null = todavía no se la movió: aparece en su lugar de fábrica). */
   salaFiltro: z.boolean().default(false),
-  salaLado: LadoPlano.default("opuesto"),
-  salaPos: PosicionLado.default("fin"),
-  /** Casa / quincho: para orientar dónde está respecto de la pileta. */
+  salaPosLibre: LuzPos.nullable().default(null),
+  /** Casa / quincho: para orientar dónde está respecto de la pileta. Mismo criterio que la sala. */
   casa: z.boolean().default(false),
-  casaLado: LadoPlano.default("solar"),
-  casaPos: PosicionLado.default("centro"),
+  casaPosLibre: LuzPos.nullable().default(null),
 });
 export type PlanoLosetasEntrada = z.input<typeof PlanoLosetasEntrada>;
 export type PlanoLosetasEstado = z.infer<typeof PlanoLosetasEntrada>;
@@ -257,7 +257,7 @@ export type PrimLine = {
 /** Todo lo que se puede arrastrar en el editor. La escalera libre y el
  *  espejo/etc. tienen un único objeto (`indice` siempre 0); luces/skimmers/
  *  hidromasajes pueden tener varios. */
-export type TipoArrastrable = "luz" | "escalera" | "skimmer" | "hidromasaje";
+export type TipoArrastrable = "luz" | "escalera" | "skimmer" | "hidromasaje" | "sala" | "casa";
 
 export type PrimCircle = {
   t: "circle";
@@ -297,6 +297,9 @@ export interface GeometriaPlano {
   /** Rectángulo de la pileta en píxeles — lo usa el editor para convertir
    *  coordenadas de puntero a posición normalizada al arrastrar una luz. */
   pool: { x: number; y: number; w: number; h: number };
+  /** El borde (el rectángulo grande de loseta) en píxeles y la escala: el editor lo usa para
+   *  convertir el puntero a metros al arrastrar la sala de filtro o la casa. */
+  caja: { x: number; y: number; w: number; h: number; pxPerM: number };
   colores: { aguaTop: string; aguaBottom: string; losetaFill: string };
   fondo: Prim; // el rectángulo grande de loseta
   grid: PrimLine[];
@@ -400,10 +403,12 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
   const padSide = showDims ? 130 : 90;
   const padBottom = showDims ? 110 : 60;
   // La sala de filtro y la casa se dibujan afuera del borde: se reserva su lugar en cada lado.
-  const ubicaciones: Ubicacion[] = [];
-  if (s.salaFiltro) ubicaciones.push({ tipo: "sala", lado: s.salaLado, pos: s.salaPos });
-  if (s.casa) ubicaciones.push({ tipo: "casa", lado: s.casaLado, pos: s.casaPos });
-  const reserva = reservaPorLado(ubicaciones);
+  // Como se arrastran a cualquier lado, se reserva lo mismo en los cuatro.
+  const activos: TipoUbicacion[] = [];
+  if (s.salaFiltro) activos.push("sala");
+  if (s.casa) activos.push("casa");
+  const reservaUbic = reservaUbicacion(activos);
+  const reserva = { solar: reservaUbic, opuesto: reservaUbic, lateral1: reservaUbic, lateral2: reservaUbic };
   const maxW = viewW - padSide * 2 - reserva.solar - reserva.opuesto;
   const maxH = viewHmax - padTop - padBottom - reserva.lateral1 - reserva.lateral2;
   const totalW = s.largo + s.solar + s.opuesto;
@@ -753,6 +758,8 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
     if (s.escalera && s.escaleraMovible) arrastrables.push("la escalera");
     if (s.skimmer && s.cantSkimmers > 0) arrastrables.push(s.cantSkimmers > 1 ? "los skimmers" : "el skimmer");
     if (s.hidromasaje && s.cantHidromasajes > 0) arrastrables.push(s.cantHidromasajes > 1 ? "los hidromasajes" : "el hidromasaje");
+    if (s.salaFiltro) arrastrables.push("la sala de filtro");
+    if (s.casa) arrastrables.push("la casa");
     if (arrastrables.length > 0) {
       // "Arrastrá X donde quieras" (sin "para ubicarla(s)/lo(s)") a
       // propósito: mezclando luz/escalera (femenino) con skimmer/
@@ -770,9 +777,22 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
     }
   }
 
-  // Sala de filtro y casa: afuera del borde, pegadas al lado elegido.
-  for (const caja of ubicarObjetos(ubicaciones, { x: ox, y: oy, w: totalW * pxPerM, h: totalH * pxPerM })) {
+  // Sala de filtro y casa: se arrastran, pero quedan siempre afuera del borde, pegadas a un lado.
+  const bordeCaja = { x: ox, y: oy, w: totalW * pxPerM, h: totalH * pxPerM };
+  const cajasUbicadas: CajaUbicada[] = [];
+  const posLibre: Record<TipoUbicacion, LuzPos | null> = { sala: s.salaPosLibre, casa: s.casaPosLibre };
+  for (const tipo of activos) {
+    const p = posLibre[tipo];
+    const centro = p ? { x: ox + p.x * pxPerM, y: oy + p.y * pxPerM } : centroPorDefecto(tipo, bordeCaja);
+    let caja = colocarObjeto(tipo, centro, bordeCaja, reservaUbic);
+    // La casa se corre si quedó encima de la sala (la sala se coloca primero).
+    const sala = cajasUbicadas.find((c) => c.tipo === "sala");
+    if (tipo === "casa" && sala) caja = separarObjetos(sala, caja, bordeCaja, reservaUbic);
+    cajasUbicadas.push(caja);
     extras.push(...dibujarObjetoUbicado(caja));
+    if (interactive) {
+      extras.push({ t: "circle", cx: caja.x + caja.w / 2, cy: caja.y + caja.h / 2, r: Math.min(26, caja.h / 2 + 2), fill: "transparent", drag: { tipo, indice: 0 } });
+    }
   }
   // Puntos cardinales: arriba a la derecha, en el margen (nunca encima del plano).
   if (s.puntosCardinales) {
@@ -936,6 +956,7 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
     viewW,
     svgH,
     pool: { x: poolX, y: poolY, w: poolW, h: poolH },
+    caja: { x: ox, y: oy, w: totalW * pxPerM, h: totalH * pxPerM, pxPerM },
     colores: { aguaTop, aguaBottom, losetaFill },
     fondo: { t: "rect", x: ox, y: oy, w: totalW * pxPerM, h: totalH * pxPerM, rx: 6, fill: losetaFill, stroke: "#C0522D", strokeWidth: 1 },
     grid,

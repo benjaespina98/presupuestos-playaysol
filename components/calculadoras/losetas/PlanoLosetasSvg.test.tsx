@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render } from "@testing-library/react";
+import { fireEvent, render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { calcularGeometriaPlano } from "@/lib/domain/plano/losetas";
 import { PlanoLosetasSvg } from "./PlanoLosetasSvg";
@@ -52,5 +52,52 @@ describe("PlanoLosetasSvg — capa de arrastre siempre arriba", () => {
     expect(referencias).toBeTruthy();
     expect(agarre).toBeTruthy();
     expect(referencias!.compareDocumentPosition(agarre!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
+describe("PlanoLosetasSvg — arrastrar la sala de filtro y la casa", () => {
+  const geometria = calcularGeometriaPlano(
+    { largo: 8, ancho: 4, solar: 1, opuesto: 1, lateral1: 1, lateral2: 1, salaFiltro: true, casa: true },
+    { viewW: 680, viewHmax: 420, showDims: false, interactive: true }
+  );
+
+  function montar() {
+    const movidas: { tipo: string; x: number; y: number }[] = [];
+    const { container } = render(
+      <PlanoLosetasSvg
+        geometria={geometria}
+        interactive
+        ariaLabel="Editor"
+        onMoverSala={(p) => movidas.push({ tipo: "sala", ...p })}
+        onMoverCasa={(p) => movidas.push({ tipo: "casa", ...p })}
+      />
+    );
+    const svg = container.querySelector("svg")!;
+    // jsdom no calcula layout: se lo fija para que 1 px de pantalla = 1 unidad del dibujo.
+    svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: geometria.viewW, height: geometria.svgH, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({}) });
+    return { container, svg, movidas };
+  }
+
+  it("tienen manija y, al arrastrarlas, avisan la posición en METROS desde la esquina del borde", () => {
+    const { container, svg, movidas } = montar();
+    const manija = container.querySelector('[data-drag="sala:0"]')!;
+    expect(manija).toBeTruthy();
+    expect(container.querySelector('[data-drag="casa:0"]')).toBeTruthy();
+
+    fireEvent.pointerDown(manija, { pointerId: 1 });
+    const { x, y, pxPerM } = geometria.caja;
+    fireEvent.pointerMove(svg, { pointerId: 1, clientX: x + 3 * pxPerM, clientY: y - 1 * pxPerM });
+
+    expect(movidas).toHaveLength(1);
+    expect(movidas[0].tipo).toBe("sala");
+    expect(movidas[0].x).toBeCloseTo(3, 5);
+    expect(movidas[0].y).toBeCloseTo(-1, 5); // afuera (arriba) del borde: no se acota a 0..1
+  });
+
+  it("la manija queda al final del dibujo para que nada la tape", () => {
+    const { container } = montar();
+    const leyenda = [...container.querySelectorAll("text")].find((t) => t.textContent === "Casa /")!;
+    const manija = container.querySelector('[data-drag="casa:0"]')!;
+    expect(leyenda.compareDocumentPosition(manija) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
