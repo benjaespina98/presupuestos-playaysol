@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TipoCalculadora } from "../presupuesto/v1";
 import { CATEGORIA_POR_DEFECTO, CATEGORIAS, Categoria } from "./categorias";
+import { lineaDeClave, type LineaPiscina } from "./listas";
 
 /**
  * Una fila de `catalogo_items` tal como la necesita la pantalla de Catálogo
@@ -101,6 +102,10 @@ export function textoParaCopiar(item: Pick<ItemCatalogo, "descripcion" | "clave"
 export interface FiltroCatalogo {
   busqueda?: string;
   categoria?: Categoria | null;
+  /** Sólo las piscinas completas de esa línea (hormigón / Indusplast). */
+  linea?: LineaPiscina | null;
+  /** Sólo los ítems de esa calculadora. null/undefined = todas. */
+  tipo?: ItemCatalogo["tipo"] | null;
   /** default false: por default el listado no muestra los dados de baja. */
   incluirInactivos?: boolean;
 }
@@ -113,6 +118,8 @@ export function filtrarCatalogo(items: ItemCatalogo[], filtro: FiltroCatalogo): 
   return items.filter((item) => {
     if (!filtro.incluirInactivos && !item.activo) return false;
     if (filtro.categoria && categoriaEfectiva(item) !== filtro.categoria) return false;
+    if (filtro.tipo && item.tipo !== filtro.tipo) return false;
+    if (filtro.linea && lineaDeClave(item.clave) !== filtro.linea) return false;
     if (q) {
       const enDescripcion = (item.descripcion ?? "").toLowerCase().includes(q);
       const enClave = item.clave.toLowerCase().includes(q);
@@ -120,6 +127,41 @@ export function filtrarCatalogo(items: ItemCatalogo[], filtro: FiltroCatalogo): 
     }
     return true;
   });
+}
+
+/**
+ * Cuántos ítems hay por categoría después de aplicar el resto de los filtros
+ * (búsqueda, calculadora, inactivos) — ignora a propósito el filtro de
+ * categoría: son los contadores de los chips, que le dicen al usuario cuánto
+ * encontraría si eligiera cada uno. Sólo trae las categorías con al menos un
+ * ítem. `total` es la suma de todas.
+ */
+export function contarPorCategoria(
+  items: ItemCatalogo[],
+  filtro: Omit<FiltroCatalogo, "categoria">
+): { total: number; porCategoria: Partial<Record<Categoria, number>> } {
+  const porCategoria: Partial<Record<Categoria, number>> = {};
+  const coincidentes = filtrarCatalogo(items, { ...filtro, categoria: null });
+  for (const item of coincidentes) {
+    const c = categoriaEfectiva(item);
+    porCategoria[c] = (porCategoria[c] ?? 0) + 1;
+  }
+  return { total: coincidentes.length, porCategoria };
+}
+
+/** Cuántas piscinas completas hay por línea, con el resto de los filtros
+ *  aplicados (ignora el de línea, como `contarPorCategoria` ignora el de
+ *  categoría). Sólo trae las líneas que tienen algo. */
+export function contarPorLinea(
+  items: ItemCatalogo[],
+  filtro: Omit<FiltroCatalogo, "linea">
+): Partial<Record<LineaPiscina, number>> {
+  const conteo: Partial<Record<LineaPiscina, number>> = {};
+  for (const item of filtrarCatalogo(items, { ...filtro, linea: null })) {
+    const l = lineaDeClave(item.clave);
+    if (l) conteo[l] = (conteo[l] ?? 0) + 1;
+  }
+  return conteo;
 }
 
 /**
@@ -137,4 +179,21 @@ export function disponibleEnCalculadora(
   clavesAMantener: readonly string[] = []
 ): boolean {
   return fila.activo !== false || clavesAMantener.includes(fila.clave);
+}
+
+/**
+ * Los precios base de cada calculadora (cercos, cobertores). Las calculadoras
+ * los leen por clave: si faltaran, el precio caería a $0. Por eso no se pueden
+ * eliminar desde el Catálogo (sí editar el precio).
+ */
+export const CLAVES_PRECIO_BASE = [
+  "precioSin",
+  "precioCon",
+  "precioMenos15",
+  "precioMas15",
+  "precioInstalacion",
+] as const;
+
+export function esPrecioBase(clave: string): boolean {
+  return (CLAVES_PRECIO_BASE as readonly string[]).includes(clave);
 }

@@ -79,7 +79,7 @@ export function CrearItemModal({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="crear-item-titulo" className="mb-1 text-base font-bold text-[#1B3A5C]">
-          Nuevo ítem del catálogo
+          Agregar ítem al catálogo
         </h2>
         <p className="mb-4 text-xs text-gray-500">
           Queda disponible para todo el equipo en la calculadora que elijas.
@@ -138,7 +138,7 @@ export function CrearItemModal({
               disabled={isSubmitting}
               className="min-h-11 w-full rounded-md bg-[#1B3A5C] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B3A5C] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
             >
-              {isSubmitting ? "Creando..." : "Crear ítem"}
+              {isSubmitting ? "Agregando..." : "Agregar al catálogo"}
             </button>
             <button
               type="button"

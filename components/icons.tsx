@@ -113,3 +113,12 @@ export function IconPower({ className = "h-4 w-4" }: IconProps) {
     </svg>
   );
 }
+
+export function IconTable({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M3 10h18M3 15h18M9 4v16" />
+    </svg>
+  );
+}

@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useZodForm } from "@/lib/forms/useZodForm";
 import { MoneyField, TextField, SelectField, CheckboxField } from "@/components/form";
-import { actualizarItemCatalogo } from "@/lib/catalogo";
+import { actualizarItemCatalogo, eliminarItemCatalogo } from "@/lib/catalogo";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { CATEGORIAS, UNIDADES } from "@/lib/domain/catalogo/categorias";
-import type { ItemCatalogo } from "@/lib/domain/catalogo/item";
+import { esPrecioBase, type ItemCatalogo } from "@/lib/domain/catalogo/item";
 import { aCambios, aFormulario, EditarItemSchema, type EditarItemForm } from "./editar-item.schema";
 import { TITULOS_TIPO } from "./titulos-tipo";
 
@@ -26,17 +27,26 @@ const OPCIONES_UNIDAD = [
  * app/dashboard/catalogo/page.tsx): así cada ítem abre una instancia de form
  * nueva con sus propios `defaultValues`, sin necesitar `reset()` ni un efecto
  * para sincronizar — al cambiar de ítem, React desmonta y monta de nuevo.
+ *
+ * Acá viven las tres acciones sobre un ítem existente: guardar los cambios,
+ * darlo de baja (el interruptor "Activo": lo oculta sin perderlo) y eliminarlo
+ * (definitivo, con confirmación). Agregar uno nuevo es CrearItemModal.
  */
 export function EditarItemModal({
   item,
   onClose,
   onGuardado,
+  onEliminado,
 }: {
   item: ItemCatalogo;
   onClose: () => void;
   onGuardado: (item: ItemCatalogo) => void;
+  onEliminado: (item: ItemCatalogo) => void;
 }) {
   const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
+  const [confirmandoEliminar, setConfirmandoEliminar] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
+  const protegido = esPrecioBase(item.clave);
   const {
     control,
     register,
@@ -55,10 +65,23 @@ export function EditarItemModal({
     onGuardado({ ...item, ...cambios });
   }
 
+  async function eliminar() {
+    setEliminando(true);
+    setErrorGuardado(null);
+    const { error } = await eliminarItemCatalogo(item.id);
+    setEliminando(false);
+    setConfirmandoEliminar(false);
+    if (error) {
+      setErrorGuardado(error);
+      return;
+    }
+    onEliminado(item);
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-[#1B3A5C]/45 p-4"
-      onClick={isSubmitting ? undefined : onClose}
+      onClick={isSubmitting || eliminando ? undefined : onClose}
     >
       <div
         role="dialog"
@@ -109,7 +132,7 @@ export function EditarItemModal({
             errors={errors}
             name="activo"
             label="Activo"
-            hint="Si está apagado, no aparece en el listado del catálogo (no afecta las calculadoras)."
+            hint="Desactivalo para dar de baja el ítem: deja de ofrecerse en los presupuestos nuevos, pero los ya hechos no cambian. Lo podés reactivar cuando quieras."
           />
 
           {errorGuardado && (
@@ -136,6 +159,35 @@ export function EditarItemModal({
             </button>
           </div>
         </form>
+
+        <div className="mt-5 border-t border-gray-200 pt-4">
+          {protegido ? (
+            <p className="text-xs text-gray-500">
+              Es un precio base de la calculadora: se puede editar, pero no eliminar.
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmandoEliminar(true)}
+              disabled={isSubmitting || eliminando}
+              className="min-h-11 w-full rounded-md border border-red-200 px-4 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Eliminar ítem
+            </button>
+          )}
+        </div>
+
+        <ConfirmDialog
+          open={confirmandoEliminar}
+          danger
+          loading={eliminando}
+          title="¿Eliminar este ítem?"
+          message={`Se elimina "${item.descripcion || item.clave}" del catálogo para todo el equipo y no se puede deshacer. Los presupuestos ya guardados no cambian. Si sólo querés ocultarlo, desactivalo en lugar de eliminarlo.`}
+          confirmLabel="Sí, eliminar"
+          cancelLabel="No, conservarlo"
+          onConfirm={eliminar}
+          onCancel={() => setConfirmandoEliminar(false)}
+        />
       </div>
     </div>
   );
