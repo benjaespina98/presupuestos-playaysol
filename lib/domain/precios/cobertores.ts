@@ -76,10 +76,20 @@ export function calcularCobertor(entrada: EntradaCobertores): ResultadoCobertore
   };
 }
 
+/**
+ * Los totales que imprime el presupuesto.
+ *
+ * Mientras no haya superficie (largo y ancho sin cargar) NO hay totales: antes
+ * un cobertor de 0 m² mostraba "con instalación $100.000", porque la
+ * instalación es un costo fijo, y un presupuesto sin medidas no tiene que
+ * mostrar un importe. `calcularCobertor` sigue devolviendo esos números (es el
+ * cálculo puro); lo que cambia es que no se muestren hasta tener medidas.
+ */
 export function totalesAMostrar(
   r: ResultadoCobertores,
   modo: ModoPrecio
 ): number[] {
+  if (r.m2 <= 0) return [];
   if (modo === "sin") return [r.totalSinInstalacion];
   if (modo === "con") return [r.totalConInstalacion];
   return [r.totalSinInstalacion, r.totalConInstalacion];
