@@ -14,8 +14,8 @@ describe("material y tono del borde", () => {
     expect(colorDeBorde("travertino", "blanco")).toBe(colorDeBorde("travertino", "marfil"));
   });
 
-  it("el marfil de las losetas es el color de siempre del plano (los planos viejos no cambian)", () => {
-    expect(colorDeBorde("losetas", "marfil")).toBe("#F7E6D3");
+  it("el marfil es un crema claro, no rosado", () => {
+    expect(colorDeBorde("losetas", "marfil")).toBe("#F1E7CC");
   });
 
   it("la leyenda y el nombre incluyen el tono sólo cuando hay tono", () => {

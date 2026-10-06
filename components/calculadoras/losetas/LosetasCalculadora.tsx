@@ -13,10 +13,19 @@ import {
   TONOS_BORDE,
   colorDeBorde,
   nombreDeBorde,
+  COLOR_BORDE_POR_DEFECTO,
+  MARFILES_ANTERIORES,
   type LuzPos,
   type MaterialBorde,
   type TonoBorde,
 } from "@/lib/domain/plano/losetas";
+import {
+  DIRECCIONES_NORTE,
+  ETIQUETA_LADO,
+  LadoPlano,
+  PosicionLado,
+  etiquetaPosicion,
+} from "@/lib/domain/plano/ubicacion";
 import { problemasTramos } from "@/lib/domain/plano/profundidad";
 import { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { PresupuestoLeido } from "@/lib/domain/presupuesto/adaptadores";
@@ -75,6 +84,16 @@ function medidasDesdePresupuesto(leido: PresupuestoLeido): LosetasForm {
   // Un plano guardado antes de poder elegir el tono no lo tiene: era el marfil de siempre.
   const tonoBorde: TonoBorde = m.tonoBorde === "blanco" ? "blanco" : "marfil";
 
+  // El marfil de antes era rosado/amarillento. Un plano que lo guardó tal cual (no lo eligió a mano)
+  // se abre con el marfil de ahora; un color elegido a mano se respeta.
+  const colorGuardado = str(m.colorLoseta, COLOR_BORDE_POR_DEFECTO);
+  const colorLoseta = (MARFILES_ANTERIORES as readonly string[]).includes(colorGuardado.toLowerCase())
+    ? colorDeBorde(materialBorde, tonoBorde)
+    : colorGuardado;
+
+  const lado = (v: unknown, def: LosetasForm["salaLado"]) => (LadoPlano.safeParse(v).success ? (v as LosetasForm["salaLado"]) : def);
+  const posicion = (v: unknown, def: LosetasForm["salaPos"]) => (PosicionLado.safeParse(v).success ? (v as LosetasForm["salaPos"]) : def);
+
   return {
     ...base,
     materialBorde,
@@ -116,7 +135,15 @@ function medidasDesdePresupuesto(leido: PresupuestoLeido): LosetasForm {
     revestimiento,
     revestimientoOtro: str(m.revestimientoOtro, ""),
     colorAgua: str(m.colorAgua, "#A6D1EC"),
-    colorLoseta: str(m.colorLoseta, "#F7E6D3"),
+    colorLoseta,
+    puntosCardinales: bool(m.puntosCardinales),
+    norte: String(DIRECCIONES_NORTE.some((d) => d.grados === m.norteGrados) ? m.norteGrados : 0),
+    salaFiltro: bool(m.salaFiltro),
+    salaLado: lado(m.salaLado, "opuesto"),
+    salaPos: posicion(m.salaPos, "fin"),
+    casa: bool(m.casa),
+    casaLado: lado(m.casaLado, "solar"),
+    casaPos: posicion(m.casaPos, "centro"),
     lblSolar: str(m.lblSolar, "Solar"),
     lblOpuesto: str(m.lblOpuesto, "Opuesto"),
     lblLateral1: str(m.lblLateral1, "Lateral 1"),
@@ -169,6 +196,14 @@ function medidasParaSnapshot(v: LosetasForm) {
     lblOpuesto: v.lblOpuesto,
     lblLateral1: v.lblLateral1,
     lblLateral2: v.lblLateral2,
+    puntosCardinales: v.puntosCardinales,
+    norteGrados: Number(v.norte) || 0,
+    salaFiltro: v.salaFiltro,
+    salaLado: v.salaLado,
+    salaPos: v.salaPos,
+    casa: v.casa,
+    casaLado: v.casaLado,
+    casaPos: v.casaPos,
   };
 }
 
@@ -192,6 +227,9 @@ const ESCALERA_OPCIONES = [
   { value: "lateral1", label: "Lateral 1" },
   { value: "lateral2", label: "Lateral 2" },
 ];
+const NORTE_OPCIONES = DIRECCIONES_NORTE.map((d) => ({ value: String(d.grados), label: d.etiqueta }));
+const LADO_OPCIONES = LadoPlano.options.map((l) => ({ value: l, label: ETIQUETA_LADO[l] }));
+const posicionOpciones = (lado: LadoPlano) => PosicionLado.options.map((p) => ({ value: p, label: etiquetaPosicion(lado, p) }));
 const TIPO_PILETA_OPCIONES = [
   { value: "hormigon", label: "Hormigón" },
   { value: "fibra", label: "Fibra" },
@@ -307,7 +345,7 @@ export function LosetasCalculadora({
       revestimiento: valoresForm.revestimiento ?? "",
       revestimientoOtro: valoresForm.revestimientoOtro ?? "",
       colorAgua: valoresForm.colorAgua || "#A6D1EC",
-      colorLoseta: valoresForm.colorLoseta || "#F7E6D3",
+      colorLoseta: valoresForm.colorLoseta || COLOR_BORDE_POR_DEFECTO,
       materialBorde: valoresForm.materialBorde ?? "losetas",
       tonoBorde: valoresForm.tonoBorde ?? "marfil",
       profundidad: num(valoresForm.profundidad),
@@ -320,6 +358,14 @@ export function LosetasCalculadora({
       lblOpuesto: valoresForm.lblOpuesto || "Opuesto",
       lblLateral1: valoresForm.lblLateral1 || "Lateral 1",
       lblLateral2: valoresForm.lblLateral2 || "Lateral 2",
+      puntosCardinales: !!valoresForm.puntosCardinales,
+      norteGrados: Number(valoresForm.norte) || 0,
+      salaFiltro: !!valoresForm.salaFiltro,
+      salaLado: valoresForm.salaLado ?? "opuesto",
+      salaPos: valoresForm.salaPos ?? "fin",
+      casa: !!valoresForm.casa,
+      casaLado: valoresForm.casaLado ?? "solar",
+      casaPos: valoresForm.casaPos ?? "centro",
     }),
     [valoresForm]
   );
@@ -627,6 +673,54 @@ export function LosetasCalculadora({
               )}
             </div>
           </div>
+        </section>
+
+        <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">Ubicación en el terreno</h2>
+            <p className="mt-1 text-xs text-gray-500">
+              Para orientar la pileta: hacia dónde está el norte y dónde quedan la sala de filtro y la casa. Se dibujan
+              <b> afuera</b> del borde, nunca sobre las {nombreMaterial.etiqueta.toLowerCase()}.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <CheckboxField register={register} errors={errors} name="puntosCardinales" label="Puntos cardinales" />
+            {valoresForm.puntosCardinales && (
+              <SelectField
+                register={register}
+                errors={errors}
+                name="norte"
+                label="El norte está hacia…"
+                hint="En el plano, el solar queda a la izquierda y el lateral 1 arriba. Se dibuja una rosa de los vientos (N, E, S, O) arriba a la derecha."
+                options={NORTE_OPCIONES}
+              />
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 border-t border-gray-100 pt-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <CheckboxField register={register} errors={errors} name="salaFiltro" label="Sala de filtro" />
+              {valoresForm.salaFiltro && (
+                <>
+                  <SelectField register={register} errors={errors} name="salaLado" label="Del lado…" options={LADO_OPCIONES} />
+                  <SelectField register={register} errors={errors} name="salaPos" label="Ubicación sobre ese lado" options={posicionOpciones(valoresForm.salaLado ?? "opuesto")} />
+                </>
+              )}
+            </div>
+            <div className="space-y-2">
+              <CheckboxField register={register} errors={errors} name="casa" label="Casa / quincho" />
+              {valoresForm.casa && (
+                <>
+                  <SelectField register={register} errors={errors} name="casaLado" label="Del lado…" options={LADO_OPCIONES} />
+                  <SelectField register={register} errors={errors} name="casaPos" label="Ubicación sobre ese lado" options={posicionOpciones(valoresForm.casaLado ?? "solar")} />
+                </>
+              )}
+            </div>
+          </div>
+          {valoresForm.salaFiltro && valoresForm.casa && valoresForm.salaLado === valoresForm.casaLado && (
+            <p className="text-xs text-gray-500">La sala y la casa están del mismo lado: la sala queda pegada al borde y la casa detrás.</p>
+          )}
         </section>
 
         <details className="rounded-lg border border-gray-200 bg-white shadow-sm">

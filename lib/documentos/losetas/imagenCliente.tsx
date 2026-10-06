@@ -71,6 +71,8 @@ function primASvg(p: Prim): string {
       return `<line${attr("x1", p.x1)}${attr("y1", p.y1)}${attr("x2", p.x2)}${attr("y2", p.y2)}${attr("stroke", p.stroke)}${attr("stroke-width", p.strokeWidth)}${attr("opacity", p.opacity)} />`;
     case "circle":
       return `<circle${attr("cx", p.cx)}${attr("cy", p.cy)}${attr("r", p.r)}${attr("fill", p.fill)}${attr("stroke", p.stroke)}${attr("stroke-width", p.strokeWidth)}${attr("opacity", p.opacity)} />`;
+    case "poly":
+      return `<polygon points="${p.puntos.map(([x, y]) => `${x},${y}`).join(" ")}"${attr("fill", p.fill)}${attr("stroke", p.stroke)}${attr("stroke-width", p.strokeWidth)}${attr("opacity", p.opacity)} />`;
     case "text": {
       const transform = p.rotateDeg ? ` transform="rotate(${p.rotateDeg} ${p.x} ${p.y})"` : "";
       return `<text${attr("x", p.x)}${attr("y", p.y)} font-family="Arial, Helvetica, sans-serif"${attr("font-size", p.fontSize)}${attr("fill", p.fill)}${attr("text-anchor", p.anchor ?? "start")}${p.central ? ' dominant-baseline="central"' : ""}${p.weight ? ' font-weight="bold"' : ""}${attr("opacity", p.opacity)}${transform}>${escaparXml(p.text)}</text>`;
@@ -91,6 +93,8 @@ function legendASvg(items: LegendItem[], losetaFill: string): string {
       else if (it.kind === "solarhumedo") glifo = `<rect x="${it.x}" y="${sy}" width="${LEGEND_SW}" height="${LEGEND_SW}" rx="2" fill="#BFE0EF" stroke="#0C447C" stroke-width="0.75" />`;
       else if (it.kind === "espejo") glifo = `<rect x="${it.x}" y="${sy}" width="${LEGEND_SW}" height="${LEGEND_SW}" rx="2" fill="url(#poolGrad)" stroke="#1B3A5C" stroke-width="1" stroke-dasharray="3 2" />`;
       else if (it.kind === "escalera") glifo = `<rect x="${it.x}" y="${sy}" width="${LEGEND_SW}" height="${LEGEND_SW}" rx="1" fill="#ffffff" stroke="#1B3A5C" stroke-width="1.1" stroke-dasharray="3 2" />`;
+      else if (it.kind === "sala") glifo = `<rect x="${it.x}" y="${sy}" width="${LEGEND_SW}" height="${LEGEND_SW}" rx="2" fill="#4B5563" stroke="#2F3742" stroke-width="1" />`;
+      else if (it.kind === "casa") glifo = `<rect x="${it.x}" y="${sy}" width="${LEGEND_SW}" height="${LEGEND_SW}" rx="2" fill="#E4DED2" stroke="#7C6F58" stroke-width="1" stroke-dasharray="4 2" />`;
       else if (it.kind === "luz") {
         const cx = it.x + LEGEND_SW / 2;
         glifo = `<circle cx="${cx}" cy="${it.y}" r="9" fill="url(#luzGlow)" /><circle cx="${cx}" cy="${it.y}" r="4" fill="#FFEFA8" stroke="#C99A2E" stroke-width="1" />`;

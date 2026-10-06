@@ -139,7 +139,7 @@ describe("leerPresupuesto · formato viejo (v0)", () => {
       revestimiento: "",
       revestimientoOtro: "",
       colorAgua: "#A6D1EC",
-      colorLoseta: "#F7E6D3",
+      colorLoseta: "#F1E7CC",
       lblSolar: "Solar",
       lblOpuesto: "Opuesto",
       lblLateral1: "Lateral 1",

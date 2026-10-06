@@ -60,9 +60,9 @@ describe("LosetasCalculadora · material alrededor de la pileta", () => {
     render(<LosetasCalculadora />);
     const color = () => (screen.getByLabelText(/Color del borde/) as HTMLInputElement).value.toLowerCase();
 
-    expect(color()).toBe("#f7e6d3");
+    expect(color()).toBe("#f1e7cc");
     await user.selectOptions(screen.getByLabelText("Material alrededor de la pileta"), "decks");
-    await waitFor(() => expect(color()).toBe("#ebddc0")); // decks marfil
+    await waitFor(() => expect(color()).toBe("#e6d7b3")); // decks marfil
 
     fireEvent.input(screen.getByLabelText(/Color del borde/), { target: { value: "#123456" } });
     await user.selectOptions(screen.getByLabelText("Material alrededor de la pileta"), "travertino");
@@ -138,7 +138,7 @@ describe("LosetasCalculadora · marfil y blanco", () => {
     const user = userEvent.setup();
     render(<LosetasCalculadora />);
     await cargarMedidas(user, "8", "4");
-    expect(color()).toBe("#f7e6d3");
+    expect(color()).toBe("#f1e7cc");
     expect(vista().textContent).toContain("Borde de loseta marfil");
 
     await user.selectOptions(tono(), "blanco");
@@ -282,5 +282,88 @@ describe("LosetasCalculadora · profundidad", () => {
     );
     expect(screen.getByLabelText("Hasta (m)")).toHaveValue("3");
     await waitFor(() => expect(vista().textContent).toContain("Prof. 1,00 a 1,10 m"));
+  });
+});
+
+describe("LosetasCalculadora · ubicación en el terreno", () => {
+  beforeEach(() => {
+    guardarPresupuesto.mockReset();
+    guardarPresupuesto.mockResolvedValue({ error: null });
+  });
+
+  it("por defecto no hay puntos cardinales, sala ni casa en el plano", async () => {
+    const user = userEvent.setup();
+    render(<LosetasCalculadora />);
+    await cargarMedidas(user, "8", "4");
+    expect(vista().textContent).not.toContain("quincho");
+    expect(vista().textContent).not.toContain("Sala de");
+    expect(screen.queryByLabelText("El norte está hacia…")).not.toBeInTheDocument();
+  });
+
+  it("los puntos cardinales, la sala de filtro y la casa salen en el plano del cliente y en la leyenda", async () => {
+    const user = userEvent.setup();
+    render(<LosetasCalculadora />);
+    await cargarMedidas(user, "8", "4");
+
+    await user.click(screen.getByLabelText("Puntos cardinales"));
+    await user.selectOptions(screen.getByLabelText("El norte está hacia…"), "90");
+    await user.click(screen.getByLabelText("Sala de filtro"));
+    await user.click(screen.getByLabelText("Casa / quincho"));
+
+    await waitFor(() => expect(vista().textContent).toContain("Casa /"));
+    const texto = vista().textContent ?? "";
+    expect(texto).toContain("Sala de");
+    expect(texto).toContain("Sala de filtro"); // leyenda
+    expect(texto).toContain("Casa / quincho"); // leyenda
+    for (const letra of ["N", "E", "S", "O"]) expect(texto).toContain(letra);
+  });
+
+  it("la posición se ofrece según el lado: sobre uno horizontal, izquierda/derecha", async () => {
+    const user = userEvent.setup();
+    render(<LosetasCalculadora />);
+    await user.click(screen.getByLabelText("Sala de filtro"));
+    const lado = screen.getByLabelText("Del lado…") as HTMLSelectElement;
+    const pos = () => [...(screen.getByLabelText("Ubicación sobre ese lado") as HTMLSelectElement).options].map((o) => o.textContent);
+    expect(lado.value).toBe("opuesto");
+    expect(pos()).toEqual(["Hacia arriba", "Centrada", "Hacia abajo"]);
+
+    await user.selectOptions(lado, "lateral1");
+    expect(pos()).toEqual(["Hacia la izquierda", "Centrada", "Hacia la derecha"]);
+  });
+
+  it("se guarda con el plano y se recupera; un plano viejo se abre sin nada de esto", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<LosetasCalculadora />);
+    await cargarMedidas(user, "8", "4");
+    await user.click(screen.getByLabelText("Puntos cardinales"));
+    await user.selectOptions(screen.getByLabelText("El norte está hacia…"), "225");
+    await user.click(screen.getByLabelText("Casa / quincho"));
+    await user.selectOptions(screen.getByLabelText("Del lado…"), "lateral2");
+    await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
+
+    await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
+    const guardado = PresupuestoV1.parse(guardarPresupuesto.mock.calls[0][1]);
+    expect(guardado.medidas).toMatchObject({ puntosCardinales: true, norteGrados: 225, casa: true, casaLado: "lateral2" });
+    unmount();
+
+    render(<LosetasCalculadora presupuestoId="x" presupuestoInicial={{ presupuesto: guardado, preciosCongelados: true, clavesIncluidas: [] }} />);
+    expect((screen.getByLabelText("El norte está hacia…") as HTMLSelectElement).value).toBe("225");
+    expect((screen.getByLabelText("Del lado…") as HTMLSelectElement).value).toBe("lateral2");
+  });
+
+  it("un plano guardado con el marfil de antes (rosado) se abre con el marfil de ahora; un color a mano se respeta", () => {
+    const abrir = (colorLoseta: string) => {
+      const p = PresupuestoV1.parse({
+        v: 1, tipo: "losetas", fecha: "", cliente: { nombre: "X" },
+        medidas: { largo: 8, ancho: 4, solar: 1, opuesto: 1, lateral1: 1, lateral2: 1, colorLoseta },
+        lineas: [], totales: [],
+      });
+      const { unmount } = render(<LosetasCalculadora presupuestoInicial={{ presupuesto: p, preciosCongelados: true, clavesIncluidas: [] }} />);
+      const valor = (screen.getByLabelText(/Color del borde/) as HTMLInputElement).value.toLowerCase();
+      unmount();
+      return valor;
+    };
+    expect(abrir("#F7E6D3")).toBe("#f1e7cc");
+    expect(abrir("#123456")).toBe("#123456");
   });
 });

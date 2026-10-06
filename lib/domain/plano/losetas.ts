@@ -1,5 +1,15 @@
 import { z } from "zod";
 import { TramoProfundidad, cortesProfundidad, fmtProfundidad, resumenProfundidad, zonasProfundidad } from "./profundidad";
+import {
+
+  LadoPlano,
+  PosicionLado,
+  dibujarBrujula,
+  dibujarObjetoUbicado,
+  reservaPorLado,
+  ubicarObjetos,
+  type Ubicacion,
+} from "./ubicacion";
 import { buscarLugarLibre, cajaDeTexto, trasladarCaja, unirCajas, type Caja } from "./solapes";
 
 /**
@@ -57,11 +67,15 @@ export const MATERIALES_BORDE: Record<
     colores: Record<TonoBorde, string>;
   }
 > = {
-  // El marfil de las losetas es el color de siempre de este plano: no cambia para los planos viejos.
-  losetas: { etiqueta: "Losetas", singular: "loseta", leyenda: "Borde de loseta", conTono: true, colores: { marfil: "#F7E6D3", blanco: "#F4F4F1" } },
-  decks: { etiqueta: "Decks", singular: "deck", leyenda: "Borde de deck", conTono: true, colores: { marfil: "#EBDDC0", blanco: "#F1F1EE" } },
+  // Marfil = un crema claro (ni rosado ni amarillo fuerte); el de los decks, un poco más cálido.
+  losetas: { etiqueta: "Losetas", singular: "loseta", leyenda: "Borde de loseta", conTono: true, colores: { marfil: "#F1E7CC", blanco: "#F4F4F1" } },
+  decks: { etiqueta: "Decks", singular: "deck", leyenda: "Borde de deck", conTono: true, colores: { marfil: "#E6D7B3", blanco: "#F1F1EE" } },
   travertino: { etiqueta: "Travertino", singular: "travertino", leyenda: "Borde de travertino", conTono: false, colores: { marfil: "#E6DAC3", blanco: "#E6DAC3" } },
 };
+
+/** Los colores de fábrica que tuvo el marfil antes de corregirlo (rosado/amarillento): un plano guardado con
+ *  alguno de estos no lo eligió a mano, así que se actualiza al marfil de ahora. */
+export const MARFILES_ANTERIORES = ["#f7e6d3", "#ebddc0"] as const;
 
 /** El color de fábrica del borde para ese material y tono. */
 export function colorDeBorde(material: MaterialBorde, tono: TonoBorde): string {
@@ -80,6 +94,9 @@ export function nombreDeBorde(material: MaterialBorde, tono: TonoBorde): string 
   const m = MATERIALES_BORDE[material];
   return m.conTono ? `${m.etiqueta.toLowerCase()} ${tono}` : m.etiqueta.toLowerCase();
 }
+
+/** El borde de losetas marfil: el color con el que arranca un plano nuevo. */
+export const COLOR_BORDE_POR_DEFECTO = MATERIALES_BORDE.losetas.colores.marfil;
 
 export const PlanoLosetasEntrada = z.object({
   largo: z.number().min(0).default(0),
@@ -132,7 +149,7 @@ export const PlanoLosetasEntrada = z.object({
   revestimiento: Revestimiento.default(""),
   revestimientoOtro: z.string().default(""),
   colorAgua: z.string().default("#A6D1EC"),
-  colorLoseta: z.string().default("#F7E6D3"),
+  colorLoseta: z.string().default(COLOR_BORDE_POR_DEFECTO),
   materialBorde: MaterialBorde.default("losetas"),
   tonoBorde: TonoBorde.default("marfil"),
   /** Profundidad general de la pileta (m); 0 = sin cargar. Si hay tramos, es la
@@ -144,6 +161,18 @@ export const PlanoLosetasEntrada = z.object({
   lblOpuesto: z.string().default("Opuesto"),
   lblLateral1: z.string().default("Lateral 1"),
   lblLateral2: z.string().default("Lateral 2"),
+  /** Puntos cardinales: una rosa de los vientos en el plano, con el norte hacia `norteGrados`
+   *  (en sentido horario; 0 = el norte está arriba). */
+  puntosCardinales: z.boolean().default(false),
+  norteGrados: z.number().default(0),
+  /** Sala de filtro: un cuadrado gris oscuro FUERA del borde, pegado a un lado. */
+  salaFiltro: z.boolean().default(false),
+  salaLado: LadoPlano.default("opuesto"),
+  salaPos: PosicionLado.default("fin"),
+  /** Casa / quincho: para orientar dónde está respecto de la pileta. */
+  casa: z.boolean().default(false),
+  casaLado: LadoPlano.default("solar"),
+  casaPos: PosicionLado.default("centro"),
 });
 export type PlanoLosetasEntrada = z.input<typeof PlanoLosetasEntrada>;
 export type PlanoLosetasEstado = z.infer<typeof PlanoLosetasEntrada>;
@@ -248,11 +277,17 @@ export type PrimText = {
   opacity?: number;
   rotateDeg?: number;
 };
-export type Prim = PrimRect | PrimLine | PrimCircle | PrimText;
+/** Un polígono relleno (la flecha del norte). */
+export type PrimPoly = {
+  t: "poly";
+  puntos: [number, number][];
+  fill: string; stroke?: string; strokeWidth?: number; opacity?: number;
+};
+export type Prim = PrimRect | PrimLine | PrimCircle | PrimText | PrimPoly;
 
 export interface LegendItem {
   x: number; y: number;
-  kind: "loseta" | "pileta" | "solarhumedo" | "espejo" | "escalera" | "luz" | "skimmer" | "hidromasaje";
+  kind: "loseta" | "pileta" | "solarhumedo" | "espejo" | "escalera" | "luz" | "skimmer" | "hidromasaje" | "sala" | "casa";
   label: string;
 }
 
@@ -335,6 +370,7 @@ function trasladarPrim(p: Prim, dx: number, dy: number): void {
   if (p.t === "rect") { p.x += dx; p.y += dy; }
   else if (p.t === "circle") { p.cx += dx; p.cy += dy; }
   else if (p.t === "text") { p.x += dx; p.y += dy; }
+  else if (p.t === "poly") { p.puntos = p.puntos.map(([x, y]) => [x + dx, y + dy]); }
   else { p.x1 += dx; p.x2 += dx; p.y1 += dy; p.y2 += dy; }
 }
 
@@ -363,13 +399,23 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
   const padTop = showDims ? 90 : 46;
   const padSide = showDims ? 130 : 90;
   const padBottom = showDims ? 110 : 60;
-  const maxW = viewW - padSide * 2;
-  const maxH = viewHmax - padTop - padBottom;
+  // La sala de filtro y la casa se dibujan afuera del borde: se reserva su lugar en cada lado.
+  const ubicaciones: Ubicacion[] = [];
+  if (s.salaFiltro) ubicaciones.push({ tipo: "sala", lado: s.salaLado, pos: s.salaPos });
+  if (s.casa) ubicaciones.push({ tipo: "casa", lado: s.casaLado, pos: s.casaPos });
+  const reserva = reservaPorLado(ubicaciones);
+  const maxW = viewW - padSide * 2 - reserva.solar - reserva.opuesto;
+  const maxH = viewHmax - padTop - padBottom - reserva.lateral1 - reserva.lateral2;
   const totalW = s.largo + s.solar + s.opuesto;
   const totalH = s.ancho + s.lateral1 + s.lateral2;
   const pxPerM = Math.max(1, Math.min(maxW / Math.max(totalW, 0.01), maxH / Math.max(totalH, 0.01)));
-  const ox = padSide;
-  const oy = padTop;
+  const ox = padSide + reserva.solar;
+  const oy = padTop + reserva.lateral1;
+  // Los bordes EXTERIORES (contando lo reservado): de ahí en adelante van cotas, títulos y leyenda.
+  const arribaFuera = oy - reserva.lateral1;
+  const izquierdaFuera = ox - reserva.solar;
+  const derechaFuera = ox + totalW * pxPerM + reserva.opuesto;
+  const abajoFuera = oy + totalH * pxPerM + reserva.lateral2;
 
   const poolX = ox + s.solar * pxPerM;
   const poolY = oy + s.lateral1 * pxPerM;
@@ -717,11 +763,21 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
           ? arrastrables[0]
           : `${arrastrables.slice(0, -1).join(", ")} y ${arrastrables[arrastrables.length - 1]}`;
       extras.push({
-        t: "text", x: ox + (totalW * pxPerM) / 2, y: oy + totalH * pxPerM + 34,
+        t: "text", x: ox + (totalW * pxPerM) / 2, y: abajoFuera + 34,
         text: `Arrastrá ${lista} donde quieras`,
         fontSize: 11, fill: "#B98A1E", anchor: "middle",
       });
     }
+  }
+
+  // Sala de filtro y casa: afuera del borde, pegadas al lado elegido.
+  for (const caja of ubicarObjetos(ubicaciones, { x: ox, y: oy, w: totalW * pxPerM, h: totalH * pxPerM })) {
+    extras.push(...dibujarObjetoUbicado(caja));
+  }
+  // Puntos cardinales: arriba a la derecha, en el margen (nunca encima del plano).
+  if (s.puntosCardinales) {
+    const r = showDims ? 24 : 17;
+    extras.push(...dibujarBrujula(viewW - (showDims ? 66 : 46), showDims ? 66 : 42, r, s.norteGrados, showDims ? 12 : 10));
   }
 
   const dimColor = "#1B3A5C";
@@ -729,7 +785,7 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
 
   const aguaBottom = s.colorAgua || "#A6D1EC";
   const aguaTop = String(aguaBottom).toLowerCase() === "#a6d1ec" ? "#E7F3FC" : aclararHex(aguaBottom, 0.6);
-  const losetaFill = s.colorLoseta || "#F7E6D3";
+  const losetaFill = s.colorLoseta || COLOR_BORDE_POR_DEFECTO;
 
   const revestText = s.revestimiento ? REVEST_LABELS[s.revestimiento] || (s.revestimiento === "otro" ? s.revestimientoOtro || "Otro" : "") : "";
   const revestTextFinal = s.revestimiento === "otro" ? s.revestimientoOtro || "Otro" : revestText;
@@ -738,7 +794,7 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
 
   if (showDims) {
     dims.push({
-      t: "text", x: poolX + poolW / 2, y: oy - 13,
+      t: "text", x: poolX + poolW / 2, y: arribaFuera - 13,
       text: `Pileta ${fmtM(s.largo)} x ${fmtM(s.ancho)} m${resumenProfundidad(zonas) ? " · Prof. " + resumenProfundidad(zonas) : ""}`,
       fontSize: 17, fill: dimColor, anchor: "middle", weight: "bold",
     });
@@ -758,13 +814,13 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
       });
     }
 
-    const topY = oy - 34;
+    const topY = arribaFuera - 34;
     dims.push({ t: "line", x1: ox, y1: topY, x2: ox + totalW * pxPerM, y2: topY, stroke: dimColor, strokeWidth: 0.75 });
     dims.push(tickH(ox, topY, dimColor));
     dims.push(tickH(ox + totalW * pxPerM, topY, dimColor));
     dims.push({ t: "text", x: ox + (totalW * pxPerM) / 2, y: topY - 10, text: `Borde total: ${fmtM(totalW)} m`, fontSize: 13, fill: dimColor, anchor: "middle" });
 
-    const leftX = Math.max(40, ox - 60);
+    const leftX = Math.max(40, izquierdaFuera - 60);
     dims.push({ t: "line", x1: leftX, y1: oy, x2: leftX, y2: oy + totalH * pxPerM, stroke: dimColor, strokeWidth: 0.75 });
     dims.push(tick(leftX, oy, dimColor));
     dims.push(tick(leftX, oy + totalH * pxPerM, dimColor));
@@ -795,10 +851,10 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
       });
     }
   } else {
-    dims.push({ t: "text", x: ox + (totalW * pxPerM) / 2, y: oy - 14, text: `${s.lblLateral1}: ${fmtM(s.lateral1)} m`, fontSize: 12, fill: "#555", anchor: "middle" });
-    dims.push({ t: "text", x: ox + (totalW * pxPerM) / 2, y: oy + totalH * pxPerM + 24, text: `${s.lblLateral2}: ${fmtM(s.lateral2)} m`, fontSize: 12, fill: "#555", anchor: "middle" });
-    dims.push({ t: "text", x: Math.max(14, ox - 16), y: oy + (totalH * pxPerM) / 2, text: `${s.lblSolar}: ${fmtM(s.solar)} m`, fontSize: 12, fill: "#555", anchor: "end" });
-    dims.push({ t: "text", x: ox + totalW * pxPerM + 16, y: oy + (totalH * pxPerM) / 2, text: `${s.lblOpuesto}: ${fmtM(s.opuesto)} m`, fontSize: 12, fill: "#555", anchor: "start" });
+    dims.push({ t: "text", x: ox + (totalW * pxPerM) / 2, y: arribaFuera - 14, text: `${s.lblLateral1}: ${fmtM(s.lateral1)} m`, fontSize: 12, fill: "#555", anchor: "middle" });
+    dims.push({ t: "text", x: ox + (totalW * pxPerM) / 2, y: abajoFuera + 24, text: `${s.lblLateral2}: ${fmtM(s.lateral2)} m`, fontSize: 12, fill: "#555", anchor: "middle" });
+    dims.push({ t: "text", x: Math.max(14, izquierdaFuera - 16), y: oy + (totalH * pxPerM) / 2, text: `${s.lblSolar}: ${fmtM(s.solar)} m`, fontSize: 12, fill: "#555", anchor: "end" });
+    dims.push({ t: "text", x: derechaFuera + 16, y: oy + (totalH * pxPerM) / 2, text: `${s.lblOpuesto}: ${fmtM(s.opuesto)} m`, fontSize: 12, fill: "#555", anchor: "start" });
     dims.push({
       t: "text", x: poolX + poolW / 2, y: poolY + poolH / 2 - (revestTextFinal ? 8 : 0),
       text: `${fmtM(s.largo)} x ${fmtM(s.ancho)} m`, fontSize: 14, fill: "#1B3A5C", anchor: "middle", central: true,
@@ -846,7 +902,7 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
     }
   }
 
-  let svgH = oy + totalH * pxPerM + padBottom;
+  let svgH = abajoFuera + padBottom;
   const legend: LegendItem[] = [];
 
   if (showDims) {
@@ -860,11 +916,13 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
     if (s.luces && s.cantLuces > 0) legItems.push({ kind: "luz", label: "Luz" });
     if (s.skimmer && s.cantSkimmers > 0) legItems.push({ kind: "skimmer", label: "Skimmer" });
     if (s.hidromasaje && s.cantHidromasajes > 0) legItems.push({ kind: "hidromasaje", label: "Hidromasaje" });
+    if (s.salaFiltro) legItems.push({ kind: "sala", label: "Sala de filtro" });
+    if (s.casa) legItems.push({ kind: "casa", label: "Casa / quincho" });
 
     const swW = 18, swGap = 8, itemGap = 30, rowH = 28;
-    const maxRight = ox + totalW * pxPerM;
+    const maxRight = derechaFuera;
     let lx = ox;
-    let ly = oy + totalH * pxPerM + 62;
+    let ly = abajoFuera + 62;
     for (const it of legItems) {
       const w = swW + swGap + it.label.length * 7.4 + itemGap;
       if (lx + w > maxRight && lx > ox) { lx = ox; ly += rowH; }
