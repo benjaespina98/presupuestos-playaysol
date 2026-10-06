@@ -4,3 +4,11 @@
 // sin usarse en public/logo-mark.png, asi que ahora se sirve como imagen estatica:
 // sale del JS, la cachea el navegador y la comparten el portal y las calculadoras.
 export const LOGO_URL = "/logo-mark.png";
+
+// Planilla de costos y pedidos (Google Sheets), guardada en la carpeta de Drive
+// del proyecto. El catálogo web es la fuente de los precios de venta; la
+// planilla es el apoyo para costos, proveedores y pedido de materiales.
+export const PLANILLA_COSTOS_URL =
+  "https://docs.google.com/spreadsheets/d/17GH_EoeKPUkNb7i4UjsmlWRyhZwcFVViT3zQv_8eBPE/edit";
+export const CARPETA_DRIVE_URL =
+  "https://drive.google.com/drive/folders/1VEttLyH8ZMBM3V92iKzeZZeKA0Bo0583";

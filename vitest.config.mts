@@ -21,6 +21,10 @@ export default defineConfig({
     // tests, node incluido: solo extiende `expect` con los matchers de
     // jest-dom, no depende del DOM.
     setupFiles: ["./tests/setup-jsdom.ts"],
+    // Los tests de calculadoras tipean con userEvent y cada tecla vuelve a dibujar el
+    // formulario y el documento: con 5 s (el default) los más largos quedan al borde y
+    // fallan por timeout cuando la máquina está cargada, sin que haya un error real.
+    testTimeout: 20_000,
   },
   resolve: {
     // Mismo alias que tsconfig, para que los tests importen igual que la app.

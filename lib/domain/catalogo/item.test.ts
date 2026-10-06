@@ -3,6 +3,9 @@ import { CATEGORIAS } from "./categorias";
 import {
   agruparPorCategoria,
   categoriaEfectiva,
+  contarPorCategoria,
+  disponibleEnCalculadora,
+  esPrecioBase,
   filtrarCatalogo,
   ItemCatalogo,
   ordenarCatalogo,
@@ -191,5 +194,68 @@ describe("textoParaCopiar", () => {
   it("sin descripción, usa la clave", () => {
     const i = item({ descripcion: null, clave: "luces", precio: 240000, unidad: null });
     expect(textoParaCopiar(i, $)).toBe("luces: $240.000");
+  });
+});
+
+describe("disponibleEnCalculadora", () => {
+  it("ofrece los ítems activos, y también los que no traen el flag", () => {
+    expect(disponibleEnCalculadora({ clave: "luces", activo: true })).toBe(true);
+    expect(disponibleEnCalculadora({ clave: "luces" })).toBe(true);
+  });
+
+  it("no ofrece un ítem dado de baja en un presupuesto nuevo", () => {
+    expect(disponibleEnCalculadora({ clave: "luces", activo: false })).toBe(false);
+  });
+
+  it("conserva el dado de baja si el presupuesto reabierto ya lo incluía", () => {
+    expect(disponibleEnCalculadora({ clave: "luces", activo: false }, ["luces"])).toBe(true);
+    expect(disponibleEnCalculadora({ clave: "luces", activo: false }, ["otra"])).toBe(false);
+  });
+});
+
+describe("filtrarCatalogo · calculadora", () => {
+  it("deja sólo los ítems de la calculadora elegida", () => {
+    const items = [
+      item({ id: "a", tipo: "piscinas" }),
+      item({ id: "b", tipo: "cercos" }),
+      item({ id: "c", tipo: "cercos" }),
+    ];
+    expect(filtrarCatalogo(items, { tipo: "cercos" }).map((i) => i.id)).toEqual(["b", "c"]);
+    expect(filtrarCatalogo(items, { tipo: null })).toHaveLength(3);
+  });
+});
+
+describe("contarPorCategoria", () => {
+  const items = [
+    item({ id: "a", categoria: "Piscinas", tipo: "piscinas" }),
+    item({ id: "b", categoria: "Piscinas", tipo: "piscinas" }),
+    item({ id: "c", categoria: "Cercos", tipo: "cercos" }),
+    item({ id: "d", categoria: null, tipo: "piscinas" }),
+    item({ id: "e", categoria: "Cercos", tipo: "cercos", activo: false }),
+  ];
+
+  it("cuenta por categoría, sin las vacías, tratando sin clasificar como Otros", () => {
+    const { total, porCategoria } = contarPorCategoria(items, {});
+    expect(total).toBe(4);
+    expect(porCategoria).toEqual({ Piscinas: 2, Cercos: 1, Otros: 1 });
+  });
+
+  it("respeta búsqueda, calculadora e inactivos, pero no la categoría", () => {
+    expect(contarPorCategoria(items, { incluirInactivos: true }).porCategoria.Cercos).toBe(2);
+    expect(contarPorCategoria(items, { tipo: "cercos" }).porCategoria).toEqual({ Cercos: 1 });
+    expect(contarPorCategoria(items, { busqueda: "no-existe" }).total).toBe(0);
+  });
+});
+
+describe("esPrecioBase", () => {
+  it("reconoce los precios base de cercos y cobertores", () => {
+    for (const c of ["precioSin", "precioCon", "precioMenos15", "precioMas15", "precioInstalacion"]) {
+      expect(esPrecioBase(c)).toBe(true);
+    }
+  });
+
+  it("un opcional común se puede eliminar", () => {
+    expect(esPrecioBase("luces")).toBe(false);
+    expect(esPrecioBase("cascada")).toBe(false);
   });
 });

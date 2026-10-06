@@ -1,20 +1,26 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { listarItemsCatalogo, actualizarItemCatalogo } from "@/lib/catalogo";
+import { listarItemsCatalogo } from "@/lib/catalogo";
 import {
   agruparPorCategoria,
+  contarPorCategoria,
+  contarPorLinea,
   filtrarCatalogo,
   ordenarCatalogo,
   textoParaCopiar,
   type ItemCatalogo,
 } from "@/lib/domain/catalogo/item";
-import { CATEGORIAS, type Categoria } from "@/lib/domain/catalogo/categorias";
+import type { Categoria } from "@/lib/domain/catalogo/categorias";
+import type { LineaPiscina } from "@/lib/domain/catalogo/listas";
+import type { TipoCalculadora } from "@/lib/presupuestos";
 import { formatARS } from "@/lib/format/ars";
 import { formatFechaRelativa, formatFechaCompleta } from "@/lib/format/fecha";
 import { copiarAlPortapapeles } from "@/lib/clipboard";
 import { PanelPortal } from "@/components/PanelPortal";
-import { IconEdit, IconCopy, IconSearch, IconPlus, IconPower } from "@/components/icons";
+import { IconEdit, IconCopy, IconPlus, IconTable } from "@/components/icons";
+import { PLANILLA_COSTOS_URL } from "@/lib/brand";
+import { FiltrosCatalogo } from "@/components/catalogo/FiltrosCatalogo";
 import { EditarItemModal } from "@/components/catalogo/EditarItemModal";
 import { CrearItemModal } from "@/components/catalogo/CrearItemModal";
 import { TITULOS_TIPO } from "@/components/catalogo/titulos-tipo";
@@ -24,14 +30,14 @@ export default function CatalogoPage() {
   const [error, setError] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [categoria, setCategoria] = useState<Categoria | "">("");
+  const [tipo, setTipo] = useState<TipoCalculadora | "">("");
+  const [linea, setLinea] = useState<LineaPiscina | "">("");
   const [incluirInactivos, setIncluirInactivos] = useState(false);
   const [modoConsulta, setModoConsulta] = useState(false);
   const [editando, setEditando] = useState<ItemCatalogo | null>(null);
   const [creando, setCreando] = useState(false);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
   const [copiadoId, setCopiadoId] = useState<string | null>(null);
-  const [cambiandoEstadoId, setCambiandoEstadoId] = useState<string | null>(null);
-  const [errorEstado, setErrorEstado] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -48,16 +54,37 @@ export default function CatalogoPage() {
   const visibles = useMemo(() => {
     if (!items) return null;
     return ordenarCatalogo(
-      filtrarCatalogo(items, { busqueda, categoria: categoria || null, incluirInactivos })
+      filtrarCatalogo(items, { busqueda, categoria: categoria || null,
+        tipo: tipo || null,
+        linea: linea || null,
+        incluirInactivos,
+      })
     );
-  }, [items, busqueda, categoria, incluirInactivos]);
+  }, [items, busqueda, categoria, tipo, linea, incluirInactivos]);
+
+  const conteos = useMemo(
+    () => contarPorCategoria(items ?? [], { busqueda, tipo: tipo || null, linea: linea || null, incluirInactivos }),
+    [items, busqueda, tipo, linea, incluirInactivos]
+  );
+  const conteosLinea = useMemo(
+    () => contarPorLinea(items ?? [], { busqueda, categoria: categoria || null, tipo: tipo || null, incluirInactivos }),
+    [items, busqueda, categoria, tipo, incluirInactivos]
+  );
 
   // Un bloque por categoría en vez de repetir la columna "Categoría" en cada
   // fila — con el catálogo lleno (varias decenas de ítems) es mucho más
   // rápido encontrar algo escaneando encabezados que leyendo una tabla plana.
   const grupos = useMemo(() => (visibles ? agruparPorCategoria(visibles) : []), [visibles]);
 
-  const hayFiltros = !!(busqueda || categoria || incluirInactivos);
+  const hayFiltros = !!(busqueda || categoria || tipo || linea || incluirInactivos);
+
+  function limpiarFiltros() {
+    setBusqueda("");
+    setCategoria("");
+    setTipo("");
+    setLinea("");
+    setIncluirInactivos(false);
+  }
 
   function abrirEdicion(item: ItemCatalogo) {
     setMensajeExito(null);
@@ -78,35 +105,16 @@ export default function CatalogoPage() {
     setTimeout(() => setCopiadoId((actual) => (actual === item.id ? null : actual)), 2000);
   }
 
+  function itemEliminado(eliminado: ItemCatalogo) {
+    setItems((prev) => (prev ? prev.filter((it) => it.id !== eliminado.id) : prev));
+    setEditando(null);
+    setMensajeExito(`Se eliminó "${eliminado.descripcion || eliminado.clave}".`);
+  }
+
   function itemCreado(nuevo: ItemCatalogo) {
     setItems((prev) => (prev ? [...prev, nuevo] : [nuevo]));
     setCreando(false);
-    setMensajeExito(`Se creó "${nuevo.descripcion || nuevo.clave}".`);
-  }
-
-  /** Dar de alta/baja rápido, sin abrir el modal completo — nunca borra la
-   *  fila (no hay `.delete()` sobre catalogo_items, ver lib/catalogo.test.ts):
-   *  sólo prende/apaga el mismo flag `activo` que ya ofrece EditarItemModal,
-   *  con un solo click desde el listado. */
-  async function alternarActivo(item: ItemCatalogo) {
-    setErrorEstado(null);
-    setCambiandoEstadoId(item.id);
-    try {
-      const { error } = await actualizarItemCatalogo(item.id, {
-        descripcion: item.descripcion,
-        precio: item.precio,
-        categoria: item.categoria,
-        unidad: item.unidad,
-        activo: !item.activo,
-      });
-      if (error) {
-        setErrorEstado(error);
-        return;
-      }
-      setItems((prev) => (prev ? prev.map((it) => (it.id === item.id ? { ...it, activo: !it.activo } : it)) : prev));
-    } finally {
-      setCambiandoEstadoId(null);
-    }
+    setMensajeExito(`Se agregó "${nuevo.descripcion || nuevo.clave}".`);
   }
 
   return (
@@ -118,65 +126,47 @@ export default function CatalogoPage() {
             Precios y descripciones de materiales y opcionales, compartidos por todo el equipo.
           </p>
         </div>
-        {!modoConsulta && (
-          <button
-            type="button"
-            onClick={() => setCreando(true)}
-            className="flex min-h-11 items-center gap-1.5 rounded-md bg-[#1B3A5C] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46]"
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href={PLANILLA_COSTOS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex min-h-11 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-[#1B3A5C] shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50"
           >
-            <IconPlus className="h-4 w-4" />
-            Nuevo ítem
-          </button>
-        )}
-      </div>
-
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <select
-          value={categoria}
-          onChange={(e) => setCategoria(e.target.value as Categoria | "")}
-          aria-label="Filtrar por categoría"
-          className="min-h-11 w-full rounded-md border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#1B3A5C] focus:outline-none sm:w-auto"
-        >
-          <option value="">Todas las categorías</option>
-          {CATEGORIAS.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-
-        <div className="relative w-full sm:max-w-sm">
-          <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar por nombre o clave..."
-            aria-label="Buscar en el catálogo"
-            className="min-h-11 w-full rounded-md border border-gray-300 py-2.5 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none"
-          />
+            <IconTable className="h-4 w-4" />
+            Planilla de costos
+          </a>
+          {!modoConsulta && (
+            <button
+              type="button"
+              onClick={() => setCreando(true)}
+              className="flex min-h-11 items-center gap-1.5 rounded-lg bg-[#1B3A5C] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#142c46]"
+            >
+              <IconPlus className="h-4 w-4" />
+              Agregar ítem
+            </button>
+          )}
         </div>
-
-        <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-gray-700">
-          <input
-            type="checkbox"
-            checked={incluirInactivos}
-            onChange={(e) => setIncluirInactivos(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300 text-[#1B3A5C] focus:ring-2 focus:ring-[#1B3A5C]/30"
-          />
-          Mostrar dados de baja
-        </label>
-
-        <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-gray-700 sm:ml-auto">
-          <input
-            type="checkbox"
-            checked={modoConsulta}
-            onChange={(e) => setModoConsulta(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300 text-[#1B3A5C] focus:ring-2 focus:ring-[#1B3A5C]/30"
-          />
-          Modo consulta rápida
-        </label>
       </div>
+
+      <FiltrosCatalogo
+        busqueda={busqueda}
+        onBusqueda={setBusqueda}
+        categoria={categoria}
+        onCategoria={setCategoria}
+        tipo={tipo}
+        onTipo={setTipo}
+        linea={linea}
+        onLinea={setLinea}
+        conteosLinea={conteosLinea}
+        incluirInactivos={incluirInactivos}
+        onIncluirInactivos={setIncluirInactivos}
+        modoConsulta={modoConsulta}
+        onModoConsulta={setModoConsulta}
+        conteos={conteos}
+        hayFiltros={hayFiltros}
+        onLimpiar={limpiarFiltros}
+      />
 
       {modoConsulta && (
         <p className="mb-4 rounded-md bg-[#EEF2F6] px-4 py-2.5 text-xs text-gray-600">
@@ -188,12 +178,6 @@ export default function CatalogoPage() {
       {error && (
         <p role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
-        </p>
-      )}
-
-      {errorEstado && (
-        <p role="alert" className="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
-          No se pudo cambiar el estado: {errorEstado}
         </p>
       )}
 
@@ -234,7 +218,7 @@ export default function CatalogoPage() {
                       <tr className="border-b border-gray-200 bg-gray-50 text-gray-700">
                         <th className="px-4 py-3 font-medium">Producto</th>
                         <th className="px-4 py-3 font-medium">Calculadora</th>
-                        <th className="px-4 py-3 font-medium">Precio</th>
+                        <th className="px-4 py-3 text-right font-medium">Precio</th>
                         <th className="px-4 py-3 font-medium">Actualizado</th>
                         {!modoConsulta && <th className="px-4 py-3 font-medium">Estado</th>}
                         <th className="px-4 py-3 font-medium"></th>
@@ -242,12 +226,19 @@ export default function CatalogoPage() {
                     </thead>
                     <tbody>
                       {grupo.items.map((item) => (
-                        <tr key={item.id} className="border-b border-gray-100 last:border-0">
+                        <tr
+                          key={item.id}
+                          className={`border-b border-gray-100 transition-colors last:border-0 hover:bg-gray-50/70 ${item.activo ? "" : "opacity-60"}`}
+                        >
                           <td className="px-4 py-3 text-gray-900">
                             <ItemDescripcion item={item} />
                           </td>
-                          <td className="px-4 py-3 text-gray-700">{TITULOS_TIPO[item.tipo]}</td>
-                          <td className="px-4 py-3 text-gray-700">
+                          <td className="px-4 py-3">
+                            <span className="inline-flex rounded-md bg-[#EEF2F6] px-2 py-0.5 text-xs font-medium text-[#1B3A5C]">
+                              {TITULOS_TIPO[item.tipo]}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums text-gray-700">
                             <PrecioItem item={item} />
                           </td>
                           <td className="px-4 py-3 text-gray-500">
@@ -278,7 +269,6 @@ export default function CatalogoPage() {
                                   <IconEdit className="h-4 w-4" />
                                   Editar
                                 </button>
-                                <BotonAlternarActivo item={item} enCurso={cambiandoEstadoId === item.id} onClick={() => alternarActivo(item)} />
                               </div>
                             )}
                           </td>
@@ -329,7 +319,6 @@ export default function CatalogoPage() {
                                 <IconEdit className="h-4 w-4" />
                                 Editar
                               </button>
-                              <BotonAlternarActivo item={item} enCurso={cambiandoEstadoId === item.id} onClick={() => alternarActivo(item)} />
                             </div>
                           )}
                         </div>
@@ -349,38 +338,12 @@ export default function CatalogoPage() {
           item={editando}
           onClose={() => setEditando(null)}
           onGuardado={guardarEdicion}
+          onEliminado={itemEliminado}
         />
       )}
 
       {creando && <CrearItemModal onClose={() => setCreando(false)} onCreado={itemCreado} />}
     </PanelPortal>
-  );
-}
-
-/** Dar de alta/baja con un solo click, sin abrir el modal completo — mismo
- *  flag `activo` que ya ofrece EditarItemModal, nunca un borrado real (no
- *  hay `.delete()` sobre catalogo_items, ver lib/catalogo.test.ts). */
-function BotonAlternarActivo({
-  item,
-  enCurso,
-  onClick,
-}: {
-  item: ItemCatalogo;
-  enCurso: boolean;
-  onClick: () => void;
-}) {
-  const label = item.activo ? "Dar de baja" : "Reactivar";
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={enCurso}
-      title={label}
-      aria-label={`${label} "${item.descripcion || item.clave}"`}
-      className="inline-flex min-h-11 items-center rounded-md px-2.5 py-1.5 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      <IconPower className="h-4 w-4" />
-    </button>
   );
 }
 
@@ -418,13 +381,13 @@ function ItemDescripcion({ item }: { item: ItemCatalogo }) {
 function PrecioItem({ item }: { item: ItemCatalogo }) {
   if (item.precio === null) {
     return (
-      <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+      <span className="inline-flex items-center whitespace-nowrap rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
         A cotizar
       </span>
     );
   }
   return (
-    <span className="font-medium text-gray-900">
+    <span className="whitespace-nowrap font-medium text-gray-900">
       {formatARS(item.precio)}
       {item.unidad && <span className="font-normal text-gray-400"> / {item.unidad}</span>}
     </span>

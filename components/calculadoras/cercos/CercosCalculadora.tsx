@@ -11,6 +11,7 @@ import type { PresupuestoLeido } from "@/lib/domain/presupuesto/adaptadores";
 import { guardarPresupuesto, actualizarPresupuesto, subirFotoPresupuesto } from "@/lib/presupuestos";
 import { formatARS } from "@/lib/format/ars";
 import type { CatalogoRow } from "@/lib/catalogo";
+import { disponibleEnCalculadora } from "@/lib/domain/catalogo/item";
 import { esTextoCompartido } from "@/lib/domain/catalogo/categorias";
 import { adicionalesDesdeLineas } from "@/lib/domain/presupuesto/formulario";
 import { leerTextosCompartidos, type TextosCompartidos } from "@/lib/documentos/textosCompartidos";
@@ -42,7 +43,7 @@ function esOpcionalCatalogo(r: CatalogoRow): boolean {
 /** Arma los valores por defecto del form a partir del catálogo compartido: los
  *  dos precios base y la lista de opcionales (todo lo que no sea esas dos
  *  claves ni un texto reservado). */
-function formularioDesdeCatalogo(catalogo: CatalogoRow[]): CercosForm {
+function formularioDesdeCatalogo(catalogo: CatalogoRow[], clavesAMantener: string[] = []): CercosForm {
   const base = formularioVacio();
   const porClave = new Map(catalogo.map((r) => [r.clave, r]));
 
@@ -50,7 +51,7 @@ function formularioDesdeCatalogo(catalogo: CatalogoRow[]): CercosForm {
     ...base,
     precioPorMlSinInstalacion: porClave.get(CLAVE_PRECIO_SIN)?.precio ?? base.precioPorMlSinInstalacion,
     precioPorMlConInstalacion: porClave.get(CLAVE_PRECIO_CON)?.precio ?? base.precioPorMlConInstalacion,
-    opcionales: catalogo.filter(esOpcionalCatalogo).map((r) => ({
+    opcionales: catalogo.filter((r) => esOpcionalCatalogo(r) && disponibleEnCalculadora(r, clavesAMantener)).map((r) => ({
       clave: r.clave,
       descripcion: r.descripcion ?? r.clave,
       precio: r.precio,
@@ -71,8 +72,8 @@ function formularioDesdeCatalogo(catalogo: CatalogoRow[]): CercosForm {
  *                             Fase 2, no algo para "arreglar" acá).
  */
 function formularioDesdePresupuesto(leido: PresupuestoLeido, catalogo: CatalogoRow[]): CercosForm {
-  const base = formularioDesdeCatalogo(catalogo);
   const { presupuesto, preciosCongelados, clavesIncluidas } = leido;
+  const base = formularioDesdeCatalogo(catalogo, clavesIncluidas);
   const medidas = presupuesto.medidas as { metrosLineales?: number };
 
   const comunes = {

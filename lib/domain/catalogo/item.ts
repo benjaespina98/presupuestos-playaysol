@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TipoCalculadora } from "../presupuesto/v1";
 import { CATEGORIA_POR_DEFECTO, CATEGORIAS, Categoria } from "./categorias";
+import { lineaDeClave, type LineaPiscina } from "./listas";
 
 /**
  * Una fila de `catalogo_items` tal como la necesita la pantalla de Catálogo
@@ -29,13 +30,11 @@ export const ItemCatalogo = z.object({
    *  (no el enum `Unidad`): una fila cargada a mano en Supabase con otro
    *  valor no tiene que romper el listado, sólo se ve rara. */
   unidad: z.string().nullable(),
-  /** Si aparece en el listado de Catálogo. No afecta ningún cálculo ni a las
-   *  calculadoras: `obtenerCatalogo()` (lib/catalogo.ts) no filtra por esto,
-   *  como dice el comentario de la migración ("La pantalla lista por
-   *  categoría y filtra los inactivos"). Es puramente un flag de la pantalla
-   *  de administración, para dar de baja un material discontinuado sin
-   *  borrar su fila (que rompería presupuestos viejos que la referencian por
-   *  clave — ver PresupuestoV1). */
+  /** Si el ítem está vigente. Dado de baja (false) deja de ofrecerse en el
+   *  listado de Catálogo y como opcional/material de las calculadoras (ver
+   *  `disponibleEnCalculadora`). No se borra la fila: presupuestos viejos la
+   *  referencian por clave (ver PresupuestoV1) y siguen mostrándola. No
+   *  afecta ningún cálculo. */
   activo: z.boolean(),
   /** Posición manual dentro de su categoría. null = sin orden explícito, se
    *  ordena alfabéticamente. */
@@ -103,6 +102,10 @@ export function textoParaCopiar(item: Pick<ItemCatalogo, "descripcion" | "clave"
 export interface FiltroCatalogo {
   busqueda?: string;
   categoria?: Categoria | null;
+  /** Sólo las piscinas completas de esa línea (hormigón / Indusplast). */
+  linea?: LineaPiscina | null;
+  /** Sólo los ítems de esa calculadora. null/undefined = todas. */
+  tipo?: ItemCatalogo["tipo"] | null;
   /** default false: por default el listado no muestra los dados de baja. */
   incluirInactivos?: boolean;
 }
@@ -115,6 +118,8 @@ export function filtrarCatalogo(items: ItemCatalogo[], filtro: FiltroCatalogo): 
   return items.filter((item) => {
     if (!filtro.incluirInactivos && !item.activo) return false;
     if (filtro.categoria && categoriaEfectiva(item) !== filtro.categoria) return false;
+    if (filtro.tipo && item.tipo !== filtro.tipo) return false;
+    if (filtro.linea && lineaDeClave(item.clave) !== filtro.linea) return false;
     if (q) {
       const enDescripcion = (item.descripcion ?? "").toLowerCase().includes(q);
       const enClave = item.clave.toLowerCase().includes(q);
@@ -122,4 +127,73 @@ export function filtrarCatalogo(items: ItemCatalogo[], filtro: FiltroCatalogo): 
     }
     return true;
   });
+}
+
+/**
+ * Cuántos ítems hay por categoría después de aplicar el resto de los filtros
+ * (búsqueda, calculadora, inactivos) — ignora a propósito el filtro de
+ * categoría: son los contadores de los chips, que le dicen al usuario cuánto
+ * encontraría si eligiera cada uno. Sólo trae las categorías con al menos un
+ * ítem. `total` es la suma de todas.
+ */
+export function contarPorCategoria(
+  items: ItemCatalogo[],
+  filtro: Omit<FiltroCatalogo, "categoria">
+): { total: number; porCategoria: Partial<Record<Categoria, number>> } {
+  const porCategoria: Partial<Record<Categoria, number>> = {};
+  const coincidentes = filtrarCatalogo(items, { ...filtro, categoria: null });
+  for (const item of coincidentes) {
+    const c = categoriaEfectiva(item);
+    porCategoria[c] = (porCategoria[c] ?? 0) + 1;
+  }
+  return { total: coincidentes.length, porCategoria };
+}
+
+/** Cuántas piscinas completas hay por línea, con el resto de los filtros
+ *  aplicados (ignora el de línea, como `contarPorCategoria` ignora el de
+ *  categoría). Sólo trae las líneas que tienen algo. */
+export function contarPorLinea(
+  items: ItemCatalogo[],
+  filtro: Omit<FiltroCatalogo, "linea">
+): Partial<Record<LineaPiscina, number>> {
+  const conteo: Partial<Record<LineaPiscina, number>> = {};
+  for (const item of filtrarCatalogo(items, { ...filtro, linea: null })) {
+    const l = lineaDeClave(item.clave);
+    if (l) conteo[l] = (conteo[l] ?? 0) + 1;
+  }
+  return conteo;
+}
+
+/**
+ * ¿Se ofrece este ítem al armar un presupuesto NUEVO? Un ítem dado de baja
+ * (`activo === false`) deja de ofrecerse, pero se conserva si el presupuesto
+ * que se está reabriendo ya lo tenía incluido (`clavesAMantener`): dar de baja
+ * un material no puede hacer desaparecer una línea de un presupuesto viejo.
+ *
+ * `activo` undefined (fila leída por una versión que no lo traía) cuenta como
+ * activo. Sólo se aplica a opcionales/materiales: los precios base se leen por
+ * clave y no se filtran, así que dar de baja uno no los pone en $0.
+ */
+export function disponibleEnCalculadora(
+  fila: { clave: string; activo?: boolean },
+  clavesAMantener: readonly string[] = []
+): boolean {
+  return fila.activo !== false || clavesAMantener.includes(fila.clave);
+}
+
+/**
+ * Los precios base de cada calculadora (cercos, cobertores). Las calculadoras
+ * los leen por clave: si faltaran, el precio caería a $0. Por eso no se pueden
+ * eliminar desde el Catálogo (sí editar el precio).
+ */
+export const CLAVES_PRECIO_BASE = [
+  "precioSin",
+  "precioCon",
+  "precioMenos15",
+  "precioMas15",
+  "precioInstalacion",
+] as const;
+
+export function esPrecioBase(clave: string): boolean {
+  return (CLAVES_PRECIO_BASE as readonly string[]).includes(clave);
 }

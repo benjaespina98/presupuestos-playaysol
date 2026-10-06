@@ -37,6 +37,8 @@ export type CatalogoRow = {
   clave: string;
   precio: number | null;
   descripcion: string | null;
+  /** false = dado de baja desde la pantalla de Catálogo. */
+  activo?: boolean;
 };
 
 // Lee el catálogo compartido de un tipo. Es la contraparte de lectura de
@@ -44,15 +46,18 @@ export type CatalogoRow = {
 // cada -calc.js aplica estos valores sobre los defaults, para que los precios de
 // opcionales y los textos fijos/pie que otro usuario dejó como predeterminados se
 // vean en los presupuestos nuevos de TODOS (antes esta tabla solo se escribía).
+// Si la lectura falla TIRA, en vez de devolver []: con un catálogo vacío la
+// calculadora abría con todos los precios en $0 y sin avisar, y se podía
+// emitir un presupuesto en cero. Las páginas ya tienen un estado de error.
 export async function obtenerCatalogo(tipo: TipoCalculadora): Promise<CatalogoRow[]> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("catalogo_items")
-    .select("clave, precio, descripcion")
+    .select("clave, precio, descripcion, activo")
     .eq("tipo", tipo);
   if (error) {
     console.error("No se pudo leer el catálogo compartido", error);
-    return [];
+    throw new Error(`No se pudo leer el catálogo de precios: ${error.message}`);
   }
   return (data ?? []) as CatalogoRow[];
 }
@@ -264,5 +269,32 @@ export async function crearItemCatalogo(
   } catch (err) {
     console.error("No se pudo crear el ítem de catálogo", err);
     return { item: null, error: ERROR_DE_RED };
+  }
+}
+
+const ELIMINAR_SIN_FILA =
+  "No se pudo eliminar: el ítem ya no existe (puede haberlo eliminado otra persona) o falta habilitar el borrado en Supabase (migration_catalogo_eliminar.sql).";
+
+/**
+ * Elimina un ítem del catálogo por id. Es un borrado real (a diferencia de
+ * "dar de baja", que sólo lo oculta): los presupuestos ya guardados no
+ * cambian porque congelan sus precios, pero un presupuesto viejo anterior a
+ * esa migración que lo incluía lo pierde al reabrirse.
+ *
+ * Mismo cuidado que `actualizarItemCatalogo`: pide `.select("id")` para
+ * distinguir "borré una fila" de "no matcheó ninguna" (PostgREST devuelve
+ * error null en los dos casos; con la policy de delete ausente también).
+ */
+export async function eliminarItemCatalogo(id: string): Promise<{ error: string | null }> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase.from("catalogo_items").delete().eq("id", id).select("id");
+
+    if (error) return { error: error.message };
+    if (!data || data.length === 0) return { error: ELIMINAR_SIN_FILA };
+    return { error: null };
+  } catch (err) {
+    console.error("No se pudo eliminar el ítem de catálogo", err);
+    return { error: ERROR_DE_RED };
   }
 }

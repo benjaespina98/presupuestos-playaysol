@@ -1,17 +1,23 @@
 // @vitest-environment jsdom
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ItemCatalogo } from "@/lib/domain/catalogo/item";
 import { CATEGORIAS } from "@/lib/domain/catalogo/categorias";
 import CatalogoPage from "./page";
 
-const { listarItemsCatalogo, actualizarItemCatalogo, crearItemCatalogo } = vi.hoisted(() => ({
+const { listarItemsCatalogo, actualizarItemCatalogo, crearItemCatalogo, eliminarItemCatalogo } = vi.hoisted(() => ({
   listarItemsCatalogo: vi.fn(),
   actualizarItemCatalogo: vi.fn(),
   crearItemCatalogo: vi.fn(),
+  eliminarItemCatalogo: vi.fn(),
 }));
-vi.mock("@/lib/catalogo", () => ({ listarItemsCatalogo, actualizarItemCatalogo, crearItemCatalogo }));
+vi.mock("@/lib/catalogo", () => ({
+  listarItemsCatalogo,
+  actualizarItemCatalogo,
+  crearItemCatalogo,
+  eliminarItemCatalogo,
+}));
 
 const { copiarAlPortapapeles } = vi.hoisted(() => ({ copiarAlPortapapeles: vi.fn() }));
 vi.mock("@/lib/clipboard", () => ({ copiarAlPortapapeles }));
@@ -165,7 +171,7 @@ describe("CatalogoPage · lectura", () => {
     render(<CatalogoPage />);
 
     await screen.findAllByText("Luces LED");
-    await user.selectOptions(screen.getByLabelText("Filtrar por categoría"), "Cercos");
+    await user.click(screen.getByRole("button", { name: /^Cercos/ }));
 
     await waitFor(() => expect(screen.queryByText("Luces LED")).not.toBeInTheDocument());
     expect(screen.getAllByText("Cerco perimetral")[0]).toBeInTheDocument();
@@ -330,14 +336,14 @@ describe("CatalogoPage · alta de un ítem nuevo", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Luces LED");
 
-    await user.click(screen.getByRole("button", { name: "Nuevo ítem" }));
+    await user.click(screen.getByRole("button", { name: "Agregar ítem" }));
     await user.type(await screen.findByLabelText("Clave"), "Cerco Reforzado");
     await user.type(screen.getByLabelText("Descripción"), "Cerco reforzado");
-    await user.click(screen.getByRole("button", { name: "Crear ítem" }));
+    await user.click(screen.getByRole("button", { name: "Agregar al catálogo" }));
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(screen.getAllByText("Cerco reforzado")[0]).toBeInTheDocument();
-    expect(await screen.findByText('Se creó "Cerco reforzado".')).toBeInTheDocument();
+    expect(await screen.findByText('Se agregó "Cerco reforzado".')).toBeInTheDocument();
   });
 
   it("en modo consulta rápida no se puede dar de alta un ítem nuevo", async () => {
@@ -346,7 +352,7 @@ describe("CatalogoPage · alta de un ítem nuevo", () => {
     render(<CatalogoPage />);
     await user.click(screen.getByLabelText("Modo consulta rápida"));
 
-    expect(screen.queryByRole("button", { name: "Nuevo ítem" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Agregar ítem" })).not.toBeInTheDocument();
   });
 });
 
@@ -355,7 +361,19 @@ describe("CatalogoPage · dar de baja/reactivar rápido", () => {
     actualizarItemCatalogo.mockReset();
   });
 
-  it("dar de baja llama a actualizarItemCatalogo con activo:false y el resto de los datos intactos", async () => {
+  it("el listado no tiene botón de encendido: dar de baja se hace dentro de Editar", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: [item({ id: "a", descripcion: "Luces LED", precio: 240000, categoria: "Iluminación", activo: true })],
+      error: null,
+    });
+    render(<CatalogoPage />);
+    await screen.findAllByText("Luces LED");
+
+    expect(screen.queryByRole("button", { name: /Dar de baja/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Reactivar/ })).not.toBeInTheDocument();
+  });
+
+  it("dar de baja desde la edición guarda activo:false y lo saca del listado", async () => {
     listarItemsCatalogo.mockResolvedValue({
       items: [item({ id: "a", descripcion: "Luces LED", precio: 240000, categoria: "Iluminación", activo: true })],
       error: null,
@@ -365,14 +383,36 @@ describe("CatalogoPage · dar de baja/reactivar rápido", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Luces LED");
 
-    await user.click(screen.getAllByRole("button", { name: 'Dar de baja "Luces LED"' })[0]);
+    await user.click(screen.getAllByRole("button", { name: /Editar/ })[0]);
+    await user.click(await screen.findByLabelText("Activo"));
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
-    await waitFor(() => expect(actualizarItemCatalogo).toHaveBeenCalledWith(
-      "a",
-      { descripcion: "Luces LED", precio: 240000, categoria: "Iluminación", unidad: null, activo: false }
-    ));
+    await waitFor(() =>
+      expect(actualizarItemCatalogo).toHaveBeenCalledWith("a", expect.objectContaining({ activo: false, precio: 240000 }))
+    );
     // Sin "Mostrar dados de baja" tildado, desaparece del listado.
     await waitFor(() => expect(screen.queryByText("Luces LED")).not.toBeInTheDocument());
+  });
+
+  it("eliminar desde la edición lo saca del listado y avisa", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: [item({ id: "a", descripcion: "Luces LED" }), item({ id: "b", descripcion: "Kit de limpieza" })],
+      error: null,
+    });
+    eliminarItemCatalogo.mockResolvedValue({ error: null });
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+    await screen.findAllByText("Luces LED");
+
+    // El listado va ordenado alfabéticamente: "Kit de limpieza" queda primero.
+    await user.click(screen.getAllByRole("button", { name: /Editar/ })[0]);
+    await user.click(await screen.findByRole("button", { name: "Eliminar ítem" }));
+    await user.click(screen.getByRole("button", { name: "Sí, eliminar" }));
+
+    await waitFor(() => expect(eliminarItemCatalogo).toHaveBeenCalledWith("b"));
+    await waitFor(() => expect(screen.queryByText("Kit de limpieza")).not.toBeInTheDocument());
+    expect(screen.getAllByText("Luces LED")[0]).toBeInTheDocument();
+    expect(await screen.findByText('Se eliminó "Kit de limpieza".')).toBeInTheDocument();
   });
 });
 
@@ -381,17 +421,68 @@ describe("CatalogoPage · las 9 categorías", () => {
     actualizarItemCatalogo.mockReset();
   });
 
-  it("el filtro por categoría ofrece exactamente las 9 acordadas en Fase 2", async () => {
+  it("el filtro por categoría ofrece exactamente las 9 acordadas en Fase 2 (con ítems en cada una)", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: CATEGORIAS.map((c, i) => item({ id: String(i), clave: "k" + i, descripcion: "Ítem " + c, categoria: c })),
+      error: null,
+    });
+    render(<CatalogoPage />);
+    const grupo = await screen.findByRole("group", { name: "Filtrar por categoría" });
+
+    const chips = within(grupo)
+      .getAllByRole("button")
+      .map((b) => b.textContent?.replace(/\d+$/, ""));
+
+    expect(chips).toEqual(["Todas", ...CATEGORIAS]);
+  });
+
+  it("los chips muestran sólo las categorías que tienen ítems, con su contador", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: [
+        item({ id: "a", descripcion: "Uno", categoria: "Cercos" }),
+        item({ id: "b", descripcion: "Dos", categoria: "Cercos" }),
+        item({ id: "c", descripcion: "Tres", categoria: "Piscinas" }),
+      ],
+      error: null,
+    });
+    render(<CatalogoPage />);
+    const grupo = await screen.findByRole("group", { name: "Filtrar por categoría" });
+
+    expect(within(grupo).getByRole("button", { name: /^Todass*3$/ })).toBeInTheDocument();
+    expect(within(grupo).getByRole("button", { name: /^Cercoss*2$/ })).toBeInTheDocument();
+    expect(within(grupo).getByRole("button", { name: /^Piscinass*1$/ })).toBeInTheDocument();
+    expect(within(grupo).queryByRole("button", { name: /Mano de obra/ })).not.toBeInTheDocument();
+  });
+
+  it("filtra por calculadora y 'Limpiar filtros' lo deja todo como estaba", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: [
+        item({ id: "a", tipo: "piscinas", descripcion: "De piscinas" }),
+        item({ id: "b", tipo: "cercos", descripcion: "De cercos" }),
+      ],
+      error: null,
+    });
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+    await screen.findAllByText("De piscinas");
+
+    await user.selectOptions(screen.getByLabelText("Filtrar por calculadora"), "cercos");
+    await waitFor(() => expect(screen.queryByText("De piscinas")).not.toBeInTheDocument());
+    expect(screen.getAllByText("De cercos")[0]).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Limpiar filtros" }));
+    expect(screen.getAllByText("De piscinas")[0]).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Limpiar filtros" })).not.toBeInTheDocument();
+  });
+
+  it("hay un botón que abre la planilla de costos en Drive en otra pestaña", async () => {
     listarItemsCatalogo.mockResolvedValue({ items: [], error: null });
     render(<CatalogoPage />);
-    await screen.findByLabelText("Filtrar por categoría");
 
-    const opciones = screen
-      .getAllByRole("option")
-      .filter((o) => o.closest("select")?.getAttribute("aria-label") === "Filtrar por categoría")
-      .map((o) => o.textContent);
-
-    expect(opciones).toEqual(["Todas las categorías", ...CATEGORIAS]);
+    const link = await screen.findByRole("link", { name: /Planilla de costos/ });
+    expect(link).toHaveAttribute("href", expect.stringContaining("docs.google.com/spreadsheets"));
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
   });
 
   it("un ítem sin clasificar (categoria null) se lista bajo 'Otros' y puede clasificarse", async () => {

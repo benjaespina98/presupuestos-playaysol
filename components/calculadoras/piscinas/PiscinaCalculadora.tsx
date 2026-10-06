@@ -11,6 +11,8 @@ import type { PresupuestoLeido } from "@/lib/domain/presupuesto/adaptadores";
 import { guardarPresupuesto, actualizarPresupuesto, subirFotoPresupuesto } from "@/lib/presupuestos";
 import { formatARS } from "@/lib/format/ars";
 import type { CatalogoRow } from "@/lib/catalogo";
+import { disponibleEnCalculadora } from "@/lib/domain/catalogo/item";
+import { esListaDePrecios } from "@/lib/domain/catalogo/listas";
 import { esTextoCompartido } from "@/lib/domain/catalogo/categorias";
 import { adicionalesDesdeLineas } from "@/lib/domain/presupuesto/formulario";
 import { leerTextosCompartidos, type TextosCompartidos } from "@/lib/documentos/textosCompartidos";
@@ -33,7 +35,7 @@ import { VistaPreviaMovil } from "@/components/calculadoras/VistaPreviaMovil";
 import { EditorTextosCompartidos } from "@/components/calculadoras/EditorTextosCompartidos";
 
 function esOpcionalCatalogo(r: CatalogoRow): boolean {
-  return !esTextoCompartido(r.clave);
+  return !esTextoCompartido(r.clave) && !esListaDePrecios(r.clave);
 }
 
 /**
@@ -61,11 +63,11 @@ function textoDimension(largo: number, ancho: number): string {
   );
 }
 
-function formularioDesdeCatalogo(catalogo: CatalogoRow[]): PiscinaForm {
+function formularioDesdeCatalogo(catalogo: CatalogoRow[], clavesAMantener: string[] = []): PiscinaForm {
   const base = formularioVacio();
   return {
     ...base,
-    opcionales: catalogo.filter(esOpcionalCatalogo).map((r) => ({
+    opcionales: catalogo.filter((r) => esOpcionalCatalogo(r) && disponibleEnCalculadora(r, clavesAMantener)).map((r) => ({
       clave: r.clave,
       descripcion: r.descripcion ?? r.clave,
       precio: r.precio,
@@ -75,8 +77,8 @@ function formularioDesdeCatalogo(catalogo: CatalogoRow[]): PiscinaForm {
 }
 
 function formularioDesdePresupuesto(leido: PresupuestoLeido, catalogo: CatalogoRow[]): PiscinaForm {
-  const base = formularioDesdeCatalogo(catalogo);
   const { presupuesto, preciosCongelados, clavesIncluidas } = leido;
+  const base = formularioDesdeCatalogo(catalogo, clavesIncluidas);
 
   const medidas = presupuesto.medidas as { largo?: unknown; ancho?: unknown };
   const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
@@ -214,6 +216,22 @@ export function PiscinaCalculadora({
 
   const valoresForm = useWatch({ control });
   const subtotal = valoresForm.subtotal;
+
+  // Piscinas completas con precio de lista (hormigón por tamaño, Indusplast):
+  // sólo sirven para completar el subtotal, no son opcionales del documento.
+  const listasDePrecios = useMemo(
+    () =>
+      catalogo.filter(
+        (r) => esListaDePrecios(r.clave) && r.precio !== null && disponibleEnCalculadora(r)
+      ),
+    [catalogo]
+  );
+  const [listaElegida, setListaElegida] = useState("");
+  function elegirLista(clave: string) {
+    setListaElegida(clave);
+    const fila = listasDePrecios.find((l) => l.clave === clave);
+    if (fila && fila.precio !== null) setValue("subtotal", fila.precio, { shouldDirty: true, shouldValidate: true });
+  }
   const adicionalesEnVivo = valoresForm.adicionales;
   const opcionalesEnVivo = valoresForm.opcionales;
 
@@ -507,6 +525,29 @@ export function PiscinaCalculadora({
 
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Ítems</h2>
+          {listasDePrecios.length > 0 && (
+            <div>
+              <label htmlFor="lista-precios" className="mb-1 block text-sm font-medium text-gray-700">
+                Precio de lista (completa el subtotal)
+              </label>
+              <select
+                id="lista-precios"
+                value={listaElegida}
+                onChange={(e) => elegirLista(e.target.value)}
+                className="min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20"
+              >
+                <option value="">Elegir tamaño o modelo…</option>
+                {listasDePrecios.map((l) => (
+                  <option key={l.clave} value={l.clave}>
+                    {formatARS(l.precio)} — {l.descripcion ?? l.clave}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                Después podés editar el subtotal a mano si se acordó un precio distinto.
+              </p>
+            </div>
+          )}
           <MoneyField control={control} name="subtotal" label="Subtotal construcción piscina" emptyValue="zero" required />
 
           <div>
