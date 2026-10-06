@@ -67,11 +67,14 @@ export function armarBloquesCobertor(
     });
   }
 
-  bloques.push({
-    tipo: "seccionPrecios",
-    variante: "totales",
-    renglones: snapshot.totales.map((t, i) => ({ descripcion: etiquetas[i], monto: formatARS(t), grande: true, destacado: true })),
-  });
+  // Sin medidas no hay totales (ver `totalesAMostrar`): no se dibuja una sección vacía.
+  if (snapshot.totales.length > 0) {
+    bloques.push({
+      tipo: "seccionPrecios",
+      variante: "totales",
+      renglones: snapshot.totales.map((t, i) => ({ descripcion: etiquetas[i], monto: formatARS(t), grande: true, destacado: true })),
+    });
+  }
 
   if (opcionalesIncluidos.length > 0) {
     bloques.push({ tipo: "tituloSeccion", texto: "Opcionales" });
