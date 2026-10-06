@@ -7,6 +7,7 @@ const SECCIONES = [
   { href: "/dashboard/catalogo", etiqueta: "Precios de venta", exacto: true },
   { href: "/dashboard/catalogo/materiales", etiqueta: "Materiales" },
   { href: "/dashboard/catalogo/proveedores", etiqueta: "Proveedores" },
+  { href: "/dashboard/catalogo/pedido", etiqueta: "Armar pedido" },
 ] as const;
 
 /**
