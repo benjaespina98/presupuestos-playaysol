@@ -12,7 +12,7 @@ import {
 } from "@/lib/domain/abastecimiento/pedidoDocumento";
 import { exportarPedido, type FormatoPedido, type ModoPedido } from "@/lib/documentos/pedidos/exportar";
 import { compartirOdescargarArchivo } from "@/lib/documentos/compartir";
-import { formatARS } from "@/lib/format/ars";
+import { formatARSExacto } from "@/lib/format/ars";
 import { ModalShell, ZonaEliminar } from "@/components/abastecimiento/modal-partes";
 import { MenuExportar } from "./MenuExportar";
 
@@ -153,10 +153,10 @@ export function DetallePedidoModal({
                         {cantidad(l.cantidad)} <span className="text-gray-400">{l.unidad}</span>
                       </td>
                       <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums text-gray-700">
-                        {l.precio === null ? <span className="text-xs text-amber-700">A confirmar</span> : formatARS(l.precio)}
+                        {l.precio === null ? <span className="text-xs text-amber-700">A confirmar</span> : formatARSExacto(l.precio)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-1.5 text-right font-medium tabular-nums text-gray-900">
-                        {l.subtotal === null ? "—" : formatARS(l.subtotal)}
+                        {l.subtotal === null ? "—" : formatARSExacto(l.subtotal)}
                       </td>
                     </tr>
                   ))}
@@ -164,7 +164,7 @@ export function DetallePedidoModal({
               </table>
             </div>
             <p className="border-t border-gray-100 bg-gray-50 px-3 py-1.5 text-right text-sm font-semibold tabular-nums text-gray-900">
-              Subtotal {formatARS(s.subtotal)}
+              Subtotal {formatARSExacto(s.subtotal)}
             </p>
           </section>
         ))}
@@ -172,7 +172,7 @@ export function DetallePedidoModal({
 
       <p className="mt-3 flex items-baseline justify-between border-t-2 border-[#1B3A5C] pt-2 text-base font-bold text-[#1B3A5C]">
         <span>Total estimado</span>
-        <span className="tabular-nums">{formatARS(doc.total)}</span>
+        <span className="tabular-nums">{formatARSExacto(doc.total)}</span>
       </p>
       {doc.sinPrecio > 0 && (
         <p className="mt-1 text-xs text-amber-700">
