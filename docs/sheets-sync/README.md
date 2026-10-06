@@ -16,6 +16,7 @@ actualiza sola a partir de él (cada 5 minutos, o al instante con un botón).
 | **Proveedores** | Columnas A a G, desde la fila 6 | — |
 | **Artículos** | Columnas A a T, desde la fila 6. En los artículos cotizados en dólares queda la fórmula `=USD × tipo de cambio` en la columna D | El tipo de cambio (`B3`), formatos y colores |
 | **Precios y margen** | La columna B (precio de venta) de las filas que se reconocen por su nombre: tamaños de piscina, modelos Indusplast y la lista de adicionales. Y la columna **Stock** (unidades en el local) de las piscinas que llevan stock | Cualquier celda con fórmula, y las filas que no están en el catálogo |
+| **Catálogo web** (la crea el script) | Todos los precios de venta del catálogo con todos sus campos | — |
 | Presupuesto, Pedido, Mensaje, Calc | Nada | Todo |
 
 Los dados de baja en el catálogo **no** van a la planilla. Un precio sin cargar aparece como
@@ -38,10 +39,17 @@ columna con el encabezado **Stock** de la hoja "Precios y margen":
 > 🔁 Si ya tenías el script pegado, hay que **volver a pegar el contenido de
 > [`Sincronizar.gs`](./Sincronizar.gs)** en Apps Script (reemplaza todo) para que sincronice el stock.
 
-## Qué datos del catálogo web NO están en la planilla
-Estos campos existen sólo en la web (la planilla tiene sus propios rótulos para esos ítems):
-descripción larga, categoría y unidad de los **precios de venta**, y si un precio de venta está
-dado de baja. Si querés que alguno se vea en la planilla, hay que decidir en qué columna.
+## La hoja "Catálogo web": todos los campos
+Además de las hojas de siempre, el script crea (si no existe) y mantiene una hoja **Catálogo web**
+con **una fila por precio de venta del catálogo y todos sus campos**: calculadora, clave,
+descripción, categoría, unidad, precio, stock, estado (Activo / De baja) y fecha de actualización.
+Se reescribe entera en cada sincronización, así que **todo cambio del catálogo web aparece ahí**
+(incluido un ítem nuevo, un cambio de descripción o de categoría, o un ítem dado de baja). Es una
+hoja del script: no se edita a mano.
+
+Los proveedores (con su teléfono, contacto, forma de pago, plazo y notas) y los materiales van a
+sus hojas, como antes: **agregar un proveedor o cargarle el número se ve en la planilla en la
+próxima actualización** (cada 5 minutos, o al instante con Catálogo web → Actualizar ahora).
 
 ## Puesta en marcha (una sola vez)
 

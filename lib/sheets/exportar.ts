@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { TAMANOS, type Material } from "@/lib/domain/abastecimiento/material";
 import type { Proveedor } from "@/lib/domain/abastecimiento/proveedor";
+import { CATEGORIAS } from "@/lib/domain/catalogo/categorias";
 
 /**
  * Lo que el catálogo web le entrega a la planilla de costos (Google Sheets).
@@ -27,7 +28,26 @@ export interface ItemPrecio {
   activo?: boolean;
   /** Unidades en el local; null/undefined = no lleva stock. */
   stock?: number | null;
+  descripcion?: string | null;
+  categoria?: string | null;
+  unidad?: string | null;
+  updated_at?: string | null;
 }
+
+/** Nombre para mostrar de cada calculadora en la hoja "Catálogo web". */
+const NOMBRE_TIPO: Record<string, string> = {
+  piscinas: "Piscinas",
+  cercos: "Cercos",
+  cobertores: "Cobertores",
+  losetas: "Plano de piscina",
+  revestimientos: "Revestimientos",
+};
+const ORDEN_TIPO = Object.keys(NOMBRE_TIPO);
+
+/** Los encabezados de la hoja "Catálogo web" (una fila por precio de venta del catálogo, TODOS sus campos). */
+export const ENCABEZADOS_CATALOGO = [
+  "Calculadora", "Clave", "Descripción", "Categoría", "Unidad", "Precio de venta", "Stock", "Estado", "Actualizado",
+] as const;
 
 export interface EntradaExportacion {
   proveedores: Proveedor[];
@@ -54,6 +74,9 @@ export interface Exportacion {
   articulos: ArticuloFila[];
   /** "tipo:clave" → precio de venta (null = a cotizar). Sólo ítems activos. */
   precios: Record<string, number | null>;
+  /** Todos los precios de venta del catálogo con todos sus campos (9 columnas, ver ENCABEZADOS_CATALOGO),
+   *  incluidos los dados de baja (con Estado "De baja"): es la hoja "Catálogo web". */
+  catalogo: Celda[][];
   /** "tipo:clave" → unidades en stock. Sólo los ítems activos que llevan stock (0 = agotado). */
   stock: Record<string, number>;
   tamanos: readonly string[];
@@ -124,7 +147,31 @@ export function armarExportacion(entrada: EntradaExportacion, ahora: Date = new 
     if (typeof i.stock === "number") stock[`${i.tipo}:${i.clave}`] = i.stock;
   }
 
-  const contenido = { proveedores, articulos, precios, stock };
+  const indiceCategoria = (c: string | null | undefined) => {
+    const i = CATEGORIAS.indexOf((c ?? "Otros") as (typeof CATEGORIAS)[number]);
+    return i === -1 ? CATEGORIAS.length : i;
+  };
+  const catalogo: Celda[][] = entrada.items
+    .filter((i) => !i.clave.startsWith("__"))
+    .sort(
+      (a, b) =>
+        ORDEN_TIPO.indexOf(a.tipo) - ORDEN_TIPO.indexOf(b.tipo) ||
+        indiceCategoria(a.categoria) - indiceCategoria(b.categoria) ||
+        texto(a.descripcion ?? a.clave).localeCompare(texto(b.descripcion ?? b.clave), "es")
+    )
+    .map((i) => [
+      NOMBRE_TIPO[i.tipo] ?? i.tipo,
+      i.clave,
+      texto(i.descripcion),
+      texto(i.categoria),
+      texto(i.unidad),
+      i.precio === null ? "A cotizar" : i.precio,
+      typeof i.stock === "number" ? i.stock : "",
+      i.activo === false ? "De baja" : "Activo",
+      fechaParaPlanilla(i.updated_at ?? null),
+    ]);
+
+  const contenido = { proveedores, articulos, precios, stock, catalogo };
   const version = createHash("sha1").update(JSON.stringify(contenido)).digest("hex").slice(0, 16);
 
   return { version, generado: ahora.toISOString(), ...contenido, tamanos: TAMANOS };
