@@ -20,6 +20,9 @@
  *                          no tiene una columna con el encabezado "Stock", se agrega a la
  *                          derecha de todo (no pisa nada). Las celdas con fórmula no se tocan.
  *
+ *   - Piscinas nuevas:      una piscina (hormigón o Indusplast) agregada al catálogo web se agrega
+ *                          también como fila de "Precios y margen", ordenada dentro de su modelo,
+ *                          copiando las fórmulas de la fila vecina.
  *   - Hoja "Catálogo web": una fila por precio de venta del catálogo con TODOS sus campos
  *                          (calculadora, clave, descripción, categoría, unidad, precio, stock,
  *                          estado y fecha). La crea el script si no existe y se reescribe entera.
@@ -88,6 +91,29 @@ function claveDePrecio(etiqueta) {
   // Piscina de fibra Indusplast: "RACIONALISTA 400", "SPA 240".
   var m = /^(RACIONALISTA|CARIBE|FINESA|LAGUNE|SPA) (\d+)$/.exec(t);
   if (m) return "piscinas:indusplast_" + m[1].toLowerCase() + "_" + m[2];
+  return null;
+}
+
+/**
+ * La etiqueta con que figura una piscina del catálogo en "Precios y margen" ("CARIBE 750", "8x4.5"),
+ * o null si no es una piscina que la planilla sepa reconocer. Sólo vale si la planilla, al leer esa
+ * etiqueta, vuelve a la MISMA clave (si no, se agregaría una fila nueva en cada sincronización).
+ */
+function etiquetaDePiscina(clave) {
+  var etiqueta = null;
+  var m = /^indusplast_([a-z]+)_(\d+)$/.exec(clave);
+  if (m) etiqueta = m[1].toUpperCase() + " " + m[2];
+  else if (clave.indexOf("lista_hormigon_") === 0) etiqueta = clave.slice("lista_hormigon_".length).replace(/(\d)_(\d)/g, "$1.$2");
+  if (etiqueta === null) return null;
+  return claveDePrecio(etiqueta) === "piscinas:" + clave ? etiqueta : null;
+}
+
+/** Grupo (modelo Indusplast u hormigón) y orden por tamaño de una etiqueta de piscina; null si no es una. */
+function grupoDeEtiqueta_(etiqueta) {
+  var m = /^(RACIONALISTA|CARIBE|FINESA|LAGUNE|SPA) (\d+)$/.exec(etiqueta);
+  if (m) return { grupo: m[1], orden: Number(m[2]) };
+  var h = /^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/.exec(etiqueta);
+  if (h) return { grupo: "hormigon", orden: Number(h[1]) * 1000 + Number(h[2]) };
   return null;
 }
 
@@ -320,6 +346,67 @@ function escribirCatalogo_(filas) {
   return { filas: filas.length, cambiadas: cambiadas };
 }
 
+/**
+ * Una piscina nueva del catálogo (hormigón o Indusplast) que todavía no tiene fila en "Precios y
+ * margen" se agrega en su lugar, ordenada por tamaño dentro de su modelo. La fila nueva copia el
+ * formato y las FÓRMULAS (no los valores) de la fila vecina del mismo modelo, como se haría a mano
+ * (copiar la fila y cambiarle el nombre); el precio y el stock los completan los pasos siguientes.
+ * Si no hay ninguna fila de ese modelo de donde copiar, no se inserta nada (se informa). Devuelve
+ * { agregadas: [...], sinModelo: [...] }.
+ */
+function agregarPiscinasNuevas_(hoja, catalogo) {
+  var resultado = { agregadas: [], sinModelo: [] };
+  var ultima = hoja.getLastRow();
+  if (ultima < 1) return resultado;
+  var etiquetas = hoja.getRange(1, 1, ultima, 1).getValues();
+  var presentes = {};
+  var filas = [];
+  for (var i = 0; i < etiquetas.length; i++) {
+    var texto = String(etiquetas[i][0] === null || etiquetas[i][0] === undefined ? "" : etiquetas[i][0]).trim();
+    var clave = claveDePrecio(texto);
+    if (clave) presentes[clave] = true;
+    var g = grupoDeEtiqueta_(texto);
+    if (g) filas.push({ fila: i + 1, grupo: g.grupo, orden: g.orden });
+  }
+
+  for (var k = 0; k < catalogo.length; k++) {
+    var item = catalogo[k];
+    if (item[0] !== "Piscinas" || item[7] !== "Activo") continue;
+    var etiqueta = etiquetaDePiscina(String(item[1]));
+    if (!etiqueta || presentes["piscinas:" + item[1]]) continue;
+    var nueva = grupoDeEtiqueta_(etiqueta);
+    var mismas = filas.filter(function (f) { return f.grupo === nueva.grupo; });
+    if (mismas.length === 0) { resultado.sinModelo.push(etiqueta); continue; }
+
+    var antes = mismas.filter(function (f) { return f.orden < nueva.orden; });
+    var despues = mismas.filter(function (f) { return f.orden > nueva.orden; });
+    var filaNueva, filaOrigen;
+    if (antes.length > 0) {
+      var previa = antes.reduce(function (a, b) { return b.orden > a.orden ? b : a; });
+      hoja.insertRowAfter(previa.fila);
+      filaNueva = previa.fila + 1;
+      filaOrigen = previa.fila;
+    } else {
+      var primera = despues.reduce(function (a, b) { return b.orden < a.orden ? b : a; });
+      hoja.insertRowBefore(primera.fila);
+      filaNueva = primera.fila;
+      filaOrigen = primera.fila + 1;
+    }
+    var ancho = Math.max(hoja.getLastColumn(), 2);
+    var origen = hoja.getRange(filaOrigen, 1, 1, ancho);
+    var destino = hoja.getRange(filaNueva, 1, 1, ancho);
+    origen.copyTo(destino, SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
+    origen.copyTo(destino, SpreadsheetApp.CopyPasteType.PASTE_FORMULA, false);
+    hoja.getRange(filaNueva, 1).setValue(etiqueta);
+
+    filas.forEach(function (f) { if (f.fila >= filaNueva) f.fila++; });
+    filas.push({ fila: filaNueva, grupo: nueva.grupo, orden: nueva.orden });
+    presentes["piscinas:" + item[1]] = true;
+    resultado.agregadas.push(etiqueta);
+  }
+  return resultado;
+}
+
 function hoja_(nombre) {
   var h = SpreadsheetApp.getActive().getSheetByName(nombre);
   if (!h) throw new Error('No encuentro la hoja "' + nombre + '".');
@@ -356,6 +443,8 @@ function sincronizar_(forzar) {
     // Sólo se escribe lo que cambió: lo demás queda intacto (y si nada cambió, no se toca la planilla).
     var cambiosProveedores = escribirProveedores_(hoja_(HOJA_PROVEEDORES), datos.proveedores);
     var cambiosArticulos = escribirArticulos_(hoja_(HOJA_ARTICULOS), datos.articulos);
+    // Las piscinas nuevas del catálogo se agregan (en su lugar) a "Precios y margen" ANTES de escribir precios y stock.
+    var nuevas = datos.catalogo === undefined ? { agregadas: [], sinModelo: [] } : agregarPiscinasNuevas_(hoja_(HOJA_PRECIOS), datos.catalogo);
     var precios = escribirPrecios_(hoja_(HOJA_PRECIOS), datos.precios);
     // Un catálogo viejo (sin el campo) no manda stock: en ese caso no se toca la columna.
     var stocks = datos.stock === undefined ? 0 : escribirStock_(hoja_(HOJA_PRECIOS), datos.stock);
@@ -373,6 +462,8 @@ function sincronizar_(forzar) {
       precios: precios,
       stocks: stocks,
       catalogo: catalogo.filas,
+      piscinasNuevas: nuevas.agregadas,
+      piscinasSinFila: nuevas.sinModelo,
       // Cuántas filas/celdas se escribieron de verdad (0 = la planilla ya estaba al día).
       cambios: {
         proveedores: cambiosProveedores,
@@ -427,7 +518,9 @@ function actualizarAhora() {
   try {
     var r = sincronizar_(true);
     if (r.estado === "ocupado") ui.alert("Ya hay una actualización en curso. Probá de nuevo en un momento.");
-    else ui.alert("Planilla actualizada: " + r.proveedores + " proveedores, " + r.materiales + " materiales y " + r.precios + " precios de venta y " + r.stocks + " stocks cambiados. Hoja Catálogo web: " + r.catalogo + " precios de venta.\n\nFilas modificadas: " + r.cambios.proveedores + " de proveedores, " + r.cambios.articulos + " de artículos y " + r.cambios.catalogo + " del catálogo web (lo que no cambió no se toca).");
+    else ui.alert("Planilla actualizada: " + r.proveedores + " proveedores, " + r.materiales + " materiales y " + r.precios + " precios de venta y " + r.stocks + " stocks cambiados. Hoja Catálogo web: " + r.catalogo + " precios de venta.\n\nFilas modificadas: " + r.cambios.proveedores + " de proveedores, " + r.cambios.articulos + " de artículos y " + r.cambios.catalogo + " del catálogo web (lo que no cambió no se toca)." +
+        (r.piscinasNuevas.length ? "\n\nPiscinas nuevas agregadas a Precios y margen: " + r.piscinasNuevas.join(", ") + "." : "") +
+        (r.piscinasSinFila.length ? "\n\nSin fila en Precios y margen (no hay ninguna fila de ese modelo para copiar; están en Catálogo web): " + r.piscinasSinFila.join(", ") + "." : ""));
   } catch (e) {
     ui.alert("No se pudo actualizar: " + e.message);
   }
@@ -478,5 +571,5 @@ function mostrarEstado() {
 
 // Sólo para las pruebas automáticas del proyecto (en Google Apps Script `module` no existe).
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { claveDePrecio: claveDePrecio, valorDePrecio: valorDePrecio, validarDatos: validarDatos, valorDeStock: valorDeStock, buscarEncabezadoStock: buscarEncabezadoStock, ETIQUETAS_PRECIO: ETIQUETAS_PRECIO };
+  module.exports = { etiquetaDePiscina: etiquetaDePiscina, claveDePrecio: claveDePrecio, valorDePrecio: valorDePrecio, validarDatos: validarDatos, valorDeStock: valorDeStock, buscarEncabezadoStock: buscarEncabezadoStock, ETIQUETAS_PRECIO: ETIQUETAS_PRECIO };
 }

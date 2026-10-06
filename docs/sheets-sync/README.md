@@ -45,6 +45,18 @@ columna con el encabezado **Stock** de la hoja "Precios y margen":
 > 🔁 Si ya tenías el script pegado, hay que **volver a pegar el contenido de
 > [`Sincronizar.gs`](./Sincronizar.gs)** en Apps Script (reemplaza todo) para que sincronice el stock.
 
+## Lo que se agrega en la web llega a la planilla
+- **Material nuevo** (pestaña Materiales): aparece como una fila nueva en la hoja **Artículos**.
+- **Proveedor nuevo**: aparece como una fila nueva en la hoja **Proveedores**.
+- **Piscina nueva** (hormigón o Indusplast, desde Precios de venta → Agregar ítem → "Piscina de
+  hormigón" / "Piscina de fibra Indusplast"): se agrega como fila de **Precios y margen**, ordenada
+  por tamaño dentro de su modelo. La fila nueva **copia el formato y las fórmulas** de la fila vecina
+  del mismo modelo (no sus valores, así no se arrastran costos de otra piscina) y el script le
+  completa el precio y el stock. Si no hay ninguna fila de ese modelo de donde copiar (por ejemplo,
+  el primer modelo nuevo), no inserta nada: lo informa en "Actualizar ahora" y la piscina igual está
+  en la hoja Catálogo web.
+- Todo ítem nuevo (de cualquier tipo) aparece en la hoja **Catálogo web**.
+
 ## La hoja "Catálogo web": todos los campos
 Además de las hojas de siempre, el script crea (si no existe) y mantiene una hoja **Catálogo web**
 con **una fila por precio de venta del catálogo y todos sus campos**: calculadora, clave,

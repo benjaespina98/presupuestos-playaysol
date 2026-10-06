@@ -62,3 +62,36 @@ export function ordenMedida(clave: string): number {
   const [a, b] = medida.split("x").map((n) => parseFloat(n));
   return Number.isFinite(b) ? a * 1000 + b : Number.isFinite(a) ? a : Number.POSITIVE_INFINITY;
 }
+
+/** Un número como se escribe en una medida: "8", "4.5" (punto decimal, sin ceros de más). */
+function medidaNumero(n: number): string {
+  return String(Math.round(n * 100) / 100);
+}
+
+/**
+ * Los datos de una piscina de hormigón nueva, a partir de su largo y ancho: la clave (con el
+ * prefijo que la ubica en su sección y en la planilla), la descripción y el nombre en la planilla.
+ * La clave reemplaza sólo el PRIMER punto decimal por "_" (8x4.5 → lista_hormigon_8x4_5), igual
+ * que las que ya existen, y es la que reconoce el script de la planilla.
+ */
+export function datosPiscinaHormigon(largo: number, ancho: number): { clave: string; descripcion: string; medida: string } | null {
+  if (!(largo > 0) || !(ancho > 0)) return null;
+  const medida = `${medidaNumero(largo)}x${medidaNumero(ancho)}`;
+  return {
+    clave: "lista_hormigon_" + medida.replace(".", "_"),
+    descripcion: `Piscina de hormigón ${medida} — precio de lista, obra terminada`,
+    medida,
+  };
+}
+
+/** Los datos de una piscina de fibra Indusplast nueva: modelo (uno de MODELOS_INDUSPLAST) y medida. */
+export function datosPiscinaIndusplast(modelo: string, medida: number): { clave: string; descripcion: string; medida: string } | null {
+  const m = modelo.trim().toLowerCase();
+  if (!(MODELOS_INDUSPLAST as readonly string[]).includes(m)) return null;
+  if (!Number.isInteger(medida) || medida <= 0) return null;
+  return {
+    clave: `indusplast_${m}_${medida}`,
+    descripcion: `Piscina de fibra Indusplast ${mayuscula(m)} ${medida} — contado, kit estándar instalado`,
+    medida: `${m.toUpperCase()} ${medida}`,
+  };
+}
