@@ -22,6 +22,7 @@ function item(overrides: Partial<ItemCatalogo> = {}): ItemCatalogo {
     unidad: "unidad",
     activo: true,
     orden: null,
+    stock: null,
     updated_at: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };
@@ -226,5 +227,52 @@ describe("EditarItemModal · dar de baja y eliminar", () => {
     );
     expect(screen.queryByRole("button", { name: "Eliminar ítem" })).not.toBeInTheDocument();
     expect(screen.getByText(/no eliminar/)).toBeInTheDocument();
+  });
+});
+
+describe("EditarItemModal · stock", () => {
+  beforeEach(() => actualizarItemCatalogo.mockReset());
+
+  it("un ítem sin stock no muestra el campo; tildar 'Llevar stock' lo habilita y guarda 0 si queda vacío", async () => {
+    actualizarItemCatalogo.mockResolvedValue({ error: null });
+    const onGuardado = vi.fn();
+    const user = userEvent.setup();
+    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={onGuardado} onEliminado={vi.fn()} />);
+    expect(screen.queryByLabelText("Unidades en stock")).not.toBeInTheDocument();
+
+    await user.click(screen.getByLabelText("Llevar stock"));
+    expect(screen.getByLabelText("Unidades en stock")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    await vi.waitFor(() => expect(onGuardado).toHaveBeenCalled());
+    expect(actualizarItemCatalogo).toHaveBeenCalledWith("id-1", expect.objectContaining({ stock: 0 }));
+  });
+
+  it("precarga las unidades y las guarda al cambiarlas", async () => {
+    actualizarItemCatalogo.mockResolvedValue({ error: null });
+    const onGuardado = vi.fn();
+    const user = userEvent.setup();
+    render(<EditarItemModal item={item({ stock: 2 })} onClose={vi.fn()} onGuardado={onGuardado} onEliminado={vi.fn()} />);
+    expect(screen.getByLabelText("Unidades en stock")).toHaveValue("2");
+
+    await user.clear(screen.getByLabelText("Unidades en stock"));
+    await user.type(screen.getByLabelText("Unidades en stock"), "5");
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    await vi.waitFor(() => expect(onGuardado).toHaveBeenCalled());
+    expect(actualizarItemCatalogo).toHaveBeenCalledWith("id-1", expect.objectContaining({ stock: 5 }));
+  });
+
+  it("destildar 'Llevar stock' deja el ítem sin stock (null)", async () => {
+    actualizarItemCatalogo.mockResolvedValue({ error: null });
+    const onGuardado = vi.fn();
+    const user = userEvent.setup();
+    render(<EditarItemModal item={item({ stock: 2 })} onClose={vi.fn()} onGuardado={onGuardado} onEliminado={vi.fn()} />);
+
+    await user.click(screen.getByLabelText("Llevar stock"));
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    await vi.waitFor(() => expect(onGuardado).toHaveBeenCalled());
+    expect(actualizarItemCatalogo).toHaveBeenCalledWith("id-1", expect.objectContaining({ stock: null }));
   });
 });

@@ -98,8 +98,16 @@ export async function guardarTextosCompartidos(
  * activo, orden) — que el puente legacy ni conoce ni necesita.
  * ───────────────────────────────────────────────────────────────────────── */
 
-const COLUMNAS_ITEM_CATALOGO =
-  "id, tipo, clave, descripcion, precio, categoria, unidad, activo, orden, updated_at";
+const COLUMNAS_SIN_STOCK = "id, tipo, clave, descripcion, precio, categoria, unidad, activo, orden, updated_at";
+const COLUMNAS_ITEM_CATALOGO = `${COLUMNAS_SIN_STOCK}, stock`;
+
+/** Lo mismo que `esErrorMigracionPendiente`, pero sólo para la columna `stock`
+ *  (migration_stock_piscinas.sql): esa falta no tiene que romper el catálogo,
+ *  se sigue funcionando sin stock hasta que se corra. */
+function esErrorSinColumnaStock(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return /column .*stock/i.test(error.message ?? "") || (error.code === "42703" && /stock/i.test(error.message ?? ""));
+}
 
 /**
  * Postgres devuelve 42703 ("undefined_column") cuando se pide una columna que
@@ -138,9 +146,11 @@ const ERROR_DE_RED =
 export async function listarItemsCatalogo(): Promise<ResultadoListarCatalogo> {
   try {
     const supabase = createClient();
-    const { data, error } = await supabase
-      .from("catalogo_items")
-      .select(COLUMNAS_ITEM_CATALOGO);
+    let { data, error } = await supabase.from("catalogo_items").select(COLUMNAS_ITEM_CATALOGO);
+    // Todavía sin la columna stock: se lee igual, sin stock.
+    if (error && esErrorSinColumnaStock(error)) {
+      ({ data, error } = await supabase.from("catalogo_items").select(COLUMNAS_SIN_STOCK));
+    }
 
     if (error) {
       if (esErrorMigracionPendiente(error)) {
@@ -173,6 +183,8 @@ export interface CambiosItemCatalogo {
   categoria: ItemCatalogo["categoria"];
   unidad: string | null;
   activo: boolean;
+  /** null = no lleva stock. */
+  stock: number | null;
 }
 
 const SIN_FILA_AFECTADA =
@@ -199,11 +211,21 @@ export async function actualizarItemCatalogo(
       data: { user },
     } = await supabase.auth.getUser();
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("catalogo_items")
       .update({ ...cambios, updated_by: user?.id })
       .eq("id", id)
       .select("id");
+    // Sin la columna stock todavía: se guarda todo lo demás.
+    if (error && esErrorSinColumnaStock(error)) {
+      const { stock: _stock, ...sinStock } = cambios;
+      void _stock;
+      ({ data, error } = await supabase
+        .from("catalogo_items")
+        .update({ ...sinStock, updated_by: user?.id })
+        .eq("id", id)
+        .select("id"));
+    }
 
     if (error) {
       if (esErrorMigracionPendiente(error)) return { error: ERROR_MIGRACION_PENDIENTE };
@@ -228,6 +250,8 @@ export interface NuevoItemCatalogo {
   categoria: ItemCatalogo["categoria"];
   unidad: string | null;
   activo: boolean;
+  /** null = no lleva stock. */
+  stock: number | null;
 }
 
 const CLAVE_DUPLICADA = "Ya existe un ítem con esa clave para esa calculadora — elegí otra.";
@@ -247,11 +271,20 @@ export async function crearItemCatalogo(
       data: { user },
     } = await supabase.auth.getUser();
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("catalogo_items")
       .insert({ ...nuevo, updated_by: user?.id })
       .select(COLUMNAS_ITEM_CATALOGO)
       .single();
+    if (error && esErrorSinColumnaStock(error)) {
+      const { stock: _stock, ...sinStock } = nuevo;
+      void _stock;
+      ({ data, error } = await supabase
+        .from("catalogo_items")
+        .insert({ ...sinStock, updated_by: user?.id })
+        .select(COLUMNAS_SIN_STOCK)
+        .single());
+    }
 
     if (error) {
       if (esErrorMigracionPendiente(error)) return { item: null, error: ERROR_MIGRACION_PENDIENTE };
@@ -295,6 +328,37 @@ export async function eliminarItemCatalogo(id: string): Promise<{ error: string 
     return { error: null };
   } catch (err) {
     console.error("No se pudo eliminar el ítem de catálogo", err);
+    return { error: ERROR_DE_RED };
+  }
+}
+
+const STOCK_SIN_MIGRACION =
+  "Todavía no se puede guardar el stock: falta correr supabase/migration_stock_piscinas.sql en Supabase.";
+
+/**
+ * Cambia sólo el stock de un ítem (los botones − / + de la lista). `null`
+ * deja de llevar stock. Mismo cuidado que `actualizarItemCatalogo`: pide
+ * `.select("id")` para no dar por guardado un update que no tocó ninguna fila.
+ */
+export async function guardarStockItem(id: string, stock: number | null): Promise<{ error: string | null }> {
+  if (stock !== null && (!Number.isInteger(stock) || stock < 0)) {
+    return { error: "El stock tiene que ser un número entero, 0 o más." };
+  }
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const { data, error } = await supabase
+      .from("catalogo_items")
+      .update({ stock, updated_by: user?.id })
+      .eq("id", id)
+      .select("id");
+    if (error) return { error: esErrorSinColumnaStock(error) ? STOCK_SIN_MIGRACION : error.message };
+    if (!data || data.length === 0) return { error: SIN_FILA_AFECTADA };
+    return { error: null };
+  } catch (err) {
+    console.error("No se pudo guardar el stock", err);
     return { error: ERROR_DE_RED };
   }
 }

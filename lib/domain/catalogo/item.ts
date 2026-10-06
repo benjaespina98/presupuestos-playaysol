@@ -39,6 +39,10 @@ export const ItemCatalogo = z.object({
   /** Posición manual dentro de su categoría. null = sin orden explícito, se
    *  ordena alfabéticamente. */
   orden: z.number().nullable(),
+  /** Unidades físicas en el local. null = el ítem no lleva stock (se pide a
+   *  pedido: hierros, luces...); 0 = lleva stock y está agotado. Sólo existe si
+   *  corrió `supabase/migration_stock_piscinas.sql`; sin ella llega como null. */
+  stock: z.number().int().nonnegative().nullable().default(null),
   updated_at: z.string(),
 });
 export type ItemCatalogo = z.infer<typeof ItemCatalogo>;
@@ -93,10 +97,48 @@ export function agruparPorCategoria(items: ItemCatalogo[]): { categoria: Categor
  * Pura — separada del botón "Copiar" para poder testearla sin
  * `navigator.clipboard`, que no existe en todos los entornos de test.
  */
-export function textoParaCopiar(item: Pick<ItemCatalogo, "descripcion" | "clave" | "precio" | "unidad">, formatearPrecio: (n: number) => string): string {
+export function textoParaCopiar(
+  item: Pick<ItemCatalogo, "descripcion" | "clave" | "precio" | "unidad"> & { stock?: number | null },
+  formatearPrecio: (n: number) => string
+): string {
   const nombre = item.descripcion || item.clave;
   const precio = item.precio === null ? "a cotizar" : formatearPrecio(item.precio) + (item.unidad ? `/${item.unidad}` : "");
-  return `${nombre}: ${precio}`;
+  const stock = llevaStock(item) ? ` · ${textoStock(item.stock)}` : "";
+  return `${nombre}: ${precio}${stock}`;
+}
+
+/** ¿Este ítem se guarda en el local? (stock null = no, se pide a pedido). */
+export function llevaStock(item: { stock?: number | null }): item is { stock: number } {
+  return item.stock !== null && item.stock !== undefined;
+}
+
+/** "Sin stock" / "1 en stock" / "3 en stock": para pegar en WhatsApp o mostrar. */
+export function textoStock(stock: number): string {
+  return stock <= 0 ? "sin stock" : `${stock} en stock`;
+}
+
+/** Filtro por disponibilidad: con unidades, agotado (lleva stock y hay 0) o
+ *  "no lleva stock" (se pide a pedido). */
+export type FiltroStock = "disponible" | "agotado" | "sin-control";
+
+export function coincideStock(item: { stock?: number | null }, filtro: FiltroStock): boolean {
+  if (!llevaStock(item)) return filtro === "sin-control";
+  return filtro === "disponible" ? item.stock > 0 : filtro === "agotado" ? item.stock === 0 : false;
+}
+
+/** Resumen del stock de un conjunto de ítems: cuántos modelos lo llevan, cuántos
+ *  tienen unidades y el total de unidades. Los que no llevan stock no cuentan. */
+export function resumenStock(items: { stock?: number | null }[]): { modelos: number; conUnidades: number; unidades: number } {
+  let modelos = 0;
+  let conUnidades = 0;
+  let unidades = 0;
+  for (const it of items) {
+    if (!llevaStock(it)) continue;
+    modelos++;
+    if (it.stock > 0) conUnidades++;
+    unidades += it.stock;
+  }
+  return { modelos, conUnidades, unidades };
 }
 
 export interface FiltroCatalogo {
@@ -106,6 +148,8 @@ export interface FiltroCatalogo {
   linea?: LineaPiscina | null;
   /** Sólo los ítems de esa calculadora. null/undefined = todas. */
   tipo?: ItemCatalogo["tipo"] | null;
+  /** Disponibilidad: con unidades / agotado / no lleva stock. null = todos. */
+  stock?: FiltroStock | null;
   /** default false: por default el listado no muestra los dados de baja. */
   incluirInactivos?: boolean;
 }
@@ -120,6 +164,7 @@ export function filtrarCatalogo(items: ItemCatalogo[], filtro: FiltroCatalogo): 
     if (filtro.categoria && categoriaEfectiva(item) !== filtro.categoria) return false;
     if (filtro.tipo && item.tipo !== filtro.tipo) return false;
     if (filtro.linea && lineaDeClave(item.clave) !== filtro.linea) return false;
+    if (filtro.stock && !coincideStock(item, filtro.stock)) return false;
     if (q) {
       const enDescripcion = (item.descripcion ?? "").toLowerCase().includes(q);
       const enClave = item.clave.toLowerCase().includes(q);
@@ -160,6 +205,16 @@ export function contarPorLinea(
   for (const item of filtrarCatalogo(items, { ...filtro, linea: null })) {
     const l = lineaDeClave(item.clave);
     if (l) conteo[l] = (conteo[l] ?? 0) + 1;
+  }
+  return conteo;
+}
+
+/** Cuántos ítems hay por disponibilidad, con el resto de los filtros aplicados
+ *  (ignora el de stock, como `contarPorCategoria` ignora el de categoría). */
+export function contarPorStock(items: ItemCatalogo[], filtro: Omit<FiltroCatalogo, "stock">): Record<FiltroStock, number> {
+  const conteo: Record<FiltroStock, number> = { disponible: 0, agotado: 0, "sin-control": 0 };
+  for (const item of filtrarCatalogo(items, { ...filtro, stock: null })) {
+    for (const f of Object.keys(conteo) as FiltroStock[]) if (coincideStock(item, f)) conteo[f]++;
   }
   return conteo;
 }

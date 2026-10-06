@@ -23,6 +23,9 @@ export const EditarItemSchema = z.object({
   categoria: z.union([Categoria, z.literal("")]),
   unidad: z.union([z.enum(UNIDADES), z.literal("")]),
   activo: z.boolean(),
+  /** Si el ítem se guarda en el local. Tildado → `stock` es la cantidad. */
+  llevaStock: z.boolean(),
+  stock: z.number().int("El stock tiene que ser un número entero").nonnegative("El stock no puede ser negativo").nullable(),
 });
 export type EditarItemForm = z.infer<typeof EditarItemSchema>;
 
@@ -38,6 +41,8 @@ export function aFormulario(item: ItemCatalogo): EditarItemForm {
       ? (item.unidad as EditarItemForm["unidad"])
       : "",
     activo: item.activo,
+    llevaStock: item.stock !== null,
+    stock: item.stock,
   };
 }
 
@@ -49,5 +54,8 @@ export function aCambios(form: EditarItemForm): CambiosItemCatalogo {
     categoria: form.categoria === "" ? null : form.categoria,
     unidad: form.unidad === "" ? null : form.unidad,
     activo: form.activo,
+    // Sin tildar "Llevar stock" el ítem deja de llevarlo (null); tildado y sin
+    // número, arranca en 0.
+    stock: form.llevaStock ? (form.stock ?? 0) : null,
   };
 }
