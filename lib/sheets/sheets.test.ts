@@ -213,3 +213,28 @@ describe("armarExportacion · stock", () => {
     expect(a.version).not.toBe(b.version);
   });
 });
+
+describe("armarExportacion · hoja 'Catálogo web'", () => {
+  it("una fila de 9 columnas por precio de venta, con todos sus campos y también los dados de baja", () => {
+    const e = armarExportacion({
+      proveedores: [],
+      materiales: [],
+      items: [
+        { tipo: "piscinas", clave: "indusplast_caribe_550", precio: 8810000, activo: true, descripcion: "Caribe 550", categoria: "Piscinas", unidad: "obra", stock: 2, updated_at: "2026-10-05T12:00:00Z" },
+        { tipo: "cercos", clave: "precioCon", precio: null, activo: false, descripcion: null, categoria: null, unidad: "ml", updated_at: null },
+        { tipo: "piscinas", clave: "__legal", precio: null },
+      ],
+    });
+    expect(e.catalogo).toHaveLength(2); // el texto compartido no va
+    expect(e.catalogo[0]).toEqual(["Piscinas", "indusplast_caribe_550", "Caribe 550", "Piscinas", "obra", 8810000, 2, "Activo", "05/10/2026"]);
+    expect(e.catalogo[1]).toEqual(["Cercos", "precioCon", "", "", "ml", "A cotizar", "", "De baja", ""]);
+  });
+
+  it("cambiar la descripción, la categoría o la unidad cambia la versión", () => {
+    const base = { tipo: "piscinas", clave: "luces", precio: 1, descripcion: "A", categoria: "Iluminación", unidad: "unidad" };
+    const v = (o: object) => armarExportacion({ proveedores: [], materiales: [], items: [{ ...base, ...o }] }).version;
+    expect(v({})).not.toBe(v({ descripcion: "B" }));
+    expect(v({})).not.toBe(v({ categoria: "Otros" }));
+    expect(v({})).not.toBe(v({ unidad: "ml" }));
+  });
+});

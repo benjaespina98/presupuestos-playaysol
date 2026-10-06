@@ -3,7 +3,6 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ItemCatalogo } from "@/lib/domain/catalogo/item";
-import { CATEGORIAS } from "@/lib/domain/catalogo/categorias";
 import CatalogoPage from "./page";
 
 const { listarItemsCatalogo, actualizarItemCatalogo, crearItemCatalogo, eliminarItemCatalogo, guardarStockItem } = vi.hoisted(() => ({
@@ -49,8 +48,8 @@ function item(overrides: Partial<ItemCatalogo>): ItemCatalogo {
 describe("CatalogoPage · lectura", () => {
   it("muestra el skeleton mientras carga", () => {
     listarItemsCatalogo.mockReturnValue(new Promise(() => {})); // nunca resuelve
-    render(<CatalogoPage />);
-    expect(screen.getAllByRole("table")[0]).toBeInTheDocument();
+    const { container } = render(<CatalogoPage />);
+    expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
   });
 
   it("lista los ítems activos una vez cargados", async () => {
@@ -78,9 +77,10 @@ describe("CatalogoPage · lectura", () => {
     render(<CatalogoPage />);
 
     await screen.findAllByText("Luces LED");
-    expect(screen.getAllByText("Iluminación")[0]).toBeInTheDocument();
-    expect(screen.getAllByText("Cercos")[0]).toBeInTheDocument();
-    // Ya no se repite la categoría al lado de cada ítem individual.
+    // Cercos tiene su sección; lo que no es de ninguna cae en "Otros", por categoría.
+    expect(screen.getAllByText("Otros · Iluminación")[0]).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Cercos" })[0]).toBeInTheDocument();
+    // La categoría no se repite al lado de cada ítem.
     expect(screen.queryByText("Iluminación · Piscinas")).not.toBeInTheDocument();
   });
 
@@ -316,8 +316,8 @@ describe("CatalogoPage · edición", () => {
       "a",
       expect.objectContaining({ categoria: "Iluminación" })
     );
-    // La columna Categoría del listado sigue mostrando la original.
-    expect(screen.getAllByText("Iluminación")[0]).toBeInTheDocument();
+    // El bloque del listado sigue mostrando la categoría original.
+    expect(screen.getAllByText("Otros · Iluminación")[0]).toBeInTheDocument();
   });
 });
 
@@ -419,62 +419,77 @@ describe("CatalogoPage · dar de baja/reactivar rápido", () => {
   });
 });
 
-describe("CatalogoPage · las 9 categorías", () => {
+describe("CatalogoPage · secciones", () => {
   beforeEach(() => {
     actualizarItemCatalogo.mockReset();
   });
 
-  it("el filtro por categoría ofrece exactamente las 9 acordadas en Fase 2 (con ítems en cada una)", async () => {
-    listarItemsCatalogo.mockResolvedValue({
-      items: CATEGORIAS.map((c, i) => item({ id: String(i), clave: "k" + i, descripcion: "Ítem " + c, categoria: c })),
-      error: null,
-    });
-    render(<CatalogoPage />);
-    const grupo = await screen.findByRole("group", { name: "Filtrar por categoría" });
-
-    const chips = within(grupo)
-      .getAllByRole("button")
-      .map((b) => b.textContent?.replace(/\d+$/, ""));
-
-    expect(chips).toEqual(["Todos", ...CATEGORIAS]);
-  });
-
-  it("los chips muestran sólo las categorías que tienen ítems, con su contador", async () => {
+  it("ofrece las secciones que más se consultan como accesos directos, en este orden", async () => {
     listarItemsCatalogo.mockResolvedValue({
       items: [
-        item({ id: "a", descripcion: "Uno", categoria: "Cercos" }),
-        item({ id: "b", descripcion: "Dos", categoria: "Cercos" }),
-        item({ id: "c", descripcion: "Tres", categoria: "Piscinas" }),
+        item({ id: "1", clave: "lista_hormigon_8x4", descripcion: "Hormigón 8x4" }),
+        item({ id: "2", clave: "indusplast_caribe_550", descripcion: "Caribe" }),
+        item({ id: "3", tipo: "cobertores", clave: "precioMenos15", descripcion: "Cobertor" }),
+        item({ id: "4", tipo: "cercos", clave: "precioCon", descripcion: "Cerco" }),
+        item({ id: "5", clave: "climatizacion25000", descripcion: "Clima" }),
+        item({ id: "6", tipo: "revestimientos", clave: "travertino", descripcion: "Travertino" }),
+        item({ id: "7", clave: "luces", descripcion: "Luces" }),
       ],
       error: null,
     });
     render(<CatalogoPage />);
-    const grupo = await screen.findByRole("group", { name: "Filtrar por categoría" });
+    const grupo = await screen.findByRole("group", { name: "Filtrar por sección" });
 
-    expect(within(grupo).getByRole("button", { name: /^Todoss*3$/ })).toBeInTheDocument();
-    expect(within(grupo).getByRole("button", { name: /^Cercoss*2$/ })).toBeInTheDocument();
-    expect(within(grupo).getByRole("button", { name: /^Piscinass*1$/ })).toBeInTheDocument();
-    expect(within(grupo).queryByRole("button", { name: /Mano de obra/ })).not.toBeInTheDocument();
+    const chips = within(grupo).getAllByRole("button").map((b) => b.textContent?.replace(/\d+$/, ""));
+    expect(chips).toEqual([
+      "Todo",
+      "Piscinas de hormigón",
+      "Piscinas de fibra Indusplast",
+      "Cobertores",
+      "Cercos",
+      "Climatización",
+      "Revestimientos",
+      "Otros",
+    ]);
   });
 
-  it("filtra por calculadora y 'Limpiar filtros' lo deja todo como estaba", async () => {
+  it("los chips muestran sólo las secciones con ítems, con su contador, y filtran", async () => {
     listarItemsCatalogo.mockResolvedValue({
       items: [
-        item({ id: "a", tipo: "piscinas", descripcion: "De piscinas" }),
-        item({ id: "b", tipo: "cercos", descripcion: "De cercos" }),
+        item({ id: "a", tipo: "cercos", descripcion: "Uno" }),
+        item({ id: "b", tipo: "cercos", descripcion: "Dos" }),
+        item({ id: "c", tipo: "cobertores", descripcion: "Tres" }),
       ],
       error: null,
     });
     const user = userEvent.setup();
     render(<CatalogoPage />);
-    await screen.findAllByText("De piscinas");
+    const grupo = await screen.findByRole("group", { name: "Filtrar por sección" });
 
-    await user.selectOptions(screen.getByLabelText("Filtrar por calculadora"), "cercos");
-    await waitFor(() => expect(screen.queryByText("De piscinas")).not.toBeInTheDocument());
-    expect(screen.getAllByText("De cercos")[0]).toBeInTheDocument();
+    expect(within(grupo).getByRole("button", { name: /^Todo\s*3$/ })).toBeInTheDocument();
+    expect(within(grupo).getByRole("button", { name: /^Cercos\s*2$/ })).toBeInTheDocument();
+    expect(within(grupo).getByRole("button", { name: /^Cobertores\s*1$/ })).toBeInTheDocument();
+    expect(within(grupo).queryByRole("button", { name: /Climatización/ })).not.toBeInTheDocument();
+
+    await user.click(within(grupo).getByRole("button", { name: /^Cobertores/ }));
+    expect(screen.getAllByText("Tres").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Uno")).not.toBeInTheDocument();
+  });
+
+  it("'Limpiar filtros' lo deja todo como estaba", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: [item({ id: "a", descripcion: "De luces" }), item({ id: "b", tipo: "cercos", descripcion: "De cercos" })],
+      error: null,
+    });
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+    await screen.findAllByText("De luces");
+
+    await user.click(screen.getByRole("button", { name: /^Cercos/ }));
+    await waitFor(() => expect(screen.queryByText("De luces")).not.toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: "Limpiar filtros" }));
-    expect(screen.getAllByText("De piscinas")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("De luces")[0]).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Limpiar filtros" })).not.toBeInTheDocument();
   });
 
@@ -497,7 +512,7 @@ describe("CatalogoPage · las 9 categorías", () => {
     const user = userEvent.setup();
     render(<CatalogoPage />);
 
-    expect((await screen.findAllByText("Otros"))[0]).toBeInTheDocument();
+    expect((await screen.findAllByText("Otros · Otros"))[0]).toBeInTheDocument();
 
     await user.click(screen.getAllByRole("button", { name: "Editar" })[0]);
     await user.selectOptions(await screen.findByLabelText("Categoría"), "Piscinas");
@@ -509,7 +524,7 @@ describe("CatalogoPage · las 9 categorías", () => {
         expect.objectContaining({ categoria: "Piscinas" })
       )
     );
-    expect(screen.getAllByText("Piscinas")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Otros · Piscinas")[0]).toBeInTheDocument();
   });
 });
 
@@ -546,7 +561,7 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Hierro del 6");
     expect(screen.queryByText(/Stock · /)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Filtrar por stock")).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Filtrar por stock" })).not.toBeInTheDocument();
   });
 
   it("sumar una unidad se ve al instante y se guarda", async () => {
@@ -582,13 +597,13 @@ describe("CatalogoPage · stock", () => {
     const user = userEvent.setup();
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
-    const filtro = screen.getByLabelText("Filtrar por stock");
+    const filtro = screen.getByRole("group", { name: "Filtrar por stock" });
 
-    await user.selectOptions(filtro, "agotado");
+    await user.click(within(filtro).getByRole("button", { name: /^Agotado/ }));
     expect(screen.getAllByText("Caribe 650").length).toBeGreaterThan(0);
     expect(screen.queryByText("Caribe 550")).not.toBeInTheDocument();
 
-    await user.selectOptions(filtro, "sin-control");
+    await user.click(within(filtro).getByRole("button", { name: /^A pedido/ }));
     expect(screen.getAllByText("Hierro del 6").length).toBeGreaterThan(0);
     expect(screen.queryByText("Caribe 650")).not.toBeInTheDocument();
   });
@@ -624,25 +639,26 @@ describe("CatalogoPage · piscinas de lista", () => {
     expect(screen.getAllByText("Kit de limpieza").length).toBeGreaterThan(0);
   });
 
-  it("el chip 'Piscinas Indusplast' deja sólo esas y oculta los rubros", async () => {
+  it("el acceso directo de Indusplast deja sólo esas piscinas", async () => {
     const user = userEvent.setup();
     listarItemsCatalogo.mockResolvedValue({ items: LISTA, error: null });
     render(<CatalogoPage />);
     await screen.findAllByText("Racionalista 400");
-    const tipo = screen.getByRole("group", { name: "Filtrar por tipo de producto" });
-    expect(within(tipo).getByRole("button", { name: /^Piscinas Indusplast\s*3$/ })).toBeInTheDocument();
-    expect(within(tipo).getByRole("button", { name: /^Opcionales y otros\s*1$/ })).toBeInTheDocument();
+    const secciones = screen.getByRole("group", { name: "Filtrar por sección" });
+    expect(within(secciones).getByRole("button", { name: /^Piscinas de fibra Indusplast\s*3$/ })).toBeInTheDocument();
+    expect(within(secciones).getByRole("button", { name: /^Otros\s*1$/ })).toBeInTheDocument();
 
-    await user.click(within(tipo).getByRole("button", { name: /Piscinas Indusplast/ }));
+    await user.click(within(secciones).getByRole("button", { name: /Piscinas de fibra Indusplast/ }));
 
     expect(screen.queryByText("Kit de limpieza")).not.toBeInTheDocument();
-    expect(screen.queryByRole("group", { name: "Filtrar por categoría" })).not.toBeInTheDocument();
+    expect(screen.getAllByText("Caribe 650").length).toBeGreaterThan(0);
   });
 
-  it("sin piscinas de lista no hay filtro de tipo", async () => {
+  it("sin piscinas de lista no hay acceso directo a Indusplast ni a hormigón", async () => {
     listarItemsCatalogo.mockResolvedValue({ items: [LISTA[3]], error: null });
     render(<CatalogoPage />);
     await screen.findAllByText("Kit de limpieza");
-    expect(screen.queryByRole("group", { name: "Filtrar por tipo de producto" })).not.toBeInTheDocument();
+    const secciones = screen.getByRole("group", { name: "Filtrar por sección" });
+    expect(within(secciones).queryByRole("button", { name: /Indusplast|hormigón/ })).not.toBeInTheDocument();
   });
 });
