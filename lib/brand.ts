@@ -23,3 +23,6 @@ export const EMPRESA = {
   email: "piscinas@playaysol.com.ar",
   web: "www.playaysol.com.ar",
 } as const;
+
+/** El local donde se guarda el stock de piscinas de fibra. */
+export const LOCAL_STOCK = "Local Av. Carranza · Villa Nueva";

@@ -142,6 +142,7 @@ describe("actualizarItemCatalogo", () => {
     categoria: null,
     unidad: null,
     activo: true,
+    stock: null,
   };
 
   it("un fallo de red no rechaza la promesa", async () => {
@@ -198,6 +199,7 @@ describe("crearItemCatalogo", () => {
     categoria: null,
     unidad: null,
     activo: true,
+    stock: null,
   };
   const filaCreada = {
     id: "nuevo-1",
@@ -209,6 +211,7 @@ describe("crearItemCatalogo", () => {
     unidad: null,
     activo: true,
     orden: null,
+    stock: null,
     updated_at: "2026-01-01T00:00:00.000Z",
   };
 
@@ -378,5 +381,62 @@ describe("eliminarItemCatalogo", () => {
 
     createClient.mockReturnValue({ from: () => ({ delete: () => { throw new TypeError("Failed to fetch"); } }) });
     expect((await eliminarItemCatalogo("id-1")).error).toMatch(/no se pudo conectar/i);
+  });
+});
+
+describe("stock", () => {
+  const fila = {
+    id: "1", tipo: "piscinas", clave: "indusplast_caribe_550", descripcion: "Caribe 550", precio: 1,
+    categoria: "Piscinas", unidad: "obra", activo: true, orden: null, updated_at: "2026-01-01T00:00:00.000Z",
+  };
+
+  it("si todavía no corrió la migración del stock, el catálogo se lee igual (sin stock)", async () => {
+    const select = vi
+      .fn()
+      .mockResolvedValueOnce({ data: null, error: { code: "42703", message: "column catalogo_items.stock does not exist" } })
+      .mockResolvedValueOnce({ data: [fila], error: null });
+    createClient.mockReturnValue(clienteFalso({ select }));
+    const { listarItemsCatalogo } = await import("./catalogo");
+
+    const r = await listarItemsCatalogo();
+
+    expect(r.error).toBeNull();
+    expect(r.items?.[0]).toMatchObject({ clave: "indusplast_caribe_550", stock: null });
+    expect(select.mock.calls[1][0]).not.toContain("stock");
+  });
+
+  it("guardarStockItem guarda el número y avisa si el ítem ya no existe", async () => {
+    const eq = vi.fn(() => ({ select: () => Promise.resolve({ data: [{ id: "1" }], error: null }) }));
+    const update = vi.fn(() => ({ eq }));
+    createClient.mockReturnValue(clienteFalso({ update: update as never }));
+    const { guardarStockItem } = await import("./catalogo");
+
+    expect(await guardarStockItem("1", 3)).toEqual({ error: null });
+    expect(update).toHaveBeenCalledWith({ stock: 3, updated_by: "u1" });
+
+    createClient.mockReturnValue(
+      clienteFalso({ update: (() => ({ eq: () => ({ select: () => Promise.resolve({ data: [], error: null }) }) })) as never })
+    );
+    expect((await guardarStockItem("1", 3)).error).toMatch(/ya no existe/);
+  });
+
+  it("guardarStockItem rechaza negativos y decimales sin llamar a Supabase", async () => {
+    createClient.mockClear();
+    const { guardarStockItem } = await import("./catalogo");
+    expect((await guardarStockItem("1", -1)).error).toMatch(/entero/);
+    expect((await guardarStockItem("1", 1.5)).error).toMatch(/entero/);
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
+  it("sin la migración, guardar el stock dice qué falta correr", async () => {
+    createClient.mockReturnValue(
+      clienteFalso({
+        update: (() => ({
+          eq: () => ({ select: () => Promise.resolve({ data: null, error: { code: "42703", message: "column \"stock\" of relation \"catalogo_items\" does not exist" } }) }),
+        })) as never,
+      })
+    );
+    const { guardarStockItem } = await import("./catalogo");
+    expect((await guardarStockItem("1", 1)).error).toMatch(/migration_stock_piscinas/);
   });
 });

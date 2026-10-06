@@ -13,6 +13,7 @@ function item(overrides: Partial<ItemCatalogo>): ItemCatalogo {
     unidad: null,
     activo: true,
     orden: null,
+    stock: null,
     updated_at: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };
@@ -45,23 +46,23 @@ describe("aFormulario", () => {
 
 describe("aCambios", () => {
   it("'' vuelve a ser null para categoría y unidad", () => {
-    const cambios = aCambios({ descripcion: "x", precio: 1, categoria: "", unidad: "", activo: true });
+    const cambios = aCambios({ descripcion: "x", precio: 1, categoria: "", unidad: "", activo: true, llevaStock: false, stock: null });
     expect(cambios.categoria).toBeNull();
     expect(cambios.unidad).toBeNull();
   });
 
   it("precio null se preserva como 'a cotizar', no se convierte en 0", () => {
-    const cambios = aCambios({ descripcion: "x", precio: null, categoria: "", unidad: "", activo: true });
+    const cambios = aCambios({ descripcion: "x", precio: null, categoria: "", unidad: "", activo: true, llevaStock: false, stock: null });
     expect(cambios.precio).toBeNull();
   });
 
   it("precio 0 se preserva como 0, no como null", () => {
-    const cambios = aCambios({ descripcion: "x", precio: 0, categoria: "", unidad: "", activo: true });
+    const cambios = aCambios({ descripcion: "x", precio: 0, categoria: "", unidad: "", activo: true, llevaStock: false, stock: null });
     expect(cambios.precio).toBe(0);
   });
 
   it("una descripción sólo con espacios se guarda como null", () => {
-    const cambios = aCambios({ descripcion: "   ", precio: 1, categoria: "", unidad: "", activo: true });
+    const cambios = aCambios({ descripcion: "   ", precio: 1, categoria: "", unidad: "", activo: true, llevaStock: false, stock: null });
     expect(cambios.descripcion).toBeNull();
   });
 
@@ -74,6 +75,7 @@ describe("aCambios", () => {
       categoria: original.categoria,
       unidad: original.unidad,
       activo: original.activo,
+      stock: null,
     });
   });
 });
@@ -86,6 +88,8 @@ describe("EditarItemSchema", () => {
       categoria: "",
       unidad: "",
       activo: true,
+      llevaStock: false,
+      stock: null,
     });
     expect(r.success).toBe(true);
   });
@@ -97,6 +101,8 @@ describe("EditarItemSchema", () => {
       categoria: "Climatización",
       unidad: "",
       activo: true,
+      llevaStock: false,
+      stock: null,
     });
     expect(r.success).toBe(false);
   });
@@ -108,6 +114,8 @@ describe("EditarItemSchema", () => {
       categoria: "",
       unidad: "",
       activo: true,
+      llevaStock: false,
+      stock: null,
     });
     expect(r.success).toBe(false);
   });
@@ -120,8 +128,35 @@ describe("EditarItemSchema", () => {
         categoria: "",
         unidad: "",
         activo: true,
+      llevaStock: false,
+      stock: null,
       });
       expect(r.success).toBe(true);
     }
+  });
+});
+
+describe("stock en el formulario", () => {
+  const base = { descripcion: "x", precio: 1, categoria: "" as const, unidad: "" as const, activo: true };
+
+  it("sin tildar 'Llevar stock' el ítem no lleva stock (null), aunque quede un número", () => {
+    expect(aCambios({ ...base, llevaStock: false, stock: 5 }).stock).toBeNull();
+  });
+
+  it("tildado, guarda la cantidad; sin cantidad arranca en 0 (no null)", () => {
+    expect(aCambios({ ...base, llevaStock: true, stock: 4 }).stock).toBe(4);
+    expect(aCambios({ ...base, llevaStock: true, stock: null }).stock).toBe(0);
+  });
+
+  it("el formulario distingue 'sin stock' (null) de 'agotado' (0)", () => {
+    expect(aFormulario(item({ stock: null }))).toMatchObject({ llevaStock: false, stock: null });
+    expect(aFormulario(item({ stock: 0 }))).toMatchObject({ llevaStock: true, stock: 0 });
+  });
+
+  it("rechaza stock negativo o con decimales", () => {
+    const f = { ...base, llevaStock: true };
+    expect(EditarItemSchema.safeParse({ ...f, stock: -1 }).success).toBe(false);
+    expect(EditarItemSchema.safeParse({ ...f, stock: 1.5 }).success).toBe(false);
+    expect(EditarItemSchema.safeParse({ ...f, stock: 2 }).success).toBe(true);
   });
 });

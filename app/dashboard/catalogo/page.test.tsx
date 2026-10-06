@@ -6,17 +6,19 @@ import type { ItemCatalogo } from "@/lib/domain/catalogo/item";
 import { CATEGORIAS } from "@/lib/domain/catalogo/categorias";
 import CatalogoPage from "./page";
 
-const { listarItemsCatalogo, actualizarItemCatalogo, crearItemCatalogo, eliminarItemCatalogo } = vi.hoisted(() => ({
+const { listarItemsCatalogo, actualizarItemCatalogo, crearItemCatalogo, eliminarItemCatalogo, guardarStockItem } = vi.hoisted(() => ({
   listarItemsCatalogo: vi.fn(),
   actualizarItemCatalogo: vi.fn(),
   crearItemCatalogo: vi.fn(),
   eliminarItemCatalogo: vi.fn(),
+  guardarStockItem: vi.fn(),
 }));
 vi.mock("@/lib/catalogo", () => ({
   listarItemsCatalogo,
   actualizarItemCatalogo,
   crearItemCatalogo,
   eliminarItemCatalogo,
+  guardarStockItem,
 }));
 
 const { copiarAlPortapapeles } = vi.hoisted(() => ({ copiarAlPortapapeles: vi.fn() }));
@@ -33,6 +35,7 @@ function item(overrides: Partial<ItemCatalogo>): ItemCatalogo {
     unidad: null,
     activo: true,
     orden: null,
+    stock: null,
     updated_at: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };
@@ -507,5 +510,97 @@ describe("CatalogoPage · las 9 categorías", () => {
       )
     );
     expect(screen.getAllByText("Piscinas")[0]).toBeInTheDocument();
+  });
+});
+
+describe("CatalogoPage · stock", () => {
+  const PISCINAS = [
+    item({ id: "p1", clave: "indusplast_caribe_550", descripcion: "Caribe 550", categoria: "Piscinas", stock: 2 }),
+    item({ id: "p2", clave: "indusplast_caribe_650", descripcion: "Caribe 650", categoria: "Piscinas", stock: 0 }),
+    item({ id: "h1", clave: "hierro", descripcion: "Hierro del 6", categoria: "Accesorios" }),
+  ];
+
+  beforeEach(() => {
+    guardarStockItem.mockReset();
+    guardarStockItem.mockResolvedValue({ error: null });
+    listarItemsCatalogo.mockResolvedValue({ items: PISCINAS, error: null });
+  });
+
+  it("muestra el stock de las piscinas y 'A pedido' en lo que no lleva stock", async () => {
+    render(<CatalogoPage />);
+    await screen.findAllByText("Caribe 550");
+
+    expect(screen.getAllByTitle("2 en stock").length).toBeGreaterThan(0);
+    expect(screen.getAllByTitle("sin stock").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("A pedido").length).toBeGreaterThan(0);
+  });
+
+  it("resume el stock del local arriba", async () => {
+    render(<CatalogoPage />);
+    expect(await screen.findByText(/2 unidades en 1 modelo/)).toBeInTheDocument();
+    expect(screen.getByText(/Local Av\. Carranza/)).toBeInTheDocument();
+  });
+
+  it("si ningún ítem lleva stock, no aparece el resumen ni el filtro", async () => {
+    listarItemsCatalogo.mockResolvedValue({ items: [PISCINAS[2]], error: null });
+    render(<CatalogoPage />);
+    await screen.findAllByText("Hierro del 6");
+    expect(screen.queryByText(/Stock · /)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Filtrar por stock")).not.toBeInTheDocument();
+  });
+
+  it("sumar una unidad se ve al instante y se guarda", async () => {
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+    await screen.findAllByText("Caribe 550");
+
+    await user.click(screen.getAllByRole("button", { name: "Sumar una unidad de Caribe 550" })[0]);
+
+    expect(guardarStockItem).toHaveBeenCalledWith("p1", 3);
+    expect((await screen.findAllByTitle("3 en stock")).length).toBeGreaterThan(0);
+  });
+
+  it("no deja bajar de 0", async () => {
+    render(<CatalogoPage />);
+    await screen.findAllByText("Caribe 650");
+    for (const b of screen.getAllByRole("button", { name: "Restar una unidad de Caribe 650" })) expect(b).toBeDisabled();
+  });
+
+  it("si no se pudo guardar, vuelve al valor anterior y avisa", async () => {
+    guardarStockItem.mockResolvedValue({ error: "Sin conexión" });
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+    await screen.findAllByText("Caribe 550");
+
+    await user.click(screen.getAllByRole("button", { name: "Restar una unidad de Caribe 550" })[0]);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Sin conexión");
+    expect(screen.getAllByTitle("2 en stock").length).toBeGreaterThan(0);
+  });
+
+  it("filtra por stock: con unidades / agotado / a pedido", async () => {
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+    await screen.findAllByText("Caribe 550");
+    const filtro = screen.getByLabelText("Filtrar por stock");
+
+    await user.selectOptions(filtro, "agotado");
+    expect(screen.getAllByText("Caribe 650").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Caribe 550")).not.toBeInTheDocument();
+
+    await user.selectOptions(filtro, "sin-control");
+    expect(screen.getAllByText("Hierro del 6").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Caribe 650")).not.toBeInTheDocument();
+  });
+
+  it("en modo consulta el stock es de sólo lectura", async () => {
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+    await screen.findAllByText("Caribe 550");
+
+    await user.click(screen.getByLabelText("Modo consulta rápida"));
+
+    expect(screen.queryByRole("button", { name: /Sumar una unidad/ })).not.toBeInTheDocument();
+    expect(screen.getAllByTitle("2 en stock").length).toBeGreaterThan(0);
   });
 });

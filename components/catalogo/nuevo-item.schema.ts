@@ -25,6 +25,9 @@ export const NuevoItemSchema = z.object({
   categoria: z.union([Categoria, z.literal("")]),
   unidad: z.union([z.enum(UNIDADES), z.literal("")]),
   activo: z.boolean(),
+  /** Si el ítem se guarda en el local. Tildado → `stock` es la cantidad. */
+  llevaStock: z.boolean(),
+  stock: z.number().int("El stock tiene que ser un número entero").nonnegative("El stock no puede ser negativo").nullable(),
 });
 export type NuevoItemForm = z.infer<typeof NuevoItemSchema>;
 
@@ -50,6 +53,8 @@ export function nuevoItemFormVacio(): NuevoItemForm {
     categoria: "",
     unidad: "",
     activo: true,
+    llevaStock: false,
+    stock: null,
   };
 }
 
@@ -68,5 +73,6 @@ export function aNuevoItem(form: NuevoItemForm): NuevoItemCatalogo | null {
     categoria: form.categoria === "" ? null : form.categoria,
     unidad: form.unidad === "" ? null : form.unidad,
     activo: form.activo,
+    stock: form.llevaStock ? (form.stock ?? 0) : null,
   };
 }

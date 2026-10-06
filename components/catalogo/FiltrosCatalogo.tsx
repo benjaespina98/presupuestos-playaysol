@@ -1,6 +1,7 @@
 "use client";
 
 import { CATEGORIAS, type Categoria } from "@/lib/domain/catalogo/categorias";
+import type { FiltroStock } from "@/lib/domain/catalogo/item";
 import { LINEAS_PISCINA, type LineaPiscina } from "@/lib/domain/catalogo/listas";
 import type { TipoCalculadora } from "@/lib/presupuestos";
 import { IconSearch } from "@/components/icons";
@@ -18,6 +19,10 @@ export interface FiltrosCatalogoProps {
   onLinea: (v: LineaPiscina | "") => void;
   /** Piscinas completas por línea; vacío = no hay ninguna, se oculta el filtro. */
   conteosLinea: Partial<Record<LineaPiscina, number>>;
+  stock: FiltroStock | "";
+  onStock: (v: FiltroStock | "") => void;
+  /** Ítems por disponibilidad; si ninguno lleva stock, el filtro se oculta. */
+  conteosStock: Record<FiltroStock, number>;
   incluirInactivos: boolean;
   onIncluirInactivos: (v: boolean) => void;
   modoConsulta: boolean;
@@ -51,6 +56,9 @@ export function FiltrosCatalogo({
   linea,
   onLinea,
   conteosLinea,
+  stock,
+  onStock,
+  conteosStock,
   incluirInactivos,
   onIncluirInactivos,
   modoConsulta,
@@ -61,6 +69,7 @@ export function FiltrosCatalogo({
 }: FiltrosCatalogoProps) {
   // Sólo las categorías con algo adentro (más la elegida, para poder des-elegirla).
   const categoriasVisibles = CATEGORIAS.filter((c) => (conteos.porCategoria[c] ?? 0) > 0 || c === categoria);
+  const hayStock = conteosStock.disponible + conteosStock.agotado > 0 || stock !== "";
   const lineasVisibles = LINEAS_PISCINA.filter((l) => (conteosLinea[l.id] ?? 0) > 0 || l.id === linea);
 
   return (
@@ -111,6 +120,15 @@ export function FiltrosCatalogo({
                   {l.etiqueta} ({conteosLinea[l.id] ?? 0})
                 </option>
               ))}
+            </select>
+          )}
+
+          {hayStock && (
+            <select value={stock} onChange={(e) => onStock(e.target.value as FiltroStock | "")} aria-label="Filtrar por stock" className={CLASE_SELECT}>
+              <option value="">Stock: todo</option>
+              <option value="disponible">Con stock ({conteosStock.disponible})</option>
+              <option value="agotado">Agotado ({conteosStock.agotado})</option>
+              <option value="sin-control">Se pide a pedido ({conteosStock["sin-control"]})</option>
             </select>
           )}
         </div>
