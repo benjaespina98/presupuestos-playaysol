@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { LuzPos, EscaleraPos, TipoPileta, Revestimiento, MaterialBorde, TonoBorde } from "@/lib/domain/plano/losetas";
+import { LuzPos, EscaleraPos, TipoPileta, Revestimiento, MaterialBorde, TonoBorde, COLOR_BORDE_POR_DEFECTO } from "@/lib/domain/plano/losetas";
+import { LadoPlano, PosicionLado } from "@/lib/domain/plano/ubicacion";
 import { TramoProfundidad } from "@/lib/domain/plano/profundidad";
 
 /**
@@ -57,7 +58,7 @@ export const LosetasFormSchema = z.object({
   revestimientoOtro: z.string().default(""),
 
   colorAgua: z.string().default("#A6D1EC"),
-  colorLoseta: z.string().default("#F7E6D3"),
+  colorLoseta: z.string().default(COLOR_BORDE_POR_DEFECTO),
   materialBorde: MaterialBorde.default("losetas"),
   tonoBorde: TonoBorde.default("marfil"),
   profundidad: z.number().nonnegative("No puede ser negativo").default(0),
@@ -67,6 +68,16 @@ export const LosetasFormSchema = z.object({
   lblOpuesto: z.string().default("Opuesto"),
   lblLateral1: z.string().default("Lateral 1"),
   lblLateral2: z.string().default("Lateral 2"),
+
+  // Ubicación en el terreno. `norte` viaja como texto ("0", "45"...) porque así responde un <select>.
+  puntosCardinales: z.boolean().default(false),
+  norte: z.string().default("0"),
+  salaFiltro: z.boolean().default(false),
+  salaLado: LadoPlano.default("opuesto"),
+  salaPos: PosicionLado.default("fin"),
+  casa: z.boolean().default(false),
+  casaLado: LadoPlano.default("solar"),
+  casaPos: PosicionLado.default("centro"),
 });
 export type LosetasForm = z.infer<typeof LosetasFormSchema>;
 
@@ -107,7 +118,7 @@ export function formularioVacio(): LosetasForm {
     revestimiento: "",
     revestimientoOtro: "",
     colorAgua: "#A6D1EC",
-    colorLoseta: "#F7E6D3",
+    colorLoseta: COLOR_BORDE_POR_DEFECTO,
     materialBorde: "losetas",
     tonoBorde: "marfil",
     profundidad: 0,
@@ -116,5 +127,13 @@ export function formularioVacio(): LosetasForm {
     lblOpuesto: "Opuesto",
     lblLateral1: "Lateral 1",
     lblLateral2: "Lateral 2",
+    puntosCardinales: false,
+    norte: "0",
+    salaFiltro: false,
+    salaLado: "opuesto",
+    salaPos: "fin",
+    casa: false,
+    casaLado: "solar",
+    casaPos: "centro",
   };
 }

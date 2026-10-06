@@ -210,6 +210,13 @@ function PrimSvg({ p }: { p: Prim }) {
           className={p.drag ? "pys-luz-drag" : undefined}
         />
       );
+    case "poly":
+      return (
+        <polygon
+          points={p.puntos.map(([x, y]) => `${x},${y}`).join(" ")}
+          fill={p.fill} stroke={p.stroke} strokeWidth={p.strokeWidth} opacity={p.opacity}
+        />
+      );
     case "text":
       return (
         <text
@@ -241,6 +248,8 @@ function LegendGlyph({
       {item.kind === "solarhumedo" && <rect x={item.x} y={sy} width={LEGEND_SW} height={LEGEND_SW} rx={2} fill="#BFE0EF" stroke="#0C447C" strokeWidth={0.75} />}
       {item.kind === "espejo" && <rect x={item.x} y={sy} width={LEGEND_SW} height={LEGEND_SW} rx={2} fill="url(#poolGrad)" stroke="#1B3A5C" strokeWidth={1} strokeDasharray="3 2" />}
       {item.kind === "escalera" && <rect x={item.x} y={sy} width={LEGEND_SW} height={LEGEND_SW} rx={1} fill="#ffffff" stroke="#1B3A5C" strokeWidth={1.1} strokeDasharray="3 2" />}
+      {item.kind === "sala" && <rect x={item.x} y={sy} width={LEGEND_SW} height={LEGEND_SW} rx={2} fill="#4B5563" stroke="#2F3742" strokeWidth={1} />}
+      {item.kind === "casa" && <rect x={item.x} y={sy} width={LEGEND_SW} height={LEGEND_SW} rx={2} fill="#E4DED2" stroke="#7C6F58" strokeWidth={1} strokeDasharray="4 2" />}
       {item.kind === "luz" && (
         <>
           <circle cx={item.x + LEGEND_SW / 2} cy={item.y} r={9} fill="url(#luzGlow)" />
