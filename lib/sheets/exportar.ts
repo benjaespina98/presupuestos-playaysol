@@ -11,6 +11,8 @@ import type { Proveedor } from "@/lib/domain/abastecimiento/proveedor";
  *
  *   Proveedores: A Proveedor · B Rubro · C Contacto · D Teléfono · E Forma de
  *                pago · F Plazo · G Qué se le compra / notas
+ *   Precios y margen: el precio de venta y, en una columna "Stock", las unidades
+ *                que hay en el local (sólo de los ítems que llevan stock).
  *   Artículos:   A Artículo · B Proveedor · C Unidad · D Precio ARS ·
  *                E Actualizado · F Rubro · G Aplica · H..R cantidad por tamaño ·
  *                S USD ref. · T Notas
@@ -23,6 +25,8 @@ export interface ItemPrecio {
   clave: string;
   precio: number | null;
   activo?: boolean;
+  /** Unidades en el local; null/undefined = no lleva stock. */
+  stock?: number | null;
 }
 
 export interface EntradaExportacion {
@@ -50,6 +54,8 @@ export interface Exportacion {
   articulos: ArticuloFila[];
   /** "tipo:clave" → precio de venta (null = a cotizar). Sólo ítems activos. */
   precios: Record<string, number | null>;
+  /** "tipo:clave" → unidades en stock. Sólo los ítems activos que llevan stock (0 = agotado). */
+  stock: Record<string, number>;
   tamanos: readonly string[];
 }
 
@@ -112,7 +118,13 @@ export function armarExportacion(entrada: EntradaExportacion, ahora: Date = new 
     precios[`${i.tipo}:${i.clave}`] = i.precio;
   }
 
-  const contenido = { proveedores, articulos, precios };
+  const stock: Record<string, number> = {};
+  for (const i of entrada.items) {
+    if (i.clave.startsWith("__") || i.activo === false) continue;
+    if (typeof i.stock === "number") stock[`${i.tipo}:${i.clave}`] = i.stock;
+  }
+
+  const contenido = { proveedores, articulos, precios, stock };
   const version = createHash("sha1").update(JSON.stringify(contenido)).digest("hex").slice(0, 16);
 
   return { version, generado: ahora.toISOString(), ...contenido, tamanos: TAMANOS };

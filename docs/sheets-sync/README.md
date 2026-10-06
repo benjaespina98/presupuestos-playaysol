@@ -15,7 +15,7 @@ actualiza sola a partir de él (cada 5 minutos, o al instante con un botón).
 |---|---|---|
 | **Proveedores** | Columnas A a G, desde la fila 6 | — |
 | **Artículos** | Columnas A a T, desde la fila 6. En los artículos cotizados en dólares queda la fórmula `=USD × tipo de cambio` en la columna D | El tipo de cambio (`B3`), formatos y colores |
-| **Precios y margen** | La columna B (precio de venta) de las filas que se reconocen por su nombre: tamaños de piscina, modelos Indusplast y la lista de adicionales | Cualquier celda con fórmula, y las filas que no están en el catálogo |
+| **Precios y margen** | La columna B (precio de venta) de las filas que se reconocen por su nombre: tamaños de piscina, modelos Indusplast y la lista de adicionales. Y la columna **Stock** (unidades en el local) de las piscinas que llevan stock | Cualquier celda con fórmula, y las filas que no están en el catálogo |
 | Presupuesto, Pedido, Mensaje, Calc | Nada | Todo |
 
 Los dados de baja en el catálogo **no** van a la planilla. Un precio sin cargar aparece como
@@ -24,6 +24,24 @@ Los dados de baja en el catálogo **no** van a la planilla. Un precio sin cargar
 > ⚠️ Lo que se escriba a mano en las celdas que se sincronizan **se pisa** en la próxima
 > actualización. Para cambiar un proveedor, un material o un precio de venta, hacelo en el
 > catálogo web.
+
+### La columna Stock
+El stock se carga en el catálogo web (Precios de venta → Stock). En la planilla se escribe en una
+columna con el encabezado **Stock** de la hoja "Precios y margen":
+
+- Si ya existe una columna con ese encabezado (en las primeras 10 filas), se usa esa.
+- Si no existe, el script **la agrega a la derecha de todo** (en la fila del encabezado de la
+  tabla, la de "Precio"), sin tocar ninguna otra columna. Después la podés mover: mientras el
+  encabezado siga diciendo "Stock", el script la encuentra.
+- Lo que no lleva stock (se pide a pedido) queda vacío; **0** significa agotado.
+
+> 🔁 Si ya tenías el script pegado, hay que **volver a pegar el contenido de
+> [`Sincronizar.gs`](./Sincronizar.gs)** en Apps Script (reemplaza todo) para que sincronice el stock.
+
+## Qué datos del catálogo web NO están en la planilla
+Estos campos existen sólo en la web (la planilla tiene sus propios rótulos para esos ítems):
+descripción larga, categoría y unidad de los **precios de venta**, y si un precio de venta está
+dado de baja. Si querés que alguno se vea en la planilla, hay que decidir en qué columna.
 
 ## Puesta en marcha (una sola vez)
 

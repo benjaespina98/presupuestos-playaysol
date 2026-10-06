@@ -12,8 +12,10 @@
  *                          fórmula =S*tipo de cambio.
  *   - Hoja "Precios y margen": la columna B (precio de venta) de cada fila que se
  *                          reconoce por su nombre (tamaños de piscina, modelos
- *                          Indusplast y la lista de adicionales). Las celdas con
- *                          fórmula no se tocan.
+ *                          Indusplast y la lista de adicionales), y la columna "Stock"
+ *                          (unidades en el local, sólo de lo que lleva stock). Si la hoja
+ *                          no tiene una columna con el encabezado "Stock", se agrega a la
+ *                          derecha de todo (no pisa nada). Las celdas con fórmula no se tocan.
  *
  * Qué NO toca: fórmulas, formatos, colores, el tipo de cambio (Artículos!B3), ni las
  * hojas Presupuesto, Pedido, Mensaje y Calc.
@@ -33,6 +35,8 @@ var MAX_FILAS_ARTICULOS = 150; // las fórmulas de la planilla leen Artículos!6
 var MAX_FILAS_PROVEEDORES = 150;
 var COLUMNA_PRECIO = 4; // D
 var COLUMNA_ACTUALIZADO = 5; // E
+var ENCABEZADO_STOCK = "Stock";
+var FILAS_ENCABEZADO = 10; // dónde se busca el encabezado "Stock" (las primeras filas de la hoja)
 
 // Nombre de la fila en "Precios y margen" → "tipo:clave" del catálogo web.
 var ETIQUETAS_PRECIO = {
@@ -87,6 +91,36 @@ function valorDePrecio(precios, clave) {
   return p === null ? "A cotizar" : p;
 }
 
+/**
+ * Lo que se escribe en la celda de stock: el número de unidades, o "" si el catálogo no
+ * lleva stock de ese ítem (se pide a pedido).
+ */
+function valorDeStock(stock, clave) {
+  if (stock && Object.prototype.hasOwnProperty.call(stock, clave)) return stock[clave];
+  return "";
+}
+
+/**
+ * Dónde está el encabezado "Stock" entre las primeras filas de la hoja: { fila, columna }
+ * (desde 1), o null si no hay.
+ */
+function buscarEncabezadoStock(valores) {
+  for (var i = 0; i < valores.length; i++) {
+    for (var j = 0; j < valores[i].length; j++) {
+      if (String(valores[i][j]).trim().toLowerCase() === ENCABEZADO_STOCK.toLowerCase()) return { fila: i + 1, columna: j + 1 };
+    }
+  }
+  return null;
+}
+
+/** La fila del encabezado de la tabla de precios: la primera donde la columna B dice "precio"; si no, la 1. */
+function filaDeEncabezadoPrecios(valores) {
+  for (var i = 0; i < valores.length; i++) {
+    if (/precio/i.test(String(valores[i][1] === undefined ? "" : valores[i][1]))) return i + 1;
+  }
+  return 1;
+}
+
 /** Valida lo que mandó la web ANTES de tocar la planilla: un catálogo vacío o roto
  *  nunca tiene que borrar la planilla. Devuelve un mensaje de error, o null si está bien. */
 function validarDatos(datos) {
@@ -96,6 +130,9 @@ function validarDatos(datos) {
   }
   if (datos.proveedores.length === 0 || datos.articulos.length === 0) {
     return "El catálogo no tiene proveedores o materiales: no se actualiza la planilla para no borrarla.";
+  }
+  if (datos.stock !== undefined && (datos.stock === null || typeof datos.stock !== "object" || Array.isArray(datos.stock))) {
+    return "El stock que mandó el catálogo no es válido.";
   }
   if (datos.articulos.length > MAX_FILAS_ARTICULOS) {
     return "Hay " + datos.articulos.length + " materiales y la planilla admite " + MAX_FILAS_ARTICULOS + ".";
@@ -165,6 +202,42 @@ function escribirPrecios_(hoja, precios) {
   return cambios;
 }
 
+/**
+ * El stock de las piscinas (y de lo que se agregue con stock) en la columna "Stock" de
+ * "Precios y margen", en la fila de cada ítem reconocido por su nombre. Si la hoja no tiene
+ * esa columna se agrega a la derecha de todo. Lo que no lleva stock queda vacío. Las celdas
+ * con fórmula no se tocan. Devuelve cuántas celdas cambiaron.
+ */
+function escribirStock_(hoja, stock) {
+  var ultima = hoja.getLastRow();
+  if (ultima < 1) return 0;
+  var ancho = Math.max(hoja.getLastColumn(), 2);
+  var cabecera = hoja.getRange(1, 1, Math.min(FILAS_ENCABEZADO, ultima), ancho).getValues();
+  var donde = buscarEncabezadoStock(cabecera);
+  if (!donde) {
+    donde = { fila: filaDeEncabezadoPrecios(cabecera), columna: ancho + 1 };
+    hoja.getRange(donde.fila, donde.columna).setValue(ENCABEZADO_STOCK);
+  }
+  var etiquetas = hoja.getRange(1, 1, ultima, 1).getValues();
+  var actuales = hoja.getRange(1, donde.columna, ultima, 1);
+  var valores = actuales.getValues();
+  var formulas = actuales.getFormulas();
+  var cambios = 0;
+  for (var i = 0; i < etiquetas.length; i++) {
+    var clave = claveDePrecio(etiquetas[i][0]);
+    if (!clave) continue;
+    if (formulas[i][0]) continue;
+    var nuevo = valorDeStock(stock, clave);
+    if (valores[i][0] !== nuevo) {
+      var celda = hoja.getRange(i + 1, donde.columna);
+      if (nuevo !== "") celda.setNumberFormat("0");
+      celda.setValue(nuevo);
+      cambios++;
+    }
+  }
+  return cambios;
+}
+
 function hoja_(nombre) {
   var h = SpreadsheetApp.getActive().getSheetByName(nombre);
   if (!h) throw new Error('No encuentro la hoja "' + nombre + '".');
@@ -201,6 +274,8 @@ function sincronizar_(forzar) {
     escribirProveedores_(hoja_(HOJA_PROVEEDORES), datos.proveedores);
     escribirArticulos_(hoja_(HOJA_ARTICULOS), datos.articulos);
     var precios = escribirPrecios_(hoja_(HOJA_PRECIOS), datos.precios);
+    // Un catálogo viejo (sin el campo) no manda stock: en ese caso no se toca la columna.
+    var stocks = datos.stock === undefined ? 0 : escribirStock_(hoja_(HOJA_PRECIOS), datos.stock);
     SpreadsheetApp.flush();
 
     props.setProperty("VERSION", datos.version);
@@ -210,7 +285,8 @@ function sincronizar_(forzar) {
       estado: "actualizada",
       proveedores: datos.proveedores.length,
       materiales: datos.articulos.length,
-      precios: precios
+      precios: precios,
+      stocks: stocks
     };
   } finally {
     candado.releaseLock();
@@ -257,7 +333,7 @@ function actualizarAhora() {
   try {
     var r = sincronizar_(true);
     if (r.estado === "ocupado") ui.alert("Ya hay una actualización en curso. Probá de nuevo en un momento.");
-    else ui.alert("Planilla actualizada: " + r.proveedores + " proveedores, " + r.materiales + " materiales y " + r.precios + " precios de venta cambiados.");
+    else ui.alert("Planilla actualizada: " + r.proveedores + " proveedores, " + r.materiales + " materiales y " + r.precios + " precios de venta y " + r.stocks + " stocks cambiados.");
   } catch (e) {
     ui.alert("No se pudo actualizar: " + e.message);
   }
@@ -308,5 +384,5 @@ function mostrarEstado() {
 
 // Sólo para las pruebas automáticas del proyecto (en Google Apps Script `module` no existe).
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { claveDePrecio: claveDePrecio, valorDePrecio: valorDePrecio, validarDatos: validarDatos, ETIQUETAS_PRECIO: ETIQUETAS_PRECIO };
+  module.exports = { claveDePrecio: claveDePrecio, valorDePrecio: valorDePrecio, validarDatos: validarDatos, valorDeStock: valorDeStock, buscarEncabezadoStock: buscarEncabezadoStock, ETIQUETAS_PRECIO: ETIQUETAS_PRECIO };
 }
