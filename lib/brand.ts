@@ -12,3 +12,14 @@ export const PLANILLA_COSTOS_URL =
   "https://docs.google.com/spreadsheets/d/17GH_EoeKPUkNb7i4UjsmlWRyhZwcFVViT3zQv_8eBPE/edit";
 export const CARPETA_DRIVE_URL =
   "https://drive.google.com/drive/folders/1VEttLyH8ZMBM3V92iKzeZZeKA0Bo0583";
+
+// Datos de la empresa para los documentos formales (pedidos a proveedores).
+// Son los mismos que ya figuran en el pie de los presupuestos.
+export const EMPRESA = {
+  nombre: "PLAYA Y SOL S.A.S.",
+  direccion: "Corrientes 1210, 5900 Villa María, Córdoba",
+  telefono: "0353-4531612",
+  whatsapp: "3534224605",
+  email: "piscinas@playaysol.com.ar",
+  web: "www.playaysol.com.ar",
+} as const;

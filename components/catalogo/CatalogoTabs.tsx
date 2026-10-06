@@ -8,6 +8,7 @@ const SECCIONES = [
   { href: "/dashboard/catalogo/materiales", etiqueta: "Materiales" },
   { href: "/dashboard/catalogo/proveedores", etiqueta: "Proveedores" },
   { href: "/dashboard/catalogo/pedido", etiqueta: "Armar pedido" },
+  { href: "/dashboard/catalogo/pedidos", etiqueta: "Pedidos" },
 ] as const;
 
 /**
@@ -21,7 +22,10 @@ export function CatalogoTabs() {
     <nav aria-label="Secciones del catálogo" className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0">
       <ul className="flex gap-1 border-b border-gray-200">
         {SECCIONES.map((s) => {
-          const activa = "exacto" in s && s.exacto ? pathname === s.href : pathname.startsWith(s.href);
+          const activa = "exacto" in s && s.exacto
+              ? pathname === s.href
+              : // Con "/" al final: /pedido no puede dar por activa a /pedidos (ni al revés).
+                pathname === s.href || pathname.startsWith(`${s.href}/`);
           return (
             <li key={s.href}>
               <Link
