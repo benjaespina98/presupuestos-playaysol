@@ -131,14 +131,20 @@ export function DocumentoCobertor({
           </section>
         )}
 
-        <div data-testid="totales" className="space-y-1 border-t-2 border-[#244B5A] pt-3">
-          {snapshot.totales.map((t, i) => (
-            <div key={etiquetas[i]} className="flex justify-between text-base font-bold text-[#244B5A]">
-              <span>{etiquetas[i]}</span>
-              <span>{formatARS(t)}</span>
-            </div>
-          ))}
-        </div>
+        {snapshot.totales.length > 0 ? (
+          <div data-testid="totales" className="space-y-1 border-t-2 border-[#244B5A] pt-3">
+            {snapshot.totales.map((t, i) => (
+              <div key={etiquetas[i]} className="flex justify-between text-base font-bold text-[#244B5A]">
+                <span>{etiquetas[i]}</span>
+                <span>{formatARS(t)}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p data-testid="totales" className="border-t-2 border-[#244B5A] pt-3 text-sm italic text-gray-500">
+            Cargá el largo y el ancho para ver el total.
+          </p>
+        )}
 
         {opcionalesIncluidos.length > 0 && (
           <section>

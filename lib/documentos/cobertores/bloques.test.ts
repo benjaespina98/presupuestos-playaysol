@@ -28,6 +28,11 @@ function armar(overrides: Partial<PresupuestoV1> = {}): BloqueDocumento[] {
 }
 
 describe("armarBloquesCobertor", () => {
+  it("sin medidas no arma la sección de totales (no hay importe que mostrar)", () => {
+    const bloques = armar({ totales: [], medidas: { largo: 0, ancho: 0, adicionalM2: 0 } });
+    expect(bloques.some((x) => x.tipo === "seccionPrecios" && x.variante === "totales")).toBe(false);
+  });
+
   it("la meta muestra la superficie derivada de largo × ancho", () => {
     const bloques = armar();
     const meta = bloques.find((b) => b.tipo === "meta");

@@ -88,10 +88,22 @@ describe("CobertorCalculadora · paridad con el oráculo", () => {
     expect(totales().getByText("$ 158.093,5")).toBeInTheDocument();
   });
 
-  it("sin medidas: sin instalación es $0, con instalación es sólo el costo fijo", async () => {
+  it("sin medidas no hay ningún total (ni siquiera el costo fijo de instalación)", async () => {
     render(<CobertorCalculadora catalogo={CATALOGO_ORACULO} />);
-    expect(totales().getByText("$ 0")).toBeInTheDocument();
-    expect(totales().getByText("$ 100.000")).toBeInTheDocument();
+    expect(totales().getByText("Cargá el largo y el ancho para ver el total.")).toBeInTheDocument();
+    expect(totales().queryByText("$ 0")).not.toBeInTheDocument();
+    expect(totales().queryByText("$ 100.000")).not.toBeInTheDocument();
+  });
+
+  it("al cargar las medidas aparecen los totales", async () => {
+    const user = userEvent.setup();
+    render(<CobertorCalculadora catalogo={CATALOGO_ORACULO} />);
+    await cargarMedidas(user, "3", "4.5", "0");
+
+    expect(totales().queryByText("Cargá el largo y el ancho para ver el total.")).not.toBeInTheDocument();
+    // 13,5 m² × $10.903 = $147.190,5; con instalación (+$100.000) = $247.190,5
+    expect(totales().getByText("$ 147.190,5")).toBeInTheDocument();
+    expect(totales().getByText("$ 247.190,5")).toBeInTheDocument();
   });
 });
 

@@ -146,7 +146,15 @@ describe("calcularCobertor reproduce el legacy", () => {
         adicionales: [],
       });
 
-      esperarMontos(totalesCobertor(r, "ambos"), caso.montos, caso.nombre);
+      if (caso.nombre === "sin medidas") {
+        // CAMBIO INTENCIONAL respecto del legacy (que mostraba "con instalación
+        // $100.000" sin medidas): ahora no hay totales hasta cargar largo y ancho.
+        // El cálculo puro sigue dando lo mismo que el oráculo.
+        expect(r.totalConInstalacion).toBe(100000);
+        expect(totalesCobertor(r, "ambos")).toEqual([]);
+      } else {
+        esperarMontos(totalesCobertor(r, "ambos"), caso.montos, caso.nombre);
+      }
 
       // El legacy también muestra los m² en un campo de sólo lectura; el
       // oráculo los grabó. Se comparan como número para no depender del
