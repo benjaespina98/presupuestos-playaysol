@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { listarMateriales, listarProveedores } from "@/lib/abastecimiento";
 import { TAMANOS, type Material } from "@/lib/domain/abastecimiento/material";
 import type { Proveedor } from "@/lib/domain/abastecimiento/proveedor";
@@ -17,11 +18,21 @@ import {
   type GrupoPedido,
   type ParametrosPedido,
 } from "@/lib/domain/abastecimiento/pedido";
+import {
+  armarDocumento,
+  lineasDePedido,
+  numeroFormateado,
+  type PedidoGuardado,
+} from "@/lib/domain/abastecimiento/pedidoDocumento";
+import { exportarPedido, type FormatoPedido, type ModoPedido } from "@/lib/documentos/pedidos/exportar";
+import { compartirOdescargarArchivo } from "@/lib/documentos/compartir";
+import { guardarPedido, listarPedidos } from "@/lib/pedidos";
 import { formatARS } from "@/lib/format/ars";
 import { copiarAlPortapapeles } from "@/lib/clipboard";
 import { PanelPortal } from "@/components/PanelPortal";
 import { Interruptor } from "@/components/catalogo/FiltrosCatalogo";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
+import { MenuExportar } from "@/components/pedidos/MenuExportar";
 
 const CLASE_CAMPO =
   "min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20";
@@ -47,7 +58,22 @@ function nombreArchivo(obra: string, tamano: string): string {
   return `Pedido_${limpio ? limpio + "_" : ""}${tamano.replace(".", ",")}.csv`;
 }
 
+/**
+ * Armar pedido — con `?desde=<id>` se vuelve a armar a partir de un pedido guardado
+ * (misma obra y condiciones; las cantidades se recalculan con el catálogo de hoy).
+ */
 export default function PedidoPage() {
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-5xl px-4 py-8 text-sm text-gray-500">Cargando…</div>}>
+      <PedidoContenido />
+    </Suspense>
+  );
+}
+
+type Mensaje = { tipo: "ok" | "aviso" | "error"; texto: string };
+
+function PedidoContenido() {
+  const desde = useSearchParams().get("desde");
   const [materiales, setMateriales] = useState<Material[] | null>(null);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +83,29 @@ export default function PedidoPage() {
   const [params, setParams] = useState<ParametrosPedido>(PARAMETROS_POR_DEFECTO);
   const [ajustes, setAjustes] = useState<Record<string, AjusteLinea>>({});
   const [copiado, setCopiado] = useState<string | null>(null);
+  const [notas, setNotas] = useState("");
+  const [guardado, setGuardado] = useState<{ pedido: PedidoGuardado; firma: string } | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const [mensaje, setMensaje] = useState<Mensaje | null>(null);
+
+  // Volver a armar a partir de un pedido guardado.
+  useEffect(() => {
+    if (!desde) return;
+    let cancelado = false;
+    listarPedidos().then((r) => {
+      if (cancelado || !r.items) return;
+      const p = r.items.find((x) => x.id === desde);
+      if (!p) return;
+      setObra(p.obra);
+      setPide(p.solicitante);
+      setNotas(p.notas ?? "");
+      setParams(p.parametros);
+      setMensaje({ tipo: "aviso", texto: `Se cargaron los datos de ${numeroFormateado(p.numero)}. Las cantidades se recalcularon con el catálogo de hoy.` });
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [desde]);
 
   useEffect(() => {
     let cancelado = false;
@@ -99,6 +148,66 @@ export default function PedidoPage() {
     });
 
   const encabezado = { obra, pide };
+
+  // El pedido tal como se guarda y se imprime (la foto de lo que se pide ahora).
+  const lineas = useMemo(() => lineasDePedido(pedido), [pedido]);
+  const firma = useMemo(
+    () => JSON.stringify({ obra: obra.trim(), pide: pide.trim(), notas: notas.trim(), params, lineas }),
+    [obra, pide, notas, params, lineas]
+  );
+  // El pedido guardado sólo vale mientras no cambie nada: si se cambia algo, el siguiente guardado es OTRO pedido.
+  const vigente = guardado && guardado.firma === firma ? guardado.pedido : null;
+
+  async function asegurarGuardado(): Promise<{ pedido: PedidoGuardado | null; error: string | null }> {
+    if (vigente) return { pedido: vigente, error: null };
+    const r = await guardarPedido({ obra, solicitante: pide, parametros: params, lineas, costo: pedido.costo, notas });
+    if (r.pedido) setGuardado({ pedido: r.pedido, firma });
+    return r;
+  }
+
+  async function onGuardar() {
+    setOcupado(true);
+    setMensaje(null);
+    const r = await asegurarGuardado();
+    setMensaje(
+      r.pedido
+        ? { tipo: "ok", texto: `Pedido ${numeroFormateado(r.pedido.numero)} guardado.` }
+        : { tipo: "error", texto: r.error ?? "No se pudo guardar el pedido." }
+    );
+    setOcupado(false);
+  }
+
+  /** Genera el archivo formal. Todo documento formal sale con su número: antes de generarlo se guarda el pedido. */
+  async function onExportar(formato: FormatoPedido, modo: ModoPedido) {
+    setOcupado(true);
+    setMensaje(null);
+    try {
+      const r = await asegurarGuardado();
+      const doc = armarDocumento(lineas, {
+        numero: r.pedido?.numero ?? null,
+        fecha: r.pedido ? new Date(r.pedido.created_at) : new Date(),
+        obra,
+        solicitante: pide,
+        parametros: params,
+        observaciones: notas,
+      });
+      const archivo = await exportarPedido(doc, formato, modo);
+      await compartirOdescargarArchivo(archivo.blob, archivo.nombre, archivo.mime);
+      setMensaje(
+        r.pedido
+          ? { tipo: "ok", texto: `${archivo.nombre} generado. Quedó guardado como ${numeroFormateado(r.pedido.numero)}.` }
+          : {
+              tipo: "aviso",
+              texto: `${archivo.nombre} generado como BORRADOR (sin número) porque no se pudo guardar el pedido: ${r.error ?? "error desconocido"}`,
+            }
+      );
+    } catch (err) {
+      console.error("No se pudo generar el archivo del pedido", err);
+      setMensaje({ tipo: "error", texto: "No se pudo generar el archivo. Probá de nuevo." });
+    } finally {
+      setOcupado(false);
+    }
+  }
 
   async function copiar(clave: string, texto: string) {
     const ok = await copiarAlPortapapeles(texto);
@@ -160,6 +269,17 @@ export default function PedidoPage() {
                 <input id="pide" type="text" value={pide} onChange={(e) => setPide(e.target.value)} className={CLASE_CAMPO} />
               </Campo>
             </div>
+
+            <Campo etiqueta="Observaciones (salen en el pedido)" id="notas">
+              <textarea
+                id="notas"
+                rows={2}
+                value={notas}
+                onChange={(e) => setNotas(e.target.value)}
+                placeholder="Ej: Entregar en obra antes del viernes"
+                className={CLASE_CAMPO}
+              />
+            </Campo>
 
             <div className="grid gap-4 sm:grid-cols-4">
               <Campo etiqueta="Tamaño de pileta" id="tamano">
@@ -255,10 +375,13 @@ export default function PedidoPage() {
                   <b className="text-gray-900">{pedido.articulos}</b> artículos · <b className="text-gray-900">{pedido.proveedores}</b> proveedores ·{" "}
                   <b className="text-gray-900">{formatARS(pedido.costo)}</b>
                 </p>
-                <Accion principal onClick={() => copiar("todo", mensajeWhatsApp(pedido, params, encabezado))}>
+                <Accion principal onClick={onGuardar} deshabilitado={ocupado || !!vigente}>
+                  {vigente ? `Guardado · ${numeroFormateado(vigente.numero)}` : "Guardar pedido"}
+                </Accion>
+                <Accion onClick={() => copiar("todo", mensajeWhatsApp(pedido, params, encabezado))}>
                   {copiado === "todo" ? "¡Copiado!" : "Copiar mensaje para WhatsApp"}
                 </Accion>
-                <Accion onClick={descargarCsv}>Descargar para Excel</Accion>
+                <MenuExportar onExportar={onExportar} onCsv={descargarCsv} variosProveedores={pedido.grupos.length > 1} ocupado={ocupado} />
                 <Accion onClick={() => window.print()}>Imprimir</Accion>
                 {hayAjustes && (
                   <button
@@ -270,6 +393,30 @@ export default function PedidoPage() {
                   </button>
                 )}
               </div>
+
+              {mensaje && (
+                <p
+                  role={mensaje.tipo === "error" ? "alert" : "status"}
+                  data-print-hide=""
+                  className={`mb-4 rounded-md px-4 py-3 text-sm ${
+                    mensaje.tipo === "ok"
+                      ? "bg-green-50 text-green-700"
+                      : mensaje.tipo === "aviso"
+                        ? "bg-amber-50 text-amber-800"
+                        : "bg-red-50 text-red-700"
+                  }`}
+                >
+                  {mensaje.texto}
+                  {mensaje.tipo === "ok" && vigente && (
+                    <>
+                      {" "}
+                      <Link href="/dashboard/catalogo/pedidos" className="font-medium underline">
+                        Ver en Pedidos
+                      </Link>
+                    </>
+                  )}
+                </p>
+              )}
 
               <div className="space-y-4">
                 {pedido.grupos.map((g) => (
@@ -333,12 +480,23 @@ function Resumen({ etiqueta, valor, nota }: { etiqueta: string; valor: string; n
   );
 }
 
-function Accion({ children, onClick, principal = false }: { children: React.ReactNode; onClick: () => void; principal?: boolean }) {
+function Accion({
+  children,
+  onClick,
+  principal = false,
+  deshabilitado = false,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  principal?: boolean;
+  deshabilitado?: boolean;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`min-h-11 rounded-lg px-4 text-sm font-semibold shadow-sm transition-colors ${
+      disabled={deshabilitado}
+      className={`min-h-11 rounded-lg px-4 text-sm font-semibold shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
         principal
           ? "bg-[#1B3A5C] text-white hover:bg-[#142c46]"
           : "border border-gray-200 bg-white text-[#1B3A5C] hover:border-gray-300 hover:bg-gray-50"
