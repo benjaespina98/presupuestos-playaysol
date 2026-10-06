@@ -318,19 +318,6 @@ describe("LosetasCalculadora · ubicación en el terreno", () => {
     for (const letra of ["N", "E", "S", "O"]) expect(texto).toContain(letra);
   });
 
-  it("la posición se ofrece según el lado: sobre uno horizontal, izquierda/derecha", async () => {
-    const user = userEvent.setup();
-    render(<LosetasCalculadora />);
-    await user.click(screen.getByLabelText("Sala de filtro"));
-    const lado = screen.getByLabelText("Del lado…") as HTMLSelectElement;
-    const pos = () => [...(screen.getByLabelText("Ubicación sobre ese lado") as HTMLSelectElement).options].map((o) => o.textContent);
-    expect(lado.value).toBe("opuesto");
-    expect(pos()).toEqual(["Hacia arriba", "Centrada", "Hacia abajo"]);
-
-    await user.selectOptions(lado, "lateral1");
-    expect(pos()).toEqual(["Hacia la izquierda", "Centrada", "Hacia la derecha"]);
-  });
-
   it("se guarda con el plano y se recupera; un plano viejo se abre sin nada de esto", async () => {
     const user = userEvent.setup();
     const { unmount } = render(<LosetasCalculadora />);
@@ -338,17 +325,16 @@ describe("LosetasCalculadora · ubicación en el terreno", () => {
     await user.click(screen.getByLabelText("Puntos cardinales"));
     await user.selectOptions(screen.getByLabelText("El norte está hacia…"), "225");
     await user.click(screen.getByLabelText("Casa / quincho"));
-    await user.selectOptions(screen.getByLabelText("Del lado…"), "lateral2");
     await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
 
     await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
     const guardado = PresupuestoV1.parse(guardarPresupuesto.mock.calls[0][1]);
-    expect(guardado.medidas).toMatchObject({ puntosCardinales: true, norteGrados: 225, casa: true, casaLado: "lateral2" });
+    expect(guardado.medidas).toMatchObject({ puntosCardinales: true, norteGrados: 225, casa: true, casaPosLibre: null });
     unmount();
 
     render(<LosetasCalculadora presupuestoId="x" presupuestoInicial={{ presupuesto: guardado, preciosCongelados: true, clavesIncluidas: [] }} />);
     expect((screen.getByLabelText("El norte está hacia…") as HTMLSelectElement).value).toBe("225");
-    expect((screen.getByLabelText("Del lado…") as HTMLSelectElement).value).toBe("lateral2");
+    expect(screen.getByLabelText("Casa / quincho")).toBeChecked();
   });
 
   it("un plano guardado con el marfil de antes (rosado) se abre con el marfil de ahora; un color a mano se respeta", () => {

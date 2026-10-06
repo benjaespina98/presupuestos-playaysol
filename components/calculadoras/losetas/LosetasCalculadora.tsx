@@ -19,13 +19,7 @@ import {
   type MaterialBorde,
   type TonoBorde,
 } from "@/lib/domain/plano/losetas";
-import {
-  DIRECCIONES_NORTE,
-  ETIQUETA_LADO,
-  LadoPlano,
-  PosicionLado,
-  etiquetaPosicion,
-} from "@/lib/domain/plano/ubicacion";
+import { DIRECCIONES_NORTE } from "@/lib/domain/plano/ubicacion";
 import { problemasTramos } from "@/lib/domain/plano/profundidad";
 import { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { PresupuestoLeido } from "@/lib/domain/presupuesto/adaptadores";
@@ -91,8 +85,10 @@ function medidasDesdePresupuesto(leido: PresupuestoLeido): LosetasForm {
     ? colorDeBorde(materialBorde, tonoBorde)
     : colorGuardado;
 
-  const lado = (v: unknown, def: LosetasForm["salaLado"]) => (LadoPlano.safeParse(v).success ? (v as LosetasForm["salaLado"]) : def);
-  const posicion = (v: unknown, def: LosetasForm["salaPos"]) => (PosicionLado.safeParse(v).success ? (v as LosetasForm["salaPos"]) : def);
+  const posicionOpcional = (v: unknown): LuzPos | null => {
+    const p = v as { x?: unknown; y?: unknown } | null | undefined;
+    return p && typeof p.x === "number" && typeof p.y === "number" && Number.isFinite(p.x) && Number.isFinite(p.y) ? { x: p.x, y: p.y } : null;
+  };
 
   return {
     ...base,
@@ -139,11 +135,9 @@ function medidasDesdePresupuesto(leido: PresupuestoLeido): LosetasForm {
     puntosCardinales: bool(m.puntosCardinales),
     norte: String(DIRECCIONES_NORTE.some((d) => d.grados === m.norteGrados) ? m.norteGrados : 0),
     salaFiltro: bool(m.salaFiltro),
-    salaLado: lado(m.salaLado, "opuesto"),
-    salaPos: posicion(m.salaPos, "fin"),
+    salaPosLibre: posicionOpcional(m.salaPosLibre),
     casa: bool(m.casa),
-    casaLado: lado(m.casaLado, "solar"),
-    casaPos: posicion(m.casaPos, "centro"),
+    casaPosLibre: posicionOpcional(m.casaPosLibre),
     lblSolar: str(m.lblSolar, "Solar"),
     lblOpuesto: str(m.lblOpuesto, "Opuesto"),
     lblLateral1: str(m.lblLateral1, "Lateral 1"),
@@ -199,11 +193,9 @@ function medidasParaSnapshot(v: LosetasForm) {
     puntosCardinales: v.puntosCardinales,
     norteGrados: Number(v.norte) || 0,
     salaFiltro: v.salaFiltro,
-    salaLado: v.salaLado,
-    salaPos: v.salaPos,
+    salaPosLibre: v.salaPosLibre,
     casa: v.casa,
-    casaLado: v.casaLado,
-    casaPos: v.casaPos,
+    casaPosLibre: v.casaPosLibre,
   };
 }
 
@@ -228,8 +220,6 @@ const ESCALERA_OPCIONES = [
   { value: "lateral2", label: "Lateral 2" },
 ];
 const NORTE_OPCIONES = DIRECCIONES_NORTE.map((d) => ({ value: String(d.grados), label: d.etiqueta }));
-const LADO_OPCIONES = LadoPlano.options.map((l) => ({ value: l, label: ETIQUETA_LADO[l] }));
-const posicionOpciones = (lado: LadoPlano) => PosicionLado.options.map((p) => ({ value: p, label: etiquetaPosicion(lado, p) }));
 const TIPO_PILETA_OPCIONES = [
   { value: "hormigon", label: "Hormigón" },
   { value: "fibra", label: "Fibra" },
@@ -361,11 +351,9 @@ export function LosetasCalculadora({
       puntosCardinales: !!valoresForm.puntosCardinales,
       norteGrados: Number(valoresForm.norte) || 0,
       salaFiltro: !!valoresForm.salaFiltro,
-      salaLado: valoresForm.salaLado ?? "opuesto",
-      salaPos: valoresForm.salaPos ?? "fin",
+      salaPosLibre: valoresForm.salaPosLibre ? { x: num(valoresForm.salaPosLibre.x), y: num(valoresForm.salaPosLibre.y) } : null,
       casa: !!valoresForm.casa,
-      casaLado: valoresForm.casaLado ?? "solar",
-      casaPos: valoresForm.casaPos ?? "centro",
+      casaPosLibre: valoresForm.casaPosLibre ? { x: num(valoresForm.casaPosLibre.x), y: num(valoresForm.casaPosLibre.y) } : null,
     }),
     [valoresForm]
   );
@@ -381,6 +369,14 @@ export function LosetasCalculadora({
 
   function onMoverLuz(indice: number, pos: LuzPos) {
     setValue(`lucesPos.${indice}`, pos, { shouldDirty: true });
+  }
+
+  function onMoverSala(pos: LuzPos) {
+    setValue("salaPosLibre", pos, { shouldDirty: true });
+  }
+
+  function onMoverCasa(pos: LuzPos) {
+    setValue("casaPosLibre", pos, { shouldDirty: true });
   }
 
   function onMoverEscalera(pos: LuzPos) {
@@ -700,27 +696,24 @@ export function LosetasCalculadora({
 
           <div className="grid grid-cols-1 gap-4 border-t border-gray-100 pt-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <CheckboxField register={register} errors={errors} name="salaFiltro" label="Sala de filtro" />
-              {valoresForm.salaFiltro && (
-                <>
-                  <SelectField register={register} errors={errors} name="salaLado" label="Del lado…" options={LADO_OPCIONES} />
-                  <SelectField register={register} errors={errors} name="salaPos" label="Ubicación sobre ese lado" options={posicionOpciones(valoresForm.salaLado ?? "opuesto")} />
-                </>
-              )}
+              <CheckboxField
+                register={register}
+                errors={errors}
+                name="salaFiltro"
+                label="Sala de filtro"
+                hint="Arrastrala en el plano al lado que quieras: queda siempre afuera del borde."
+              />
             </div>
             <div className="space-y-2">
-              <CheckboxField register={register} errors={errors} name="casa" label="Casa / quincho" />
-              {valoresForm.casa && (
-                <>
-                  <SelectField register={register} errors={errors} name="casaLado" label="Del lado…" options={LADO_OPCIONES} />
-                  <SelectField register={register} errors={errors} name="casaPos" label="Ubicación sobre ese lado" options={posicionOpciones(valoresForm.casaLado ?? "solar")} />
-                </>
-              )}
+              <CheckboxField
+                register={register}
+                errors={errors}
+                name="casa"
+                label="Casa / quincho"
+                hint="Arrastrala en el plano para orientar dónde está respecto de la pileta."
+              />
             </div>
           </div>
-          {valoresForm.salaFiltro && valoresForm.casa && valoresForm.salaLado === valoresForm.casaLado && (
-            <p className="text-xs text-gray-500">La sala y la casa están del mismo lado: la sala queda pegada al borde y la casa detrás.</p>
-          )}
         </section>
 
         <details className="rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -759,6 +752,8 @@ export function LosetasCalculadora({
               onMoverEscalera={onMoverEscalera}
               onMoverSkimmer={onMoverSkimmer}
               onMoverHidromasaje={onMoverHidromasaje}
+              onMoverSala={onMoverSala}
+              onMoverCasa={onMoverCasa}
             />
           </div>
 

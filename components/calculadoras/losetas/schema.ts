@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { LuzPos, EscaleraPos, TipoPileta, Revestimiento, MaterialBorde, TonoBorde, COLOR_BORDE_POR_DEFECTO } from "@/lib/domain/plano/losetas";
-import { LadoPlano, PosicionLado } from "@/lib/domain/plano/ubicacion";
 import { TramoProfundidad } from "@/lib/domain/plano/profundidad";
 
 /**
@@ -72,12 +71,11 @@ export const LosetasFormSchema = z.object({
   // Ubicación en el terreno. `norte` viaja como texto ("0", "45"...) porque así responde un <select>.
   puntosCardinales: z.boolean().default(false),
   norte: z.string().default("0"),
+  // La sala y la casa se arrastran: su posición (centro, en metros desde la esquina del borde) o null = lugar de fábrica.
   salaFiltro: z.boolean().default(false),
-  salaLado: LadoPlano.default("opuesto"),
-  salaPos: PosicionLado.default("fin"),
+  salaPosLibre: LuzPos.nullable().default(null),
   casa: z.boolean().default(false),
-  casaLado: LadoPlano.default("solar"),
-  casaPos: PosicionLado.default("centro"),
+  casaPosLibre: LuzPos.nullable().default(null),
 });
 export type LosetasForm = z.infer<typeof LosetasFormSchema>;
 
@@ -130,10 +128,8 @@ export function formularioVacio(): LosetasForm {
     puntosCardinales: false,
     norte: "0",
     salaFiltro: false,
-    salaLado: "opuesto",
-    salaPos: "fin",
+    salaPosLibre: null,
     casa: false,
-    casaLado: "solar",
-    casaPos: "centro",
+    casaPosLibre: null,
   };
 }
