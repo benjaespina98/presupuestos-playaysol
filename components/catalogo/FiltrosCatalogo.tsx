@@ -164,7 +164,7 @@ export function FiltrosCatalogo({
   );
 }
 
-function Chip({
+export function Chip({
   activo,
   onClick,
   cantidad,
@@ -200,7 +200,7 @@ function Chip({
 
 /** Interruptor accesible: un checkbox real (por eso se prueba con su label) con
  *  el aspecto de un switch. */
-function Interruptor({
+export function Interruptor({
   checked,
   onChange,
   children,
