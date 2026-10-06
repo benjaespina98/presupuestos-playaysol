@@ -10,8 +10,12 @@ import {
   ajustarLucesPos,
   fmtM,
   MATERIALES_BORDE,
+  TONOS_BORDE,
+  colorDeBorde,
+  nombreDeBorde,
   type LuzPos,
   type MaterialBorde,
+  type TonoBorde,
 } from "@/lib/domain/plano/losetas";
 import { problemasTramos } from "@/lib/domain/plano/profundidad";
 import { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
@@ -68,9 +72,13 @@ function medidasDesdePresupuesto(leido: PresupuestoLeido): LosetasForm {
       }))
     : [];
 
+  // Un plano guardado antes de poder elegir el tono no lo tiene: era el marfil de siempre.
+  const tonoBorde: TonoBorde = m.tonoBorde === "blanco" ? "blanco" : "marfil";
+
   return {
     ...base,
     materialBorde,
+    tonoBorde,
     profundidad: num(m.profundidad, 0),
     tramosProfundidad: tramosGuardados,
     nombre: leido.presupuesto.cliente.nombre || "",
@@ -154,6 +162,7 @@ function medidasParaSnapshot(v: LosetasForm) {
     colorAgua: v.colorAgua,
     colorLoseta: v.colorLoseta,
     materialBorde: v.materialBorde,
+    tonoBorde: v.tonoBorde,
     profundidad: v.profundidad,
     tramosProfundidad: v.tramosProfundidad,
     lblSolar: v.lblSolar,
@@ -162,6 +171,8 @@ function medidasParaSnapshot(v: LosetasForm) {
     lblLateral2: v.lblLateral2,
   };
 }
+
+const TONO_BORDE_OPCIONES = (Object.keys(TONOS_BORDE) as TonoBorde[]).map((k) => ({ value: k, label: TONOS_BORDE[k] }));
 
 const MATERIAL_BORDE_OPCIONES = (Object.keys(MATERIALES_BORDE) as MaterialBorde[]).map((k) => ({
   value: k,
@@ -243,17 +254,18 @@ export function LosetasCalculadora({
   // beige, deck madera, travertino crema) — salvo que se haya elegido un color a
   // mano: ese se respeta.
   const materialBorde: MaterialBorde = valoresForm.materialBorde ?? "losetas";
-  const materialPrevio = useRef<MaterialBorde>(materialBorde);
+  const tonoBorde: TonoBorde = valoresForm.tonoBorde ?? "marfil";
+  const previoBorde = useRef({ materialBorde, tonoBorde });
   useEffect(() => {
-    const previo = materialPrevio.current;
-    if (previo === materialBorde) return;
-    materialPrevio.current = materialBorde;
+    const antes = previoBorde.current;
+    if (antes.materialBorde === materialBorde && antes.tonoBorde === tonoBorde) return;
+    previoBorde.current = { materialBorde, tonoBorde };
     const actual = (getValues("colorLoseta") || "").toLowerCase();
-    if (!actual || actual === MATERIALES_BORDE[previo].color.toLowerCase()) {
-      setValue("colorLoseta", MATERIALES_BORDE[materialBorde].color, { shouldDirty: true });
+    if (!actual || actual === colorDeBorde(antes.materialBorde, antes.tonoBorde).toLowerCase()) {
+      setValue("colorLoseta", colorDeBorde(materialBorde, tonoBorde), { shouldDirty: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [materialBorde]);
+  }, [materialBorde, tonoBorde]);
   const nombreMaterial = MATERIALES_BORDE[materialBorde];
   const problemasDeTramos = problemasTramos(
     (valoresForm.tramosProfundidad ?? []).map((t) => ({ desde: num(t?.desde), hasta: num(t?.hasta), prof: num(t?.prof) })),
@@ -297,6 +309,7 @@ export function LosetasCalculadora({
       colorAgua: valoresForm.colorAgua || "#A6D1EC",
       colorLoseta: valoresForm.colorLoseta || "#F7E6D3",
       materialBorde: valoresForm.materialBorde ?? "losetas",
+      tonoBorde: valoresForm.tonoBorde ?? "marfil",
       profundidad: num(valoresForm.profundidad),
       tramosProfundidad: (valoresForm.tramosProfundidad ?? []).map((t) => ({
         desde: num(t?.desde),
@@ -499,6 +512,16 @@ export function LosetasCalculadora({
             hint="Lo que elige el cliente para el borde: se nombra así en el plano."
             options={MATERIAL_BORDE_OPCIONES}
           />
+          {nombreMaterial.conTono && (
+            <SelectField
+              register={register}
+              errors={errors}
+              name="tonoBorde"
+              label={`Color de ${nombreMaterial.etiqueta.toLowerCase()}`}
+              hint="Las losetas y los decks vienen en marfil y en blanco."
+              options={TONO_BORDE_OPCIONES}
+            />
+          )}
           <p className="text-xs text-gray-500">
             Medida <b>terminada</b> de cada lado, incluyendo el borde de arriba.
           </p>
@@ -617,7 +640,7 @@ export function LosetasCalculadora({
                 <input id="colorAgua" type="color" className="h-10 w-full cursor-pointer rounded-md border border-gray-300" {...register("colorAgua")} />
               </div>
               <div>
-                <label htmlFor="colorLoseta" className="mb-1 block text-xs text-gray-500">Color del borde ({nombreMaterial.etiqueta.toLowerCase()})</label>
+                <label htmlFor="colorLoseta" className="mb-1 block text-xs text-gray-500">Color del borde ({nombreDeBorde(materialBorde, tonoBorde)})</label>
                 <input id="colorLoseta" type="color" className="h-10 w-full cursor-pointer rounded-md border border-gray-300" {...register("colorLoseta")} />
               </div>
             </div>
