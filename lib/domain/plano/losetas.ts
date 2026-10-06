@@ -336,6 +336,20 @@ interface Marcador {
   caja: Caja;
 }
 
+/** El centro (en x) del tramo de agua más ancho que dejan libre las franjas a todo lo alto (solar húmedo, escalera). */
+function centroLibreX(x0: number, x1: number, altoPool: number, franjas: Caja[]): number {
+  const llenas = franjas.filter((f) => f.y1 - f.y0 >= altoPool * 0.9).sort((a, b) => a.x0 - b.x0);
+  let mejor: [number, number] = [x0, x1];
+  let ancho = -1;
+  let desde = x0;
+  for (const f of [...llenas, { x0: x1, y0: 0, x1: x1, y1: 0 }]) {
+    const hasta = Math.min(f.x0, x1);
+    if (hasta - desde > ancho) { ancho = hasta - desde; mejor = [desde, hasta]; }
+    desde = Math.max(desde, f.x1);
+  }
+  return (mejor[0] + mejor[1]) / 2;
+}
+
 /** Un texto (o grupo de textos) que se puede correr de lugar si queda tapado. */
 interface Movible {
   /** Todo lo que se mueve junto (p. ej. el cartelito y su texto). */
@@ -399,7 +413,7 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
   };
   const { viewW, viewHmax, showDims, interactive } = opciones;
 
-  const padTop = showDims ? 90 : 46;
+  const padTop = showDims ? 90 : 30;
   const padSide = showDims ? 130 : 90;
   const padBottom = showDims ? 110 : 60;
   // La sala de filtro y la casa se dibujan afuera del borde: se reserva su lugar en cada lado.
@@ -871,17 +885,22 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
       });
     }
   } else {
-    dims.push({ t: "text", x: ox + (totalW * pxPerM) / 2, y: arribaFuera - 14, text: `${s.lblLateral1}: ${fmtM(s.lateral1)} m`, fontSize: 12, fill: "#555", anchor: "middle" });
-    dims.push({ t: "text", x: ox + (totalW * pxPerM) / 2, y: abajoFuera + 24, text: `${s.lblLateral2}: ${fmtM(s.lateral2)} m`, fontSize: 12, fill: "#555", anchor: "middle" });
-    dims.push({ t: "text", x: Math.max(14, izquierdaFuera - 16), y: oy + (totalH * pxPerM) / 2, text: `${s.lblSolar}: ${fmtM(s.solar)} m`, fontSize: 12, fill: "#555", anchor: "end" });
-    dims.push({ t: "text", x: derechaFuera + 16, y: oy + (totalH * pxPerM) / 2, text: `${s.lblOpuesto}: ${fmtM(s.opuesto)} m`, fontSize: 12, fill: "#555", anchor: "start" });
+    // Las medidas de cada lado van DENTRO del borde, pegadas a su lado (como en el plano del cliente): así
+    // quedan junto a lo que miden aunque haya una sala o una casa alrededor.
+    const lbl = { fontSize: 11, fill: labelColor, anchor: "middle" as const, central: true };
+    if (s.lateral1 * pxPerM > 16) dims.push({ t: "text", x: poolX + poolW / 2, y: oy + (s.lateral1 * pxPerM) / 2, text: `${s.lblLateral1}: ${fmtM(s.lateral1)} m`, ...lbl });
+    if (s.lateral2 * pxPerM > 16) dims.push({ t: "text", x: poolX + poolW / 2, y: oy + s.lateral1 * pxPerM + poolH + (s.lateral2 * pxPerM) / 2, text: `${s.lblLateral2}: ${fmtM(s.lateral2)} m`, ...lbl });
+    if (s.solar * pxPerM > 22) dims.push({ t: "text", x: ox + (s.solar * pxPerM) / 2, y: poolY + poolH / 2, text: `${s.lblSolar}: ${fmtM(s.solar)} m`, ...lbl, rotateDeg: -90 });
+    if (s.opuesto * pxPerM > 22) dims.push({ t: "text", x: ox + s.solar * pxPerM + poolW + (s.opuesto * pxPerM) / 2, y: poolY + poolH / 2, text: `${s.lblOpuesto}: ${fmtM(s.opuesto)} m`, ...lbl, rotateDeg: -90 });
+    // El texto central va en el medio del agua que queda libre (no encima del solar húmedo ni de la escalera).
+    const xTexto = centroLibreX(poolX, poolX + poolW, poolH, franjas);
     dims.push({
-      t: "text", x: poolX + poolW / 2, y: poolY + poolH / 2 - (revestTextFinal ? 8 : 0),
+      t: "text", x: xTexto, y: poolY + poolH / 2 - (revestTextFinal ? 8 : 0),
       text: `${fmtM(s.largo)} x ${fmtM(s.ancho)} m`, fontSize: 14, fill: "#1B3A5C", anchor: "middle", central: true,
     });
     if (revestTextFinal) {
       dims.push({
-        t: "text", x: poolX + poolW / 2, y: poolY + poolH / 2 + 12,
+        t: "text", x: xTexto, y: poolY + poolH / 2 + 12,
         text: `Revestimiento: ${revestTextFinal}`, fontSize: 10, fill: "#1B3A5C", anchor: "middle", central: true, opacity: 0.7,
       });
     }
