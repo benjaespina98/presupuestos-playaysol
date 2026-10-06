@@ -9,13 +9,14 @@ vi.mock("next/navigation", () => ({ usePathname }));
 describe("CatalogoTabs", () => {
   beforeEach(() => usePathname.mockReset());
 
-  it("muestra las tres secciones y marca sólo la actual", () => {
+  it("muestra las cuatro secciones y marca sólo la actual", () => {
     usePathname.mockReturnValue("/dashboard/catalogo/materiales");
     render(<CatalogoTabs />);
 
     expect(screen.getByRole("link", { name: "Materiales" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Precios de venta" })).not.toHaveAttribute("aria-current");
     expect(screen.getByRole("link", { name: "Proveedores" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "Armar pedido" })).toHaveAttribute("href", "/dashboard/catalogo/pedido");
   });
 
   it("'Precios de venta' es la raíz: no queda activa en las subsecciones", () => {
