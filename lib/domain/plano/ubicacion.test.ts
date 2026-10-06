@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calcularGeometriaPlano, type Prim } from "./losetas";
+import { ajustarLucesPos, seTocan } from "./losetas";
 import { centroPorDefecto, colocarObjeto, dibujarBrujula, reservaUbicacion, separarObjetos, vectoresCardinales } from "./ubicacion";
 
 const base = { largo: 8, ancho: 4, solar: 1.5, opuesto: 1.5, lateral1: 1.5, lateral2: 1.5 };
@@ -107,8 +108,8 @@ describe("sala de filtro y casa (se arrastran, pero quedan siempre afuera del bo
 
   it("en el plano: sale con su nombre, en la leyenda, y la posición guardada (en metros) la mueve", () => {
     const g0 = calcularGeometriaPlano({ ...base, salaFiltro: true, casa: true }, cliente);
-    expect(textos(g0.extras)).toEqual(expect.arrayContaining(["Sala de", "filtro", "Casa /", "quincho"]));
-    expect(g0.legend.map((l) => l.label)).toEqual(expect.arrayContaining(["Sala de filtro", "Casa / quincho"]));
+    expect(textos(g0.extras)).toEqual(expect.arrayContaining(["Sala de", "filtro", "Casa"]));
+    expect(g0.legend.map((l) => l.label)).toEqual(expect.arrayContaining(["Sala de filtro", "Casa"]));
 
     const salaDe = (g: typeof g0) => rects(g.extras).find((r) => r.fill === "#4B5563")!;
     const g1 = calcularGeometriaPlano({ ...base, salaFiltro: true, salaPosLibre: { x: 5, y: -1 } }, cliente);
@@ -147,5 +148,39 @@ describe("sala de filtro y casa (se arrastran, pero quedan siempre afuera del bo
   it("el cartel de ayuda del editor nombra la sala y la casa", () => {
     const g = calcularGeometriaPlano({ ...base, salaFiltro: true, casa: true }, editor);
     expect(textos(g.extras).some((t) => t.includes("la sala de filtro") && t.includes("la casa"))).toBe(true);
+  });
+});
+
+describe("que un objeto nuevo no nazca encima de otro", () => {
+  it("un skimmer nuevo se corre si una luz ya está donde nacería", () => {
+    const luzArriba = { x: 0.5, y: 0.1 };
+    const [skimmer] = ajustarLucesPos([], true, 1, "skimmer", [luzArriba]);
+    expect(seTocan(skimmer, luzArriba)).toBe(false);
+    expect(skimmer.y).toBeCloseTo(0.1); // sigue sobre la pared de arriba
+  });
+
+  it("sin choque, la posición de siempre", () => {
+    expect(ajustarLucesPos([], true, 1, "skimmer", [{ x: 0.9, y: 0.9 }])).toEqual([{ x: 0.5, y: 0.1 }]);
+  });
+
+  it("varios objetos del mismo tipo tampoco se pisan entre sí", () => {
+    const luces = ajustarLucesPos([], true, 4, "luz", [{ x: 0.06, y: 0.375 }]);
+    for (let i = 0; i < luces.length; i++) for (let j = i + 1; j < luces.length; j++) expect(seTocan(luces[i], luces[j])).toBe(false);
+  });
+});
+
+describe("la medida de cada lado siempre se dice", () => {
+  it("un lado sin borde (0 m) lleva su medida afuera, pegada a él", () => {
+    for (const op of [editor, cliente]) {
+      const g = calcularGeometriaPlano({ largo: 7, ancho: 3, solar: 2, opuesto: 0, lateral1: 0.5, lateral2: 0.5 }, op);
+      const t = g.dims.find((p) => p.t === "text" && p.text === "Opuesto: 0 m") as Extract<Prim, { t: "text" }> | undefined;
+      expect(t, "falta la medida del opuesto").toBeTruthy();
+      expect(t!.x).toBeGreaterThanOrEqual(g.caja.x + g.caja.w);
+    }
+  });
+
+  it("un lado con desborde infinito no lleva medida (ya dice DESBORDE)", () => {
+    const g = calcularGeometriaPlano({ largo: 7, ancho: 3, solar: 2, opuesto: 1, desbordeOpuesto: true }, cliente);
+    expect(textos(g.dims).some((t) => t.startsWith("Opuesto"))).toBe(false);
   });
 });

@@ -98,16 +98,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#FFFFFF",
   },
+  aviso: { fontSize: 9.5, color: AMBAR, backgroundColor: AMBAR_FONDO, borderRadius: 3, paddingVertical: 4, paddingHorizontal: 8, textAlign: "center", marginBottom: 10 },
   nota: { fontSize: 9.5, color: AMBAR, backgroundColor: AMBAR_FONDO, borderRadius: 3, paddingVertical: 5, paddingHorizontal: 8, textAlign: "right", marginBottom: 8 },
   observaciones: { borderWidth: 1, borderColor: BORDE, borderRadius: 4, padding: 9, marginTop: 6, marginBottom: 6, fontSize: 10.5 },
-  firmas: { flexDirection: "row", justifyContent: "space-between", marginTop: 38 },
-  firma: { width: "42%", borderTopWidth: 1, borderTopColor: TEXTO, paddingTop: 4, textAlign: "center", fontSize: 9.5, color: SUAVE },
   pie: { position: "absolute", left: 38, right: 38, bottom: 22, borderTopWidth: 0.75, borderTopColor: BORDE, paddingTop: 5, flexDirection: "row", justifyContent: "space-between", fontSize: 8.5, color: SUAVE },
 });
 
 const cantidad = (n: number) => new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(n);
 
-function Tabla({ s, conTitulo }: { s: SeccionProveedor; conTitulo: boolean }) {
+function Tabla({ s, conTitulo, conPrecios }: { s: SeccionProveedor; conTitulo: boolean; conPrecios: boolean }) {
   return (
     <View style={styles.seccion}>
       {conTitulo && (
@@ -121,8 +120,8 @@ function Tabla({ s, conTitulo }: { s: SeccionProveedor; conTitulo: boolean }) {
         <Text style={styles.cArticulo}>Artículo</Text>
         <Text style={[styles.cCantidad, { fontFamily: "Helvetica-Bold" }]}>Cant.</Text>
         <Text style={[styles.cUnidad, { color: "#FFFFFF" }]}>Unidad</Text>
-        <Text style={styles.cPrecio}>Precio unit.</Text>
-        <Text style={styles.cSubtotal}>Subtotal</Text>
+        {conPrecios && <Text style={styles.cPrecio}>Precio unit.</Text>}
+        {conPrecios && <Text style={styles.cSubtotal}>Subtotal</Text>}
       </View>
       {s.lineas.map((l, i) => (
         <View key={i} style={i % 2 === 1 ? [styles.fila, styles.filaCebra] : styles.fila} wrap={false}>
@@ -130,23 +129,26 @@ function Tabla({ s, conTitulo }: { s: SeccionProveedor; conTitulo: boolean }) {
           <Text style={styles.cArticulo}>{l.descripcion}</Text>
           <Text style={styles.cCantidad}>{cantidad(l.cantidad)}</Text>
           <Text style={styles.cUnidad}>{l.unidad}</Text>
-          {l.precio === null ? (
-            <>
-              <Text style={[styles.cPrecio, styles.aConfirmar]}>A confirmar</Text>
-              <Text style={styles.cSubtotal}>—</Text>
-            </>
-          ) : (
-            <>
-              <Text style={styles.cPrecio}>{formatARSExacto(l.precio)}</Text>
-              <Text style={styles.cSubtotal}>{formatARSExacto(l.subtotal)}</Text>
-            </>
-          )}
+          {conPrecios &&
+            (l.precio === null ? (
+              <>
+                <Text style={[styles.cPrecio, styles.aConfirmar]}>A confirmar</Text>
+                <Text style={styles.cSubtotal}>—</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.cPrecio}>{formatARSExacto(l.precio)}</Text>
+                <Text style={styles.cSubtotal}>{formatARSExacto(l.subtotal)}</Text>
+              </>
+            ))}
         </View>
       ))}
-      <View style={styles.filaSubtotal} wrap={false}>
-        <Text style={styles.negrita}>{conTitulo ? `Subtotal ${s.nombre}: ` : "Subtotal: "}</Text>
-        <Text style={[styles.negrita, { width: 88, textAlign: "right" }]}>{formatARSExacto(s.subtotal)}</Text>
-      </View>
+      {conPrecios && (
+        <View style={styles.filaSubtotal} wrap={false}>
+          <Text style={styles.negrita}>{conTitulo ? `Subtotal ${s.nombre}: ` : "Subtotal: "}</Text>
+          <Text style={[styles.negrita, { width: 88, textAlign: "right" }]}>{formatARSExacto(s.subtotal)}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -164,8 +166,11 @@ export function PedidoPdfDocument({
   doc,
   logoUrl,
   titulo,
+  conPrecios = true,
 }: {
   doc: DocumentoPedido;
+  /** true = versión de uso interno (precios tentativos); false = la que se le manda al proveedor, sin precios. */
+  conPrecios?: boolean;
   /** Dirección absoluta del logo; sin ella el encabezado lleva el nombre de la empresa. */
   logoUrl: string | null;
   titulo: string;
@@ -197,6 +202,8 @@ export function PedidoPdfDocument({
           <Text style={styles.numero}>N° {doc.numero}</Text>
         </View>
 
+        {conPrecios && <Text style={styles.aviso}>Precios tentativos — uso interno, no enviar al proveedor.</Text>}
+
         <View style={styles.info}>
           <Dato etiqueta="Fecha" valor={doc.fecha} />
           <Dato etiqueta="Pide" valor={doc.solicitante || "—"} />
@@ -220,7 +227,7 @@ export function PedidoPdfDocument({
             <Text style={styles.resumenNumero}>{articulos}</Text>
             <Text style={styles.resumenTexto}>{articulos === 1 ? "artículo" : "artículos"}</Text>
           </View>
-          {doc.sinPrecio > 0 && (
+          {conPrecios && doc.sinPrecio > 0 && (
             <View style={styles.resumenItem}>
               <Text style={[styles.resumenNumero, { color: AMBAR }]}>{doc.sinPrecio}</Text>
               <Text style={styles.resumenTexto}>a confirmar</Text>
@@ -229,16 +236,18 @@ export function PedidoPdfDocument({
         </View>
 
         {doc.proveedores.map((s, i) => (
-          <Tabla key={i} s={s} conTitulo={varios} />
+          <Tabla key={i} s={s} conTitulo={varios} conPrecios={conPrecios} />
         ))}
 
-        <View style={styles.totalCaja} wrap={false}>
-          <View style={styles.total}>
-            <Text>{varios ? "TOTAL ESTIMADO" : "TOTAL"}</Text>
-            <Text>{formatARSExacto(doc.total)}</Text>
+        {conPrecios && (
+          <View style={styles.totalCaja} wrap={false}>
+            <View style={styles.total}>
+              <Text>{varios ? "TOTAL ESTIMADO" : "TOTAL"}</Text>
+              <Text>{formatARSExacto(doc.total)}</Text>
+            </View>
           </View>
-        </View>
-        {doc.sinPrecio > 0 && (
+        )}
+        {conPrecios && doc.sinPrecio > 0 && (
           <Text style={styles.nota}>
             El total no incluye {doc.sinPrecio} {doc.sinPrecio === 1 ? "artículo" : "artículos"} con precio a confirmar con el proveedor.
           </Text>
@@ -252,11 +261,6 @@ export function PedidoPdfDocument({
             </Text>
           </View>
         )}
-
-        <View style={styles.firmas} wrap={false}>
-          <Text style={styles.firma}>Solicitó</Text>
-          <Text style={styles.firma}>{varios ? "Recibió conforme" : `Recibió conforme (${unico?.nombre ?? "proveedor"})`}</Text>
-        </View>
 
         <View style={styles.pie} fixed>
           <Text>{EMPRESA.nombre} · {EMPRESA.web}</Text>

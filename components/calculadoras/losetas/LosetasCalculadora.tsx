@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useFieldArray, useWatch } from "react-hook-form";
 import { useZodForm } from "@/lib/forms/useZodForm";
 import { NumberField, TextField, CheckboxField, SelectField } from "@/components/form";
@@ -282,7 +283,12 @@ export function LosetasCalculadora({
     useEffect(() => {
       const actuales = getValues(campo) ?? [];
       const tipo = campo === "skimmersPos" ? "skimmer" : campo === "hidromasajesPos" ? "hidromasaje" : "luz";
-      const ajustadas = ajustarLucesPos(actuales, on, cantidad ?? 0, tipo);
+      // Lo nuevo no nace encima de otro objeto (p. ej. un skimmer sobre una luz que ya se movió).
+      const otros = (["lucesPos", "skimmersPos", "hidromasajesPos"] as const)
+        .filter((c) => c !== campo)
+        .flatMap((c) => getValues(c) ?? []);
+      if (getValues("escalera") && getValues("escaleraMovible")) otros.push(getValues("escaleraPosLibre"));
+      const ajustadas = ajustarLucesPos(actuales, on, cantidad ?? 0, tipo, otros.filter((p) => p && typeof p.x === "number" && typeof p.y === "number"));
       const cambiaron =
         ajustadas.length !== actuales.length || ajustadas.some((p, i) => p.x !== actuales[i]?.x || p.y !== actuales[i]?.y);
       if (cambiaron) setValue(campo, ajustadas, { shouldDirty: false });
@@ -724,7 +730,7 @@ export function LosetasCalculadora({
                 register={register}
                 errors={errors}
                 name="casa"
-                label="Casa / quincho"
+                label="Casa"
                 hint="Arrastrala en el plano para orientar dónde está respecto de la pileta."
               />
             </div>
@@ -758,14 +764,17 @@ export function LosetasCalculadora({
 
       <div>
         <div className="space-y-4 lg:sticky lg:top-4">
-          {/* Un solo editor: el mismo elemento se muestra en la columna o, ampliado, a pantalla completa. */}
+          {/* El mismo editor se muestra en la columna o, ampliado, a pantalla completa (en un portal al <body>:
+              así ninguna barra flotante de la página queda por encima). */}
+          {(() => {
+            const editor = (
           <div
             role={ampliado ? "dialog" : undefined}
             aria-modal={ampliado ? true : undefined}
             aria-label={ampliado ? "Editor del plano ampliado" : undefined}
             className={
               ampliado
-                ? "fixed inset-0 z-50 flex flex-col gap-3 bg-white p-3 sm:p-5"
+                ? "fixed inset-0 z-[100] flex flex-col gap-3 bg-white p-3 sm:p-5"
                 : "rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
             }
           >
@@ -807,6 +816,9 @@ export function LosetasCalculadora({
               </div>
             </div>
           </div>
+            );
+            return ampliado && typeof document !== "undefined" ? createPortal(editor, document.body) : editor;
+          })()}
 
           {/* Vista previa de lo que sale en "Imagen"/"PDF" — mismo contenido
               que arma lib/documentos/losetas/imagenCliente.tsx (nombre del

@@ -46,12 +46,14 @@ export function nombresUnicos(nombres: readonly string[]): string[] {
 }
 
 export interface OpcionesExportar {
+  /** Con precios (uso interno, tentativos) o sin ellos (para pedirle al proveedor). Por defecto, con. */
+  conPrecios?: boolean;
   /** Para probar sin red. */
   logo?: () => Promise<ArrayBuffer | undefined>;
 }
 
-async function generarUno(doc: DocumentoPedido, formato: FormatoPedido, logo?: ArrayBuffer): Promise<Blob> {
-  return formato === "pdf" ? generarPdfPedido(doc) : generarExcelPedido(doc, { logo });
+async function generarUno(doc: DocumentoPedido, formato: FormatoPedido, logo: ArrayBuffer | undefined, conPrecios: boolean): Promise<Blob> {
+  return formato === "pdf" ? generarPdfPedido(doc, { conPrecios }) : generarExcelPedido(doc, { logo, conPrecios });
 }
 
 /**
@@ -67,17 +69,18 @@ export async function exportarPedido(
   modo: ModoPedido,
   opciones: OpcionesExportar = {}
 ): Promise<ArchivoGenerado> {
+  const conPrecios = opciones.conPrecios ?? true;
   const logo = formato === "xlsx" ? await (opciones.logo ?? cargarLogo)() : undefined;
 
   if (modo === "junto") {
-    return { blob: await generarUno(doc, formato, logo), nombre: nombreArchivoPedido(doc, formato), mime: MIME[formato] };
+    return { blob: await generarUno(doc, formato, logo, conPrecios), nombre: nombreArchivoPedido(doc, formato), mime: MIME[formato] };
   }
 
   const partes = separarPorProveedor(doc);
   if (partes.length === 1) {
     const unico = partes[0];
     return {
-      blob: await generarUno(unico, formato, logo),
+      blob: await generarUno(unico, formato, logo, conPrecios),
       nombre: nombreArchivoPedido(unico, formato, unico.proveedores[0].nombre),
       mime: MIME[formato],
     };
@@ -88,7 +91,7 @@ export async function exportarPedido(
   const nombres = nombresUnicos(partes.map((p) => nombreArchivoPedido(p, formato, p.proveedores[0].nombre)));
   for (let i = 0; i < partes.length; i++) {
     // Con bytes (no con el Blob): JSZip sólo acepta Blob en el navegador; así anda en cualquier entorno.
-    zip.file(nombres[i], await (await generarUno(partes[i], formato, logo)).arrayBuffer());
+    zip.file(nombres[i], await (await generarUno(partes[i], formato, logo, conPrecios)).arrayBuffer());
   }
   const nombreZip = nombreArchivoPedido(doc, "zip").replace(/\.zip$/, `_por_proveedor_${formato}.zip`);
   const bytes = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });

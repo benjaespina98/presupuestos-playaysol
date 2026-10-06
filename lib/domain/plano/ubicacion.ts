@@ -38,7 +38,7 @@ const TAMANO: Record<TipoUbicacion, { largo: number; prof: number }> = {
   casa: { largo: 130, prof: 64 },
 };
 /** Separación mínima entre el borde del plano y el objeto. */
-const SEPARACION = 8;
+const SEPARACION = 20;
 
 export interface Caja2 {
   x: number;
@@ -135,11 +135,10 @@ export function dibujarObjetoUbicado(c: CajaUbicada): Prim[] {
   return [
     { t: "rect", x: c.x, y: c.y, w: c.w, h: c.h, rx: 3, fill: COLORES_UBICACION.casaFondo, stroke: COLORES_UBICACION.casaBorde, strokeWidth: 1.2, dash: "6 3" },
     // Una casita (techo y paredes) arriba del nombre.
-    { t: "poly", puntos: [[cx - 11, cy - 11], [cx, cy - 22], [cx + 11, cy - 11]], fill: COLORES_UBICACION.casaBorde },
-    { t: "rect", x: cx - 8, y: cy - 11, w: 16, h: 9, fill: COLORES_UBICACION.casaBorde, opacity: 0.75 },
-    { t: "rect", x: cx - 2, y: cy - 7, w: 4, h: 5, fill: COLORES_UBICACION.casaFondo },
-    { t: "text", x: cx, y: cy + 6, text: "Casa /", fontSize: 12, fill: COLORES_UBICACION.casaTexto, anchor: "middle", central: true, weight: "bold" },
-    { t: "text", x: cx, y: cy + 20, text: "quincho", fontSize: 12, fill: COLORES_UBICACION.casaTexto, anchor: "middle", central: true, weight: "bold" },
+    { t: "poly", puntos: [[cx - 12, cy - 6], [cx, cy - 18], [cx + 12, cy - 6]], fill: COLORES_UBICACION.casaBorde },
+    { t: "rect", x: cx - 9, y: cy - 6, w: 18, h: 10, fill: COLORES_UBICACION.casaBorde, opacity: 0.75 },
+    { t: "rect", x: cx - 2, y: cy - 2, w: 4, h: 6, fill: COLORES_UBICACION.casaFondo },
+    { t: "text", x: cx, y: cy + 15, text: "Casa", fontSize: 13, fill: COLORES_UBICACION.casaTexto, anchor: "middle", central: true, weight: "bold" },
   ];
 }
 

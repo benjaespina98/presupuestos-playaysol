@@ -295,7 +295,7 @@ describe("LosetasCalculadora · ubicación en el terreno", () => {
     const user = userEvent.setup();
     render(<LosetasCalculadora />);
     await cargarMedidas(user, "8", "4");
-    expect(vista().textContent).not.toContain("quincho");
+    expect(vista().textContent).not.toContain("Casa");
     expect(vista().textContent).not.toContain("Sala de");
     expect(screen.queryByLabelText("El norte está hacia…")).not.toBeInTheDocument();
   });
@@ -308,13 +308,13 @@ describe("LosetasCalculadora · ubicación en el terreno", () => {
     await user.click(screen.getByLabelText("Puntos cardinales"));
     await user.selectOptions(screen.getByLabelText("El norte está hacia…"), "90");
     await user.click(screen.getByLabelText("Sala de filtro"));
-    await user.click(screen.getByLabelText("Casa / quincho"));
+    await user.click(screen.getByLabelText("Casa"));
 
-    await waitFor(() => expect(vista().textContent).toContain("Casa /"));
+    await waitFor(() => expect(vista().textContent).toContain("Casa"));
     const texto = vista().textContent ?? "";
     expect(texto).toContain("Sala de");
     expect(texto).toContain("Sala de filtro"); // leyenda
-    expect(texto).toContain("Casa / quincho"); // leyenda
+    expect(texto).toContain("Casa"); // leyenda
     for (const letra of ["N", "E", "S", "O"]) expect(texto).toContain(letra);
   });
 
@@ -324,7 +324,7 @@ describe("LosetasCalculadora · ubicación en el terreno", () => {
     await cargarMedidas(user, "8", "4");
     await user.click(screen.getByLabelText("Puntos cardinales"));
     await user.selectOptions(screen.getByLabelText("El norte está hacia…"), "225");
-    await user.click(screen.getByLabelText("Casa / quincho"));
+    await user.click(screen.getByLabelText("Casa"));
     await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
 
     await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
@@ -334,7 +334,7 @@ describe("LosetasCalculadora · ubicación en el terreno", () => {
 
     render(<LosetasCalculadora presupuestoId="x" presupuestoInicial={{ presupuesto: guardado, preciosCongelados: true, clavesIncluidas: [] }} />);
     expect((screen.getByLabelText("El norte está hacia…") as HTMLSelectElement).value).toBe("225");
-    expect(screen.getByLabelText("Casa / quincho")).toBeChecked();
+    expect(screen.getByLabelText("Casa")).toBeChecked();
   });
 
   it("un plano guardado con el marfil de antes (rosado) se abre con el marfil de ahora; un color a mano se respeta", () => {

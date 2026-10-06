@@ -179,3 +179,29 @@ describe("generarExcelPedido · formato", () => {
     expect(textos(hoja)).toContain("BORRADOR");
   });
 });
+
+describe("generarExcelPedido · sin precios (para pedirle al proveedor)", () => {
+  it("no lleva precios, subtotales ni total, y los artículos y cantidades siguen", async () => {
+    const libro = await leer(await generarExcelPedido(doc(), { conPrecios: false }));
+    for (const hoja of libro.worksheets) {
+      const t = textos(hoja).join("|");
+      expect(t).not.toMatch(/Precio unit|Subtotal|TOTAL ESTIMADO|A confirmar|Precios tentativos/);
+      expect(hoja.getRow(1).values).toBeTruthy();
+    }
+    const resumen = libro.getWorksheet("Resumen")!;
+    expect(textos(resumen)).toEqual(expect.arrayContaining(["Hierro", "Cemento 25 kg", "Filtro", "Bomba", "Cantidad", "Unidad"]));
+    // Sólo 3 columnas con datos: artículo, cantidad, unidad.
+    resumen.eachRow((fila) => expect(fila.getCell(4).value ?? null).toBeNull());
+  });
+
+  it("las observaciones se conservan", async () => {
+    const libro = await leer(await generarExcelPedido(doc(), { conPrecios: false }));
+    expect(textos(libro.getWorksheet("Resumen")!).some((t) => t.includes("Entregar temprano"))).toBe(true);
+  });
+
+  it("con precios (por defecto) avisa que son tentativos y de uso interno", async () => {
+    const libro = await leer(await generarExcelPedido(doc()));
+    expect(textos(libro.getWorksheet("Resumen")!).some((t) => /tentativos.*uso interno/.test(t))).toBe(true);
+    expect(textos(libro.getWorksheet("Resumen")!)).toContain("TOTAL ESTIMADO");
+  });
+});

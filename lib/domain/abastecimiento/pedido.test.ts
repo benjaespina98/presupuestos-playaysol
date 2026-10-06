@@ -303,3 +303,17 @@ describe("csvPedido", () => {
     expect(csv.split("\r\n")[1]).toContain(";A confirmar;");
   });
 });
+
+describe("csvPedido · sin precios", () => {
+  it("deja sólo proveedor, teléfono, artículo, cantidad y unidad (sin precio, subtotal ni costo)", () => {
+    const pedido = armarPedido(
+      [material({ id: "a", nombre: "Hierro", precio: 100, cantidades: { "8x4": 10 } })],
+      [proveedor({ id: "p1", nombre: "Corralón", telefono: "123" })],
+      params()
+    );
+    const csv = csvPedido(pedido, false);
+    expect(csv).not.toMatch(/Precio|Subtotal|COSTO/);
+    expect(csv).toMatch(/Proveedor;Teléfono;Artículo;Cantidad;Unidad/);
+    expect(csvPedido(pedido)).toMatch(/Precio unitario/);
+  });
+});

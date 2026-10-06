@@ -178,7 +178,7 @@ function PedidoContenido() {
   }
 
   /** Genera el archivo formal. Todo documento formal sale con su número: antes de generarlo se guarda el pedido. */
-  async function onExportar(formato: FormatoPedido, modo: ModoPedido) {
+  async function onExportar(formato: FormatoPedido, modo: ModoPedido, conPrecios: boolean) {
     setOcupado(true);
     setMensaje(null);
     try {
@@ -191,7 +191,7 @@ function PedidoContenido() {
         parametros: params,
         observaciones: notas,
       });
-      const archivo = await exportarPedido(doc, formato, modo);
+      const archivo = await exportarPedido(doc, formato, modo, { conPrecios });
       await compartirOdescargarArchivo(archivo.blob, archivo.nombre, archivo.mime);
       setMensaje(
         r.pedido
@@ -216,8 +216,8 @@ function PedidoContenido() {
     setTimeout(() => setCopiado((actual) => (actual === clave ? null : actual)), 2000);
   }
 
-  function descargarCsv() {
-    const blob = new Blob([csvPedido(pedido)], { type: "text/csv;charset=utf-8" });
+  function descargarCsv(conPrecios: boolean) {
+    const blob = new Blob([csvPedido(pedido, conPrecios)], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
