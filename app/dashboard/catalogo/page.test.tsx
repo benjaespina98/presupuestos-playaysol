@@ -340,7 +340,7 @@ describe("CatalogoPage · alta de un ítem nuevo", () => {
     await screen.findAllByText("Luces LED");
 
     await user.click(screen.getByRole("button", { name: "Agregar ítem" }));
-    await user.type(await screen.findByLabelText("Clave"), "Cerco Reforzado");
+    await user.type(await screen.findByLabelText("Clave (opcional)"), "Cerco Reforzado");
     await user.type(screen.getByLabelText("Descripción"), "Cerco reforzado");
     await user.click(screen.getByRole("button", { name: "Agregar al catálogo" }));
 
@@ -660,5 +660,83 @@ describe("CatalogoPage · piscinas de lista", () => {
     await screen.findAllByText("Kit de limpieza");
     const secciones = screen.getByRole("group", { name: "Filtrar por sección" });
     expect(within(secciones).queryByRole("button", { name: /Indusplast|hormigón/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("CatalogoPage · alta de una piscina (clave y categoría salen solas)", () => {
+  beforeEach(() => {
+    crearItemCatalogo.mockReset();
+    listarItemsCatalogo.mockResolvedValue({ items: [item({ id: "a", descripcion: "Luces LED" })], error: null });
+  });
+
+  async function abrirAlta(user: ReturnType<typeof userEvent.setup>) {
+    render(<CatalogoPage />);
+    await screen.findAllByText("Luces LED");
+    await user.click(screen.getByRole("button", { name: "Agregar ítem" }));
+    return screen.findByRole("dialog");
+  }
+
+  it("piscina de hormigón: se cargan sólo las medidas y el precio", async () => {
+    crearItemCatalogo.mockResolvedValue({
+      item: item({ id: "n", clave: "lista_hormigon_8x4_5", descripcion: "Piscina de hormigón 8x4.5 — precio de lista, obra terminada", categoria: "Piscinas" }),
+      error: null,
+    });
+    const user = userEvent.setup();
+    const dialogo = await abrirAlta(user);
+
+    await user.selectOptions(within(dialogo).getByLabelText("¿Qué vas a agregar?"), "hormigon");
+    expect(within(dialogo).queryByLabelText("Clave (opcional)")).not.toBeInTheDocument();
+    await user.type(within(dialogo).getByLabelText("Largo (m)"), "8");
+    await user.type(within(dialogo).getByLabelText("Ancho (m)"), "4,5");
+    expect(within(dialogo).getByText("lista_hormigon_8x4_5")).toBeInTheDocument(); // vista previa
+    await user.type(within(dialogo).getByLabelText("Precio"), "13000000");
+    await user.click(within(dialogo).getByRole("button", { name: "Agregar al catálogo" }));
+
+    await waitFor(() => expect(crearItemCatalogo).toHaveBeenCalledTimes(1));
+    expect(crearItemCatalogo.mock.calls[0][0]).toMatchObject({
+      tipo: "piscinas",
+      clave: "lista_hormigon_8x4_5",
+      categoria: "Piscinas",
+      unidad: "obra",
+      precio: 13000000,
+      activo: true,
+    });
+  });
+
+  it("piscina Indusplast: modelo y medida", async () => {
+    crearItemCatalogo.mockResolvedValue({ item: item({ id: "n", clave: "indusplast_caribe_750" }), error: null });
+    const user = userEvent.setup();
+    const dialogo = await abrirAlta(user);
+
+    await user.selectOptions(within(dialogo).getByLabelText("¿Qué vas a agregar?"), "indusplast");
+    await user.selectOptions(within(dialogo).getByLabelText("Modelo"), "caribe");
+    await user.type(within(dialogo).getByLabelText("Medida"), "750");
+    await user.click(within(dialogo).getByRole("button", { name: "Agregar al catálogo" }));
+
+    await waitFor(() => expect(crearItemCatalogo).toHaveBeenCalledTimes(1));
+    expect(crearItemCatalogo.mock.calls[0][0]).toMatchObject({ clave: "indusplast_caribe_750", categoria: "Piscinas", unidad: "obra" });
+  });
+
+  it("si faltan las medidas lo avisa y no crea nada", async () => {
+    const user = userEvent.setup();
+    const dialogo = await abrirAlta(user);
+
+    await user.selectOptions(within(dialogo).getByLabelText("¿Qué vas a agregar?"), "hormigon");
+    await user.click(within(dialogo).getByRole("button", { name: "Agregar al catálogo" }));
+
+    expect(await within(dialogo).findByText(/Ingresá el largo y el ancho/)).toBeInTheDocument();
+    expect(crearItemCatalogo).not.toHaveBeenCalled();
+  });
+
+  it("otro ítem sin clave: se arma con la descripción", async () => {
+    crearItemCatalogo.mockResolvedValue({ item: item({ id: "n", clave: "cerco_reforzado", descripcion: "Cerco reforzado" }), error: null });
+    const user = userEvent.setup();
+    const dialogo = await abrirAlta(user);
+
+    await user.type(within(dialogo).getByLabelText("Descripción"), "Cerco reforzado");
+    await user.click(within(dialogo).getByRole("button", { name: "Agregar al catálogo" }));
+
+    await waitFor(() => expect(crearItemCatalogo).toHaveBeenCalledTimes(1));
+    expect(crearItemCatalogo.mock.calls[0][0]).toMatchObject({ clave: "cerco_reforzado", descripcion: "Cerco reforzado" });
   });
 });

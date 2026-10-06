@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { esListaDePrecios, lineaDeClave, medidaDeLista, nombreCortoLista } from "./listas";
+import { datosPiscinaHormigon, datosPiscinaIndusplast, esListaDePrecios, lineaDeClave, medidaDeLista, nombreCortoLista } from "./listas";
 
 describe("esListaDePrecios", () => {
   it("reconoce piscinas de hormigón por tamaño y modelos Indusplast", () => {
@@ -40,5 +40,32 @@ describe("nombre y medida de una piscina de lista", () => {
 
   it("un ítem que no es de lista no tiene nombre corto", () => {
     expect(nombreCortoLista("luces")).toBeNull();
+  });
+});
+
+describe("datos de una piscina nueva", () => {
+  it("hormigón: clave con el primer punto decimal como guion bajo, igual que las existentes", () => {
+    expect(datosPiscinaHormigon(8, 4)?.clave).toBe("lista_hormigon_8x4");
+    expect(datosPiscinaHormigon(8, 4.5)?.clave).toBe("lista_hormigon_8x4_5");
+    expect(datosPiscinaHormigon(6.5, 2.5)?.clave).toBe("lista_hormigon_6_5x2.5");
+    expect(datosPiscinaHormigon(8, 4.5)?.medida).toBe("8x4.5");
+  });
+
+  it("la clave que sale se reconoce como hormigón y vuelve a la misma medida", () => {
+    const d = datosPiscinaHormigon(7, 3.5)!;
+    expect(lineaDeClave(d.clave)).toBe("hormigon");
+    expect(nombreCortoLista(d.clave)).toBe("Hormigón 7x3.5");
+  });
+
+  it("Indusplast: sólo los cinco modelos, con medida entera", () => {
+    expect(datosPiscinaIndusplast("Caribe", 750)).toMatchObject({ clave: "indusplast_caribe_750", medida: "CARIBE 750" });
+    expect(datosPiscinaIndusplast("otro", 750)).toBeNull();
+    expect(datosPiscinaIndusplast("spa", 0)).toBeNull();
+    expect(nombreCortoLista(datosPiscinaIndusplast("lagune", 276)!.clave)).toBe("Lagune 276");
+  });
+
+  it("sin medidas válidas no hay datos", () => {
+    expect(datosPiscinaHormigon(0, 4)).toBeNull();
+    expect(datosPiscinaHormigon(8, -1)).toBeNull();
   });
 });
