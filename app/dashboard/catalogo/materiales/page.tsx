@@ -14,8 +14,13 @@ import { formatARS } from "@/lib/format/ars";
 import { formatFechaCompleta, formatFechaRelativa } from "@/lib/format/fecha";
 import { PanelPortal } from "@/components/PanelPortal";
 import { IconEdit, IconPlus, IconSearch } from "@/components/icons";
-import { Chip, Interruptor } from "@/components/catalogo/FiltrosCatalogo";
+import { BarraFiltros } from "@/components/catalogo/BarraFiltros";
+import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
+import { CLASE_SELECT, Chip, Interruptor } from "@/components/catalogo/FiltrosCatalogo";
 import { MaterialModal } from "@/components/abastecimiento/MaterialModal";
+
+/** Las columnas de la lista en pantallas medianas y grandes: Material · Proveedor · Rubro · Precio · Actualizado · acción. */
+const COLUMNAS = "md:grid-cols-[minmax(0,1fr)_10rem_8rem_12.5rem_6rem_5rem]";
 
 export default function MaterialesPage() {
   const [materiales, setMateriales] = useState<Material[] | null>(null);
@@ -84,14 +89,11 @@ export default function MaterialesPage() {
   }
 
   return (
-    <PanelPortal>
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Materiales</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Lo que se compra para las obras: proveedor, precio de costo y cantidades por tamaño de pileta.
-          </p>
-        </div>
+    <PanelPortal compacto>
+      <EncabezadoPagina
+        titulo="Materiales"
+        descripcion="Lo que se compra para las obras: proveedor, precio de costo y cantidades por tamaño de pileta."
+      >
         <button
           type="button"
           onClick={() => {
@@ -103,25 +105,35 @@ export default function MaterialesPage() {
           <IconPlus className="h-4 w-4" />
           Agregar material
         </button>
-      </div>
+      </EncabezadoPagina>
 
-      <div className="mb-5 space-y-3">
-        <div className="relative">
-          <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar material..."
-            aria-label="Buscar materiales"
-            className="min-h-12 w-full rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-4 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20"
-          />
+      <BarraFiltros>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative min-w-0 flex-1">
+            <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar material..."
+              aria-label="Buscar materiales"
+              className="min-h-11 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20"
+            />
+          </div>
+          <select value={proveedorId} onChange={(e) => setProveedorId(e.target.value)} aria-label="Filtrar por proveedor" className={CLASE_SELECT}>
+            <option value="">Todos los proveedores</option>
+            {proveedores.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div
           role="group"
           aria-label="Filtrar por rubro"
-          className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0"
+          className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0"
         >
           <Chip activo={rubro === ""} onClick={() => setRubro("")} cantidad={conteos.total}>
             Todos
@@ -132,33 +144,20 @@ export default function MaterialesPage() {
             </Chip>
           ))}
         </div>
+      </BarraFiltros>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <select
-            value={proveedorId}
-            onChange={(e) => setProveedorId(e.target.value)}
-            aria-label="Filtrar por proveedor"
-            className="min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 sm:w-auto"
-          >
-            <option value="">Todos los proveedores</option>
-            {proveedores.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre}
-              </option>
-            ))}
-          </select>
-          <Chip activo={soloSinPrecio} onClick={() => setSoloSinPrecio(!soloSinPrecio)} cantidad={sinPrecio}>
-            A confirmar
-          </Chip>
-          <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
-            Mostrar dados de baja
-          </Interruptor>
-          {hayFiltros && (
-            <button type="button" onClick={limpiar} className="min-h-11 rounded-lg px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8">
-              Limpiar filtros
-            </button>
-          )}
-        </div>
+      <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-0.5">
+        <Chip activo={soloSinPrecio} onClick={() => setSoloSinPrecio(!soloSinPrecio)} cantidad={sinPrecio}>
+          A confirmar
+        </Chip>
+        <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
+          Mostrar dados de baja
+        </Interruptor>
+        {hayFiltros && (
+          <button type="button" onClick={limpiar} className="min-h-11 rounded-lg px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8 sm:ml-auto">
+            Limpiar filtros
+          </button>
+        )}
       </div>
 
       {mensaje && (
@@ -181,23 +180,36 @@ export default function MaterialesPage() {
 
       {!error && visibles && visibles.length > 0 && (
         <>
-          <p className="mb-3 text-xs text-gray-500">
+          <p className="mb-2 text-xs text-gray-500">
             {visibles.length} {visibles.length === 1 ? "material" : "materiales"}
             {hayFiltros && materiales ? ` de ${materiales.length}` : ""}
           </p>
-          <ul className="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-            {visibles.map((m) => (
-              <FilaMaterial
-                key={m.id}
-                material={m}
-                proveedor={m.proveedor_id ? nombreProveedor.get(m.proveedor_id) ?? null : null}
-                onEditar={() => {
-                  setMensaje(null);
-                  setEditando(m);
-                }}
-              />
-            ))}
-          </ul>
+          <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div
+              aria-hidden="true"
+              className={`hidden rounded-t-lg border-b border-gray-200 bg-gray-50 px-4 py-2 text-xs font-medium uppercase tracking-wide text-gray-500 md:sticky md:top-[var(--catalogo-barra,0px)] md:z-10 md:grid md:items-center md:gap-x-4 ${COLUMNAS}`}
+            >
+              <span>Material</span>
+              <span>Proveedor</span>
+              <span>Rubro</span>
+              <span className="text-right">Precio</span>
+              <span>Actualizado</span>
+              <span />
+            </div>
+            <ul className="divide-y divide-gray-100">
+              {visibles.map((m) => (
+                <FilaMaterial
+                  key={m.id}
+                  material={m}
+                  proveedor={m.proveedor_id ? nombreProveedor.get(m.proveedor_id) ?? null : null}
+                  onEditar={() => {
+                    setMensaje(null);
+                    setEditando(m);
+                  }}
+                />
+              ))}
+            </ul>
+          </div>
         </>
       )}
 
@@ -248,21 +260,32 @@ function FilaMaterial({
 }) {
   const relativa = m.precio_actualizado ? formatFechaRelativa(m.precio_actualizado) : "";
   return (
-    <li className={`flex flex-col gap-3 p-4 transition-colors hover:bg-gray-50/70 sm:flex-row sm:items-center ${m.activo ? "" : "opacity-60"}`}>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="font-medium text-gray-900">{m.nombre}</p>
-          {m.rubro && <span className="rounded-md bg-[#EEF2F6] px-2 py-0.5 text-xs font-medium text-[#1B3A5C]">{m.rubro}</span>}
-          {m.aplica && m.aplica !== "Siempre" && (
-            <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{m.aplica}</span>
-          )}
-          {!m.activo && <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">De baja</span>}
-        </div>
-        <p className="mt-0.5 text-sm text-gray-600">{proveedor ?? <span className="text-gray-400">Sin proveedor</span>}</p>
-        {m.notas && <p className="mt-1 line-clamp-2 text-xs text-gray-500">{m.notas}</p>}
+    <li
+      className={`flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 transition-colors hover:bg-gray-50/70 md:grid md:gap-x-4 md:gap-y-0 md:py-2.5 ${COLUMNAS} ${m.activo ? "" : "opacity-60"}`}
+    >
+      {/* Material: nombre y, abajo, la nota en una sola línea (completa al pasar el mouse). */}
+      <div className="min-w-0 basis-full md:basis-auto">
+        <p className="flex flex-wrap items-center gap-x-2 font-medium text-gray-900">
+          {m.nombre}
+          {!m.activo && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">De baja</span>}
+        </p>
+        {m.notas && (
+          <p className="mt-0.5 line-clamp-1 text-xs text-gray-500" title={m.notas}>
+            {m.notas}
+          </p>
+        )}
       </div>
 
-      <div className="flex items-baseline justify-between gap-4 sm:w-44 sm:flex-col sm:items-end sm:justify-center sm:gap-0.5">
+      <p className="min-w-0 basis-full truncate text-sm text-gray-700 md:basis-auto" title={proveedor ?? undefined}>
+        {proveedor ?? <span className="text-gray-400">Sin proveedor</span>}
+      </p>
+
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5 md:block">
+        {m.rubro && <span className="inline-flex rounded-md bg-[#EEF2F6] px-2 py-0.5 text-xs font-medium text-[#1B3A5C]">{m.rubro}</span>}
+        {m.aplica && m.aplica !== "Siempre" && <p className="text-xs text-gray-500 md:mt-0.5">{m.aplica}</p>}
+      </div>
+
+      <div className="ml-auto text-right md:ml-0">
         {m.precio === null ? (
           <span className="inline-flex items-center whitespace-nowrap rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
             A confirmar
@@ -273,18 +296,17 @@ function FilaMaterial({
             {m.unidad && <span className="font-normal text-gray-400"> / {m.unidad}</span>}
           </span>
         )}
-        {relativa && (
-          <span className="text-xs text-gray-400" title={formatFechaCompleta(m.precio_actualizado!)}>
-            {relativa}
-          </span>
-        )}
       </div>
+
+      <p className="text-xs text-gray-400" title={m.precio_actualizado ? formatFechaCompleta(m.precio_actualizado) : undefined}>
+        {relativa}
+      </p>
 
       <button
         type="button"
         onClick={onEditar}
         aria-label={`Editar ${m.nombre}`}
-        className="inline-flex min-h-11 items-center gap-1.5 self-start rounded-md px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8 sm:self-center"
+        className="inline-flex min-h-11 items-center justify-end gap-1.5 rounded-md px-2 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8 md:justify-center"
       >
         <IconEdit className="h-4 w-4" />
         Editar

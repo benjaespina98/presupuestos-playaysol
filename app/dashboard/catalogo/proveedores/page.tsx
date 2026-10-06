@@ -11,8 +11,21 @@ import {
 import { materialesPorProveedor, type Material } from "@/lib/domain/abastecimiento/material";
 import { PanelPortal } from "@/components/PanelPortal";
 import { IconEdit, IconPlus, IconSearch } from "@/components/icons";
+import { BarraFiltros } from "@/components/catalogo/BarraFiltros";
+import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
 import { Chip, Interruptor } from "@/components/catalogo/FiltrosCatalogo";
 import { ProveedorModal } from "@/components/abastecimiento/ProveedorModal";
+
+/** Las columnas de la lista en pantallas medianas y grandes: Proveedor · Contacto · Teléfono · Materiales · acción. */
+const COLUMNAS = "md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_13rem_6rem_5.5rem]";
+
+/** "Rodrigo +54 9 3534 23-2878 / Luciano +54 9 3534 08-3660" → un teléfono por línea. */
+function telefonosDe(texto: string): string[] {
+  return texto
+    .split(/\s*\/\s*/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
 
 export default function ProveedoresPage() {
   const [proveedores, setProveedores] = useState<Proveedor[] | null>(null);
@@ -58,12 +71,8 @@ export default function ProveedoresPage() {
   const hayFiltros = !!(busqueda || incluirInactivos || soloSinTelefono);
 
   return (
-    <PanelPortal>
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Proveedores</h1>
-          <p className="mt-1 text-sm text-gray-500">A quién se le compra, cómo contactarlo y qué se le pide.</p>
-        </div>
+    <PanelPortal compacto>
+      <EncabezadoPagina titulo="Proveedores" descripcion="A quién se le compra, cómo contactarlo y qué se le pide.">
         <button
           type="button"
           onClick={() => {
@@ -75,9 +84,9 @@ export default function ProveedoresPage() {
           <IconPlus className="h-4 w-4" />
           Agregar proveedor
         </button>
-      </div>
+      </EncabezadoPagina>
 
-      <div className="mb-5 space-y-3">
+      <BarraFiltros>
         <div className="relative">
           <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
@@ -86,30 +95,31 @@ export default function ProveedoresPage() {
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar por nombre, rubro o contacto..."
             aria-label="Buscar proveedores"
-            className="min-h-12 w-full rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-4 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20"
+            className="min-h-11 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20"
           />
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Chip activo={soloSinTelefono} onClick={() => setSoloSinTelefono(!soloSinTelefono)} cantidad={faltanTelefono}>
-            Sin teléfono
-          </Chip>
-          <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
-            Mostrar dados de baja
-          </Interruptor>
-          {hayFiltros && (
-            <button
-              type="button"
-              onClick={() => {
-                setBusqueda("");
-                setIncluirInactivos(false);
-                setSoloSinTelefono(false);
-              }}
-              className="min-h-11 rounded-lg px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
-            >
-              Limpiar filtros
-            </button>
-          )}
-        </div>
+      </BarraFiltros>
+
+      <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-0.5">
+        <Chip activo={soloSinTelefono} onClick={() => setSoloSinTelefono(!soloSinTelefono)} cantidad={faltanTelefono}>
+          Sin teléfono
+        </Chip>
+        <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
+          Mostrar dados de baja
+        </Interruptor>
+        {hayFiltros && (
+          <button
+            type="button"
+            onClick={() => {
+              setBusqueda("");
+              setIncluirInactivos(false);
+              setSoloSinTelefono(false);
+            }}
+            className="min-h-11 rounded-lg px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8 sm:ml-auto"
+          >
+            Limpiar filtros
+          </button>
+        )}
       </div>
 
       {mensaje && (
@@ -132,23 +142,35 @@ export default function ProveedoresPage() {
 
       {!error && visibles && visibles.length > 0 && (
         <>
-          <p className="mb-3 text-xs text-gray-500">
+          <p className="mb-2 text-xs text-gray-500">
             {visibles.length} {visibles.length === 1 ? "proveedor" : "proveedores"}
             {hayFiltros && proveedores ? ` de ${proveedores.length}` : ""}
           </p>
-          <ul className="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-            {visibles.map((p) => (
-              <FilaProveedor
-                key={p.id}
-                proveedor={p}
-                materiales={conteo[p.id] ?? 0}
-                onEditar={() => {
-                  setMensaje(null);
-                  setEditando(p);
-                }}
-              />
-            ))}
-          </ul>
+          <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div
+              aria-hidden="true"
+              className={`hidden rounded-t-lg border-b border-gray-200 bg-gray-50 px-4 py-2 text-xs font-medium uppercase tracking-wide text-gray-500 md:sticky md:top-[var(--catalogo-barra,0px)] md:z-10 md:grid md:items-center md:gap-x-4 ${COLUMNAS}`}
+            >
+              <span>Proveedor</span>
+              <span>Contacto</span>
+              <span>Teléfono</span>
+              <span className="text-right">Materiales</span>
+              <span />
+            </div>
+            <ul className="divide-y divide-gray-100">
+              {visibles.map((p) => (
+                <FilaProveedor
+                  key={p.id}
+                  proveedor={p}
+                  materiales={conteo[p.id] ?? 0}
+                  onEditar={() => {
+                    setMensaje(null);
+                    setEditando(p);
+                  }}
+                />
+              ))}
+            </ul>
+          </div>
         </>
       )}
 
@@ -200,42 +222,51 @@ function FilaProveedor({
 }) {
   const falta = sinTelefono(p);
   return (
-    <li className={`flex flex-col gap-3 p-4 transition-colors hover:bg-gray-50/70 sm:flex-row sm:items-center ${p.activo ? "" : "opacity-60"}`}>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="font-medium text-gray-900">{p.nombre}</p>
-          {p.rubro && (
-            <span className="rounded-md bg-[#EEF2F6] px-2 py-0.5 text-xs font-medium text-[#1B3A5C]">{p.rubro}</span>
-          )}
-          {!p.activo && <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">De baja</span>}
-        </div>
-        {p.contacto && <p className="mt-0.5 text-sm text-gray-600">{p.contacto}</p>}
-        {p.notas && <p className="mt-1 line-clamp-2 text-xs text-gray-500">{p.notas}</p>}
+    <li
+      className={`flex flex-wrap items-start gap-x-3 gap-y-1 px-4 py-3 transition-colors hover:bg-gray-50/70 md:grid md:items-center md:gap-x-4 md:gap-y-0 md:py-2.5 ${COLUMNAS} ${p.activo ? "" : "opacity-60"}`}
+    >
+      {/* Proveedor: nombre + rubro y, abajo, la nota en una sola línea (completa al pasar el mouse). */}
+      <div className="min-w-0 basis-full md:basis-auto">
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium text-gray-900">
+          {p.nombre}
+          {p.rubro && <span className="rounded-md bg-[#EEF2F6] px-2 py-0.5 text-xs font-medium text-[#1B3A5C]">{p.rubro}</span>}
+          {!p.activo && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">De baja</span>}
+        </p>
+        {p.notas && (
+          <p className="mt-0.5 line-clamp-1 text-xs text-gray-500" title={p.notas}>
+            {p.notas}
+          </p>
+        )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm sm:w-72 sm:flex-col sm:items-start sm:gap-y-0.5">
+      <p className="min-w-0 basis-full text-sm text-gray-700 md:basis-auto" title={p.contacto ?? undefined}>
+        <span className="line-clamp-2">{p.contacto ?? <span className="text-gray-400">—</span>}</span>
+      </p>
+
+      <div className="min-w-0 basis-full space-y-0.5 text-sm md:basis-auto">
         {falta ? (
           <span className="inline-flex items-center whitespace-nowrap rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
             Falta teléfono
           </span>
         ) : (
-          <a href={`tel:${p.telefono!.replace(/[^\d+]/g, "")}`} className="whitespace-nowrap text-[#1B3A5C] hover:underline">
-            {p.telefono}
-          </a>
+          telefonosDe(p.telefono!).map((t) => (
+            <a key={t} href={`tel:${t.replace(/[^\d+]/g, "")}`} className="block text-[#1B3A5C] hover:underline">
+              {t}
+            </a>
+          ))
         )}
-        {(p.forma_pago || p.plazo) && (
-          <span className="text-xs text-gray-500">{[p.forma_pago, p.plazo].filter(Boolean).join(" · ")}</span>
-        )}
-        <span className="text-xs text-gray-400">
-          {materiales === 0 ? "Sin materiales" : `${materiales} ${materiales === 1 ? "material" : "materiales"}`}
-        </span>
+        {(p.forma_pago || p.plazo) && <p className="text-xs text-gray-500">{[p.forma_pago, p.plazo].filter(Boolean).join(" · ")}</p>}
       </div>
+
+      <p className="text-xs text-gray-500 md:text-right md:text-sm">
+        {materiales === 0 ? "Sin materiales" : `${materiales} ${materiales === 1 ? "material" : "materiales"}`}
+      </p>
 
       <button
         type="button"
         onClick={onEditar}
         aria-label={`Editar ${p.nombre}`}
-        className="inline-flex min-h-11 items-center gap-1.5 self-start rounded-md px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8 sm:self-center"
+        className="ml-auto inline-flex min-h-11 items-center justify-end gap-1.5 rounded-md px-2 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8 md:ml-0 md:justify-center"
       >
         <IconEdit className="h-4 w-4" />
         Editar
