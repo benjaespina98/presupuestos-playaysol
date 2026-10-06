@@ -36,7 +36,7 @@ var MAX_FILAS_PROVEEDORES = 150;
 var COLUMNA_PRECIO = 4; // D
 var COLUMNA_ACTUALIZADO = 5; // E
 var ENCABEZADO_STOCK = "Stock";
-var FILAS_ENCABEZADO = 10; // dónde se busca el encabezado "Stock" (las primeras filas de la hoja)
+var FILAS_ENCABEZADO = 40; // dónde se busca el encabezado "Stock" (las primeras filas de la hoja)
 
 // Nombre de la fila en "Precios y margen" → "tipo:clave" del catálogo web.
 var ETIQUETAS_PRECIO = {
@@ -107,7 +107,8 @@ function valorDeStock(stock, clave) {
 function buscarEncabezadoStock(valores) {
   for (var i = 0; i < valores.length; i++) {
     for (var j = 0; j < valores[i].length; j++) {
-      if (String(valores[i][j]).trim().toLowerCase() === ENCABEZADO_STOCK.toLowerCase()) return { fila: i + 1, columna: j + 1 };
+      // "Stock", "STOCK", "Stock actual", "Stock (unid.)"... cualquier encabezado que EMPIECE con "stock".
+      if (/^stock(\b|$)/i.test(String(valores[i][j]).trim())) return { fila: i + 1, columna: j + 1 };
     }
   }
   return null;
