@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { TramoProfundidad, cortesProfundidad, fmtProfundidad, resumenProfundidad, zonasProfundidad } from "./profundidad";
+import { buscarLugarLibre, cajaDeTexto, trasladarCaja, unirCajas, type Caja } from "./solapes";
 
 /**
  * Geometría del "Plano de Piscina" (losetas).
@@ -27,6 +29,25 @@ export type TipoPileta = z.infer<typeof TipoPileta>;
 
 export const Revestimiento = z.enum(["", "ceramicos", "travertino", "pintura", "otro"]);
 export type Revestimiento = z.infer<typeof Revestimiento>;
+
+/**
+ * Qué va ALREDEDOR de la pileta (el borde/vereda que se mide lado por lado).
+ * Es la elección del cliente: losetas, decks o travertino. Cambia el nombre en
+ * la leyenda del plano y el color de fábrica del borde; las medidas se cargan y
+ * se dibujan igual para los tres.
+ */
+export const MaterialBorde = z.enum(["losetas", "decks", "travertino"]);
+export type MaterialBorde = z.infer<typeof MaterialBorde>;
+
+export const MATERIALES_BORDE: Record<
+  MaterialBorde,
+  { etiqueta: string; singular: string; leyenda: string; color: string }
+> = {
+  // "Borde de loseta" es el texto de siempre: no cambia para los planos viejos.
+  losetas: { etiqueta: "Losetas", singular: "loseta", leyenda: "Borde de loseta", color: "#F7E6D3" },
+  decks: { etiqueta: "Decks", singular: "deck", leyenda: "Borde de deck", color: "#C9A27E" },
+  travertino: { etiqueta: "Travertino", singular: "travertino", leyenda: "Borde de travertino", color: "#E6DAC3" },
+};
 
 export const PlanoLosetasEntrada = z.object({
   largo: z.number().min(0).default(0),
@@ -80,6 +101,12 @@ export const PlanoLosetasEntrada = z.object({
   revestimientoOtro: z.string().default(""),
   colorAgua: z.string().default("#A6D1EC"),
   colorLoseta: z.string().default("#F7E6D3"),
+  materialBorde: MaterialBorde.default("losetas"),
+  /** Profundidad general de la pileta (m); 0 = sin cargar. Si hay tramos, es la
+   *  del "resto" (lo que no cae en ningún tramo). */
+  profundidad: z.number().min(0).default(0),
+  /** Tramos con otra profundidad, medidos desde el lado del solar. */
+  tramosProfundidad: z.array(TramoProfundidad).default([]),
   lblSolar: z.string().default("Solar"),
   lblOpuesto: z.string().default("Opuesto"),
   lblLateral1: z.string().default("Lateral 1"),
@@ -103,16 +130,33 @@ export function posicionLuzPorDefecto(i: number, n: number): LuzPos {
   return { x: 0.06, y: n <= 1 ? 0.5 : (i + 0.5) / n };
 }
 
+export type TipoObjetoPlano = "luz" | "skimmer" | "hidromasaje";
+
+/**
+ * Dónde nace cada tipo de objeto. Antes los tres nacían en el MISMO lugar (la
+ * pared del solar), así que una luz, un skimmer y un hidromasaje agregados sin
+ * arrastrar quedaban uno encima del otro. Ahora cada tipo tiene su pared:
+ * luces contra el solar (izquierda), hidromasajes contra la pared opuesta
+ * (derecha) y skimmers sobre la pared de arriba. Las luces conservan su lugar
+ * de siempre.
+ */
+export function posicionPorDefecto(tipo: TipoObjetoPlano, i: number, n: number): LuzPos {
+  const t = n <= 1 ? 0.5 : (i + 0.5) / n;
+  if (tipo === "hidromasaje") return { x: 0.94, y: t };
+  if (tipo === "skimmer") return { x: t, y: 0.1 };
+  return posicionLuzPorDefecto(i, n);
+}
+
 /** Ajusta un array de posiciones a la cantidad actual de objetos (luces,
  *  skimmers, hidromasajes — cualquiera con la misma forma "on/cantidad/
  *  posiciones"): conserva las ya elegidas, agrega las que falten en su
  *  posición por defecto y descarta las sobrantes. Pura: devuelve un array
  *  nuevo, nunca muta el que recibe. */
-export function ajustarLucesPos(lucesPos: LuzPos[], on: boolean, n: number): LuzPos[] {
+export function ajustarLucesPos(lucesPos: LuzPos[], on: boolean, n: number, tipo: TipoObjetoPlano = "luz"): LuzPos[] {
   if (!on || n <= 0) return [];
   const resultado = lucesPos.slice(0, n);
   for (let i = 0; i < n; i++) {
-    if (!resultado[i]) resultado[i] = posicionLuzPorDefecto(i, n);
+    if (!resultado[i]) resultado[i] = posicionPorDefecto(tipo, i, n);
   }
   return resultado;
 }
@@ -214,6 +258,53 @@ function tickH(x: number, y: number, color: string): PrimLine {
   return { t: "line", x1: x, y1: y - 4, x2: x, y2: y + 4, stroke: color, strokeWidth: 0.75 };
 }
 
+/** Un objeto del plano (luz, skimmer, hidromasaje, escalera libre) con la caja
+ *  que ocupa: lo que no se puede pisar con otro objeto ni con un texto. */
+interface Marcador {
+  prims: Prim[];
+  caja: Caja;
+}
+
+/** Un texto (o grupo de textos) que se puede correr de lugar si queda tapado. */
+interface Movible {
+  /** Todo lo que se mueve junto (p. ej. el cartelito y su texto). */
+  todos: Prim[];
+  /** La lista de primitivas donde viven, para poder sacarlas si no hay lugar. */
+  lista: Prim[];
+  caja: Caja;
+  /** Hasta dónde puede correrse. */
+  region: Caja;
+  /** true = si no hay ningún lugar libre se omite (ya figura en la leyenda). */
+  ocultable: boolean;
+  /** true = además esquiva las franjas de solar húmedo y escalera (carteles de profundidad). */
+  esquivaFranjas?: boolean;
+}
+
+/** El texto de una franja angosta (solar húmedo, escalera): horizontal si entra a lo ancho
+ *  de la franja; si no, y entra a lo alto, de costado (como las medidas de los laterales). */
+function etiquetaDeFranja(
+  text: string, cx: number, cy: number, franjaW: number, franjaH: number, fontSize: number, fill: string
+): { prim: Extract<Prim, { t: "text" }>; caja: Caja } {
+  const w = text.length * fontSize * 0.56;
+  const h = fontSize * 1.25;
+  const vertical = w > franjaW - 4 && w <= franjaH - 8;
+  const prim: Extract<Prim, { t: "text" }> = {
+    t: "text", x: cx, y: cy, text, fontSize, fill, anchor: "middle", central: true,
+    ...(vertical ? { rotateDeg: -90 } : {}),
+  };
+  const caja: Caja = vertical
+    ? { x0: cx - h / 2, y0: cy - w / 2, x1: cx + h / 2, y1: cy + w / 2 }
+    : { x0: cx - w / 2, y0: cy - h / 2, x1: cx + w / 2, y1: cy + h / 2 };
+  return { prim, caja };
+}
+
+function trasladarPrim(p: Prim, dx: number, dy: number): void {
+  if (p.t === "rect") { p.x += dx; p.y += dy; }
+  else if (p.t === "circle") { p.cx += dx; p.cy += dy; }
+  else if (p.t === "text") { p.x += dx; p.y += dy; }
+  else { p.x1 += dx; p.x2 += dx; p.y1 += dy; p.y2 += dy; }
+}
+
 /**
  * Calcula la geometría completa del plano. Determinístico y sin efectos: la
  * misma entrada siempre da la misma salida, por eso es fácil de testear
@@ -295,6 +386,19 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
     borde.push({ t: "text", x: poolX + poolW - 15, y: poolY + poolH / 2, text: DESBORDE_LABEL, fontSize: 10, fill: BORDE_COLOR, anchor: "middle", central: true, weight: "bold", rotateDeg: -90 });
   }
 
+  // Los textos "Desborde infinito" quedan pegados a su pared: no se mueven, pero
+  // los objetos y las etiquetas tienen que esquivarlos.
+  const fijos: Caja[] = [];
+  for (const p of borde) {
+    if (p.t !== "text") continue;
+    const c = cajaDeTexto(p);
+    fijos.push(
+      p.rotateDeg
+        ? { x0: p.x - (c.y1 - c.y0) / 2, y0: p.y - (c.x1 - c.x0) / 2, x1: p.x + (c.y1 - c.y0) / 2, y1: p.y + (c.x1 - c.x0) / 2 }
+        : c
+    );
+  }
+
   const grid: PrimLine[] = [];
   if (showDims) {
     for (let gx = 0; gx <= totalW + 0.001; gx++) {
@@ -308,16 +412,71 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
   }
 
   const extras: Prim[] = [];
+  const marcadores: Marcador[] = [];
+  const movibles: Movible[] = [];
+  /** Las franjas de solar húmedo y escalera: áreas que los carteles de profundidad esquivan. */
+  const franjas: Caja[] = [];
+  /** Los carteles de profundidad se dibujan DESPUÉS de las franjas, para que no queden tapados. */
+  const carteles: Prim[] = [];
+  const zonaPool: Caja = { x0: poolX, y0: poolY, x1: poolX + poolW, y1: poolY + poolH };
+  // Las etiquetas de franja (solar húmedo, escalera) pueden ser más anchas que su franja: se
+  // dibujan centradas y se desbordan un poco. Se les deja correrse sólo en vertical por ahí.
+  const zonaEtiquetas: Caja = { x0: poolX - 24, y0: poolY, x1: poolX + poolW + 24, y1: poolY + poolH };
+
+  // Profundidad por tramos: franjas más oscuras cuanto más profundas, cortes
+  // entre una y otra, y un cartel por franja con su profundidad y su rango.
+  const zonas = zonasProfundidad(s.profundidad, s.tramosProfundidad, s.largo);
+  if (zonas.length > 1) {
+    const valores = zonas.map((z) => z.prof);
+    const min = Math.min(...valores);
+    const max = Math.max(...valores);
+    for (const z of zonas) {
+      const peso = max > min ? (z.prof - min) / (max - min) : 0;
+      extras.push({
+        t: "rect", x: poolX + z.desde * pxPerM, y: poolY, w: (z.hasta - z.desde) * pxPerM, h: poolH,
+        fill: "#1B3A5C", opacity: 0.03 + 0.13 * peso,
+      });
+    }
+    for (const corte of cortesProfundidad(zonas)) {
+      const x = poolX + corte * pxPerM;
+      extras.push({ t: "line", x1: x, y1: poolY, x2: x, y2: poolY + poolH, stroke: "#1B3A5C", strokeWidth: 0.9, opacity: 0.55 });
+    }
+    const fz = showDims ? 13 : 11;
+    for (const z of zonas) {
+      const zx0 = poolX + z.desde * pxPerM;
+      const zx1 = poolX + z.hasta * pxPerM;
+      const principal = `${fmtProfundidad(z.prof)} m`;
+      if (zx1 - zx0 < principal.length * fz * 0.56 + 10) continue; // no entra: el título lo resume
+      const cx = (zx0 + zx1) / 2;
+      const cy = poolY + poolH * 0.3;
+      const titulo: Prim = { t: "text", x: cx, y: cy, text: principal, fontSize: fz, fill: "#1B3A5C", anchor: "middle", central: true, weight: "bold" };
+      const rango = `${fmtM(z.desde)} a ${fmtM(z.hasta)} m`;
+      const todos: Prim[] = [titulo];
+      const cajas = [cajaDeTexto(titulo as Extract<Prim, { t: "text" }>)];
+      if (zx1 - zx0 >= rango.length * 10 * 0.56 + 10) {
+        const sub: Prim = { t: "text", x: cx, y: cy + fz + 2, text: rango, fontSize: 10, fill: "#1B3A5C", anchor: "middle", central: true, opacity: 0.7 };
+        todos.push(sub);
+        cajas.push(cajaDeTexto(sub as Extract<Prim, { t: "text" }>));
+      }
+      carteles.push(...todos);
+      movibles.push({
+        todos, lista: extras, caja: unirCajas(cajas), region: { x0: zx0, y0: poolY, x1: zx1, y1: poolY + poolH },
+        ocultable: false, esquivaFranjas: true,
+      });
+    }
+  }
 
   if (s.solarHumedo && s.solarHumedoAncho > 0) {
     const shW = Math.min(s.solarHumedoAncho, s.largo) * pxPerM;
     extras.push({ t: "rect", x: poolX, y: poolY, w: shW, h: poolH, fill: "#BFE0EF", opacity: 0.8 });
+    franjas.push({ x0: poolX, y0: poolY, x1: poolX + shW, y1: poolY + poolH });
     if (shW > 60) {
-      extras.push({
-        t: "text", x: poolX + shW / 2, y: poolY + poolH / 2,
-        text: `Solar húmedo${showDims ? " (" + fmtM(s.solarHumedoAncho) + "m)" : ""}`,
-        fontSize: 12, fill: "#0C447C", anchor: "middle", central: true,
-      });
+      const { prim: etiqueta, caja } = etiquetaDeFranja(
+        `Solar húmedo${showDims ? " (" + fmtM(s.solarHumedoAncho) + "m)" : ""}`,
+        poolX + shW / 2, poolY + poolH / 2, shW, poolH, 12, "#0C447C"
+      );
+      extras.push(etiqueta);
+      movibles.push({ todos: [etiqueta], lista: extras, caja, region: zonaEtiquetas, ocultable: true });
     }
   }
 
@@ -330,10 +489,14 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
     const centroY = poolY + Math.max(0, Math.min(1, p.y)) * poolH;
     const ex = centroX - lado / 2;
     const ey = centroY - lado / 2;
-    extras.push({ t: "rect", x: ex, y: ey, w: lado, h: lado, fill: "#fff", stroke: "#1B3A5C", strokeWidth: 1.2, dash: "3 2" });
+    const primsEscalera: Prim[] = [
+      { t: "rect", x: ex, y: ey, w: lado, h: lado, fill: "#fff", stroke: "#1B3A5C", strokeWidth: 1.2, dash: "3 2" },
+    ];
     if (lado > 30) {
-      extras.push({ t: "text", x: centroX, y: centroY, text: "Escalera", fontSize: 9, fill: "#1B3A5C", anchor: "middle", central: true });
+      primsEscalera.push({ t: "text", x: centroX, y: centroY, text: "Escalera", fontSize: 9, fill: "#1B3A5C", anchor: "middle", central: true });
     }
+    extras.push(...primsEscalera);
+    marcadores.push({ prims: primsEscalera, caja: { x0: ex, y0: ey, x1: ex + lado, y1: ey + lado } });
     if (interactive) {
       extras.push({ t: "circle", cx: centroX, cy: centroY, r: 28, fill: "transparent", drag: { tipo: "escalera", indice: 0 } });
     }
@@ -385,13 +548,15 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
       }
     }
 
+    franjas.push({ x0: ex, y0: ey, x1: ex + ew, y1: ey + eh });
     const cabe = horizontal ? ew > 46 : eh > 32;
     if (cabe) {
-      extras.push({
-        t: "text", x: ex + ew / 2, y: ey + eh / 2,
-        text: `Escalera${showDims ? " (" + fmtM(profundidad) + "m)" : ""}`,
-        fontSize: 11, fill: "#1B3A5C", anchor: "middle", central: true,
-      });
+      const { prim: etiqueta, caja } = etiquetaDeFranja(
+        `Escalera${showDims ? " (" + fmtM(profundidad) + "m)" : ""}`,
+        ex + ew / 2, ey + eh / 2, ew, eh, 11, "#1B3A5C"
+      );
+      extras.push(etiqueta);
+      movibles.push({ todos: [etiqueta], lista: extras, caja, region: zonaEtiquetas, ocultable: true });
     }
   }
 
@@ -407,25 +572,33 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
       rx: 3, fill: "none", stroke: "#1B3A5C", strokeWidth: 1, dash: "4 3", opacity: 0.6,
     });
     if (showDims && poolW - 2 * labiosPx > 90) {
-      extras.push({
+      const etiqueta: Extract<Prim, { t: "text" }> = {
         t: "text", x: poolX + poolW / 2, y: poolY + labiosPx + 14,
         text: `Espejo de agua ${fmtM(espejoW)} x ${fmtM(espejoH)} m`,
         fontSize: 11, fill: "#1B3A5C", anchor: "middle", opacity: 0.75,
-      });
+      };
+      extras.push(etiqueta);
+      movibles.push({ todos: [etiqueta], lista: extras, caja: cajaDeTexto(etiqueta), region: zonaPool, ocultable: true });
     }
   }
+
+  extras.push(...carteles);
 
   if (s.luces && s.cantLuces > 0) {
     const n = s.cantLuces;
     const glowR = showDims ? 16 : 13;
     const bulbR = showDims ? 6 : 5;
     for (let i = 0; i < n; i++) {
-      const p = s.lucesPos[i] || posicionLuzPorDefecto(i, n);
+      const p = s.lucesPos[i] || posicionPorDefecto("luz", i, n);
       const cx = poolX + Math.max(0, Math.min(1, p.x)) * poolW;
       const cy = poolY + Math.max(0, Math.min(1, p.y)) * poolH;
-      extras.push({ t: "circle", cx, cy, r: glowR, fill: "url(#luzGlow)" });
-      extras.push({ t: "circle", cx, cy, r: bulbR, fill: "#FFEFA8", stroke: "#C99A2E", strokeWidth: 1.2 });
-      extras.push({ t: "circle", cx: cx - bulbR * 0.32, cy: cy - bulbR * 0.32, r: bulbR * 0.32, fill: "#FFFDF3" });
+      const prims: Prim[] = [
+        { t: "circle", cx, cy, r: glowR, fill: "url(#luzGlow)" },
+        { t: "circle", cx, cy, r: bulbR, fill: "#FFEFA8", stroke: "#C99A2E", strokeWidth: 1.2 },
+        { t: "circle", cx: cx - bulbR * 0.32, cy: cy - bulbR * 0.32, r: bulbR * 0.32, fill: "#FFFDF3" },
+      ];
+      extras.push(...prims);
+      marcadores.push({ prims, caja: { x0: cx - bulbR - 5, y0: cy - bulbR - 5, x1: cx + bulbR + 5, y1: cy + bulbR + 5 } });
       if (interactive) {
         // r=28 (no 16): en un celular, el viewBox de 680 se ve achicado a
         // ~340px de pantalla — un radio de agarre chico ahí es casi
@@ -449,11 +622,15 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
     const sw = showDims ? 24 : 20;
     const sh = showDims ? 15 : 13;
     for (let i = 0; i < n; i++) {
-      const p = s.skimmersPos[i] || posicionLuzPorDefecto(i, n);
+      const p = s.skimmersPos[i] || posicionPorDefecto("skimmer", i, n);
       const cx = poolX + Math.max(0, Math.min(1, p.x)) * poolW;
       const cy = poolY + Math.max(0, Math.min(1, p.y)) * poolH;
-      extras.push({ t: "rect", x: cx - sw / 2, y: cy - sh / 2, w: sw, h: sh, rx: 2, fill: "#EAF0F3", stroke: "#1B3A5C", strokeWidth: 1 });
-      extras.push({ t: "rect", x: cx - sw / 2 + 3, y: cy - 2, w: sw - 6, h: 4, rx: 1, fill: "#1B3A5C", opacity: 0.55 });
+      const prims: Prim[] = [
+        { t: "rect", x: cx - sw / 2, y: cy - sh / 2, w: sw, h: sh, rx: 2, fill: "#EAF0F3", stroke: "#1B3A5C", strokeWidth: 1 },
+        { t: "rect", x: cx - sw / 2 + 3, y: cy - 2, w: sw - 6, h: 4, rx: 1, fill: "#1B3A5C", opacity: 0.55 },
+      ];
+      extras.push(...prims);
+      marcadores.push({ prims, caja: { x0: cx - sw / 2, y0: cy - sh / 2, x1: cx + sw / 2, y1: cy + sh / 2 } });
       if (interactive) {
         extras.push({ t: "circle", cx, cy, r: 28, fill: "transparent", drag: { tipo: "skimmer", indice: i } });
         if (n > 1) {
@@ -471,11 +648,15 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
     const rExt = showDims ? 10 : 8;
     const rInt = showDims ? 4.5 : 4;
     for (let i = 0; i < n; i++) {
-      const p = s.hidromasajesPos[i] || posicionLuzPorDefecto(i, n);
+      const p = s.hidromasajesPos[i] || posicionPorDefecto("hidromasaje", i, n);
       const cx = poolX + Math.max(0, Math.min(1, p.x)) * poolW;
       const cy = poolY + Math.max(0, Math.min(1, p.y)) * poolH;
-      extras.push({ t: "circle", cx, cy, r: rExt, fill: "#ffffff", stroke: "#0C7A8C", strokeWidth: 1.4 });
-      extras.push({ t: "circle", cx, cy, r: rInt, fill: "#4FC7D9", stroke: "#0C7A8C", strokeWidth: 1 });
+      const prims: Prim[] = [
+        { t: "circle", cx, cy, r: rExt, fill: "#ffffff", stroke: "#0C7A8C", strokeWidth: 1.4 },
+        { t: "circle", cx, cy, r: rInt, fill: "#4FC7D9", stroke: "#0C7A8C", strokeWidth: 1 },
+      ];
+      extras.push(...prims);
+      marcadores.push({ prims, caja: { x0: cx - rExt - 1, y0: cy - rExt - 1, x1: cx + rExt + 1, y1: cy + rExt + 1 } });
       if (interactive) {
         extras.push({ t: "circle", cx, cy, r: 28, fill: "transparent", drag: { tipo: "hidromasaje", indice: i } });
         if (n > 1) {
@@ -525,7 +706,7 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
   if (showDims) {
     dims.push({
       t: "text", x: poolX + poolW / 2, y: oy - 13,
-      text: `Pileta ${fmtM(s.largo)} x ${fmtM(s.ancho)} m`,
+      text: `Pileta ${fmtM(s.largo)} x ${fmtM(s.ancho)} m${resumenProfundidad(zonas) ? " · Prof. " + resumenProfundidad(zonas) : ""}`,
       fontSize: 17, fill: dimColor, anchor: "middle", weight: "bold",
     });
 
@@ -535,8 +716,13 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
       const chipH = 26;
       const chipX = poolX + poolW / 2 - chipW / 2;
       const chipY = poolY + poolH - chipH - 16;
-      dims.push({ t: "rect", x: chipX, y: chipY, w: chipW, h: chipH, rx: 13, fill: "#ffffff", stroke: dimColor, strokeWidth: 0.75, opacity: 0.94 });
-      dims.push({ t: "text", x: poolX + poolW / 2, y: chipY + chipH / 2, text: chipLabel, fontSize: 13, fill: dimColor, anchor: "middle", central: true });
+      const chipRect: Prim = { t: "rect", x: chipX, y: chipY, w: chipW, h: chipH, rx: 13, fill: "#ffffff", stroke: dimColor, strokeWidth: 0.75, opacity: 0.94 };
+      const chipTexto: Prim = { t: "text", x: poolX + poolW / 2, y: chipY + chipH / 2, text: chipLabel, fontSize: 13, fill: dimColor, anchor: "middle", central: true };
+      dims.push(chipRect, chipTexto);
+      movibles.push({
+        todos: [chipRect, chipTexto], lista: dims, caja: { x0: chipX, y0: chipY, x1: chipX + chipW, y1: chipY + chipH },
+        region: zonaPool, ocultable: false,
+      });
     }
 
     const topY = oy - 34;
@@ -592,12 +778,47 @@ export function calcularGeometriaPlano(entradaCruda: PlanoLosetasEntrada, opcion
     }
   }
 
+  // ── Que nada quede pisado ──────────────────────────────────────────────────
+  // 1) Objetos (luces, skimmers, hidromasajes, escalera libre). En el plano del
+  //    cliente (el que se entrega), si uno cae sobre otro o sobre un texto
+  //    fijo se lo corre lo mínimo hasta un lugar libre. En el editor NO: ahí
+  //    lo que se arrastra es lo que se ve.
+  const zonaObjetos: Caja = { x0: poolX - 16, y0: poolY - 16, x1: poolX + poolW + 16, y1: poolY + poolH + 16 };
+  const colocados: Caja[] = [];
+  for (const m of marcadores) {
+    if (showDims) {
+      const lugar = buscarLugarLibre(m.caja, zonaObjetos, [...fijos, ...colocados], 6, 2);
+      if (lugar && (lugar.dx !== 0 || lugar.dy !== 0)) {
+        for (const p of m.prims) trasladarPrim(p, lugar.dx, lugar.dy);
+        m.caja = trasladarCaja(m.caja, lugar.dx, lugar.dy);
+      }
+    }
+    colocados.push(m.caja);
+  }
+  // 2) Textos y cartelitos: se corren a un lugar libre; si no hay (y ya figuran
+  //    en la leyenda) se omiten.
+  const ocupados: Caja[] = [...fijos, ...colocados];
+  for (const e of movibles) {
+    const lugar = buscarLugarLibre(e.caja, e.region, e.esquivaFranjas ? [...ocupados, ...franjas] : ocupados, 6, 2);
+    if (lugar) {
+      if (lugar.dx !== 0 || lugar.dy !== 0) for (const p of e.todos) trasladarPrim(p, lugar.dx, lugar.dy);
+      ocupados.push(trasladarCaja(e.caja, lugar.dx, lugar.dy));
+    } else if (e.ocultable) {
+      for (const p of e.todos) {
+        const k = e.lista.indexOf(p);
+        if (k >= 0) e.lista.splice(k, 1);
+      }
+    } else {
+      ocupados.push(e.caja);
+    }
+  }
+
   let svgH = oy + totalH * pxPerM + padBottom;
   const legend: LegendItem[] = [];
 
   if (showDims) {
     const legItems: { kind: LegendItem["kind"]; label: string }[] = [
-      { kind: "loseta", label: "Borde de loseta" },
+      { kind: "loseta", label: MATERIALES_BORDE[s.materialBorde].leyenda },
       { kind: "pileta", label: "Pileta" },
     ];
     if (s.solarHumedo && s.solarHumedoAncho > 0) legItems.push({ kind: "solarhumedo", label: "Solar húmedo" });

@@ -1,11 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useWatch } from "react-hook-form";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useFieldArray, useWatch } from "react-hook-form";
 import { useZodForm } from "@/lib/forms/useZodForm";
 import { NumberField, TextField, CheckboxField, SelectField } from "@/components/form";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { calcularGeometriaPlano, ajustarLucesPos, fmtM, type LuzPos } from "@/lib/domain/plano/losetas";
+import {
+  calcularGeometriaPlano,
+  ajustarLucesPos,
+  fmtM,
+  MATERIALES_BORDE,
+  type LuzPos,
+  type MaterialBorde,
+} from "@/lib/domain/plano/losetas";
+import { problemasTramos } from "@/lib/domain/plano/profundidad";
 import { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { PresupuestoLeido } from "@/lib/domain/presupuesto/adaptadores";
 import { guardarPresupuesto, actualizarPresupuesto } from "@/lib/presupuestos";
@@ -45,8 +53,26 @@ function medidasDesdePresupuesto(leido: PresupuestoLeido): LosetasForm {
     ? (m.revestimiento as LosetasForm["revestimiento"])
     : "";
 
+  // Un plano guardado antes de poder elegir el material no tiene el campo: era losetas.
+  const materialBorde: MaterialBorde = (["losetas", "decks", "travertino"] as const).includes(
+    m.materialBorde as never
+  )
+    ? (m.materialBorde as MaterialBorde)
+    : "losetas";
+
+  const tramosGuardados = Array.isArray(m.tramosProfundidad)
+    ? (m.tramosProfundidad as { desde?: unknown; hasta?: unknown; prof?: unknown }[]).map((t) => ({
+        desde: num(t?.desde, 0),
+        hasta: num(t?.hasta, 0),
+        prof: num(t?.prof, 0),
+      }))
+    : [];
+
   return {
     ...base,
+    materialBorde,
+    profundidad: num(m.profundidad, 0),
+    tramosProfundidad: tramosGuardados,
     nombre: leido.presupuesto.cliente.nombre || "",
     largo: num(m.largo, 0),
     ancho: num(m.ancho, 0),
@@ -127,12 +153,20 @@ function medidasParaSnapshot(v: LosetasForm) {
     revestimientoOtro: v.revestimientoOtro,
     colorAgua: v.colorAgua,
     colorLoseta: v.colorLoseta,
+    materialBorde: v.materialBorde,
+    profundidad: v.profundidad,
+    tramosProfundidad: v.tramosProfundidad,
     lblSolar: v.lblSolar,
     lblOpuesto: v.lblOpuesto,
     lblLateral1: v.lblLateral1,
     lblLateral2: v.lblLateral2,
   };
 }
+
+const MATERIAL_BORDE_OPCIONES = (Object.keys(MATERIALES_BORDE) as MaterialBorde[]).map((k) => ({
+  value: k,
+  label: MATERIALES_BORDE[k].etiqueta,
+}));
 
 const REVESTIMIENTO_OPCIONES = [
   { value: "", label: "Sin especificar" },
@@ -181,6 +215,7 @@ export function LosetasCalculadora({
   });
 
   const valoresForm = useWatch({ control });
+  const tramos = useFieldArray({ control, name: "tramosProfundidad" });
   const num = (v: unknown) => (typeof v === "number" ? v : 0);
 
   // Ajusta cada array de posiciones (luces, skimmers, hidromasajes) a su
@@ -192,7 +227,8 @@ export function LosetasCalculadora({
   function useAjustarPosiciones(campo: "lucesPos" | "skimmersPos" | "hidromasajesPos", on: boolean, cantidad: number) {
     useEffect(() => {
       const actuales = getValues(campo) ?? [];
-      const ajustadas = ajustarLucesPos(actuales, on, cantidad ?? 0);
+      const tipo = campo === "skimmersPos" ? "skimmer" : campo === "hidromasajesPos" ? "hidromasaje" : "luz";
+      const ajustadas = ajustarLucesPos(actuales, on, cantidad ?? 0, tipo);
       const cambiaron =
         ajustadas.length !== actuales.length || ajustadas.some((p, i) => p.x !== actuales[i]?.x || p.y !== actuales[i]?.y);
       if (cambiaron) setValue(campo, ajustadas, { shouldDirty: false });
@@ -202,6 +238,27 @@ export function LosetasCalculadora({
   useAjustarPosiciones("lucesPos", !!valoresForm.luces, num(valoresForm.cantLuces));
   useAjustarPosiciones("skimmersPos", !!valoresForm.skimmer, num(valoresForm.cantSkimmers));
   useAjustarPosiciones("hidromasajesPos", !!valoresForm.hidromasaje, num(valoresForm.cantHidromasajes));
+
+  // Al cambiar el material, el borde toma el color de fábrica del nuevo (losetas
+  // beige, deck madera, travertino crema) — salvo que se haya elegido un color a
+  // mano: ese se respeta.
+  const materialBorde: MaterialBorde = valoresForm.materialBorde ?? "losetas";
+  const materialPrevio = useRef<MaterialBorde>(materialBorde);
+  useEffect(() => {
+    const previo = materialPrevio.current;
+    if (previo === materialBorde) return;
+    materialPrevio.current = materialBorde;
+    const actual = (getValues("colorLoseta") || "").toLowerCase();
+    if (!actual || actual === MATERIALES_BORDE[previo].color.toLowerCase()) {
+      setValue("colorLoseta", MATERIALES_BORDE[materialBorde].color, { shouldDirty: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [materialBorde]);
+  const nombreMaterial = MATERIALES_BORDE[materialBorde];
+  const problemasDeTramos = problemasTramos(
+    (valoresForm.tramosProfundidad ?? []).map((t) => ({ desde: num(t?.desde), hasta: num(t?.hasta), prof: num(t?.prof) })),
+    num(valoresForm.largo)
+  );
 
   const geometriaEntrada = useMemo(
     () => ({
@@ -239,6 +296,13 @@ export function LosetasCalculadora({
       revestimientoOtro: valoresForm.revestimientoOtro ?? "",
       colorAgua: valoresForm.colorAgua || "#A6D1EC",
       colorLoseta: valoresForm.colorLoseta || "#F7E6D3",
+      materialBorde: valoresForm.materialBorde ?? "losetas",
+      profundidad: num(valoresForm.profundidad),
+      tramosProfundidad: (valoresForm.tramosProfundidad ?? []).map((t) => ({
+        desde: num(t?.desde),
+        hasta: num(t?.hasta),
+        prof: num(t?.prof),
+      })),
       lblSolar: valoresForm.lblSolar || "Solar",
       lblOpuesto: valoresForm.lblOpuesto || "Opuesto",
       lblLateral1: valoresForm.lblLateral1 || "Lateral 1",
@@ -379,7 +443,62 @@ export function LosetasCalculadora({
         </section>
 
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-gray-900">Profundidad</h2>
+          <NumberField
+            control={control}
+            name="profundidad"
+            label={tramos.fields.length > 0 ? "Profundidad del resto de la pileta (m)" : "Profundidad de toda la pileta (m)"}
+            hint="Sale en el título del plano. Dejala vacía si no querés mostrarla."
+          />
+
+          {tramos.fields.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500">
+                Tramos con otra profundidad, medidos desde el <b>lado del solar</b> (el extremo izquierdo del plano). Lo
+                que no entra en ningún tramo tiene la profundidad de arriba.
+              </p>
+              {tramos.fields.map((campo, i) => (
+                <div key={campo.id} className="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-3">
+                  <NumberField control={control} name={`tramosProfundidad.${i}.desde`} label="Desde (m)" />
+                  <NumberField control={control} name={`tramosProfundidad.${i}.hasta`} label="Hasta (m)" />
+                  <NumberField control={control} name={`tramosProfundidad.${i}.prof`} label="Profundidad (m)" />
+                  <button
+                    type="button"
+                    onClick={() => tramos.remove(i)}
+                    aria-label={`Quitar el tramo ${i + 1}`}
+                    className="mb-0.5 min-h-11 rounded-md px-3 text-sm font-medium text-red-600 hover:bg-red-50"
+                  >
+                    Quitar
+                  </button>
+                </div>
+              ))}
+              {problemasDeTramos.map((p) => (
+                <p key={p} role="alert" className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  {p}
+                </p>
+              ))}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => tramos.append({ desde: 0, hasta: 0, prof: 0 })}
+            className="min-h-11 rounded-md border border-gray-300 px-4 text-sm font-medium text-[#1B3A5C] transition-colors hover:bg-gray-50"
+          >
+            + Agregar tramo con otra profundidad
+          </button>
+        </section>
+
+        <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Ancho final del borde, lado por lado</h2>
+          <SelectField
+            register={register}
+            errors={errors}
+            name="materialBorde"
+            label="Material alrededor de la pileta"
+            hint="Lo que elige el cliente para el borde: se nombra así en el plano."
+            options={MATERIAL_BORDE_OPCIONES}
+          />
           <p className="text-xs text-gray-500">
             Medida <b>terminada</b> de cada lado, incluyendo el borde de arriba.
           </p>
@@ -402,7 +521,7 @@ export function LosetasCalculadora({
             </div>
           </div>
           <p className="text-xs text-gray-500">
-            Un lado con desborde infinito no lleva loseta — se dibuja más grueso y sin la medida (el agua cae a una
+            Un lado con desborde infinito no lleva {nombreMaterial.singular} — se dibuja más grueso y sin la medida (el agua cae a una
             canaleta, no a un piso caminable).
           </p>
         </section>
@@ -498,7 +617,7 @@ export function LosetasCalculadora({
                 <input id="colorAgua" type="color" className="h-10 w-full cursor-pointer rounded-md border border-gray-300" {...register("colorAgua")} />
               </div>
               <div>
-                <label htmlFor="colorLoseta" className="mb-1 block text-xs text-gray-500">Color de la loseta</label>
+                <label htmlFor="colorLoseta" className="mb-1 block text-xs text-gray-500">Color del borde ({nombreMaterial.etiqueta.toLowerCase()})</label>
                 <input id="colorLoseta" type="color" className="h-10 w-full cursor-pointer rounded-md border border-gray-300" {...register("colorLoseta")} />
               </div>
             </div>
