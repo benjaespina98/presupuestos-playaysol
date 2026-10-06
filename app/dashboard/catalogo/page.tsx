@@ -21,6 +21,7 @@ import { PanelPortal } from "@/components/PanelPortal";
 import { IconEdit, IconCopy, IconPlus, IconTable } from "@/components/icons";
 import { PLANILLA_COSTOS_URL } from "@/lib/brand";
 import { FiltrosCatalogo } from "@/components/catalogo/FiltrosCatalogo";
+import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
 import { EditarItemModal } from "@/components/catalogo/EditarItemModal";
 import { CrearItemModal } from "@/components/catalogo/CrearItemModal";
 import { TITULOS_TIPO } from "@/components/catalogo/titulos-tipo";
@@ -118,15 +119,11 @@ export default function CatalogoPage() {
   }
 
   return (
-    <PanelPortal>
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Catálogo</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Precios y descripciones de materiales y opcionales, compartidos por todo el equipo.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+    <PanelPortal compacto>
+      <EncabezadoPagina
+        titulo="Precios de venta"
+        descripcion="Lo que se le cobra al cliente en cada presupuesto: precios y descripciones compartidos por todo el equipo."
+      >
           <a
             href={PLANILLA_COSTOS_URL}
             target="_blank"
@@ -146,8 +143,7 @@ export default function CatalogoPage() {
               Agregar ítem
             </button>
           )}
-        </div>
-      </div>
+      </EncabezadoPagina>
 
       <FiltrosCatalogo
         busqueda={busqueda}
