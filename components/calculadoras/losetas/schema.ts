@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LuzPos, EscaleraPos, TipoPileta, Revestimiento, MaterialBorde } from "@/lib/domain/plano/losetas";
+import { LuzPos, EscaleraPos, TipoPileta, Revestimiento, MaterialBorde, TonoBorde } from "@/lib/domain/plano/losetas";
 import { TramoProfundidad } from "@/lib/domain/plano/profundidad";
 
 /**
@@ -59,6 +59,7 @@ export const LosetasFormSchema = z.object({
   colorAgua: z.string().default("#A6D1EC"),
   colorLoseta: z.string().default("#F7E6D3"),
   materialBorde: MaterialBorde.default("losetas"),
+  tonoBorde: TonoBorde.default("marfil"),
   profundidad: z.number().nonnegative("No puede ser negativo").default(0),
   tramosProfundidad: z.array(TramoProfundidad).default([]),
 
@@ -108,6 +109,7 @@ export function formularioVacio(): LosetasForm {
     colorAgua: "#A6D1EC",
     colorLoseta: "#F7E6D3",
     materialBorde: "losetas",
+    tonoBorde: "marfil",
     profundidad: 0,
     tramosProfundidad: [],
     lblSolar: "Solar",
