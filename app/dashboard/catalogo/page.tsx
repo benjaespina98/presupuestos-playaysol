@@ -34,8 +34,8 @@ import { CrearItemModal } from "@/components/catalogo/CrearItemModal";
  * Stock · Actualizado · acción. Sin la columna de stock cuando ningún ítem lo
  * lleva. Son anchos fijos (rem) y el producto toma el resto.
  */
-const COLUMNAS_CON_STOCK = "md:grid-cols-[minmax(0,1fr)_9.5rem_4.5rem_10rem_6.5rem_6.5rem]";
-const COLUMNAS_SIN_STOCK = "md:grid-cols-[minmax(0,1fr)_9.5rem_4.5rem_6.5rem_6.5rem]";
+const COLUMNAS_CON_STOCK = "md:grid-cols-[minmax(0,1fr)_9.5rem_4.5rem_10rem_6.5rem_3.5rem]";
+const COLUMNAS_SIN_STOCK = "md:grid-cols-[minmax(0,1fr)_9.5rem_4.5rem_6.5rem_3.5rem]";
 
 export default function CatalogoPage() {
   const [items, setItems] = useState<ItemCatalogo[] | null>(null);
@@ -364,10 +364,11 @@ function FilaItem({
           <button
             type="button"
             onClick={onEditar}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+            aria-label="Editar"
+            title="Editar"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
           >
-            <IconEdit className="h-4 w-4" />
-            Editar
+            <IconEdit className="h-[18px] w-[18px]" />
           </button>
         )}
       </div>
