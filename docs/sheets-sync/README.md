@@ -29,7 +29,7 @@ Los dados de baja en el catálogo **no** van a la planilla. Un precio sin cargar
 El stock se carga en el catálogo web (Precios de venta → Stock). En la planilla se escribe en una
 columna con el encabezado **Stock** de la hoja "Precios y margen":
 
-- Si ya existe una columna con ese encabezado (en las primeras 10 filas), se usa esa.
+- Si ya existe una columna cuyo encabezado empiece con "Stock" (en las primeras 40 filas; sirve "Stock actual", "Stock (unid.)", etc.), se usa esa.
 - Si no existe, el script **la agrega a la derecha de todo** (en la fila del encabezado de la
   tabla, la de "Precio"), sin tocar ninguna otra columna. Después la podés mover: mientras el
   encabezado siga diciendo "Stock", el script la encuentra.
