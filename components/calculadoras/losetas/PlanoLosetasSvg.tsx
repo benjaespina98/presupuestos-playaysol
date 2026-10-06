@@ -28,6 +28,8 @@ export function PlanoLosetasSvg({
   onMoverEscalera,
   onMoverSkimmer,
   onMoverHidromasaje,
+  onMoverSala,
+  onMoverCasa,
   ariaLabel,
 }: {
   geometria: GeometriaPlano;
@@ -36,6 +38,9 @@ export function PlanoLosetasSvg({
   onMoverEscalera?: (pos: LuzPos) => void;
   onMoverSkimmer?: (indice: number, pos: LuzPos) => void;
   onMoverHidromasaje?: (indice: number, pos: LuzPos) => void;
+  /** La sala de filtro y la casa se ubican a mano: la posición va en METROS desde la esquina del borde. */
+  onMoverSala?: (pos: LuzPos) => void;
+  onMoverCasa?: (pos: LuzPos) => void;
   ariaLabel?: string;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -61,6 +66,17 @@ export function PlanoLosetasSvg({
     };
   }
 
+  /** Puntero → metros desde la esquina de arriba a la izquierda del borde (sin acotar: lo acota el dibujo). */
+  function enMetros(clientX: number, clientY: number): LuzPos | null {
+    const svg = svgRef.current;
+    const { caja } = geometria;
+    if (!svg || caja.pxPerM <= 0) return null;
+    const rect = svg.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+    const escala = geometria.viewW / rect.width;
+    return { x: ((clientX - rect.left) * escala - caja.x) / caja.pxPerM, y: ((clientY - rect.top) * escala - caja.y) / caja.pxPerM };
+  }
+
   function onPointerDown(e: React.PointerEvent<SVGSVGElement>) {
     if (!interactive) return;
     const el = e.target as Element;
@@ -78,10 +94,18 @@ export function PlanoLosetasSvg({
 
   function onPointerMove(e: React.PointerEvent<SVGSVGElement>) {
     if (arrastrando === null) return;
+    const { tipo, indice } = arrastrando;
+    if (tipo === "sala" || tipo === "casa") {
+      const metros = enMetros(e.clientX, e.clientY);
+      if (!metros) return;
+      e.preventDefault();
+      if (tipo === "sala") onMoverSala?.(metros);
+      else onMoverCasa?.(metros);
+      return;
+    }
     const pos = normalizar(e.clientX, e.clientY);
     if (!pos) return;
     e.preventDefault();
-    const { tipo, indice } = arrastrando;
     if (tipo === "luz") onMoverLuz?.(indice, pos);
     else if (tipo === "escalera") onMoverEscalera?.(pos);
     else if (tipo === "skimmer") onMoverSkimmer?.(indice, pos);
