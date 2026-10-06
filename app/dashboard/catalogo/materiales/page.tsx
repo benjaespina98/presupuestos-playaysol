@@ -306,10 +306,10 @@ function FilaMaterial({
         type="button"
         onClick={onEditar}
         aria-label={`Editar ${m.nombre}`}
-        className="inline-flex min-h-11 items-center justify-end gap-1.5 rounded-md px-2 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8 md:justify-center"
+        title="Editar"
+        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
       >
-        <IconEdit className="h-4 w-4" />
-        Editar
+        <IconEdit className="h-[18px] w-[18px]" />
       </button>
     </li>
   );
