@@ -26,10 +26,11 @@ function error(mensaje: string, status: number) {
 
 /** Los ítems con su stock; si la columna todavía no existe (falta migration_stock_piscinas.sql) se leen sin él. */
 async function leerItems(supabase: SupabaseClient) {
-  const conStock = await supabase.from("catalogo_items").select("tipo, clave, precio, activo, stock");
+  const base = "tipo, clave, precio, activo, descripcion, categoria, unidad, updated_at";
+  const conStock = await supabase.from("catalogo_items").select(`${base}, stock`);
   if (!conStock.error) return conStock;
   if (!/stock/i.test(conStock.error.message ?? "")) return conStock;
-  return supabase.from("catalogo_items").select("tipo, clave, precio, activo");
+  return supabase.from("catalogo_items").select(base);
 }
 
 export async function GET(request: Request) {

@@ -45,7 +45,7 @@ function cargarScript(opciones: { hojas: Record<string, Hoja>; respuesta: { codi
   const props: Record<string, string> = { URL: "https://ejemplo.test/api/sheets/catalogo", TOKEN: "t", ...opciones.props };
   const pedidos: { url: string; headers: Record<string, string> }[] = [];
   const entorno = {
-    SpreadsheetApp: { getActive: () => ({ getSheetByName: (n: string) => opciones.hojas[n] ?? null }), flush: () => undefined },
+    SpreadsheetApp: { getActive: () => ({ getSheetByName: (n: string) => opciones.hojas[n] ?? null, insertSheet: (n: string) => (opciones.hojas[n] = crearHoja()) }), flush: () => undefined },
     PropertiesService: {
       getScriptProperties: () => ({
         getProperty: (k: string) => props[k] ?? null,
@@ -331,5 +331,68 @@ describe("buscarEncabezadoStock · encabezados con otro texto", () => {
   it("lo encuentra aunque esté más abajo de la fila 10", () => {
     const filas = Array.from({ length: 25 }, (_, i) => (i === 24 ? ["x", "Stock"] : ["x", ""]));
     expect(buscarEncabezadoStock(filas)).toEqual({ fila: 25, columna: 2 });
+  });
+});
+
+describe("hoja 'Catálogo web' (todos los campos de los precios de venta)", () => {
+  const FILAS = [
+    ["Piscinas", "indusplast_caribe_550", "Piscina de fibra Caribe 550", "Piscinas", "obra", 8810000, 3, "Activo", "05/10/2026"],
+    ["Cercos", "precioCon", "Precio por metro lineal con instalación", "Cercos", "ml", "A cotizar", "", "De baja", "01/10/2026"],
+  ];
+  const conCatalogo = { ...DATOS, catalogo: FILAS };
+
+  it("la crea si no existe, con encabezados y una fila por precio de venta", () => {
+    const hojas = hojasBase() as Record<string, Hoja>;
+    const r = cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: conCatalogo } }).sincronizar_(true);
+    const h = hojas["Catálogo web"];
+
+    expect(h).toBeTruthy();
+    expect(h.v(1, 1)).toBe("Calculadora");
+    expect(h.v(1, 9)).toBe("Actualizado");
+    expect(h.v(2, 2)).toBe("indusplast_caribe_550");
+    expect(h.v(2, 6)).toBe(8810000);
+    expect(h.v(2, 7)).toBe(3);
+    expect(h.v(3, 6)).toBe("A cotizar");
+    expect(h.v(3, 8)).toBe("De baja");
+    expect(r).toMatchObject({ catalogo: 2 });
+  });
+
+  it("al volver a sincronizar la reescribe entera: lo borrado en la web desaparece", () => {
+    const hojas = hojasBase() as Record<string, Hoja>;
+    cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: conCatalogo } }).sincronizar_(true);
+    cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: { ...DATOS, catalogo: [FILAS[0]] } } }).sincronizar_(true);
+    expect(hojas["Catálogo web"].v(2, 2)).toBe("indusplast_caribe_550");
+    expect(hojas["Catálogo web"].v(3, 2)).toBeUndefined();
+  });
+
+  it("un catálogo viejo (sin el campo) no crea ni toca la hoja", () => {
+    const hojas = hojasBase() as Record<string, Hoja>;
+    cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: DATOS } }).sincronizar_(true);
+    expect(hojas["Catálogo web"]).toBeUndefined();
+  });
+
+  it("rechaza filas con otra cantidad de columnas", () => {
+    const { validarDatos } = cargarScript({ hojas: {}, respuesta: { codigo: 200, cuerpo: {} } });
+    expect(validarDatos(conCatalogo)).toBeNull();
+    expect(validarDatos({ ...DATOS, catalogo: [["x"]] })).toMatch(/columnas/);
+    expect(validarDatos({ ...DATOS, catalogo: "no" })).toMatch(/no es válido/);
+  });
+});
+
+describe("proveedores nuevos o con datos nuevos llegan a la hoja Proveedores", () => {
+  it("agregar un proveedor, o cargarle el teléfono, aparece en la próxima sincronización", () => {
+    const hojas = hojasBase() as Record<string, Hoja>;
+    const conTelefono = {
+      ...DATOS,
+      proveedores: [
+        ["Ranco", "Corralón", "Juan", "+54 9 3534 111111", "Contado", "48 hs", "nota"],
+        ["Proveedor Nuevo", "Filtros", "Ana", "+54 9 3534 222222", "", "", ""],
+      ],
+    };
+    cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: conTelefono } }).sincronizar_(true);
+
+    expect(hojas.Proveedores.v(6, 4)).toBe("+54 9 3534 111111");
+    expect(hojas.Proveedores.v(7, 1)).toBe("Proveedor Nuevo");
+    expect(hojas.Proveedores.v(7, 4)).toBe("+54 9 3534 222222");
   });
 });

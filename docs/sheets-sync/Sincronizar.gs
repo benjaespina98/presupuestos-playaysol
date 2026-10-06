@@ -17,6 +17,10 @@
  *                          no tiene una columna con el encabezado "Stock", se agrega a la
  *                          derecha de todo (no pisa nada). Las celdas con fórmula no se tocan.
  *
+ *   - Hoja "Catálogo web": una fila por precio de venta del catálogo con TODOS sus campos
+ *                          (calculadora, clave, descripción, categoría, unidad, precio, stock,
+ *                          estado y fecha). La crea el script si no existe y se reescribe entera.
+ *
  * Qué NO toca: fórmulas, formatos, colores, el tipo de cambio (Artículos!B3), ni las
  * hojas Presupuesto, Pedido, Mensaje y Calc.
  *
@@ -27,6 +31,9 @@
 var HOJA_PROVEEDORES = "Proveedores";
 var HOJA_ARTICULOS = "Artículos";
 var HOJA_PRECIOS = "Precios y margen";
+var HOJA_CATALOGO = "Catálogo web"; // la crea el script si no existe
+var COLUMNAS_CATALOGO = 9; // Calculadora · Clave · Descripción · Categoría · Unidad · Precio · Stock · Estado · Actualizado
+var ENCABEZADOS_CATALOGO = ["Calculadora", "Clave", "Descripción", "Categoría", "Unidad", "Precio de venta", "Stock", "Estado", "Actualizado"];
 
 var FILA_INICIO = 6;
 var COLUMNAS_PROVEEDORES = 7; // A..G
@@ -135,6 +142,14 @@ function validarDatos(datos) {
   if (datos.stock !== undefined && (datos.stock === null || typeof datos.stock !== "object" || Array.isArray(datos.stock))) {
     return "El stock que mandó el catálogo no es válido.";
   }
+  if (datos.catalogo !== undefined) {
+    if (!Array.isArray(datos.catalogo)) return "El listado de precios de venta que mandó el catálogo no es válido.";
+    for (var k = 0; k < datos.catalogo.length; k++) {
+      if (!Array.isArray(datos.catalogo[k]) || datos.catalogo[k].length !== COLUMNAS_CATALOGO) {
+        return "El precio de venta " + (k + 1) + " no tiene las " + COLUMNAS_CATALOGO + " columnas esperadas.";
+      }
+    }
+  }
   if (datos.articulos.length > MAX_FILAS_ARTICULOS) {
     return "Hay " + datos.articulos.length + " materiales y la planilla admite " + MAX_FILAS_ARTICULOS + ".";
   }
@@ -239,6 +254,26 @@ function escribirStock_(hoja, stock) {
   return cambios;
 }
 
+/**
+ * La hoja "Catálogo web": se crea si falta y se reescribe entera con TODOS los precios de venta
+ * del catálogo (fila 1 = encabezados). Es una hoja que maneja el script: lo que se escriba ahí a
+ * mano se pisa. Los cambios se hacen en el catálogo web.
+ */
+function escribirCatalogo_(filas) {
+  var ss = SpreadsheetApp.getActive();
+  var hoja = ss.getSheetByName(HOJA_CATALOGO) || ss.insertSheet(HOJA_CATALOGO);
+  var ultima = Math.max(hoja.getLastRow(), filas.length + 1);
+  hoja.getRange(1, 1, ultima, COLUMNAS_CATALOGO).clearContent();
+  hoja.getRange(1, 1, 1, COLUMNAS_CATALOGO).setValues([ENCABEZADOS_CATALOGO]);
+  if (filas.length > 0) {
+    var valores = filas.map(function (f) { return f.map(celdaVacia_); });
+    hoja.getRange(2, 1, valores.length, COLUMNAS_CATALOGO).setValues(valores);
+  }
+  if (hoja.setFrozenRows) hoja.setFrozenRows(1);
+  if (hoja.getRange(1, 1, 1, COLUMNAS_CATALOGO).setFontWeight) hoja.getRange(1, 1, 1, COLUMNAS_CATALOGO).setFontWeight("bold");
+  return filas.length;
+}
+
 function hoja_(nombre) {
   var h = SpreadsheetApp.getActive().getSheetByName(nombre);
   if (!h) throw new Error('No encuentro la hoja "' + nombre + '".');
@@ -277,6 +312,8 @@ function sincronizar_(forzar) {
     var precios = escribirPrecios_(hoja_(HOJA_PRECIOS), datos.precios);
     // Un catálogo viejo (sin el campo) no manda stock: en ese caso no se toca la columna.
     var stocks = datos.stock === undefined ? 0 : escribirStock_(hoja_(HOJA_PRECIOS), datos.stock);
+    // Un catálogo viejo (sin el campo) no manda el listado: en ese caso no se toca la hoja.
+    var catalogo = datos.catalogo === undefined ? 0 : escribirCatalogo_(datos.catalogo);
     SpreadsheetApp.flush();
 
     props.setProperty("VERSION", datos.version);
@@ -287,7 +324,8 @@ function sincronizar_(forzar) {
       proveedores: datos.proveedores.length,
       materiales: datos.articulos.length,
       precios: precios,
-      stocks: stocks
+      stocks: stocks,
+      catalogo: catalogo
     };
   } finally {
     candado.releaseLock();
@@ -334,7 +372,7 @@ function actualizarAhora() {
   try {
     var r = sincronizar_(true);
     if (r.estado === "ocupado") ui.alert("Ya hay una actualización en curso. Probá de nuevo en un momento.");
-    else ui.alert("Planilla actualizada: " + r.proveedores + " proveedores, " + r.materiales + " materiales y " + r.precios + " precios de venta y " + r.stocks + " stocks cambiados.");
+    else ui.alert("Planilla actualizada: " + r.proveedores + " proveedores, " + r.materiales + " materiales y " + r.precios + " precios de venta y " + r.stocks + " stocks cambiados. Hoja Catálogo web: " + r.catalogo + " precios de venta.");
   } catch (e) {
     ui.alert("No se pudo actualizar: " + e.message);
   }

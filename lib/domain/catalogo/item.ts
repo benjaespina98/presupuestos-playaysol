@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TipoCalculadora } from "../presupuesto/v1";
 import { CATEGORIA_POR_DEFECTO, CATEGORIAS, Categoria } from "./categorias";
+import { ETIQUETA_SECCION, SECCIONES, seccionDeItem, type SeccionId } from "./secciones";
 import { lineaDeClave, MODELOS_INDUSPLAST, modeloIndusplast, ordenMedida, type LineaPiscina } from "./listas";
 
 /** Qué clase de producto ver: una línea de piscinas completas, o "otros" (todo lo
@@ -153,6 +154,8 @@ export interface FiltroCatalogo {
   linea?: VistaCatalogo | null;
   /** Sólo los ítems de esa calculadora. null/undefined = todas. */
   tipo?: ItemCatalogo["tipo"] | null;
+  /** Sólo los ítems de esa sección (hormigón, Indusplast, cobertores, cercos, climatización, revestimientos, otros). */
+  seccion?: SeccionId | null;
   /** Disponibilidad: con unidades / agotado / no lleva stock. null = todos. */
   stock?: FiltroStock | null;
   /** default false: por default el listado no muestra los dados de baja. */
@@ -171,6 +174,7 @@ export function filtrarCatalogo(items: ItemCatalogo[], filtro: FiltroCatalogo): 
     if (filtro.linea === "otros") {
       if (lineaDeClave(item.clave)) return false;
     } else if (filtro.linea && lineaDeClave(item.clave) !== filtro.linea) return false;
+    if (filtro.seccion && seccionDeItem(item) !== filtro.seccion) return false;
     if (filtro.stock && !coincideStock(item, filtro.stock)) return false;
     if (q) {
       const enDescripcion = (item.descripcion ?? "").toLowerCase().includes(q);
@@ -216,6 +220,20 @@ export function contarPorLinea(
   return conteo;
 }
 
+/** Cuántos ítems hay por sección, con el resto de los filtros aplicados (ignora el de sección). */
+export function contarPorSeccion(
+  items: ItemCatalogo[],
+  filtro: Omit<FiltroCatalogo, "seccion">
+): { total: number; porSeccion: Partial<Record<SeccionId, number>> } {
+  const porSeccion: Partial<Record<SeccionId, number>> = {};
+  const coincidentes = filtrarCatalogo(items, { ...filtro, seccion: null });
+  for (const item of coincidentes) {
+    const sec = seccionDeItem(item);
+    porSeccion[sec] = (porSeccion[sec] ?? 0) + 1;
+  }
+  return { total: coincidentes.length, porSeccion };
+}
+
 export interface GrupoListado {
   /** Identificador estable del bloque (para las keys). */
   id: string;
@@ -224,17 +242,20 @@ export interface GrupoListado {
 }
 
 /**
- * Los bloques del listado. Las piscinas completas van primero y cada modelo en
- * su bloque, de menor a mayor tamaño ("Indusplast · Caribe", "Hormigón"); lo
- * demás (opcionales, cercos...) sigue agrupado por categoría. Así las piscinas
- * ya no quedan mezcladas con kits y opcionales dentro de "Piscinas".
- *
- * Recibe la lista ya ordenada (`ordenarCatalogo`) y no reordena el resto.
+ * Los bloques del listado, en el orden en que se consulta: piscinas de hormigón,
+ * piscinas de fibra Indusplast (un bloque por modelo, de menor a mayor tamaño),
+ * cobertores, cercos, climatización, revestimientos y, al final, lo demás
+ * (agrupado por categoría). Dentro de cada bloque, el orden de `ordenarCatalogo`.
  */
 export function agruparParaListado(items: ItemCatalogo[]): GrupoListado[] {
   const grupos: GrupoListado[] = [];
+  const de = (sec: SeccionId) => items.filter((i) => seccionDeItem(i) === sec);
+  const porTamano = (a: ItemCatalogo, b: ItemCatalogo) => ordenMedida(a.clave) - ordenMedida(b.clave);
 
-  const fibra = items.filter((i) => lineaDeClave(i.clave) === "indusplast");
+  const hormigon = de("hormigon");
+  if (hormigon.length > 0) grupos.push({ id: "hormigon", titulo: ETIQUETA_SECCION.hormigon, items: [...hormigon].sort(porTamano) });
+
+  const fibra = de("indusplast");
   const modelos = [...new Set(fibra.map((i) => modeloIndusplast(i.clave) ?? "Otros modelos"))];
   const posicion = (m: string) => {
     const k = MODELOS_INDUSPLAST.indexOf(m.toLowerCase() as (typeof MODELOS_INDUSPLAST)[number]);
@@ -243,22 +264,24 @@ export function agruparParaListado(items: ItemCatalogo[]): GrupoListado[] {
   modelos.sort((a, b) => posicion(a) - posicion(b));
   for (const modelo of modelos) {
     const delModelo = fibra.filter((i) => (modeloIndusplast(i.clave) ?? "Otros modelos") === modelo);
-    grupos.push({ id: `indusplast-${modelo}`, titulo: `Indusplast · ${modelo}`, items: [...delModelo].sort((a, b) => ordenMedida(a.clave) - ordenMedida(b.clave)) });
+    grupos.push({ id: `indusplast-${modelo}`, titulo: `Indusplast · ${modelo}`, items: [...delModelo].sort(porTamano) });
   }
 
-  const hormigon = items.filter((i) => lineaDeClave(i.clave) === "hormigon");
-  if (hormigon.length > 0) {
-    grupos.push({ id: "hormigon", titulo: "Hormigón · precio de lista", items: [...hormigon].sort((a, b) => ordenMedida(a.clave) - ordenMedida(b.clave)) });
-  }
-
-  for (const g of agruparPorCategoria(items.filter((i) => !lineaDeClave(i.clave)))) {
-    grupos.push({ id: `categoria-${g.categoria}`, titulo: g.categoria, items: g.items });
+  for (const sec of SECCIONES) {
+    if (sec.id === "hormigon" || sec.id === "indusplast") continue;
+    const delas = de(sec.id);
+    if (delas.length === 0) continue;
+    if (sec.id !== "otros") {
+      grupos.push({ id: sec.id, titulo: sec.etiqueta, items: delas });
+      continue;
+    }
+    for (const g of agruparPorCategoria(delas)) grupos.push({ id: `otros-${g.categoria}`, titulo: `Otros · ${g.categoria}`, items: g.items });
   }
   return grupos;
 }
 
 /** Cuántos ítems hay por disponibilidad, con el resto de los filtros aplicados
- *  (ignora el de stock, como `contarPorCategoria` ignora el de categoría). */
+ *  (ignora el de stock, como `contarPorSeccion` ignora el de sección). */
 export function contarPorStock(items: ItemCatalogo[], filtro: Omit<FiltroCatalogo, "stock">): Record<FiltroStock, number> {
   const conteo: Record<FiltroStock, number> = { disponible: 0, agotado: 0, "sin-control": 0 };
   for (const item of filtrarCatalogo(items, { ...filtro, stock: null })) {

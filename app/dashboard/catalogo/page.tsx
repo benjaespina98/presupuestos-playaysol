@@ -4,22 +4,19 @@ import { useEffect, useMemo, useState } from "react";
 import { guardarStockItem, listarItemsCatalogo } from "@/lib/catalogo";
 import {
   agruparParaListado,
-  contarPorCategoria,
-  contarPorLinea,
+  contarPorSeccion,
   contarPorStock,
   filtrarCatalogo,
   llevaStock,
+  ordenarCatalogo,
   resumenStock,
+  textoParaCopiar,
   textoStock,
   type FiltroStock,
-  type VistaCatalogo,
-  ordenarCatalogo,
-  textoParaCopiar,
   type ItemCatalogo,
 } from "@/lib/domain/catalogo/item";
-import type { Categoria } from "@/lib/domain/catalogo/categorias";
+import type { SeccionId } from "@/lib/domain/catalogo/secciones";
 import { nombreCortoLista } from "@/lib/domain/catalogo/listas";
-import type { TipoCalculadora } from "@/lib/presupuestos";
 import { formatARS } from "@/lib/format/ars";
 import { formatFechaRelativa, formatFechaCompleta } from "@/lib/format/fecha";
 import { copiarAlPortapapeles } from "@/lib/clipboard";
@@ -30,15 +27,21 @@ import { FiltrosCatalogo } from "@/components/catalogo/FiltrosCatalogo";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
 import { EditarItemModal } from "@/components/catalogo/EditarItemModal";
 import { CrearItemModal } from "@/components/catalogo/CrearItemModal";
-import { TITULOS_TIPO } from "@/components/catalogo/titulos-tipo";
+
+/**
+ * Las columnas de la lista, IGUALES en todos los bloques (por eso los precios
+ * quedan uno debajo del otro de arriba a abajo): Producto · Precio · Unidad ·
+ * Stock · Actualizado · acción. Sin la columna de stock cuando ningún ítem lo
+ * lleva. Son anchos fijos (rem) y el producto toma el resto.
+ */
+const COLUMNAS_CON_STOCK = "md:grid-cols-[minmax(0,1fr)_9.5rem_4.5rem_10rem_6.5rem_6.5rem]";
+const COLUMNAS_SIN_STOCK = "md:grid-cols-[minmax(0,1fr)_9.5rem_4.5rem_6.5rem_6.5rem]";
 
 export default function CatalogoPage() {
   const [items, setItems] = useState<ItemCatalogo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
-  const [categoria, setCategoria] = useState<Categoria | "">("");
-  const [tipo, setTipo] = useState<TipoCalculadora | "">("");
-  const [linea, setLinea] = useState<VistaCatalogo | "">("");
+  const [seccion, setSeccion] = useState<SeccionId | "">("");
   const [stock, setStock] = useState<FiltroStock | "">("");
   const [incluirInactivos, setIncluirInactivos] = useState(false);
   const [errorStock, setErrorStock] = useState<string | null>(null);
@@ -62,47 +65,30 @@ export default function CatalogoPage() {
 
   const visibles = useMemo(() => {
     if (!items) return null;
-    return ordenarCatalogo(
-      filtrarCatalogo(items, { busqueda, categoria: categoria || null,
-        tipo: tipo || null,
-        linea: linea || null,
-        stock: stock || null,
-        incluirInactivos,
-      })
-    );
-  }, [items, busqueda, categoria, tipo, linea, stock, incluirInactivos]);
+    return ordenarCatalogo(filtrarCatalogo(items, { busqueda, seccion: seccion || null, stock: stock || null, incluirInactivos }));
+  }, [items, busqueda, seccion, stock, incluirInactivos]);
 
   const conteos = useMemo(
-    () => contarPorCategoria(items ?? [], { busqueda, tipo: tipo || null, linea: linea || null, stock: stock || null, incluirInactivos }),
-    [items, busqueda, tipo, linea, stock, incluirInactivos]
+    () => contarPorSeccion(items ?? [], { busqueda, stock: stock || null, incluirInactivos }),
+    [items, busqueda, stock, incluirInactivos]
   );
   const conteosStock = useMemo(
-    () => contarPorStock(items ?? [], { busqueda, categoria: categoria || null, tipo: tipo || null, linea: linea || null, incluirInactivos }),
-    [items, busqueda, categoria, tipo, linea, incluirInactivos]
+    () => contarPorStock(items ?? [], { busqueda, seccion: seccion || null, incluirInactivos }),
+    [items, busqueda, seccion, incluirInactivos]
   );
   // El stock total del local (de los ítems activos que lo llevan), sin filtros.
   const resumen = useMemo(() => resumenStock((items ?? []).filter((i) => i.activo)), [items]);
-  const conteosLinea = useMemo(
-    () => contarPorLinea(items ?? [], { busqueda, categoria: categoria || null, tipo: tipo || null, stock: stock || null, incluirInactivos }),
-    [items, busqueda, categoria, tipo, stock, incluirInactivos]
-  );
 
-  // Un bloque por categoría en vez de repetir la columna "Categoría" en cada
-  // fila — con el catálogo lleno (varias decenas de ítems) es mucho más
-  // rápido encontrar algo escaneando encabezados que leyendo una tabla plana.
+  // Un bloque por modelo / sección, para escanear por encabezados en vez de una tabla plana.
   const grupos = useMemo(() => (visibles ? agruparParaListado(visibles) : []), [visibles]);
 
-  // La columna "Calculadora" sobra cuando ya se filtró por una (o se miran sólo piscinas).
-  const mostrarTipo = !tipo && linea !== "indusplast" && linea !== "hormigon";
-  const mostrarEstado = incluirInactivos && !modoConsulta;
-
-  const hayFiltros = !!(busqueda || categoria || tipo || linea || stock || incluirInactivos);
+  const hayStockEnCatalogo = resumen.modelos > 0;
+  const columnas = hayStockEnCatalogo ? COLUMNAS_CON_STOCK : COLUMNAS_SIN_STOCK;
+  const hayFiltros = !!(busqueda || seccion || stock || incluirInactivos);
 
   function limpiarFiltros() {
     setBusqueda("");
-    setCategoria("");
-    setTipo("");
-    setLinea("");
+    setSeccion("");
     setStock("");
     setIncluirInactivos(false);
   }
@@ -158,37 +144,33 @@ export default function CatalogoPage() {
         titulo="Precios de venta"
         descripcion="Lo que se le cobra al cliente en cada presupuesto: precios y descripciones compartidos por todo el equipo."
       >
-          <a
-            href={PLANILLA_COSTOS_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex min-h-11 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-[#1B3A5C] shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50"
+        <a
+          href={PLANILLA_COSTOS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex min-h-11 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-[#1B3A5C] shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50"
+        >
+          <IconTable className="h-4 w-4" />
+          Planilla de costos
+        </a>
+        {!modoConsulta && (
+          <button
+            type="button"
+            onClick={() => setCreando(true)}
+            className="flex min-h-11 items-center gap-1.5 rounded-lg bg-[#1B3A5C] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#142c46]"
           >
-            <IconTable className="h-4 w-4" />
-            Planilla de costos
-          </a>
-          {!modoConsulta && (
-            <button
-              type="button"
-              onClick={() => setCreando(true)}
-              className="flex min-h-11 items-center gap-1.5 rounded-lg bg-[#1B3A5C] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#142c46]"
-            >
-              <IconPlus className="h-4 w-4" />
-              Agregar ítem
-            </button>
-          )}
+            <IconPlus className="h-4 w-4" />
+            Agregar ítem
+          </button>
+        )}
       </EncabezadoPagina>
 
       <FiltrosCatalogo
         busqueda={busqueda}
         onBusqueda={setBusqueda}
-        categoria={categoria}
-        onCategoria={setCategoria}
-        tipo={tipo}
-        onTipo={setTipo}
-        linea={linea}
-        onLinea={setLinea}
-        conteosLinea={conteosLinea}
+        seccion={seccion}
+        onSeccion={setSeccion}
+        conteos={conteos}
         stock={stock}
         onStock={setStock}
         conteosStock={conteosStock}
@@ -196,7 +178,6 @@ export default function CatalogoPage() {
         onIncluirInactivos={setIncluirInactivos}
         modoConsulta={modoConsulta}
         onModoConsulta={setModoConsulta}
-        conteos={conteos}
         hayFiltros={hayFiltros}
         onLimpiar={limpiarFiltros}
       />
@@ -214,7 +195,7 @@ export default function CatalogoPage() {
         </p>
       )}
 
-      {resumen.modelos > 0 && (
+      {hayStockEnCatalogo && (
         <p className="mb-3 rounded-md bg-[#EEF2F6] px-4 py-2.5 text-sm text-gray-700">
           <span className="font-semibold text-[#1B3A5C]">Stock · {LOCAL_STOCK}:</span>{" "}
           {resumen.unidades === 0
@@ -241,152 +222,52 @@ export default function CatalogoPage() {
       {!error && visibles && visibles.length === 0 && (
         <div className="rounded-lg border border-dashed border-gray-300 px-4 py-10 text-center">
           <p className="text-sm text-gray-500">
-            {hayFiltros
-              ? "Ningún ítem coincide con el filtro."
-              : "Todavía no hay ítems cargados en el catálogo."}
+            {hayFiltros ? "Ningún ítem coincide con el filtro." : "Todavía no hay ítems cargados en el catálogo."}
           </p>
         </div>
       )}
 
       {!error && visibles && visibles.length > 0 && (
         <>
-          <p className="mb-3 text-xs text-gray-500">
+          <p className="mb-2 text-xs text-gray-500">
             {visibles.length}
             {visibles.length === 1 ? " ítem" : " ítems"}
             {hayFiltros && items ? ` de ${items.length}` : ""}
           </p>
 
-          <div className="space-y-5">
-            {grupos.map((grupo) => (
-              <div key={grupo.id}>
-                {/* Desktop / tablet: tabla por categoría */}
-                <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm sm:block">
-                  <CategoriaHeader categoria={grupo.titulo} cantidad={grupo.items.length} />
-                  <table className="w-full text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-200 bg-gray-50 text-gray-700">
-                        <th className="px-4 py-3 font-medium">Producto</th>
-                        {mostrarTipo && <th className="px-4 py-3 font-medium">Calculadora</th>}
-                        <th className="w-44 px-4 py-3 text-right font-medium">Precio</th>
-                        <th className="w-40 px-4 py-3 text-center font-medium">Stock</th>
-                        <th className="w-32 px-4 py-3 font-medium">Actualizado</th>
-                        {mostrarEstado && <th className="px-4 py-3 font-medium">Estado</th>}
-                        <th className="w-24 px-4 py-3 font-medium"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {grupo.items.map((item) => (
-                        <tr
-                          key={item.id}
-                          className={`border-b border-gray-100 transition-colors last:border-0 hover:bg-gray-50/70 ${item.activo ? "" : "opacity-60"}`}
-                        >
-                          <td className="px-4 py-3 text-gray-900">
-                            <ItemDescripcion item={item} />
-                          </td>
-                          {mostrarTipo && (
-                            <td className="px-4 py-3">
-                              <span className="inline-flex rounded-md bg-[#EEF2F6] px-2 py-0.5 text-xs font-medium text-[#1B3A5C]">
-                                {TITULOS_TIPO[item.tipo]}
-                              </span>
-                            </td>
-                          )}
-                          <td className="px-4 py-3 text-right tabular-nums text-gray-700">
-                            <PrecioItem item={item} />
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <StockItem item={item} editable={!modoConsulta} onCambiar={cambiarStock} />
-                          </td>
-                          <td className="px-4 py-3 text-gray-500">
-                            <FechaActualizacion updatedAt={item.updated_at} />
-                          </td>
-                          {mostrarEstado && (
-                            <td className="px-4 py-3">
-                              <EstadoBadge activo={item.activo} />
-                            </td>
-                          )}
-                          <td className="px-4 py-3 text-right">
-                            {modoConsulta ? (
-                              <button
-                                type="button"
-                                onClick={() => copiarItem(item)}
-                                className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
-                              >
-                                <IconCopy className="h-4 w-4" />
-                                {copiadoId === item.id ? "¡Copiado!" : "Copiar"}
-                              </button>
-                            ) : (
-                              <div className="inline-flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => abrirEdicion(item)}
-                                  className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
-                                >
-                                  <IconEdit className="h-4 w-4" />
-                                  Editar
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+          {/* Encabezado de columnas único, pegado debajo de los filtros: las columnas son las mismas en todos los bloques. */}
+          <div
+            aria-hidden="true"
+            className={`mb-2 hidden rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-xs font-medium uppercase tracking-wide text-gray-500 md:sticky md:top-[var(--catalogo-barra,0px)] md:z-10 md:grid md:items-center md:gap-x-4 ${columnas}`}
+          >
+            <span>Producto</span>
+            <span className="text-right">Precio</span>
+            <span>Unidad</span>
+            {hayStockEnCatalogo && <span className="text-center">Stock</span>}
+            <span>Actualizado</span>
+            <span />
+          </div>
 
-                {/* Mobile: tarjetas por categoría */}
-                <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm sm:hidden">
-                  <CategoriaHeader categoria={grupo.titulo} cantidad={grupo.items.length} />
-                  <div className="flex flex-col divide-y divide-gray-100 p-3">
-                    {grupo.items.map((item) => (
-                      <div key={item.id} className="pt-3 first:pt-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <ItemDescripcion item={item} />
-                            {mostrarTipo && !nombreCortoLista(item.clave) && <p className="mt-0.5 text-xs text-gray-400">{TITULOS_TIPO[item.tipo]}</p>}
-                          </div>
-                          {!item.activo && !modoConsulta && <EstadoBadge activo={false} />}
-                        </div>
-                        <div className="mt-2 flex items-center justify-between">
-                          <div>
-                            <p className="text-base font-semibold text-gray-900">
-                              <PrecioItem item={item} />
-                            </p>
-                            <p className="mt-0.5 text-xs text-gray-400">
-                              <FechaActualizacion updatedAt={item.updated_at} />
-                            </p>
-                            {llevaStock(item) && (
-                              <div className="mt-1.5">
-                                <StockItem item={item} editable={!modoConsulta} onCambiar={cambiarStock} />
-                              </div>
-                            )}
-                          </div>
-                          {modoConsulta ? (
-                            <button
-                              type="button"
-                              onClick={() => copiarItem(item)}
-                              className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
-                            >
-                              <IconCopy className="h-4 w-4" />
-                              {copiadoId === item.id ? "¡Copiado!" : "Copiar"}
-                            </button>
-                          ) : (
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => abrirEdicion(item)}
-                                className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
-                              >
-                                <IconEdit className="h-4 w-4" />
-                                Editar
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+          <div className="space-y-4">
+            {grupos.map((grupo) => (
+              <section key={grupo.id} aria-label={grupo.titulo} className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+                <CategoriaHeader titulo={grupo.titulo} cantidad={grupo.items.length} />
+                <ul className="divide-y divide-gray-100">
+                  {grupo.items.map((item) => (
+                    <FilaItem
+                      key={item.id}
+                      item={item}
+                      columnas={columnas}
+                      conStock={hayStockEnCatalogo}
+                      modoConsulta={modoConsulta}
+                      copiado={copiadoId === item.id}
+                      onEditar={() => abrirEdicion(item)}
+                      onCopiar={() => copiarItem(item)}
+                      onCambiarStock={cambiarStock}
+                    />
+                  ))}
+                </ul>
+              </section>
             ))}
           </div>
         </>
@@ -407,18 +288,90 @@ export default function CatalogoPage() {
   );
 }
 
-/** Encabezado de cada bloque de categoría — reemplaza a la columna
- *  "Categoría" que antes se repetía en cada fila. La barra navy es sólo
- *  ritmo visual (misma paleta que el resto del portal), no un código de
- *  color por categoría: con 9 categorías posibles, un color distinto por
- *  cada una sería más ruido que ayuda. */
-function CategoriaHeader({ categoria, cantidad }: { categoria: string; cantidad: number }) {
+/** Encabezado de cada bloque (un modelo, una sección). */
+function CategoriaHeader({ titulo, cantidad }: { titulo: string; cantidad: number }) {
   return (
     <div className="flex items-center gap-2.5 border-b border-gray-200 bg-[#F4F8F9] px-4 py-2.5">
       <span aria-hidden="true" className="h-4 w-1 shrink-0 rounded-full bg-[#1B3A5C]" />
-      <h3 className="text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">{categoria}</h3>
+      <h3 className="text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">{titulo}</h3>
       <span className="text-xs text-gray-400">({cantidad})</span>
     </div>
+  );
+}
+
+/**
+ * Una fila de la lista. En pantallas medianas y grandes es una fila de la
+ * grilla de columnas fijas; en el celular, una tarjeta: nombre y acción arriba,
+ * precio y stock abajo.
+ */
+function FilaItem({
+  item,
+  columnas,
+  conStock,
+  modoConsulta,
+  copiado,
+  onEditar,
+  onCopiar,
+  onCambiarStock,
+}: {
+  item: ItemCatalogo;
+  columnas: string;
+  conStock: boolean;
+  modoConsulta: boolean;
+  copiado: boolean;
+  onEditar: () => void;
+  onCopiar: () => void;
+  onCambiarStock: (item: ItemCatalogo, nuevo: number) => void;
+}) {
+  return (
+    <li
+      className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-3 transition-colors hover:bg-gray-50/70 md:gap-x-4 md:gap-y-0 md:py-2.5 ${columnas} ${item.activo ? "" : "opacity-60"}`}
+    >
+      <div className="col-start-1 row-start-1 min-w-0 md:col-auto md:row-auto">
+        <ItemDescripcion item={item} />
+      </div>
+
+      {/* Precio y unidad: en el celular van juntos; desde md, cada uno en su columna (el número alineado a la derecha). */}
+      <p className="col-start-1 row-start-2 flex items-baseline gap-1.5 md:contents">
+        <span className="tabular-nums md:text-right">
+          <PrecioItem item={item} />
+        </span>
+        <span className="text-sm text-gray-400">{item.precio !== null && item.unidad ? `/ ${item.unidad}` : ""}</span>
+      </p>
+
+      {conStock && (
+        <div className="col-start-1 row-start-3 md:col-auto md:row-auto md:text-center">
+          <StockItem item={item} editable={!modoConsulta} onCambiar={onCambiarStock} />
+        </div>
+      )}
+
+      <p className="col-start-1 row-start-4 text-xs text-gray-400 md:col-auto md:row-auto md:text-sm md:text-gray-500">
+        <span className="md:hidden">Actualizado </span>
+        <FechaActualizacion updatedAt={item.updated_at} />
+      </p>
+
+      <div className="col-start-2 row-start-1 text-right md:col-auto md:row-auto">
+        {modoConsulta ? (
+          <button
+            type="button"
+            onClick={onCopiar}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+          >
+            <IconCopy className="h-4 w-4" />
+            {copiado ? "¡Copiado!" : "Copiar"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onEditar}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+          >
+            <IconEdit className="h-4 w-4" />
+            Editar
+          </button>
+        )}
+      </div>
+    </li>
   );
 }
 
@@ -426,29 +379,36 @@ function ItemDescripcion({ item }: { item: ItemCatalogo }) {
   // Las piscinas de lista se leen por modelo y medida ("Caribe 550"); lo que
   // sigue a la raya larga ("contado, kit estándar instalado") va como detalle.
   const corto = nombreCortoLista(item.clave);
+  const baja = !item.activo && (
+    <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 align-middle text-[11px] font-medium text-gray-500">De baja</span>
+  );
   if (corto) {
     const detalle = item.descripcion?.split("—")[1]?.trim();
     return (
       <>
-        <p className="font-semibold">{corto}</p>
+        <p className="font-semibold text-gray-900">
+          {corto}
+          {baja}
+        </p>
         {detalle && <p className="text-xs text-gray-500">{detalle.charAt(0).toUpperCase() + detalle.slice(1)}</p>}
       </>
     );
   }
   return (
     <>
-      <p className="font-medium">{item.descripcion || item.clave}</p>
+      <p className="font-medium text-gray-900">
+        {item.descripcion || item.clave}
+        {baja}
+      </p>
       {item.descripcion && <p className="text-xs text-gray-400">{item.clave}</p>}
     </>
   );
 }
 
 /**
- * Distingue de un vistazo un precio cerrado (listo para usar tal cual en un
- * presupuesto) de uno "a cotizar" (necesita ajuste manual antes de mandarlo).
- * El badge ámbar es la señal fuerte porque es la EXCEPCIÓN: la mayoría de
- * las filas tiene precio cerrado, así que no vale la pena un badge en cada
- * una — el número solo ya comunica "esto está listo".
+ * El precio, siempre con el mismo estilo (negrita, números tabulares, alineado a
+ * la derecha en su columna). "A cotizar" (sin precio fijo) lleva su propia
+ * etiqueta ámbar: es la excepción que pide ajuste manual antes de mandarlo.
  */
 function PrecioItem({ item }: { item: ItemCatalogo }) {
   if (item.precio === null) {
@@ -458,19 +418,10 @@ function PrecioItem({ item }: { item: ItemCatalogo }) {
       </span>
     );
   }
-  return (
-    <span className="whitespace-nowrap font-medium text-gray-900">
-      {formatARS(item.precio)}
-      {item.unidad && <span className="font-normal text-gray-400"> / {item.unidad}</span>}
-    </span>
-  );
+  return <span className="whitespace-nowrap font-semibold text-gray-900">{formatARS(item.precio)}</span>;
 }
 
-/** Trazabilidad mínima: hace cuánto se tocó el precio/descripción de este
- *  ítem, para poder confiar (o desconfiar) en que no está desactualizado.
- *  Sólo la fecha — "quién" queda para una iteración futura (evaluado: sumar
- *  el autor exige un join a `perfiles` fila por fila, más complejidad de la
- *  que vale la pena para esta pasada). */
+/** Trazabilidad mínima: hace cuánto se tocó el precio/descripción de este ítem. */
 function FechaActualizacion({ updatedAt }: { updatedAt: string }) {
   const relativa = formatFechaRelativa(updatedAt);
   if (!relativa) return null;
@@ -521,65 +472,23 @@ function StockItem({
   );
 }
 
-function EstadoBadge({ activo }: { activo: boolean }) {
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
-        activo ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"
-      }`}
-    >
-      {activo ? "Activo" : "De baja"}
-    </span>
-  );
-}
-
 function CatalogoSkeleton() {
   return (
-    <div>
-      <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm sm:block">
-        <div className="h-9 animate-pulse border-b border-gray-200 bg-gray-100" />
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-gray-200 bg-gray-50 text-gray-700">
-              <th className="px-4 py-3 font-medium">Producto</th>
-              <th className="px-4 py-3 font-medium">Calculadora</th>
-              <th className="px-4 py-3 font-medium">Precio</th>
-              <th className="px-4 py-3 font-medium">Stock</th>
-              <th className="px-4 py-3 font-medium">Actualizado</th>
-              <th className="px-4 py-3 font-medium">Estado</th>
-              <th className="px-4 py-3 font-medium"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {[0, 1, 2, 3, 4, 5].map((i) => (
-              <tr key={i} className="animate-pulse border-b border-gray-100 last:border-0">
-                <td className="px-4 py-3"><div className="h-3.5 w-40 rounded bg-gray-200" /></td>
-                <td className="px-4 py-3"><div className="h-3.5 w-20 rounded bg-gray-200" /></td>
-                <td className="px-4 py-3"><div className="h-3.5 w-16 rounded bg-gray-200" /></td>
-                <td className="px-4 py-3"><div className="h-3.5 w-12 rounded bg-gray-100" /></td>
-                <td className="px-4 py-3"><div className="h-3.5 w-16 rounded bg-gray-100" /></td>
-                <td className="px-4 py-3"><div className="h-3.5 w-14 rounded bg-gray-200" /></td>
-                <td className="px-4 py-3"><div className="h-3.5 w-14 rounded bg-gray-100" /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="flex flex-col gap-3 sm:hidden">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="animate-pulse rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="flex items-start justify-between gap-2">
+    <div className="space-y-4" aria-hidden="true">
+      {[0, 1].map((g) => (
+        <div key={g} className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+          <div className="h-9 animate-pulse border-b border-gray-200 bg-gray-100" />
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex animate-pulse items-center justify-between gap-4 border-b border-gray-100 px-4 py-3.5 last:border-0">
               <div className="space-y-2">
-                <div className="h-4 w-36 rounded bg-gray-200" />
-                <div className="h-3 w-24 rounded bg-gray-200" />
+                <div className="h-3.5 w-40 rounded bg-gray-200" />
+                <div className="h-3 w-24 rounded bg-gray-100" />
               </div>
-              <div className="h-5 w-14 rounded-full bg-gray-100" />
+              <div className="h-3.5 w-24 rounded bg-gray-200" />
             </div>
-            <div className="mt-3 h-4 w-20 rounded bg-gray-100" />
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ))}
     </div>
   );
 }

@@ -333,16 +333,16 @@ describe("piscinas de lista en el listado", () => {
   it("las piscinas van primero, un bloque por modelo y ordenadas por tamaño; lo demás por categoría", () => {
     const grupos = agruparParaListado(ordenarCatalogo(todos));
     expect(grupos.map((g) => g.titulo)).toEqual([
+      "Piscinas de hormigón",
       "Indusplast · Racionalista",
       "Indusplast · Caribe",
-      "Hormigón · precio de lista",
-      "Piscinas",
       "Cercos",
+      "Otros · Piscinas",
     ]);
-    expect(grupos[0].items.map((i) => i.clave)).toEqual(["indusplast_racionalista_400", "indusplast_racionalista_450"]);
-    expect(grupos[1].items.map((i) => i.clave)).toEqual(["indusplast_caribe_550", "indusplast_caribe_650"]);
-    expect(grupos[2].items.map((i) => i.clave)).toEqual(["lista_hormigon_6x3", "lista_hormigon_6_5x2.5", "lista_hormigon_7x3_50"]);
-    expect(grupos[3].items.map((i) => i.id)).toEqual(["kit"]); // el kit ya no se mezcla con las piscinas
+    expect(grupos[0].items.map((i) => i.clave)).toEqual(["lista_hormigon_6x3", "lista_hormigon_6_5x2.5", "lista_hormigon_7x3_50"]);
+    expect(grupos[1].items.map((i) => i.clave)).toEqual(["indusplast_racionalista_400", "indusplast_racionalista_450"]);
+    expect(grupos[2].items.map((i) => i.clave)).toEqual(["indusplast_caribe_550", "indusplast_caribe_650"]);
+    expect(grupos[4].items.map((i) => i.id)).toEqual(["kit"]); // el kit ya no se mezcla con las piscinas
   });
 
   it("filtra por clase: Indusplast, hormigón u otros", () => {

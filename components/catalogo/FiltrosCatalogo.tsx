@@ -1,23 +1,17 @@
 "use client";
 
-import { CATEGORIAS, type Categoria } from "@/lib/domain/catalogo/categorias";
-import type { FiltroStock, VistaCatalogo } from "@/lib/domain/catalogo/item";
-import type { TipoCalculadora } from "@/lib/presupuestos";
+import { SECCIONES, type SeccionId } from "@/lib/domain/catalogo/secciones";
+import type { FiltroStock } from "@/lib/domain/catalogo/item";
 import { IconSearch } from "@/components/icons";
 import { BarraFiltros } from "./BarraFiltros";
-import { TITULOS_TIPO } from "./titulos-tipo";
 
 export interface FiltrosCatalogoProps {
   busqueda: string;
   onBusqueda: (v: string) => void;
-  categoria: Categoria | "";
-  onCategoria: (v: Categoria | "") => void;
-  tipo: TipoCalculadora | "";
-  onTipo: (v: TipoCalculadora | "") => void;
-  linea: VistaCatalogo | "";
-  onLinea: (v: VistaCatalogo | "") => void;
-  /** Ítems por clase (Indusplast / Hormigón / otros), con el resto de los filtros aplicados. */
-  conteosLinea: Partial<Record<VistaCatalogo, number>>;
+  seccion: SeccionId | "";
+  onSeccion: (v: SeccionId | "") => void;
+  /** Cuántos ítems hay por sección con el resto de los filtros aplicados. */
+  conteos: { total: number; porSeccion: Partial<Record<SeccionId, number>> };
   stock: FiltroStock | "";
   onStock: (v: FiltroStock | "") => void;
   /** Ítems por disponibilidad; si ninguno lleva stock, el filtro se oculta. */
@@ -26,8 +20,6 @@ export interface FiltrosCatalogoProps {
   onIncluirInactivos: (v: boolean) => void;
   modoConsulta: boolean;
   onModoConsulta: (v: boolean) => void;
-  /** Cuántos ítems hay por categoría con el resto de los filtros aplicados. */
-  conteos: { total: number; porCategoria: Partial<Record<Categoria, number>> };
   hayFiltros: boolean;
   onLimpiar: () => void;
 }
@@ -35,26 +27,28 @@ export interface FiltrosCatalogoProps {
 export const CLASE_SELECT =
   "min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 sm:w-auto";
 
+const FILA_CHIPS =
+  "-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0";
+
 /**
- * Filtros del Catálogo de precios, en dos partes:
+ * Filtros del Catálogo de precios, pensados para encontrar rápido lo que más se
+ * consulta. En la barra fija (se queda arriba al bajar):
  *
- *  1. La barra fija (se queda arriba al bajar): búsqueda, calculadora, línea de
- *     piscina completa y las categorías en UNA sola línea que se desliza.
- *  2. Debajo, sin quedarse fija: los interruptores ("dados de baja", "modo
- *     consulta") y "Limpiar filtros".
+ *  1. La búsqueda.
+ *  2. Las secciones como accesos directos de un toque: piscinas de hormigón,
+ *     piscinas de fibra Indusplast, cobertores, cercos, climatización,
+ *     revestimientos y otros, cada una con su cantidad.
+ *  3. El stock (sólo si algún ítem lo lleva): con stock / agotado / a pedido.
  *
- * Es controlada: el estado vive en la página (que además lo usa para filtrar).
+ * Debajo, sin quedarse fija: los interruptores ("dados de baja", "modo
+ * consulta") y "Limpiar filtros". Es controlada: el estado vive en la página.
  */
 export function FiltrosCatalogo({
   busqueda,
   onBusqueda,
-  categoria,
-  onCategoria,
-  tipo,
-  onTipo,
-  linea,
-  onLinea,
-  conteosLinea,
+  seccion,
+  onSeccion,
+  conteos,
   stock,
   onStock,
   conteosStock,
@@ -62,105 +56,66 @@ export function FiltrosCatalogo({
   onIncluirInactivos,
   modoConsulta,
   onModoConsulta,
-  conteos,
   hayFiltros,
   onLimpiar,
 }: FiltrosCatalogoProps) {
-  // Sólo las categorías con algo adentro (más la elegida, para poder des-elegirla).
-  const categoriasVisibles = CATEGORIAS.filter((c) => (conteos.porCategoria[c] ?? 0) > 0 || c === categoria);
+  // Sólo las secciones con algo adentro (más la elegida, para poder des-elegirla).
+  const seccionesVisibles = SECCIONES.filter((s) => (conteos.porSeccion[s.id] ?? 0) > 0 || s.id === seccion);
   const hayStock = conteosStock.disponible + conteosStock.agotado > 0 || stock !== "";
-  // "Qué ver" sólo aparece si hay piscinas completas cargadas.
-  const hayListas = (conteosLinea.indusplast ?? 0) + (conteosLinea.hormigon ?? 0) > 0 || linea === "indusplast" || linea === "hormigon";
-  const vistas = (
-    [
-      ["indusplast", "Piscinas Indusplast"],
-      ["hormigon", "Piscinas de hormigón"],
-      ["otros", "Opcionales y otros"],
-    ] as const
-  ).filter(([id]) => (conteosLinea[id] ?? 0) > 0 || id === linea);
-  const totalVistas = Object.values(conteosLinea).reduce((a, b) => a + (b ?? 0), 0);
-  // Las categorías no aplican a las piscinas de lista (todas son "Piscinas"): se ocultan al mirarlas.
-  const mostrarCategorias = linea !== "indusplast" && linea !== "hormigon";
 
   return (
     <>
       <BarraFiltros>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="relative min-w-0 flex-1">
-            <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={busqueda}
-              onChange={(e) => onBusqueda(e.target.value)}
-              placeholder="Buscar por nombre o clave..."
-              aria-label="Buscar en el catálogo"
-              className="min-h-11 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-10 text-sm text-gray-900 shadow-sm transition-shadow placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20"
-            />
-            {busqueda && (
-              <button
-                type="button"
-                onClick={() => onBusqueda("")}
-                aria-label="Limpiar búsqueda"
-                className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-lg leading-none text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-              >
-                ×
-              </button>
-            )}
-          </div>
-
-          <select value={tipo} onChange={(e) => onTipo(e.target.value as TipoCalculadora | "")} aria-label="Filtrar por calculadora" className={CLASE_SELECT}>
-            <option value="">Todas las calculadoras</option>
-            {(Object.keys(TITULOS_TIPO) as TipoCalculadora[]).map((t) => (
-              <option key={t} value={t}>
-                {TITULOS_TIPO[t]}
-              </option>
-            ))}
-          </select>
-
-
-          {hayStock && (
-            <select value={stock} onChange={(e) => onStock(e.target.value as FiltroStock | "")} aria-label="Filtrar por stock" className={CLASE_SELECT}>
-              <option value="">Stock: todo</option>
-              <option value="disponible">Con stock ({conteosStock.disponible})</option>
-              <option value="agotado">Agotado ({conteosStock.agotado})</option>
-              <option value="sin-control">Se pide a pedido ({conteosStock["sin-control"]})</option>
-            </select>
+        <div className="relative min-w-0">
+          <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={busqueda}
+            onChange={(e) => onBusqueda(e.target.value)}
+            placeholder="Buscar: Caribe 550, cerco, cobertor, climatización..."
+            aria-label="Buscar en el catálogo"
+            className="min-h-11 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-10 text-sm text-gray-900 shadow-sm transition-shadow placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20"
+          />
+          {busqueda && (
+            <button
+              type="button"
+              onClick={() => onBusqueda("")}
+              aria-label="Limpiar búsqueda"
+              className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-lg leading-none text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            >
+              ×
+            </button>
           )}
         </div>
 
-        {hayListas && (
-          <div
-            role="group"
-            aria-label="Filtrar por tipo de producto"
-            className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0"
-          >
-            <EtiquetaFila>Tipo</EtiquetaFila>
-            <Chip activo={linea === ""} onClick={() => onLinea("")} cantidad={totalVistas}>
-              Todo
-            </Chip>
-            {vistas.map(([id, etiqueta]) => (
-              <Chip key={id} activo={linea === id} onClick={() => onLinea(linea === id ? "" : id)} cantidad={conteosLinea[id] ?? 0}>
-                {etiqueta}
-              </Chip>
-            ))}
-          </div>
-        )}
-
-        {mostrarCategorias && <div
-          role="group"
-          aria-label="Filtrar por categoría"
-          className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0"
-        >
-          <EtiquetaFila>Rubro</EtiquetaFila>
-          <Chip activo={categoria === ""} onClick={() => onCategoria("")} cantidad={conteos.total}>
-            Todos
+        <div role="group" aria-label="Filtrar por sección" className={FILA_CHIPS}>
+          <Chip activo={seccion === ""} onClick={() => onSeccion("")} cantidad={conteos.total}>
+            Todo
           </Chip>
-          {categoriasVisibles.map((c) => (
-            <Chip key={c} activo={categoria === c} onClick={() => onCategoria(categoria === c ? "" : c)} cantidad={conteos.porCategoria[c] ?? 0}>
-              {c}
+          {seccionesVisibles.map((s) => (
+            <Chip key={s.id} activo={seccion === s.id} onClick={() => onSeccion(seccion === s.id ? "" : s.id)} cantidad={conteos.porSeccion[s.id] ?? 0}>
+              {s.etiqueta}
             </Chip>
           ))}
-        </div>}
+        </div>
+
+        {hayStock && (
+          <div role="group" aria-label="Filtrar por stock" className={FILA_CHIPS}>
+            <EtiquetaFila>Stock</EtiquetaFila>
+            <Chip activo={stock === ""} onClick={() => onStock("")} cantidad={conteosStock.disponible + conteosStock.agotado + conteosStock["sin-control"]}>
+              Todos
+            </Chip>
+            <Chip activo={stock === "disponible"} onClick={() => onStock(stock === "disponible" ? "" : "disponible")} cantidad={conteosStock.disponible}>
+              Con stock
+            </Chip>
+            <Chip activo={stock === "agotado"} onClick={() => onStock(stock === "agotado" ? "" : "agotado")} cantidad={conteosStock.agotado}>
+              Agotado
+            </Chip>
+            <Chip activo={stock === "sin-control"} onClick={() => onStock(stock === "sin-control" ? "" : "sin-control")} cantidad={conteosStock["sin-control"]}>
+              A pedido
+            </Chip>
+          </div>
+        )}
       </BarraFiltros>
 
       <div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-0.5">
@@ -184,9 +139,9 @@ export function FiltrosCatalogo({
   );
 }
 
-/** Rótulo al comienzo de una fila de chips, para que se entienda qué filtra cada una. */
+/** Rótulo al comienzo de una fila de chips, para que se entienda qué filtra. */
 function EtiquetaFila({ children }: { children: React.ReactNode }) {
-  return <span className="w-12 shrink-0 self-center text-[11px] font-semibold uppercase tracking-wide text-gray-400">{children}</span>;
+  return <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-gray-400">{children}</span>;
 }
 
 export function Chip({
