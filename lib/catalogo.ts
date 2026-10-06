@@ -37,6 +37,8 @@ export type CatalogoRow = {
   clave: string;
   precio: number | null;
   descripcion: string | null;
+  /** false = dado de baja desde la pantalla de Catálogo. */
+  activo?: boolean;
 };
 
 // Lee el catálogo compartido de un tipo. Es la contraparte de lectura de
@@ -44,15 +46,18 @@ export type CatalogoRow = {
 // cada -calc.js aplica estos valores sobre los defaults, para que los precios de
 // opcionales y los textos fijos/pie que otro usuario dejó como predeterminados se
 // vean en los presupuestos nuevos de TODOS (antes esta tabla solo se escribía).
+// Si la lectura falla TIRA, en vez de devolver []: con un catálogo vacío la
+// calculadora abría con todos los precios en $0 y sin avisar, y se podía
+// emitir un presupuesto en cero. Las páginas ya tienen un estado de error.
 export async function obtenerCatalogo(tipo: TipoCalculadora): Promise<CatalogoRow[]> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("catalogo_items")
-    .select("clave, precio, descripcion")
+    .select("clave, precio, descripcion, activo")
     .eq("tipo", tipo);
   if (error) {
     console.error("No se pudo leer el catálogo compartido", error);
-    return [];
+    throw new Error(`No se pudo leer el catálogo de precios: ${error.message}`);
   }
   return (data ?? []) as CatalogoRow[];
 }

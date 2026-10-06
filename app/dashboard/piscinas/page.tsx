@@ -53,7 +53,7 @@ function PiscinasContenido() {
       } catch (err) {
         if (!cancelado) {
           setError(
-            "No se pudo abrir ese presupuesto. Puede que lo hayan borrado, o que se haya cortado la conexión: " +
+            "No se pudo cargar la calculadora (catálogo de precios o presupuesto). Puede que se haya cortado la conexión o que el presupuesto ya no exista: " +
               (err instanceof Error ? err.message : String(err))
           );
         }

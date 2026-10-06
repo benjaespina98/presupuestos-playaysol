@@ -14,7 +14,7 @@ const { createClient } = vi.hoisted(() => ({ createClient: vi.fn() }));
 vi.mock("@/lib/supabase", () => ({ createClient }));
 
 function clienteFalso(overrides: {
-  select?: () => Promise<{ data: unknown; error: unknown }>;
+  select?: (...args: string[]) => unknown;
   update?: () => { eq: () => { select: () => Promise<{ data: unknown; error: unknown }> } };
   insert?: () => { select: () => { single: () => Promise<{ data: unknown; error: unknown }> } };
 }) {
@@ -301,5 +301,30 @@ describe("Lote 6 · guardas de seguridad de la pantalla de Catálogo", () => {
     const bloque = src.slice(src.indexOf("interface CambiosItemCatalogo"), src.indexOf("actualizarItemCatalogo"));
     expect(bloque).not.toMatch(/\btipo\s*:/);
     expect(bloque).not.toMatch(/\bclave\s*:/);
+  });
+});
+
+describe("obtenerCatalogo", () => {
+  it("si la lectura falla tira, en vez de devolver un catálogo vacío (que abriría la calculadora en $0)", async () => {
+    createClient.mockReturnValue(
+      clienteFalso({
+        select: () => ({
+          eq: () => Promise.resolve({ data: null, error: { code: "500", message: "boom" } }),
+        }),
+      })
+    );
+    const { obtenerCatalogo } = await import("./catalogo");
+
+    await expect(obtenerCatalogo("piscinas")).rejects.toThrow(/boom/);
+  });
+
+  it("trae el flag activo para que las calculadoras puedan respetar la baja", async () => {
+    const select = vi.fn(() => ({ eq: () => Promise.resolve({ data: [], error: null }) }));
+    createClient.mockReturnValue(clienteFalso({ select }));
+    const { obtenerCatalogo } = await import("./catalogo");
+
+    await obtenerCatalogo("piscinas");
+
+    expect(select).toHaveBeenCalledWith(expect.stringContaining("activo"));
   });
 });

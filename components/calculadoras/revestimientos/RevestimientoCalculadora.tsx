@@ -11,6 +11,7 @@ import type { PresupuestoLeido } from "@/lib/domain/presupuesto/adaptadores";
 import { guardarPresupuesto, actualizarPresupuesto, subirFotoPresupuesto } from "@/lib/presupuestos";
 import { formatARS } from "@/lib/format/ars";
 import type { CatalogoRow } from "@/lib/catalogo";
+import { disponibleEnCalculadora } from "@/lib/domain/catalogo/item";
 import { esTextoCompartido } from "@/lib/domain/catalogo/categorias";
 import { adicionalesDesdeLineas } from "@/lib/domain/presupuesto/formulario";
 import { leerTextosCompartidos, type TextosCompartidos } from "@/lib/documentos/textosCompartidos";
@@ -42,12 +43,12 @@ function porM2DeClave(clave: string): boolean {
   return !CLAVES_POR_OBRA.has(clave);
 }
 
-function formularioDesdeCatalogo(catalogo: CatalogoRow[]): RevestimientoForm {
+function formularioDesdeCatalogo(catalogo: CatalogoRow[], clavesAMantener: string[] = []): RevestimientoForm {
   const base = formularioVacio();
   return {
     ...base,
     materiales: catalogo
-      .filter((r) => !esTextoCompartido(r.clave))
+      .filter((r) => !esTextoCompartido(r.clave) && disponibleEnCalculadora(r, clavesAMantener))
       .map((r) => ({
         clave: r.clave,
         descripcion: r.descripcion ?? r.clave,
@@ -59,8 +60,8 @@ function formularioDesdeCatalogo(catalogo: CatalogoRow[]): RevestimientoForm {
 }
 
 function formularioDesdePresupuesto(leido: PresupuestoLeido, catalogo: CatalogoRow[]): RevestimientoForm {
-  const base = formularioDesdeCatalogo(catalogo);
   const { presupuesto, preciosCongelados, clavesIncluidas } = leido;
+  const base = formularioDesdeCatalogo(catalogo, clavesIncluidas);
   const medidas = presupuesto.medidas as {
     largo?: number;
     ancho?: number;

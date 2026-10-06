@@ -135,7 +135,7 @@ export default function CatalogoPage() {
           value={categoria}
           onChange={(e) => setCategoria(e.target.value as Categoria | "")}
           aria-label="Filtrar por categoría"
-          className="min-h-11 w-full rounded-md border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#1B3A5C] focus:outline-none sm:w-auto"
+          className="min-h-11 w-full rounded-md border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 sm:w-auto"
         >
           <option value="">Todas las categorías</option>
           {CATEGORIAS.map((c) => (
@@ -153,7 +153,7 @@ export default function CatalogoPage() {
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar por nombre o clave..."
             aria-label="Buscar en el catálogo"
-            className="min-h-11 w-full rounded-md border border-gray-300 py-2.5 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none"
+            className="min-h-11 w-full rounded-md border border-gray-300 py-2.5 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20"
           />
         </div>
 
