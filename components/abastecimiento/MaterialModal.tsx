@@ -47,7 +47,9 @@ export function aDatosMaterial(f: MaterialForm): DatosMaterial {
     precio: f.precio,
     rubro: vacio(f.rubro),
     aplica: vacio(f.aplica),
-    usd_ref: f.usd_ref,
+    // Un USD de referencia de 0 no existe: es "sin cotización en dólares". Guardarlo en 0 hacía que la
+    // planilla mostrara $0 (USD × tipo de cambio) en vez del precio en pesos.
+    usd_ref: f.usd_ref !== null && f.usd_ref > 0 ? f.usd_ref : null,
     notas: vacio(f.notas),
     cantidades: limpiarCantidades(porTamano),
     activo: f.activo,
@@ -164,7 +166,7 @@ export function MaterialModal({
               label="Unidad"
               options={opciones(UNIDADES_MATERIAL, material?.unidad, "Sin unidad")}
             />
-            <NumberField control={control} name="usd_ref" label="USD de referencia" hint="Sólo si cotiza en dólares" />
+            <NumberField control={control} name="usd_ref" label="USD de referencia" hint="Sólo si cotiza en dólares" emptyValue="null" />
           </div>
         </section>
 
@@ -182,7 +184,7 @@ export function MaterialModal({
             <p className="mb-2 text-sm font-medium text-gray-700">Cantidad a pedir por tamaño de pileta</p>
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
               {TAMANOS.map((t, i) => (
-                <NumberField key={t} control={control} name={`cantidades.${i}`} label={t} placeholder="—" />
+                <NumberField key={t} control={control} name={`cantidades.${i}`} label={t} placeholder="—" emptyValue="null" />
               ))}
             </div>
           </div>

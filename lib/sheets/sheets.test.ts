@@ -90,6 +90,14 @@ describe("armarExportacion · artículos", () => {
     expect(e.articulos[0].fila[18]).toBe(114.68);
   });
 
+  it("REGRESIÓN: un USD de referencia en 0 NO es una cotización en dólares: el precio en pesos viaja igual", () => {
+    // Antes la planilla mostraba $0 (=USD × tipo de cambio) para un material con USD en 0.
+    const e = armarExportacion({ proveedores: [proveedor({})], materiales: [material({ precio: 5345, usd_ref: 0 })], items: [] });
+    expect(e.articulos[0].usd).toBe(false);
+    expect(e.articulos[0].fila[3]).toBe(5345);
+    expect(e.articulos[0].fila[18]).toBeNull();
+  });
+
   it("un precio a confirmar (null) viaja null, y una cantidad en 0 se conserva como 0", () => {
     const e = armarExportacion({
       proveedores: [],

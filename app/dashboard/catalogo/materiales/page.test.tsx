@@ -156,6 +156,64 @@ describe("Materiales", () => {
     expect(datos.cantidades).toEqual({ "5x3": 110 });
   });
 
+  it("REGRESIÓN: editar sólo el precio NO guarda el USD de referencia ni las cantidades vacías como 0", async () => {
+    // Un USD de referencia en 0 hacía que la planilla creyera que el material se cotiza en
+    // dólares y mostrara $0 (USD × tipo de cambio) en lugar del precio en pesos.
+    mocks.listarMateriales.mockResolvedValue({ items: [mat({ usd_ref: null, cantidades: { "5x3": 110 } })], error: null });
+    mocks.guardarMaterial.mockResolvedValue({ item: mat({ precio: 5345 }), error: null });
+    const user = userEvent.setup();
+    render(<MaterialesPage />);
+    await screen.findByText("Cemento 25 kg");
+
+    await user.click(screen.getByRole("button", { name: "Editar Cemento 25 kg" }));
+    const campo = await screen.findByLabelText("Precio");
+    await user.clear(campo);
+    await user.type(campo, "5345");
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    await waitFor(() => expect(mocks.guardarMaterial).toHaveBeenCalled());
+    const datos = mocks.guardarMaterial.mock.calls[0][1];
+    expect(datos.precio).toBe(5345);
+    expect(datos.usd_ref).toBeNull();
+    expect(datos.cantidades).toEqual({ "5x3": 110 });
+  });
+
+  it("REGRESIÓN: recorrer con Tab el campo USD y las cantidades vacías no los convierte en 0", async () => {
+    mocks.listarMateriales.mockResolvedValue({ items: [mat({ usd_ref: null, cantidades: { "5x3": 110 } })], error: null });
+    mocks.guardarMaterial.mockResolvedValue({ item: mat({}), error: null });
+    const user = userEvent.setup();
+    render(<MaterialesPage />);
+    await screen.findByText("Cemento 25 kg");
+    await user.click(screen.getByRole("button", { name: "Editar Cemento 25 kg" }));
+
+    // Entrar y salir de cada campo vacío (lo que hace quien recorre el formulario con Tab).
+    for (const etiqueta of ["USD de referencia", "6x3", "7x3", "8x4"]) {
+      const campo = await screen.findByLabelText(etiqueta);
+      await user.click(campo);
+      await user.tab();
+    }
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    await waitFor(() => expect(mocks.guardarMaterial).toHaveBeenCalled());
+    const datos = mocks.guardarMaterial.mock.calls[0][1];
+    expect(datos.usd_ref).toBeNull();
+    expect(datos.cantidades).toEqual({ "5x3": 110 });
+  });
+
+  it("un USD de referencia que ya estaba en 0 se guarda vacío (no hay precio de referencia de 0 dólares)", async () => {
+    mocks.listarMateriales.mockResolvedValue({ items: [mat({ usd_ref: 0 })], error: null });
+    mocks.guardarMaterial.mockResolvedValue({ item: mat({ usd_ref: null }), error: null });
+    const user = userEvent.setup();
+    render(<MaterialesPage />);
+    await screen.findByText("Cemento 25 kg");
+
+    await user.click(screen.getByRole("button", { name: "Editar Cemento 25 kg" }));
+    await user.click(await screen.findByRole("button", { name: "Guardar cambios" }));
+
+    await waitFor(() => expect(mocks.guardarMaterial).toHaveBeenCalled());
+    expect(mocks.guardarMaterial.mock.calls[0][1].usd_ref).toBeNull();
+  });
+
   it("eliminar pide confirmación y lo saca del listado", async () => {
     mocks.listarMateriales.mockResolvedValue({ items: [mat()], error: null });
     mocks.eliminarMaterial.mockResolvedValue({ error: null });
