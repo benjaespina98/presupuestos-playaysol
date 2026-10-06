@@ -6,9 +6,24 @@ import type { Material } from "@/lib/domain/abastecimiento/material";
 import type { Proveedor } from "@/lib/domain/abastecimiento/proveedor";
 import PedidoPage from "./page";
 
-const mocks = vi.hoisted(() => ({ listarMateriales: vi.fn(), listarProveedores: vi.fn(), copiarAlPortapapeles: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  listarMateriales: vi.fn(),
+  listarProveedores: vi.fn(),
+  copiarAlPortapapeles: vi.fn(),
+  guardarPedido: vi.fn(),
+  listarPedidos: vi.fn(),
+  exportarPedido: vi.fn(),
+  compartirOdescargarArchivo: vi.fn(),
+  desde: { valor: null as string | null },
+}));
 vi.mock("@/lib/abastecimiento", () => ({ listarMateriales: mocks.listarMateriales, listarProveedores: mocks.listarProveedores }));
 vi.mock("@/lib/clipboard", () => ({ copiarAlPortapapeles: mocks.copiarAlPortapapeles }));
+vi.mock("@/lib/pedidos", () => ({ guardarPedido: mocks.guardarPedido, listarPedidos: mocks.listarPedidos }));
+vi.mock("@/lib/documentos/pedidos/exportar", () => ({ exportarPedido: mocks.exportarPedido }));
+vi.mock("@/lib/documentos/compartir", () => ({ compartirOdescargarArchivo: mocks.compartirOdescargarArchivo }));
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(mocks.desde.valor ? { desde: mocks.desde.valor } : {}),
+}));
 
 // Datos inventados (el repo es público).
 const proveedor = (o: Partial<Proveedor>): Proveedor => ({
@@ -31,6 +46,17 @@ const MATERIALES = [
   material({ id: "f", nombre: "Luminaria", aplica: "Luz", precio: 1000, orden: 6, proveedor_id: "p2", cantidades: { "8x4": 1 } }),
 ];
 
+/** Lo que devolvería la base al guardar. */
+function guardadoDe(d: { costo: number; obra?: string; parametros?: unknown }) {
+  return {
+    id: "ped-1", numero: 7, obra: d.obra ?? "", solicitante: "", parametros: d.parametros ?? {}, lineas: [], costo: d.costo,
+    estado: "borrador", notas: null, created_at: "2026-10-05T12:00:00.000Z", updated_at: "2026-10-05T12:00:00.000Z",
+  };
+}
+
+const abrirExportar = async (user: ReturnType<typeof userEvent.setup>) =>
+  user.click(screen.getByLabelText("Exportar"));
+
 const resumen = (etiqueta: string) => within(screen.getByRole("region", { name: "Resumen del pedido" })).getByText(etiqueta).parentElement!;
 
 async function cargar() {
@@ -40,10 +66,15 @@ async function cargar() {
 
 describe("Armar pedido", () => {
   beforeEach(() => {
-    Object.values(mocks).forEach((m) => m.mockReset());
+    Object.entries(mocks).forEach(([k, m]) => k !== "desde" && (m as ReturnType<typeof vi.fn>).mockReset());
     mocks.listarMateriales.mockResolvedValue({ items: MATERIALES, error: null });
     mocks.listarProveedores.mockResolvedValue({ items: PROVEEDORES, error: null });
     mocks.copiarAlPortapapeles.mockResolvedValue(true);
+    mocks.desde.valor = null;
+    mocks.guardarPedido.mockImplementation(async (d: { costo: number }) => ({ pedido: guardadoDe(d), error: null }));
+    mocks.listarPedidos.mockResolvedValue({ items: [], error: null });
+    mocks.exportarPedido.mockResolvedValue({ blob: new Blob(["x"]), nombre: "Pedido_PED-0007.pdf", mime: "application/pdf" });
+    mocks.compartirOdescargarArchivo.mockResolvedValue(undefined);
   });
 
   it("para 8x4 con losetas arma las tablas por proveedor y el resumen", async () => {
@@ -219,7 +250,8 @@ describe("Armar pedido", () => {
     await cargar();
     await user.type(screen.getByLabelText("Cliente / obra"), "Familia Pérez");
 
-    await user.click(screen.getByRole("button", { name: "Descargar para Excel" }));
+    await abrirExportar(user);
+    await user.click(screen.getByRole("menuitem", { name: /CSV simple/ }));
 
     expect(crear).toHaveBeenCalledTimes(1);
     const blob = (crear.mock.calls as unknown as [Blob][])[0][0];
@@ -257,6 +289,180 @@ describe("Armar pedido", () => {
     mocks.listarMateriales.mockResolvedValue({ items: [...MATERIALES, material({ id: "z", nombre: "Viejo", activo: false, orden: 9 })], error: null });
     await cargar();
     expect(screen.queryByText("Viejo")).not.toBeInTheDocument();
+  });
+
+  describe("guardar y exportar", () => {
+    it("'Guardar pedido' lo guarda con sus datos y avisa el número", async () => {
+      const user = userEvent.setup();
+      await cargar();
+      await user.type(screen.getByLabelText("Cliente / obra"), "Familia Pérez");
+      await user.type(screen.getByLabelText("Pide (quién hace el pedido)"), "Benja");
+      await user.type(screen.getByLabelText(/Observaciones/), "Entregar temprano");
+
+      await user.click(screen.getByRole("button", { name: "Guardar pedido" }));
+
+      await waitFor(() => expect(mocks.guardarPedido).toHaveBeenCalledTimes(1));
+      const datos = mocks.guardarPedido.mock.calls[0][0];
+      expect(datos).toMatchObject({ obra: "Familia Pérez", solicitante: "Benja", notas: "Entregar temprano", costo: 2050 });
+      expect(datos.parametros).toMatchObject({ tamano: "8x4", borde: "Losetas" });
+      expect(datos.lineas.map((l: { nombre: string }) => l.nombre)).toEqual(["Hierro", "Cemento", "Losetas", "Filtro"]);
+      expect(await screen.findByText(/Pedido PED-0007 guardado/)).toBeInTheDocument();
+    });
+
+    it("una vez guardado, el botón queda como 'Guardado · PED-0007' y no deja guardar el mismo dos veces", async () => {
+      const user = userEvent.setup();
+      await cargar();
+      await user.click(screen.getByRole("button", { name: "Guardar pedido" }));
+
+      const boton = await screen.findByRole("button", { name: "Guardado · PED-0007" });
+      expect(boton).toBeDisabled();
+    });
+
+    it("si se cambia algo después de guardar, vuelve a poder guardarse como OTRO pedido", async () => {
+      const user = userEvent.setup();
+      await cargar();
+      await user.click(screen.getByRole("button", { name: "Guardar pedido" }));
+      await screen.findByRole("button", { name: "Guardado · PED-0007" });
+
+      await user.click(screen.getByRole("button", { name: "Deck" }));
+
+      expect(screen.getByRole("button", { name: "Guardar pedido" })).toBeEnabled();
+    });
+
+    it("exportar un PDF guarda el pedido primero y el documento lleva su número", async () => {
+      const user = userEvent.setup();
+      await cargar();
+      await user.type(screen.getByLabelText("Cliente / obra"), "Familia Pérez");
+
+      await abrirExportar(user);
+      await user.click(screen.getByRole("menuitem", { name: /PDF — todo junto/ }));
+
+      await waitFor(() => expect(mocks.exportarPedido).toHaveBeenCalledTimes(1));
+      expect(mocks.guardarPedido).toHaveBeenCalledTimes(1);
+      const [doc, formato, modo] = mocks.exportarPedido.mock.calls[0];
+      expect(formato).toBe("pdf");
+      expect(modo).toBe("junto");
+      expect(doc).toMatchObject({ numero: "PED-0007", obra: "Familia Pérez", fecha: "05/10/2026" });
+      expect(doc.proveedores.map((p: { nombre: string }) => p.nombre)).toEqual(["Corralón Uno", "Filtros SA"]);
+      expect(mocks.compartirOdescargarArchivo).toHaveBeenCalledWith(expect.any(Blob), "Pedido_PED-0007.pdf", "application/pdf");
+      expect(await screen.findByText(/generado\. Quedó guardado como PED-0007/)).toBeInTheDocument();
+    });
+
+    it("exportar el mismo pedido otra vez NO lo vuelve a guardar (no se duplican los números)", async () => {
+      const user = userEvent.setup();
+      await cargar();
+
+      await abrirExportar(user);
+      await user.click(screen.getByRole("menuitem", { name: /PDF — todo junto/ }));
+      await waitFor(() => expect(mocks.exportarPedido).toHaveBeenCalledTimes(1));
+      await abrirExportar(user);
+      await user.click(screen.getByRole("menuitem", { name: /Excel — todo junto/ }));
+      await waitFor(() => expect(mocks.exportarPedido).toHaveBeenCalledTimes(2));
+
+      expect(mocks.guardarPedido).toHaveBeenCalledTimes(1);
+      expect(mocks.exportarPedido.mock.calls[1][1]).toBe("xlsx");
+    });
+
+    it("las salidas 'uno por proveedor' piden un ZIP con un archivo por cada uno", async () => {
+      const user = userEvent.setup();
+      await cargar();
+
+      await abrirExportar(user);
+      await user.click(screen.getByRole("menuitem", { name: /Excel — uno por proveedor/ }));
+
+      await waitFor(() => expect(mocks.exportarPedido).toHaveBeenCalled());
+      expect(mocks.exportarPedido.mock.calls[0].slice(1, 3)).toEqual(["xlsx", "por-proveedor"]);
+    });
+
+    it("si no se puede guardar (falta la migración) el archivo sale igual, como BORRADOR, y lo avisa", async () => {
+      mocks.guardarPedido.mockResolvedValue({ pedido: null, error: "Falta correr supabase/migration_pedidos.sql" });
+      const user = userEvent.setup();
+      await cargar();
+
+      await abrirExportar(user);
+      await user.click(screen.getByRole("menuitem", { name: /PDF — todo junto/ }));
+
+      await waitFor(() => expect(mocks.exportarPedido).toHaveBeenCalled());
+      expect(mocks.exportarPedido.mock.calls[0][0].numero).toBe("BORRADOR");
+      expect(await screen.findByText(/BORRADOR \(sin número\).*migration_pedidos/)).toBeInTheDocument();
+    });
+
+    it("'Guardar pedido' con la tabla sin crear muestra el error y no dice que guardó", async () => {
+      mocks.guardarPedido.mockResolvedValue({ pedido: null, error: "Falta correr supabase/migration_pedidos.sql" });
+      const user = userEvent.setup();
+      await cargar();
+
+      await user.click(screen.getByRole("button", { name: "Guardar pedido" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(/migration_pedidos/);
+      expect(screen.getByRole("button", { name: "Guardar pedido" })).toBeEnabled();
+    });
+
+    it("si falla la generación del archivo lo dice, sin romper la pantalla", async () => {
+      mocks.exportarPedido.mockRejectedValue(new Error("boom"));
+      const err = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const user = userEvent.setup();
+      await cargar();
+
+      await abrirExportar(user);
+      await user.click(screen.getByRole("menuitem", { name: /PDF — todo junto/ }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(/No se pudo generar el archivo/);
+      err.mockRestore();
+    });
+
+    it("con un solo proveedor no se ofrecen las salidas 'uno por proveedor'", async () => {
+      mocks.listarMateriales.mockResolvedValue({ items: [MATERIALES[0], MATERIALES[1]], error: null });
+      const user = userEvent.setup();
+      await cargar();
+
+      await abrirExportar(user);
+
+      expect(screen.getByRole("menuitem", { name: /PDF — todo junto/ })).toBeInTheDocument();
+      expect(screen.queryByRole("menuitem", { name: /uno por proveedor/ })).not.toBeInTheDocument();
+    });
+
+    it("las observaciones salen en el documento", async () => {
+      const user = userEvent.setup();
+      await cargar();
+      await user.type(screen.getByLabelText(/Observaciones/), "Entregar temprano");
+
+      await abrirExportar(user);
+      await user.click(screen.getByRole("menuitem", { name: /PDF — todo junto/ }));
+
+      await waitFor(() => expect(mocks.exportarPedido).toHaveBeenCalled());
+      expect(mocks.exportarPedido.mock.calls[0][0].observaciones).toBe("Entregar temprano");
+    });
+  });
+
+  describe("volver a armar desde un pedido guardado (?desde=)", () => {
+    it("carga la obra, quien pide y las condiciones, y avisa que las cantidades se recalcularon", async () => {
+      mocks.desde.valor = "ped-9";
+      mocks.listarPedidos.mockResolvedValue({
+        items: [
+          {
+            ...guardadoDe({ costo: 1, obra: "Familia Gómez" }),
+            id: "ped-9", numero: 9, solicitante: "Fer", notas: "Con deck",
+            parametros: { tamano: "5x3", obras: 1, borde: "Deck", luces: 0, luzCamaAgua: false, banoQuimico: false },
+          },
+        ],
+        error: null,
+      });
+      await cargar();
+
+      await waitFor(() => expect(screen.getByLabelText("Cliente / obra")).toHaveValue("Familia Gómez"));
+      expect(screen.getByLabelText("Pide (quién hace el pedido)")).toHaveValue("Fer");
+      expect(screen.getByLabelText("Tamaño de pileta")).toHaveValue("5x3");
+      expect(screen.getByLabelText(/Observaciones/)).toHaveValue("Con deck");
+      expect(screen.getByRole("button", { name: "Deck" })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByText(/Se cargaron los datos de PED-0009/)).toBeInTheDocument();
+    });
+
+    it("si el pedido no existe más, no cambia nada", async () => {
+      mocks.desde.valor = "no-existe";
+      await cargar();
+      expect(screen.getByLabelText("Cliente / obra")).toHaveValue("");
+    });
   });
 
   it("el luces y la luz de cama de agua / baño químico se pueden tildar", async () => {

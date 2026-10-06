@@ -9,7 +9,20 @@ vi.mock("next/navigation", () => ({ usePathname }));
 describe("CatalogoTabs", () => {
   beforeEach(() => usePathname.mockReset());
 
-  it("muestra las cuatro secciones y marca sólo la actual", () => {
+  it("/pedido y /pedidos se parecen pero son pestañas distintas: nunca quedan activas las dos", () => {
+    usePathname.mockReturnValue("/dashboard/catalogo/pedidos");
+    const { unmount } = render(<CatalogoTabs />);
+    expect(screen.getByRole("link", { name: "Pedidos" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Armar pedido" })).not.toHaveAttribute("aria-current");
+    unmount();
+
+    usePathname.mockReturnValue("/dashboard/catalogo/pedido");
+    render(<CatalogoTabs />);
+    expect(screen.getByRole("link", { name: "Armar pedido" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Pedidos" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("muestra las cinco secciones y marca sólo la actual", () => {
     usePathname.mockReturnValue("/dashboard/catalogo/materiales");
     render(<CatalogoTabs />);
 
