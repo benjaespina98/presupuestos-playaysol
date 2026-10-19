@@ -1,0 +1,26 @@
+-- Las fotos del bucket 'presupuestos' no se pueden sobrescribir (H-07 de AUDITORIA.md).
+--
+-- Correr UNA vez en el SQL Editor de Supabase. Es seguro re-ejecutarla.
+-- ORDEN: aplicar DESPUÉS de migration_presupuestos_insert_autor.sql.
+--
+-- Antes: la policy "Authenticated users can update presupuesto images"
+-- (schema.sql) dejaba a cualquier usuario autenticado reemplazar el contenido de
+-- cualquier foto. Las URLs de las fotos quedan escritas en los Word/PDF que ya
+-- se le entregaron al cliente: pisar una foto cambiaba un documento ya enviado.
+--
+-- Es seguro quitarla porque el código NUNCA sobrescribe: la única escritura en
+-- Storage es subirFotoPresupuesto() (lib/presupuestos.ts), que sube con
+-- `.upload(path, blob, { contentType })` — sin `upsert: true`, o sea, un INSERT —
+-- a una ruta con nombre único `<tipo>/<uuid>.jpg` (crypto.randomUUID()). Subir
+-- sólo necesita la policy de insert, que no se toca.
+--
+-- NO toca: la policy de insert, ni "Anyone can view presupuesto images" ni el
+-- carácter público del bucket (eso se decide aparte, ver migration_limpieza.sql).
+--
+-- ROLLBACK:
+--   create policy "Authenticated users can update presupuesto images"
+--     on storage.objects for update
+--     to authenticated
+--     using (bucket_id = 'presupuestos');
+
+drop policy if exists "Authenticated users can update presupuesto images" on storage.objects;
