@@ -5,6 +5,7 @@ import {
   type LineaGuardada,
 } from "@/lib/domain/abastecimiento/pedidoDocumento";
 import type { ParametrosPedido } from "@/lib/domain/abastecimiento/pedido";
+import { mensajeFilaInvalida } from "@/lib/logs";
 
 /**
  * Acceso a Supabase de los pedidos guardados. Mismo criterio que
@@ -43,7 +44,7 @@ export async function listarPedidos(): Promise<ResultadoListarPedidos> {
     for (const fila of data ?? []) {
       const r = PedidoGuardado.safeParse(fila);
       if (r.success) items.push(r.data);
-      else console.error("Fila de pedidos con forma inesperada, se omite", fila, r.error);
+      else console.error(mensajeFilaInvalida("Fila de pedidos con forma inesperada, se omite", fila, r.error));
     }
     // Los más nuevos primero.
     items.sort((a, b) => b.numero - a.numero);
@@ -90,7 +91,7 @@ export async function guardarPedido(
     if (error) return { pedido: null, error: mensaje(error) };
     const r = PedidoGuardado.safeParse(data);
     if (!r.success) {
-      console.error("El pedido se guardó pero no valida", data, r.error);
+      console.error(mensajeFilaInvalida("El pedido se guardó pero no valida", data, r.error));
       return { pedido: null, error: "El pedido se guardó, pero no se pudo leer de vuelta — recargá la página." };
     }
     return { pedido: r.data, error: null };

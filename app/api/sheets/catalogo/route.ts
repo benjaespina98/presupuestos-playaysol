@@ -3,6 +3,7 @@ import { Proveedor } from "@/lib/domain/abastecimiento/proveedor";
 import { Material } from "@/lib/domain/abastecimiento/material";
 import { tokenDeEncabezado, tokenValido } from "@/lib/sheets/autorizacion";
 import { armarExportacion, type ItemPrecio } from "@/lib/sheets/exportar";
+import { mensajeFilaInvalida } from "@/lib/logs";
 
 /**
  * GET /api/sheets/catalogo — lo que lee el script de la planilla de costos.
@@ -61,7 +62,7 @@ export async function GET(request: Request) {
   const validos = <S extends typeof Proveedor | typeof Material>(schema: S, filas: unknown[] | null) =>
     (filas ?? []).flatMap((f) => {
       const r = schema.safeParse(f);
-      if (!r.success) console.error("Fila omitida en la exportación a la planilla", f);
+      if (!r.success) console.error(mensajeFilaInvalida("Fila omitida en la exportación a la planilla", f, r.error));
       return r.success ? [r.data] : [];
     });
 

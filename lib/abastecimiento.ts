@@ -2,6 +2,7 @@ import type { z } from "zod";
 import { createClient } from "@/lib/supabase";
 import { Proveedor, type DatosProveedor } from "@/lib/domain/abastecimiento/proveedor";
 import { Material, type DatosMaterial } from "@/lib/domain/abastecimiento/material";
+import { mensajeFilaInvalida } from "@/lib/logs";
 
 /**
  * Acceso a Supabase de las pestañas Proveedores y Materiales del catálogo.
@@ -44,7 +45,7 @@ async function listar<S extends z.ZodType>(tabla: string, schema: S): Promise<Re
     for (const fila of data ?? []) {
       const r = schema.safeParse(fila);
       if (r.success) items.push(r.data);
-      else console.error(`Fila de ${tabla} con forma inesperada, se omite`, fila, r.error);
+      else console.error(mensajeFilaInvalida(`Fila de ${tabla} con forma inesperada, se omite`, fila, r.error));
     }
     return { items, error: null };
   } catch (err) {
