@@ -26,7 +26,10 @@ export function armarNombreArchivo(tipo: string, cliente: string, fechaStr: stri
     return sinTildes(s)
       .replace(/[\\/:*?"<>|,]/g, "")
       .trim()
-      .replace(/\s+/g, "_");
+      .replace(/\s+/g, "_")
+      // Caracteres de control y de formato (nulo, escape, ancho cero, el "RTL override" que da vuelta
+      // la extensión mostrada). Va DESPUÉS de los espacios: tabs y saltos de línea ya son "_".
+      .replace(/\p{C}/gu, "");
   }
 
   const clienteLimpio = limpiar(cliente) || "Sin_nombre";
