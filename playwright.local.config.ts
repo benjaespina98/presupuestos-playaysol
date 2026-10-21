@@ -8,7 +8,7 @@ import { defineConfig } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./tests/local",
-  testMatch: "**/*.spec.ts",
+  testMatch: process.env.E2E_SPEC ? `**/${process.env.E2E_SPEC}.spec.ts` : "**/cierre.spec.ts",
   timeout: 120_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,

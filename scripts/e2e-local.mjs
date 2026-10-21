@@ -153,7 +153,8 @@ async function main() {
   let codigo = 1;
   try {
     await esperarServidor();
-    const prueba = spawn("npx playwright test -c playwright.local.config.ts", { env: entorno, shell: true, stdio: "inherit" });
+    const spec = process.argv[2];
+    const prueba = spawn("npx playwright test -c playwright.local.config.ts", { env: { ...entorno, ...(spec ? { E2E_SPEC: spec } : {}) }, shell: true, stdio: "inherit" });
     codigo = await new Promise((resolve) => prueba.on("exit", (c) => resolve(c ?? 1)));
   } finally {
     matarArbol(servidor);
