@@ -5,6 +5,9 @@
 -- migration_cascada.sql, migration_listas_piscinas.sql y migration_stock_piscinas.sql.
 -- No trae clientes, proveedores, materiales ni pedidos (eso no está en el repo).
 
+-- Sin disparar triggers: los datos de ejemplo no son "cambios" a auditar.
+set session_replication_role = replica;
+
 insert into public.catalogo_items (tipo, clave, descripcion, precio)
 values
   ('piscinas', 'luces', 'Luces de acero inoxidable con su respectiva controladora, fuente e instalaciones eléctricas, se pueden colocar 2 o 3 (siendo una en la cama de agua) — precio por unidad', 240000),
@@ -143,3 +146,5 @@ update public.catalogo_items
  where tipo = 'piscinas'
    and clave like 'indusplast\_%'
    and stock is null;
+
+set session_replication_role = origin;

@@ -101,3 +101,36 @@ npx supabase stop       # detiene SOLO este proyecto (sin --all)
 
 `db reset` y `test db` actúan contra la base local; no hace falta (ni conviene)
 tener el proyecto "linkeado" a producción para correrlos.
+
+## Auditoría: ver el historial de un registro
+
+La tabla `auditoria` (migración `20261021000100_auditoria.sql`) es de sólo
+agregar. La llenan triggers sobre `presupuestos`, `pedidos`, `catalogo_items`,
+`proveedores` y `materiales`. De las columnas sensibles (datos de clientes,
+montos de pedidos, teléfonos) guarda **sólo el nombre**, nunca el valor: la lista
+está en el encabezado de la migración. Por ahora no hay pantalla; se consulta en
+el SQL Editor:
+
+```sql
+-- Historial de un registro (cambiar tabla e id)
+select a.fecha, a.accion, p.nombre as usuario, a.columnas_cambiadas, a.valores
+from public.auditoria a
+left join public.perfiles p on p.id = a.usuario_id
+where a.tabla = 'catalogo_items'
+  and a.registro_id = '00000000-0000-0000-0000-000000000000'
+order by a.fecha desc, a.id desc;
+
+-- Cambios de precio del catálogo (antes y después)
+select a.fecha, p.nombre as usuario, c.clave,
+       a.valores #>> '{antes,precio}'   as precio_antes,
+       a.valores #>> '{despues,precio}' as precio_despues
+from public.auditoria a
+join public.catalogo_items c on c.id = a.registro_id
+left join public.perfiles p on p.id = a.usuario_id
+where a.tabla = 'catalogo_items' and 'precio' = any (a.columnas_cambiadas)
+order by a.fecha desc;
+```
+
+`usuario_id` es `null` cuando el cambio se hizo desde el SQL Editor o con la
+clave de servicio (por ejemplo, la sincronización con la planilla no escribe,
+pero un script manual sí aparecería así).
