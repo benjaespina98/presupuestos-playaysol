@@ -14,6 +14,7 @@ import {
 } from "@/lib/presupuestos";
 import { AnularDialog } from "@/components/AnularDialog";
 import { EtiquetaAnulado } from "@/components/Anulado";
+import { botonDe } from "@/components/ui/botones";
 import { Interruptor } from "@/components/catalogo/FiltrosCatalogo";
 import { contarAnulados, estaAnulado } from "@/lib/anulacion";
 import { PanelPortal } from "@/components/PanelPortal";
@@ -253,15 +254,27 @@ function HistorialTabla() {
         <>
           {/* Desktop / tablet: tabla completa */}
           <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm sm:block">
-            <table className="w-full text-left text-sm">
+            {/* Anchos pensados para que el nombre del cliente no se parta en dos líneas (si es larguísimo se
+                recorta con "…" y el nombre completo queda en el tooltip) y el detalle tenga lugar. */}
+            <table className="w-full table-fixed text-left text-sm">
+              <colgroup>
+                <col className="w-[8.5rem]" />
+                <col className="w-[22%]" />
+                <col />
+                <col className="w-[11rem]" />
+                <col className="w-[6.5rem]" />
+                <col className="w-[18rem]" />
+              </colgroup>
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50 text-gray-700">
-                  <th className="px-4 py-3 font-medium">Tipo</th>
-                  <th className="px-4 py-3 font-medium">Cliente</th>
-                  <th className="px-4 py-3 font-medium">Detalle</th>
-                  <th className="px-4 py-3 font-medium">Creado por</th>
-                  <th className="px-4 py-3 font-medium">Fecha</th>
-                  <th className="px-4 py-3 font-medium"></th>
+                <tr className="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                  <th className="px-4 py-3 font-semibold">Tipo</th>
+                  <th className="px-4 py-3 font-semibold">Cliente</th>
+                  <th className="px-4 py-3 font-semibold">Detalle</th>
+                  <th className="px-4 py-3 font-semibold">Creado por</th>
+                  <th className="px-4 py-3 font-semibold">Fecha</th>
+                  <th className="px-4 py-3 font-semibold">
+                    <span className="sr-only">Acciones</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -270,27 +283,40 @@ function HistorialTabla() {
                   const esDueño = !!userId && p.created_by === userId && !anulado;
                   return (
                     <tr key={p.id} className={`border-b border-gray-100 last:border-0 ${anulado ? "bg-gray-50/70 text-gray-500" : ""}`}>
-                      <td className="px-4 py-3 text-gray-700">{TITULOS[p.tipo]}</td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex whitespace-nowrap rounded-full bg-marca/8 px-2.5 py-0.5 text-xs font-semibold text-marca">
+                          {TITULOS[p.tipo]}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-gray-900">
-                        <span className={anulado ? "line-through" : ""}>{p.cliente_nombre}</span>
-                        {anulado && <EtiquetaAnulado className="ml-2" />}
+                        <div className="flex items-center gap-2">
+                          <span
+                            title={p.cliente_nombre}
+                            className={`min-w-0 truncate font-medium ${anulado ? "line-through" : ""}`}
+                          >
+                            {p.cliente_nombre}
+                          </span>
+                          {anulado && <EtiquetaAnulado className="shrink-0" />}
+                        </div>
                         {anulado && p.anulado_motivo && (
-                          <p className="mt-0.5 text-xs text-gray-500">Motivo: {p.anulado_motivo}</p>
+                          <p className="mt-0.5 truncate text-xs text-gray-500" title={p.anulado_motivo}>
+                            Motivo: {p.anulado_motivo}
+                          </p>
                         )}
                       </td>
                       <td className="px-4 py-3 text-gray-700">
-                        {resumenPresupuesto(p.tipo, p.datos)}
+                        <span className="line-clamp-2" title={resumenPresupuesto(p.tipo, p.datos)}>
+                          {resumenPresupuesto(p.tipo, p.datos)}
+                        </span>
                       </td>
-                      <td className="px-4 py-3 text-gray-700">{nombreCreador(p.creador)}</td>
-                      <td className="px-4 py-3 text-gray-700">{formatFecha(p.created_at)}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="truncate px-4 py-3 text-gray-600" title={nombreCreador(p.creador)}>
+                        {nombreCreador(p.creador)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-gray-600">{formatFecha(p.created_at)}</td>
+                      <td className="whitespace-nowrap px-4 py-2.5">
+                        <div className="flex items-center justify-end gap-1.5">
                           {anulado && (
-                            <Link
-                              href={`/dashboard/${p.tipo}?id=${p.id}`}
-                              title="Ver"
-                              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
-                            >
+                            <Link href={`/dashboard/${p.tipo}?id=${p.id}`} title="Ver" className={botonDe("secundario", "px-3")}>
                               Ver
                             </Link>
                           )}
@@ -299,25 +325,20 @@ function HistorialTabla() {
                               href={`/dashboard/${p.tipo}?id=${p.id}`}
                               title="Editar"
                               aria-label="Editar"
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                              className={botonDe("secundario", "w-11 px-0")}
                             >
                               <IconEdit className="h-[18px] w-[18px]" />
                             </Link>
                           )}
-                          <Link
-                            href={`/dashboard/${p.tipo}?duplicar=${p.id}`}
-                            title="Duplicar"
-                            className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
-                          >
-                            <IconCopy className="h-4 w-4" />
-                            Duplicar
-                          </Link>
+                          {/* Un presupuesto anulado se ve y se exporta, pero no se duplica. */}
+                          {!anulado && (
+                            <Link href={`/dashboard/${p.tipo}?duplicar=${p.id}`} title="Duplicar" className={botonDe("suave", "px-3")}>
+                              <IconCopy className="h-4 w-4" />
+                              Duplicar
+                            </Link>
+                          )}
                           {esDueño && (
-                            <button
-                              onClick={() => setPorAnular(p)}
-                              title="Anular"
-                              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
-                            >
+                            <button onClick={() => setPorAnular(p)} title="Anular" className={botonDe("peligro", "px-3")}>
                               <IconTrash className="h-4 w-4" />
                               Anular
                             </button>
@@ -364,10 +385,7 @@ function HistorialTabla() {
                   </div>
                   <div className="mt-3 flex gap-2 border-t border-gray-100 pt-3">
                     {anulado && (
-                      <Link
-                        href={`/dashboard/${p.tipo}?id=${p.id}`}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-[#1B3A5C] px-3 py-2 text-sm font-medium text-white"
-                      >
+                      <Link href={`/dashboard/${p.tipo}?id=${p.id}`} className={botonDe("primario", "flex-1")}>
                         Ver
                       </Link>
                     )}
@@ -376,28 +394,27 @@ function HistorialTabla() {
                         href={`/dashboard/${p.tipo}?id=${p.id}`}
                         title="Editar"
                         aria-label="Editar"
-                        className="flex min-h-10 w-12 shrink-0 items-center justify-center rounded-md bg-[#1B3A5C] text-white"
+                        className={botonDe("primario", "w-12 shrink-0 px-0")}
                       >
                         <IconEdit className="h-[18px] w-[18px]" />
                       </Link>
                     )}
-                    <Link
-                      href={`/dashboard/${p.tipo}?duplicar=${p.id}`}
-                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium ${
-                        esDueño
-                          ? "border-[#1B3A5C] text-[#1B3A5C]"
-                          : "bg-[#1B3A5C] text-white"
-                      }`}
-                    >
-                      <IconCopy className="h-4 w-4" />
-                      Duplicar
-                    </Link>
+                    {/* Un presupuesto anulado se ve y se exporta, pero no se duplica. */}
+                    {!anulado && (
+                      <Link
+                        href={`/dashboard/${p.tipo}?duplicar=${p.id}`}
+                        className={botonDe(esDueño ? "secundario" : "primario", "flex-1")}
+                      >
+                        <IconCopy className="h-4 w-4" />
+                        Duplicar
+                      </Link>
+                    )}
                     {esDueño && (
                       <button
                         onClick={() => setPorAnular(p)}
                         title="Anular"
                         aria-label="Anular"
-                        className="flex items-center justify-center rounded-md border border-red-200 px-3 py-2 text-red-600"
+                        className={botonDe("peligro", "w-12 shrink-0 px-0")}
                       >
                         <IconTrash className="h-4 w-4" />
                       </button>

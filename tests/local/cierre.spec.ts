@@ -279,6 +279,10 @@ test("presupuesto anulado: etiqueta, toggle y campos deshabilitados", async ({ p
   await expect(page.getByText("Motivo: Prueba E2E de anulación").locator("visible=true").first()).toBeVisible();
   await captura(page, info, "historial-anulados");
 
+  // Un anulado se ve y se exporta, pero NO se duplica.
+  await expect(page.getByRole("link", { name: "Ver", exact: true }).locator("visible=true").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /Duplicar/ }).locator("visible=true")).toHaveCount(0);
+
   // Se puede ver, pero no editar: campos deshabilitados, sin Guardar.
   await page.getByRole("link", { name: "Ver", exact: true }).first().click();
   await expect(page.getByText(/está anulado/)).toBeVisible();
