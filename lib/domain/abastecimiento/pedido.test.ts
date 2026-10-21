@@ -4,6 +4,7 @@ import type { Proveedor } from "./proveedor";
 import {
   PARAMETROS_POR_DEFECTO,
   armarPedido,
+  avisosDeDesactivados,
   cantidadDePedido,
   csvPedido,
   factorDeAplica,
@@ -315,5 +316,48 @@ describe("csvPedido · sin precios", () => {
     expect(csv).not.toMatch(/Precio|Subtotal|COSTO/);
     expect(csv).toMatch(/Proveedor;Teléfono;Artículo;Cantidad;Unidad/);
     expect(csvPedido(pedido)).toMatch(/Precio unitario/);
+  });
+});
+
+describe("avisosDeDesactivados", () => {
+  const activo = proveedor({ id: "p1", nombre: "Corralón Uno" });
+  const desactivado = proveedor({ id: "p2", nombre: "Viejo SA", activo: false, orden: 2 });
+  const p = params();
+
+  it("sin nada desactivado no hay avisos", () => {
+    const mats = [material({ id: "a", nombre: "Hierro" })];
+    const ped = armarPedido(mats, [activo], p);
+    expect(avisosDeDesactivados(mats, ped, p)).toEqual({ materialesFuera: [], proveedoresDesactivados: [] });
+  });
+
+  it("un material desactivado que la cuenta pediría queda afuera del pedido y se avisa", () => {
+    const mats = [material({ id: "a", nombre: "Hierro" }), material({ id: "b", nombre: "Viejo", activo: false })];
+    const ped = armarPedido(mats, [activo], p);
+    expect(ped.grupos.flatMap((g) => g.lineas.map((l) => l.material.nombre))).toEqual(["Hierro"]);
+    expect(avisosDeDesactivados(mats, ped, p).materialesFuera.map((m) => m.nombre)).toEqual(["Viejo"]);
+  });
+
+  it("un material desactivado que NO se pediría de todos modos no genera aviso", () => {
+    const mats = [material({ id: "b", nombre: "Viejo", activo: false, cantidades: {} })];
+    const ped = armarPedido(mats, [activo], p);
+    expect(avisosDeDesactivados(mats, ped, p).materialesFuera).toEqual([]);
+  });
+
+  it("un material activo de un proveedor desactivado SÍ entra, y se avisa con qué proveedor y qué materiales", () => {
+    const mats = [
+      material({ id: "a", nombre: "Hierro" }),
+      material({ id: "b", nombre: "Cemento", proveedor_id: "p2" }),
+    ];
+    const ped = armarPedido(mats, [activo, desactivado], p);
+    const avisos = avisosDeDesactivados(mats, ped, p);
+    expect(avisos.proveedoresDesactivados).toHaveLength(1);
+    expect(avisos.proveedoresDesactivados[0].proveedor.nombre).toBe("Viejo SA");
+    expect(avisos.proveedoresDesactivados[0].materiales.map((m) => m.nombre)).toEqual(["Cemento"]);
+  });
+
+  it("si al proveedor desactivado no se le pide nada, no hay aviso", () => {
+    const mats = [material({ id: "a", nombre: "Hierro" })];
+    const ped = armarPedido(mats, [activo, desactivado], p);
+    expect(avisosDeDesactivados(mats, ped, p).proveedoresDesactivados).toEqual([]);
   });
 });

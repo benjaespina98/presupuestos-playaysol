@@ -291,6 +291,40 @@ describe("Armar pedido", () => {
     expect(screen.queryByText("Viejo")).not.toBeInTheDocument();
   });
 
+  describe("desactivados", () => {
+    const conProveedorDesactivado = () => {
+      mocks.listarProveedores.mockResolvedValue({ items: [PROVEEDORES[0], proveedor({ id: "p2", nombre: "Filtros SA", telefono: null, orden: 2, activo: false })], error: null });
+    };
+
+    it("un material desactivado que se pediría queda afuera y se avisa", async () => {
+      mocks.listarMateriales.mockResolvedValue({ items: [...MATERIALES, material({ id: "z", nombre: "Material Viejo", activo: false, orden: 9 })], error: null });
+      await cargar();
+      expect(screen.getByText(/1 material desactivado quedó afuera del pedido/)).toBeInTheDocument();
+      expect(screen.getByText(/Material Viejo\. Si lo necesitás/)).toBeInTheDocument();
+    });
+
+    it("un pedido que incluye un proveedor desactivado avisa y no se guarda ni se exporta sin confirmar", async () => {
+      conProveedorDesactivado();
+      const user = userEvent.setup();
+      await cargar();
+
+      expect(screen.getByRole("alert")).toHaveTextContent(/proveedor desactivado: Filtros SA/);
+      expect(screen.getByRole("button", { name: "Guardar pedido" })).toBeDisabled();
+      expect(screen.getByLabelText("Exportar").closest("[aria-disabled=true]")).not.toBeNull();
+      expect(mocks.guardarPedido).not.toHaveBeenCalled();
+
+      await user.click(screen.getByLabelText("Pedir igual a proveedores desactivados"));
+      expect(screen.getByRole("button", { name: "Guardar pedido" })).toBeEnabled();
+      expect(screen.getByLabelText("Exportar").closest("[aria-disabled=true]")).toBeNull();
+    });
+
+    it("sin proveedores desactivados no hay aviso ni confirmación", async () => {
+      await cargar();
+      expect(screen.queryByLabelText("Pedir igual a proveedores desactivados")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Guardar pedido" })).toBeEnabled();
+    });
+  });
+
   describe("guardar y exportar", () => {
     it("'Guardar pedido' lo guarda con sus datos y avisa el número", async () => {
       const user = userEvent.setup();
