@@ -6,13 +6,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import {
   listarTodosLosPresupuestos,
-  eliminarPresupuesto,
+  anularPresupuesto,
   resumenPresupuesto,
   nombreCreador,
   type Presupuesto,
   type TipoCalculadora,
 } from "@/lib/presupuestos";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { AnularDialog } from "@/components/AnularDialog";
+import { EtiquetaAnulado } from "@/components/Anulado";
+import { Interruptor } from "@/components/catalogo/FiltrosCatalogo";
+import { contarAnulados, estaAnulado } from "@/lib/anulacion";
 import { PanelPortal } from "@/components/PanelPortal";
 import { IconEdit, IconCopy, IconTrash, IconSearch } from "@/components/icons";
 
@@ -61,8 +64,8 @@ function HistorialTabla() {
   const [presupuestos, setPresupuestos] = useState<Presupuesto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
-  const [eliminandoId, setEliminandoId] = useState<string | null>(null);
-  const [porEliminar, setPorEliminar] = useState<Presupuesto | null>(null);
+  const [porAnular, setPorAnular] = useState<Presupuesto | null>(null);
+  const [mostrarAnulados, setMostrarAnulados] = useState(false);
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const usuarioParam = searchParams.get("usuario");
@@ -112,34 +115,35 @@ function HistorialTabla() {
     if (!presupuestos) return null;
     const q = busqueda.trim().toLowerCase();
     return presupuestos.filter((p) => {
+      if (!mostrarAnulados && estaAnulado(p)) return false;
       if (tipoFiltro && p.tipo !== tipoFiltro) return false;
       if (usuarioParam && p.created_by !== usuarioParam) return false;
       if (q && !p.cliente_nombre.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [presupuestos, busqueda, tipoFiltro, usuarioParam]);
+  }, [presupuestos, busqueda, tipoFiltro, usuarioParam, mostrarAnulados]);
 
-  async function confirmarEliminar() {
-    if (!porEliminar) return;
-    const id = porEliminar.id;
-    setEliminandoId(id);
+  const cantidadAnulados = useMemo(() => contarAnulados(presupuestos ?? []), [presupuestos]);
+
+  /** Devuelve el mensaje de error (el diálogo queda abierto) o null si se anuló. */
+  async function confirmarAnular(motivo: string): Promise<string | null> {
+    if (!porAnular) return null;
+    const objetivo = porAnular;
     setErrorAccion(null);
-    try {
-      const { error } = await eliminarPresupuesto(id);
-      if (error) throw error;
-      setPresupuestos((prev) => (prev ? prev.filter((p) => p.id !== id) : prev));
-      setPorEliminar(null);
-    } catch (err) {
-      // Antes esto era un alert() del navegador: cortaba el flujo y no dejaba
-      // rastro del error una vez cerrado.
-      setErrorAccion(
-        "No se pudo eliminar el presupuesto: " +
-          (err instanceof Error ? err.message : String(err))
-      );
-      setPorEliminar(null);
-    } finally {
-      setEliminandoId(null);
-    }
+    const { error } = await anularPresupuesto(objetivo.id, motivo);
+    if (error) return error.message;
+    // Queda en la lista (con su etiqueta) para quien muestre los anulados.
+    setPresupuestos((prev) =>
+      prev
+        ? prev.map((p) =>
+            p.id === objetivo.id
+              ? { ...p, anulado_at: new Date().toISOString(), anulado_por: userId, anulado_motivo: motivo }
+              : p
+          )
+        : prev
+    );
+    setPorAnular(null);
+    return null;
   }
 
   const hayFiltros = !!(busqueda || tipoFiltro || usuarioParam);
@@ -189,6 +193,14 @@ function HistorialTabla() {
           />
         </div>
       </div>
+
+      {cantidadAnulados > 0 && (
+        <div className="mb-3">
+          <Interruptor checked={mostrarAnulados} onChange={setMostrarAnulados}>
+            Mostrar anulados ({cantidadAnulados})
+          </Interruptor>
+        </div>
+      )}
 
       {error && (
         <p className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -254,11 +266,18 @@ function HistorialTabla() {
               </thead>
               <tbody>
                 {presupuestosFiltrados.map((p) => {
-                  const esDueño = !!userId && p.created_by === userId;
+                  const anulado = estaAnulado(p);
+                  const esDueño = !!userId && p.created_by === userId && !anulado;
                   return (
-                    <tr key={p.id} className="border-b border-gray-100 last:border-0">
+                    <tr key={p.id} className={`border-b border-gray-100 last:border-0 ${anulado ? "bg-gray-50/70 text-gray-500" : ""}`}>
                       <td className="px-4 py-3 text-gray-700">{TITULOS[p.tipo]}</td>
-                      <td className="px-4 py-3 text-gray-900">{p.cliente_nombre}</td>
+                      <td className="px-4 py-3 text-gray-900">
+                        <span className={anulado ? "line-through" : ""}>{p.cliente_nombre}</span>
+                        {anulado && <EtiquetaAnulado className="ml-2" />}
+                        {anulado && p.anulado_motivo && (
+                          <p className="mt-0.5 text-xs text-gray-500">Motivo: {p.anulado_motivo}</p>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-gray-700">
                         {resumenPresupuesto(p.tipo, p.datos)}
                       </td>
@@ -266,6 +285,15 @@ function HistorialTabla() {
                       <td className="px-4 py-3 text-gray-700">{formatFecha(p.created_at)}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
+                          {anulado && (
+                            <Link
+                              href={`/dashboard/${p.tipo}?id=${p.id}`}
+                              title="Ver"
+                              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                            >
+                              Ver
+                            </Link>
+                          )}
                           {esDueño && (
                             <Link
                               href={`/dashboard/${p.tipo}?id=${p.id}`}
@@ -286,12 +314,12 @@ function HistorialTabla() {
                           </Link>
                           {esDueño && (
                             <button
-                              onClick={() => setPorEliminar(p)}
-                              title="Eliminar"
+                              onClick={() => setPorAnular(p)}
+                              title="Anular"
                               className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
                             >
                               <IconTrash className="h-4 w-4" />
-                              Eliminar
+                              Anular
                             </button>
                           )}
                         </div>
@@ -308,15 +336,22 @@ function HistorialTabla() {
           <div className="flex flex-col gap-3 sm:hidden">
             {presupuestosFiltrados.map((p) => {
               const detalle = resumenPresupuesto(p.tipo, p.datos);
-              const esDueño = !!userId && p.created_by === userId;
+              const anulado = estaAnulado(p);
+              const esDueño = !!userId && p.created_by === userId && !anulado;
               return (
                 <div
                   key={p.id}
-                  className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                  className={`rounded-lg border border-gray-200 p-4 shadow-sm ${anulado ? "bg-gray-50" : "bg-white"}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="font-medium text-gray-900">{p.cliente_nombre}</p>
+                      <p className="font-medium text-gray-900">
+                        <span className={anulado ? "line-through" : ""}>{p.cliente_nombre}</span>
+                        {anulado && <EtiquetaAnulado className="ml-2" />}
+                      </p>
+                      {anulado && p.anulado_motivo && (
+                        <p className="text-xs text-gray-500">Motivo: {p.anulado_motivo}</p>
+                      )}
                       <p className="text-sm text-gray-500">
                         {TITULOS[p.tipo]}
                         {detalle ? ` · ${detalle}` : ""}
@@ -328,6 +363,14 @@ function HistorialTabla() {
                     </span>
                   </div>
                   <div className="mt-3 flex gap-2 border-t border-gray-100 pt-3">
+                    {anulado && (
+                      <Link
+                        href={`/dashboard/${p.tipo}?id=${p.id}`}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-[#1B3A5C] px-3 py-2 text-sm font-medium text-white"
+                      >
+                        Ver
+                      </Link>
+                    )}
                     {esDueño && (
                       <Link
                         href={`/dashboard/${p.tipo}?id=${p.id}`}
@@ -351,8 +394,9 @@ function HistorialTabla() {
                     </Link>
                     {esDueño && (
                       <button
-                        onClick={() => setPorEliminar(p)}
-                        title="Eliminar"
+                        onClick={() => setPorAnular(p)}
+                        title="Anular"
+                        aria-label="Anular"
                         className="flex items-center justify-center rounded-md border border-red-200 px-3 py-2 text-red-600"
                       >
                         <IconTrash className="h-4 w-4" />
@@ -366,19 +410,16 @@ function HistorialTabla() {
         </>
       )}
 
-      <ConfirmDialog
-        open={porEliminar !== null}
-        title="Eliminar presupuesto"
-        message={
-          porEliminar
-            ? `Vas a eliminar el presupuesto de "${porEliminar.cliente_nombre}". No se puede deshacer.`
+      <AnularDialog
+        open={porAnular !== null}
+        titulo="Anular presupuesto"
+        mensaje={
+          porAnular
+            ? `Vas a anular el presupuesto de "${porAnular.cliente_nombre}". Queda en el historial (se puede ver y exportar), pero ya no se puede modificar.`
             : ""
         }
-        confirmLabel="Eliminar"
-        danger
-        loading={eliminandoId !== null}
-        onConfirm={confirmarEliminar}
-        onCancel={() => setPorEliminar(null)}
+        onConfirmar={confirmarAnular}
+        onCancel={() => setPorAnular(null)}
       />
     </PanelPortal>
   );

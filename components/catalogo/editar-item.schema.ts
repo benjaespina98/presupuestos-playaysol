@@ -23,9 +23,9 @@ export const EditarItemSchema = z.object({
   categoria: z.union([Categoria, z.literal("")]),
   unidad: z.union([z.enum(UNIDADES), z.literal("")]),
   activo: z.boolean(),
-  /** Si el ítem se guarda en el local. Tildado → `stock` es la cantidad. */
+  /** Si el ítem se guarda en el local. Las unidades NO se editan acá: se mueven con
+   *  Ingreso, Venta o Ajustar conteo (libro de movimientos, lib/stock.ts). */
   llevaStock: z.boolean(),
-  stock: z.number().int("El stock tiene que ser un número entero").nonnegative("El stock no puede ser negativo").nullable(),
 });
 export type EditarItemForm = z.infer<typeof EditarItemSchema>;
 
@@ -42,20 +42,25 @@ export function aFormulario(item: ItemCatalogo): EditarItemForm {
       : "",
     activo: item.activo,
     llevaStock: item.stock !== null,
-    stock: item.stock,
   };
 }
 
-/** Form → lo que espera `actualizarItemCatalogo`. */
-export function aCambios(form: EditarItemForm): CambiosItemCatalogo {
+/**
+ * Form → lo que espera `actualizarItemCatalogo`.
+ *
+ * El stock sólo viaja cuando se TILDA o se DESTILDA "Llevar stock" (null ↔ 0): son
+ * los únicos cambios directos que la base admite. Si no cambió el interruptor, no
+ * se manda nada: mandar el número que el formulario tenía abierto pisaría un
+ * movimiento que otra persona hizo mientras tanto (y la base lo rechazaría).
+ */
+export function aCambios(form: EditarItemForm, stockActual: number | null = null): CambiosItemCatalogo {
+  const stock = form.llevaStock ? (stockActual === null ? 0 : undefined) : stockActual === null ? undefined : null;
   return {
     descripcion: form.descripcion.trim() || null,
     precio: form.precio,
     categoria: form.categoria === "" ? null : form.categoria,
     unidad: form.unidad === "" ? null : form.unidad,
     activo: form.activo,
-    // Sin tildar "Llevar stock" el ítem deja de llevarlo (null); tildado y sin
-    // número, arranca en 0.
-    stock: form.llevaStock ? (form.stock ?? 0) : null,
+    ...(stock !== undefined ? { stock } : {}),
   };
 }

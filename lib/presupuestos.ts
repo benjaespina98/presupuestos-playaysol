@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase";
+import { mensajeDeErrorAnulacion, validarMotivo } from "@/lib/anulacion";
 
 export type TipoCalculadora =
   | "piscinas"
@@ -21,6 +22,10 @@ export interface Presupuesto {
   created_by: string | null;
   created_at: string;
   creador?: Perfil | null;
+  /** Anulado = congelado, visible y exportable pero no editable (ver lib/anulacion.ts). */
+  anulado_at?: string | null;
+  anulado_por?: string | null;
+  anulado_motivo?: string | null;
 }
 
 export function nombreCreador(creador: Perfil | null | undefined): string {
@@ -175,6 +180,7 @@ export async function obtenerUltimoPresupuesto(tipo: TipoCalculadora): Promise<P
       .from("presupuestos")
       .select("*")
       .eq("tipo", tipo)
+      .is("anulado_at", null)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -217,24 +223,36 @@ export async function actualizarPresupuesto(
     .eq("id", id)
     .select("id");
 
-  if (error) return { error };
+  if (error) {
+    // Un presupuesto anulado no se puede modificar: se avisa en castellano.
+    return { error: /anulado/i.test(error.message) ? new Error(mensajeDeErrorAnulacion(error.message)) : error };
+  }
   if (!data || data.length === 0) return { error: new Error(SIN_PERMISO) };
   return { error: null };
 }
 
-export async function eliminarPresupuesto(id: string) {
+/**
+ * Anula un presupuesto (ya no se borran). Sólo manda el motivo: quién y cuándo
+ * los fija la base con un trigger, y rechaza anular dos veces o sin motivo.
+ * Como `actualizarPresupuesto`, sólo el autor puede (RLS), y pide `.select("id")`
+ * para distinguir "anulé una fila" de "no me dejó".
+ */
+export async function anularPresupuesto(id: string, motivo: string) {
+  const validado = validarMotivo(motivo);
+  if (validado.error !== null) return { error: new Error(validado.error) };
+
   const supabase = createClient();
   const { data, error } = await supabase
     .from("presupuestos")
-    .delete()
+    .update({ anulado_motivo: validado.motivo })
     .eq("id", id)
     .select("id");
 
-  if (error) return { error };
+  if (error) return { error: new Error(mensajeDeErrorAnulacion(error.message)) };
   if (!data || data.length === 0) {
     return {
       error: new Error(
-        "No se pudo eliminar: este presupuesto lo creó otra persona y solo su autor puede borrarlo."
+        "No se pudo anular: este presupuesto lo creó otra persona y solo su autor puede anularlo."
       ),
     };
   }

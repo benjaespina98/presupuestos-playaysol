@@ -151,7 +151,7 @@ export default function MaterialesPage() {
           A confirmar
         </Chip>
         <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
-          Mostrar dados de baja
+          Mostrar desactivados
         </Interruptor>
         {hayFiltros && (
           <button type="button" onClick={limpiar} className="min-h-11 rounded-lg px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8 sm:ml-auto">
@@ -224,11 +224,6 @@ export default function MaterialesPage() {
             setEditando(null);
             setMensaje(`Se guardó "${m.nombre}".`);
           }}
-          onEliminado={(m) => {
-            setMateriales((prev) => (prev ? prev.filter((x) => x.id !== m.id) : prev));
-            setEditando(null);
-            setMensaje(`Se eliminó "${m.nombre}".`);
-          }}
         />
       )}
 
@@ -242,7 +237,6 @@ export default function MaterialesPage() {
             setCreando(false);
             setMensaje(`Se agregó "${m.nombre}".`);
           }}
-          onEliminado={() => undefined}
         />
       )}
     </PanelPortal>
@@ -267,7 +261,7 @@ function FilaMaterial({
       <div className="min-w-0 basis-full md:basis-auto">
         <p className="flex flex-wrap items-center gap-x-2 font-medium text-gray-900">
           {m.nombre}
-          {!m.activo && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">De baja</span>}
+          {!m.activo && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">Desactivado</span>}
         </p>
         {m.notas && (
           <p className="mt-0.5 line-clamp-1 text-xs text-gray-500" title={m.notas}>

@@ -29,6 +29,7 @@ import { DocumentoPiscina } from "./DocumentoPiscina";
 import { PiscinaFormSchema, formularioVacio, type PiscinaForm } from "./schema";
 import { AccionesDocumento } from "@/components/calculadoras/AccionesDocumento";
 import { FloatingSaveBar } from "@/components/calculadoras/FloatingSaveBar";
+import { CamposSoloLectura } from "@/components/Anulado";
 import { CamposObligatoriosHint } from "@/components/calculadoras/CamposObligatoriosHint";
 import { VarianteEncabezadoField } from "@/components/calculadoras/VarianteEncabezadoField";
 import { VistaPreviaMovil } from "@/components/calculadoras/VistaPreviaMovil";
@@ -484,6 +485,7 @@ export function PiscinaCalculadora({
           </p>
         )}
 
+        <CamposSoloLectura>
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Datos del cliente</h2>
           <TextField register={register} errors={errors} name="cliente.nombre" label="Señor/Sra" placeholder="Apellido, Nombre" autoComplete="name" />
@@ -660,6 +662,8 @@ export function PiscinaCalculadora({
             </div>
           )}
         </section>
+
+        </CamposSoloLectura>
 
         <AccionesDocumento
           errorGuardado={errorGuardado}

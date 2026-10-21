@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { obtenerPresupuesto } from "@/lib/presupuestos";
+import { AvisoAnulado, ProveerAnulado, type DatosAnulacion } from "@/components/Anulado";
 import { leerPresupuesto, paraDuplicar, type PresupuestoLeido } from "@/lib/domain/presupuesto/adaptadores";
 import { LosetasCalculadora } from "@/components/calculadoras/losetas/LosetasCalculadora";
 
@@ -32,6 +33,7 @@ function LosetasContenido() {
 
   const [presupuestoInicial, setPresupuestoInicial] = useState<PresupuestoLeido | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [anulado, setAnulado] = useState<DatosAnulacion | null>(null);
   const [cargando, setCargando] = useState(!!(idParam || duplicarParam));
 
   useEffect(() => {
@@ -45,6 +47,7 @@ function LosetasContenido() {
     (async () => {
       try {
         const fila = await obtenerPresupuesto(idACargar);
+        if (idParam && fila.anulado_at) setAnulado({ motivo: fila.anulado_motivo ?? null, fecha: fila.anulado_at });
         if (cancelado) return;
         const leido = leerPresupuesto("losetas", fila.datos);
         setPresupuestoInicial(
@@ -82,7 +85,10 @@ function LosetasContenido() {
       {!error && cargando && <p className="mt-4 text-sm text-gray-500">Cargando…</p>}
       {!error && !cargando && (
         <div className="mt-6">
-          <LosetasCalculadora presupuestoId={idParam} presupuestoInicial={presupuestoInicial} />
+          <ProveerAnulado anulado={anulado}>
+            {anulado && <AvisoAnulado anulado={anulado} />}
+            <LosetasCalculadora presupuestoId={idParam} presupuestoInicial={presupuestoInicial} />
+          </ProveerAnulado>
         </div>
       )}
     </div>

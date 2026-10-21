@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { obtenerCatalogo, type CatalogoRow } from "@/lib/catalogo";
 import { obtenerPresupuesto } from "@/lib/presupuestos";
+import { AvisoAnulado, ProveerAnulado, type DatosAnulacion } from "@/components/Anulado";
 import { leerPresupuesto, paraDuplicar, type PresupuestoLeido } from "@/lib/domain/presupuesto/adaptadores";
 import { PiscinaCalculadora } from "@/components/calculadoras/piscinas/PiscinaCalculadora";
 import { DuplicarUltimoBanner } from "@/components/DuplicarUltimoBanner";
@@ -29,6 +30,7 @@ function PiscinasContenido() {
   const [catalogo, setCatalogo] = useState<CatalogoRow[] | null>(null);
   const [presupuestoInicial, setPresupuestoInicial] = useState<PresupuestoLeido | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [anulado, setAnulado] = useState<DatosAnulacion | null>(null);
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
@@ -42,6 +44,7 @@ function PiscinasContenido() {
         const idACargar = idParam || duplicarParam;
         if (idACargar) {
           const fila = await obtenerPresupuesto(idACargar);
+          if (idParam && fila.anulado_at) setAnulado({ motivo: fila.anulado_motivo ?? null, fecha: fila.anulado_at });
           if (cancelado) return;
           const leido = leerPresupuesto("piscinas", fila.datos);
           setPresupuestoInicial(
@@ -80,7 +83,10 @@ function PiscinasContenido() {
       {!error && !cargando && catalogo && (
         <div className="mt-6">
           {!idParam && !duplicarParam && <DuplicarUltimoBanner tipo="piscinas" tipoLabel="Piscina" />}
-          <PiscinaCalculadora catalogo={catalogo} presupuestoId={idParam} presupuestoInicial={presupuestoInicial} />
+          <ProveerAnulado anulado={anulado}>
+            {anulado && <AvisoAnulado anulado={anulado} />}
+            <PiscinaCalculadora catalogo={catalogo} presupuestoId={idParam} presupuestoInicial={presupuestoInicial} />
+          </ProveerAnulado>
         </div>
       )}
     </div>

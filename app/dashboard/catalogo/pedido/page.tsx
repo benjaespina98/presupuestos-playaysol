@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { listarMateriales, listarProveedores } from "@/lib/abastecimiento";
 import { TAMANOS, type Material } from "@/lib/domain/abastecimiento/material";
 import type { Proveedor } from "@/lib/domain/abastecimiento/proveedor";
+import { avisosDeDesactivados } from "@/lib/domain/abastecimiento/pedido";
 import {
   PARAMETROS_POR_DEFECTO,
   armarPedido,
@@ -86,6 +87,7 @@ function PedidoContenido() {
   const [notas, setNotas] = useState("");
   const [guardado, setGuardado] = useState<{ pedido: PedidoGuardado; firma: string } | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [confirmadoPara, setConfirmadoPara] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<Mensaje | null>(null);
 
   // Volver a armar a partir de un pedido guardado.
@@ -126,6 +128,12 @@ function PedidoContenido() {
     [materiales, proveedores, params, ajustes]
   );
 
+  // Desactivados: un material desactivado se deja afuera (y se avisa); un pedido a un proveedor
+  // desactivado no se guarda ni se exporta sin que alguien lo confirme.
+  const desactivados = useMemo(() => avisosDeDesactivados(materiales ?? [], pedido, params), [materiales, pedido, params]);
+  const claveDesactivados = desactivados.proveedoresDesactivados.map((d) => d.proveedor.id).sort().join("|");
+  const bloqueadoPorDesactivados = claveDesactivados !== "" && confirmadoPara !== claveDesactivados;
+
   // Lo que la cuenta pide pero se sacó a mano: se puede volver a poner.
   const quitados = useMemo(
     () =>
@@ -160,6 +168,7 @@ function PedidoContenido() {
 
   async function asegurarGuardado(): Promise<{ pedido: PedidoGuardado | null; error: string | null }> {
     if (vigente) return { pedido: vigente, error: null };
+    if (bloqueadoPorDesactivados) return { pedido: null, error: "Confirmá primero que querés pedirle a un proveedor desactivado." };
     const r = await guardarPedido({ obra, solicitante: pide, parametros: params, lineas, costo: pedido.costo, notas });
     if (r.pedido) setGuardado({ pedido: r.pedido, firma });
     return r;
@@ -375,13 +384,20 @@ function PedidoContenido() {
                   <b className="text-gray-900">{pedido.articulos}</b> artículos · <b className="text-gray-900">{pedido.proveedores}</b> proveedores ·{" "}
                   <b className="text-gray-900">{formatARSExacto(pedido.costo)}</b>
                 </p>
-                <Accion principal onClick={onGuardar} deshabilitado={ocupado || !!vigente}>
+                <Accion principal onClick={onGuardar} deshabilitado={ocupado || !!vigente || bloqueadoPorDesactivados}>
                   {vigente ? `Guardado · ${numeroFormateado(vigente.numero)}` : "Guardar pedido"}
                 </Accion>
                 <Accion onClick={() => copiar("todo", mensajeWhatsApp(pedido, params, encabezado))}>
                   {copiado === "todo" ? "¡Copiado!" : "Copiar mensaje para WhatsApp"}
                 </Accion>
-                <MenuExportar onExportar={onExportar} onCsv={descargarCsv} variosProveedores={pedido.grupos.length > 1} ocupado={ocupado} />
+                <div
+                  aria-disabled={bloqueadoPorDesactivados || undefined}
+                  inert={bloqueadoPorDesactivados}
+                  title={bloqueadoPorDesactivados ? "Confirmá primero que querés pedir a un proveedor desactivado" : undefined}
+                  className={bloqueadoPorDesactivados ? "opacity-50" : undefined}
+                >
+                  <MenuExportar onExportar={onExportar} onCsv={descargarCsv} variosProveedores={pedido.grupos.length > 1} ocupado={ocupado} />
+                </div>
                 <Accion onClick={() => window.print()}>Imprimir</Accion>
                 {hayAjustes && (
                   <button
@@ -393,6 +409,37 @@ function PedidoContenido() {
                   </button>
                 )}
               </div>
+
+              {desactivados.materialesFuera.length > 0 && (
+                <p role="status" data-print-hide="" className="mb-3 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  <b>
+                    {desactivados.materialesFuera.length === 1
+                      ? "1 material desactivado quedó afuera del pedido:"
+                      : `${desactivados.materialesFuera.length} materiales desactivados quedaron afuera del pedido:`}
+                  </b>{" "}
+                  {desactivados.materialesFuera.map((m) => m.nombre).join(", ")}. Si lo necesitás, reactivalo en Materiales.
+                </p>
+              )}
+              {desactivados.proveedoresDesactivados.length > 0 && (
+                <div role="alert" data-print-hide="" className="mb-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  <p className="font-semibold">
+                    ⚠ Este pedido incluye {desactivados.proveedoresDesactivados.length === 1 ? "un proveedor desactivado" : "proveedores desactivados"}:{" "}
+                    {desactivados.proveedoresDesactivados.map((d) => d.proveedor.nombre).join(", ")}.
+                  </p>
+                  <p className="mt-0.5">
+                    Dejaron de ofrecerse, pero estos materiales todavía son suyos. Reasigná los materiales a otro proveedor, o confirmá para pedir igual.
+                  </p>
+                  <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-2 font-medium">
+                    <input
+                      type="checkbox"
+                      checked={!bloqueadoPorDesactivados}
+                      onChange={(e) => setConfirmadoPara(e.target.checked ? claveDesactivados : null)}
+                      className="h-5 w-5"
+                    />
+                    Pedir igual a proveedores desactivados
+                  </label>
+                </div>
+              )}
 
               {mensaje && (
                 <p

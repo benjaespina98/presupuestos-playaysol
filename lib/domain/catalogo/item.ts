@@ -45,9 +45,10 @@ export const ItemCatalogo = z.object({
    *  ordena alfabéticamente. */
   orden: z.number().nullable(),
   /** Unidades físicas en el local. null = el ítem no lleva stock (se pide a
-   *  pedido: hierros, luces...); 0 = lleva stock y está agotado. Sólo existe si
-   *  corrió `supabase/migration_stock_piscinas.sql`; sin ella llega como null. */
-  stock: z.number().int().nonnegative().nullable().default(null),
+   *  pedido: hierros, luces...); 0 = lleva stock y está agotado. Puede ser NEGATIVO
+   *  (se vendió más de lo que se tenía cargado: se permite y se avisa). Es un caché
+   *  de la suma del libro de movimientos: no se escribe directo (ver lib/stock.ts). */
+  stock: z.number().int().nullable().default(null),
   updated_at: z.string(),
 });
 export type ItemCatalogo = z.infer<typeof ItemCatalogo>;
@@ -117,7 +118,12 @@ export function llevaStock(item: { stock?: number | null }): item is { stock: nu
   return item.stock !== null && item.stock !== undefined;
 }
 
-/** "Sin stock" / "1 en stock" / "3 en stock": para pegar en WhatsApp o mostrar. */
+/** ¿Lleva stock y está por debajo de 0? (se vendió más de lo cargado). */
+export function stockNegativo(item: { stock?: number | null }): boolean {
+  return llevaStock(item) && item.stock < 0;
+}
+
+/** "Sin stock" / "1 en stock" / "3 en stock": para pegar en WhatsApp o mostrar. Un negativo también es "sin stock". */
 export function textoStock(stock: number): string {
   return stock <= 0 ? "sin stock" : `${stock} en stock`;
 }
@@ -128,7 +134,7 @@ export type FiltroStock = "disponible" | "agotado" | "sin-control";
 
 export function coincideStock(item: { stock?: number | null }, filtro: FiltroStock): boolean {
   if (!llevaStock(item)) return filtro === "sin-control";
-  return filtro === "disponible" ? item.stock > 0 : filtro === "agotado" ? item.stock === 0 : false;
+  return filtro === "disponible" ? item.stock > 0 : filtro === "agotado" ? item.stock <= 0 : false;
 }
 
 /** Resumen del stock de un conjunto de ítems: cuántos modelos lo llevan, cuántos
@@ -141,7 +147,7 @@ export function resumenStock(items: { stock?: number | null }[]): { modelos: num
     if (!llevaStock(it)) continue;
     modelos++;
     if (it.stock > 0) conUnidades++;
-    unidades += it.stock;
+    unidades += Math.max(0, it.stock); // un negativo no resta unidades que sí hay en otros modelos
   }
   return { modelos, conUnidades, unidades };
 }

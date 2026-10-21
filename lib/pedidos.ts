@@ -5,6 +5,8 @@ import {
   type LineaGuardada,
 } from "@/lib/domain/abastecimiento/pedidoDocumento";
 import type { ParametrosPedido } from "@/lib/domain/abastecimiento/pedido";
+import { mensajeFilaInvalida } from "@/lib/logs";
+import { mensajeDeErrorAnulacion, validarMotivo } from "@/lib/anulacion";
 
 /**
  * Acceso a Supabase de los pedidos guardados. Mismo criterio que
@@ -43,7 +45,7 @@ export async function listarPedidos(): Promise<ResultadoListarPedidos> {
     for (const fila of data ?? []) {
       const r = PedidoGuardado.safeParse(fila);
       if (r.success) items.push(r.data);
-      else console.error("Fila de pedidos con forma inesperada, se omite", fila, r.error);
+      else console.error(mensajeFilaInvalida("Fila de pedidos con forma inesperada, se omite", fila, r.error));
     }
     // Los más nuevos primero.
     items.sort((a, b) => b.numero - a.numero);
@@ -90,7 +92,7 @@ export async function guardarPedido(
     if (error) return { pedido: null, error: mensaje(error) };
     const r = PedidoGuardado.safeParse(data);
     if (!r.success) {
-      console.error("El pedido se guardó pero no valida", data, r.error);
+      console.error(mensajeFilaInvalida("El pedido se guardó pero no valida", data, r.error));
       return { pedido: null, error: "El pedido se guardó, pero no se pudo leer de vuelta — recargá la página." };
     }
     return { pedido: r.data, error: null };
@@ -111,7 +113,7 @@ export async function cambiarEstadoPedido(id: string, estado: EstadoPedido): Pro
       .update({ estado, updated_by: user?.id })
       .eq("id", id)
       .select("id");
-    if (error) return { error: mensaje(error) };
+    if (error) return { error: mensajeDeErrorAnulacion(mensaje(error)) };
     if (!data || data.length === 0) {
       return { error: "No se pudo cambiar el estado: el pedido ya no existe (puede haberlo eliminado otra persona)." };
     }
@@ -122,17 +124,27 @@ export async function cambiarEstadoPedido(id: string, estado: EstadoPedido): Pro
   }
 }
 
-export async function eliminarPedido(id: string): Promise<{ error: string | null }> {
+/**
+ * Anula un pedido (ya no se borran). Sólo manda el motivo: quién y cuándo los
+ * fija la base con un trigger, que también rechaza anular dos veces.
+ */
+export async function anularPedido(id: string, motivo: string): Promise<{ error: string | null }> {
+  const validado = validarMotivo(motivo);
+  if (validado.error !== null) return { error: validado.error };
   try {
     const supabase = createClient();
-    const { data, error } = await supabase.from("pedidos").delete().eq("id", id).select("id");
-    if (error) return { error: mensaje(error) };
+    const { data, error } = await supabase
+      .from("pedidos")
+      .update({ anulado_motivo: validado.motivo })
+      .eq("id", id)
+      .select("id");
+    if (error) return { error: mensajeDeErrorAnulacion(mensaje(error)) };
     if (!data || data.length === 0) {
-      return { error: "No se pudo eliminar: el pedido ya no existe o no tenés permiso para borrarlo." };
+      return { error: "No se pudo anular: el pedido ya no existe o no tenés permiso para anularlo." };
     }
     return { error: null };
   } catch (err) {
-    console.error("No se pudo eliminar el pedido", err);
+    console.error("No se pudo anular el pedido", err);
     return { error: ERROR_DE_RED };
   }
 }

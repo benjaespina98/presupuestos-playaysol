@@ -4,7 +4,7 @@ import { useState } from "react";
 import { z } from "zod";
 import { useZodForm } from "@/lib/forms/useZodForm";
 import { MoneyField, NumberField, TextField, SelectField, CheckboxField } from "@/components/form";
-import { eliminarMaterial, guardarMaterial } from "@/lib/abastecimiento";
+import { guardarMaterial } from "@/lib/abastecimiento";
 import {
   APLICA,
   RUBROS_MATERIAL,
@@ -15,7 +15,7 @@ import {
   type Material,
 } from "@/lib/domain/abastecimiento/material";
 import type { Proveedor } from "@/lib/domain/abastecimiento/proveedor";
-import { BotonesGuardar, ModalShell, ZonaEliminar } from "./modal-partes";
+import { BotonesGuardar, ModalShell } from "./modal-partes";
 
 /** `cantidades` viaja como array en el orden de TAMANOS: un nombre de campo
  *  como "7x3.50" tiene un punto, y React Hook Form lo leería como una ruta. */
@@ -80,20 +80,18 @@ function opciones(base: readonly string[], actual: string | null | undefined, va
 
 /**
  * Alta y edición de un material (artículo de compra). `material` null = alta.
- * En la edición viven "dar de baja" (apagar Activo) y "Eliminar".
+ * En la edición vive "desactivar" (apagar Activo). Los materiales no se borran.
  */
 export function MaterialModal({
   material,
   proveedores,
   onClose,
   onGuardado,
-  onEliminado,
 }: {
   material: Material | null;
   proveedores: Proveedor[];
   onClose: () => void;
   onGuardado: (m: Material, alta: boolean) => void;
-  onEliminado: (m: Material) => void;
 }) {
   const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
   const {
@@ -117,19 +115,11 @@ export function MaterialModal({
     onGuardado(item, material === null);
   }
 
-  async function eliminar(): Promise<string | null> {
-    if (!material) return null;
-    const { error } = await eliminarMaterial(material.id);
-    if (error) return error;
-    onEliminado(material);
-    return null;
-  }
-
   const opcionesProveedor = [
     { value: "", label: "Sin proveedor" },
     ...proveedores
       .filter((p) => p.activo || p.id === material?.proveedor_id)
-      .map((p) => ({ value: p.id, label: p.activo ? p.nombre : `${p.nombre} (de baja)` })),
+      .map((p) => ({ value: p.id, label: p.activo ? p.nombre : `${p.nombre} (desactivado)` })),
   ];
 
   return (
@@ -196,7 +186,7 @@ export function MaterialModal({
           errors={errors}
           name="activo"
           label="Activo"
-          hint="Desactivalo para dar de baja el material sin perderlo."
+          hint="Desactivar el material lo saca de los pedidos nuevos, sin perderlo. Lo podés reactivar cuando quieras."
         />
 
         {errorGuardado && (
@@ -213,15 +203,6 @@ export function MaterialModal({
         />
       </form>
 
-      {material && (
-        <ZonaEliminar
-          etiqueta="Eliminar material"
-          titulo="¿Eliminar este material?"
-          mensaje={`Se elimina "${material.nombre}" para todo el equipo y no se puede deshacer. Si sólo querés ocultarlo, desactivalo en lugar de eliminarlo.`}
-          deshabilitado={isSubmitting}
-          onEliminar={eliminar}
-        />
-      )}
     </ModalShell>
   );
 }

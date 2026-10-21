@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 /**
  * Piezas compartidas por los modales de Proveedores y Materiales (y con el
- * mismo aspecto que los del catálogo de precios): el marco, los botones de
- * guardar/cancelar y la zona de eliminar con confirmación. Cada modal sólo
+ * mismo aspecto que los del catálogo de precios): el marco y los botones de
+ * guardar/cancelar. Cada modal sólo
  * aporta sus campos.
  */
 
@@ -76,67 +74,6 @@ export function BotonesGuardar({
       >
         Cancelar
       </button>
-    </div>
-  );
-}
-
-/**
- * "Eliminar" con confirmación, separado del resto del formulario. `onEliminar`
- * devuelve el error (o null si salió bien); el modal muestra el error y, si
- * salió bien, quien llama cierra y actualiza el listado.
- */
-export function ZonaEliminar({
-  etiqueta,
-  titulo,
-  mensaje,
-  deshabilitado = false,
-  onEliminar,
-}: {
-  etiqueta: string;
-  titulo: string;
-  mensaje: string;
-  deshabilitado?: boolean;
-  onEliminar: () => Promise<string | null>;
-}) {
-  const [confirmando, setConfirmando] = useState(false);
-  const [eliminando, setEliminando] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function confirmar() {
-    setEliminando(true);
-    setError(null);
-    const e = await onEliminar();
-    setEliminando(false);
-    setConfirmando(false);
-    if (e) setError(e);
-  }
-
-  return (
-    <div className="mt-5 border-t border-gray-200 pt-4">
-      {error && (
-        <p role="alert" className="mb-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </p>
-      )}
-      <button
-        type="button"
-        onClick={() => setConfirmando(true)}
-        disabled={deshabilitado || eliminando}
-        className="min-h-11 w-full rounded-md border border-red-200 px-4 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {etiqueta}
-      </button>
-      <ConfirmDialog
-        open={confirmando}
-        danger
-        loading={eliminando}
-        title={titulo}
-        message={mensaje}
-        confirmLabel="Sí, eliminar"
-        cancelLabel="No, conservarlo"
-        onConfirm={confirmar}
-        onCancel={() => setConfirmando(false)}
-      />
     </div>
   );
 }

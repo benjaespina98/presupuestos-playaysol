@@ -5,11 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ItemCatalogo } from "@/lib/domain/catalogo/item";
 import { EditarItemModal } from "./EditarItemModal";
 
-const { actualizarItemCatalogo, eliminarItemCatalogo } = vi.hoisted(() => ({
+const { actualizarItemCatalogo } = vi.hoisted(() => ({
   actualizarItemCatalogo: vi.fn(),
-  eliminarItemCatalogo: vi.fn(),
 }));
-vi.mock("@/lib/catalogo", () => ({ actualizarItemCatalogo, eliminarItemCatalogo }));
+vi.mock("@/lib/catalogo", () => ({ actualizarItemCatalogo }));
 
 function item(overrides: Partial<ItemCatalogo> = {}): ItemCatalogo {
   return {
@@ -31,11 +30,10 @@ function item(overrides: Partial<ItemCatalogo> = {}): ItemCatalogo {
 describe("EditarItemModal", () => {
   beforeEach(() => {
     actualizarItemCatalogo.mockReset();
-    eliminarItemCatalogo.mockReset();
   });
 
   it("precarga los valores actuales del ítem", () => {
-    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={vi.fn()} onEliminado={vi.fn()} />);
+    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={vi.fn()} />);
 
     expect(screen.getByLabelText("Descripción")).toHaveValue("Luces LED");
     expect(screen.getByLabelText("Precio")).toHaveValue("$ 240.000");
@@ -44,7 +42,7 @@ describe("EditarItemModal", () => {
   });
 
   it("un ítem con precio null (a cotizar) precarga el campo vacío, no en $0", () => {
-    render(<EditarItemModal item={item({ precio: null })} onClose={vi.fn()} onGuardado={vi.fn()} onEliminado={vi.fn()} />);
+    render(<EditarItemModal item={item({ precio: null })} onClose={vi.fn()} onGuardado={vi.fn()} />);
     expect(screen.getByLabelText("Precio")).toHaveValue("");
   });
 
@@ -52,7 +50,7 @@ describe("EditarItemModal", () => {
     actualizarItemCatalogo.mockResolvedValue({ error: null });
     const onGuardado = vi.fn();
     const user = userEvent.setup();
-    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={onGuardado} onEliminado={vi.fn()} />);
+    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={onGuardado} />);
 
     await user.clear(screen.getByLabelText("Precio"));
     await user.type(screen.getByLabelText("Precio"), "300000");
@@ -70,7 +68,7 @@ describe("EditarItemModal", () => {
     actualizarItemCatalogo.mockResolvedValue({ error: null });
     const onGuardado = vi.fn();
     const user = userEvent.setup();
-    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={onGuardado} onEliminado={vi.fn()} />);
+    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={onGuardado} />);
 
     await user.clear(screen.getByLabelText("Precio"));
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
@@ -82,7 +80,7 @@ describe("EditarItemModal", () => {
   it("poner el precio en 0 lo guarda como 0, no como null", async () => {
     actualizarItemCatalogo.mockResolvedValue({ error: null });
     const user = userEvent.setup();
-    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={vi.fn()} onEliminado={vi.fn()} />);
+    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={vi.fn()} />);
 
     await user.clear(screen.getByLabelText("Precio"));
     await user.type(screen.getByLabelText("Precio"), "0");
@@ -95,7 +93,7 @@ describe("EditarItemModal", () => {
   it("un precio negativo se rechaza en el cliente y no llega a persistirse", async () => {
     const onGuardado = vi.fn();
     const user = userEvent.setup();
-    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={onGuardado} onEliminado={vi.fn()} />);
+    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={onGuardado} />);
 
     await user.clear(screen.getByLabelText("Precio"));
     await user.type(screen.getByLabelText("Precio"), "-100");
@@ -110,7 +108,7 @@ describe("EditarItemModal", () => {
     actualizarItemCatalogo.mockResolvedValue({ error: "No se pudo guardar: motivo tal." });
     const onGuardado = vi.fn();
     const user = userEvent.setup();
-    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={onGuardado} onEliminado={vi.fn()} />);
+    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={onGuardado} />);
 
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
@@ -121,7 +119,7 @@ describe("EditarItemModal", () => {
   it("cancelar cierra sin guardar", async () => {
     const onClose = vi.fn();
     const user = userEvent.setup();
-    render(<EditarItemModal item={item()} onClose={onClose} onGuardado={vi.fn()} onEliminado={vi.fn()} />);
+    render(<EditarItemModal item={item()} onClose={onClose} onGuardado={vi.fn()} />);
 
     await user.clear(screen.getByLabelText("Descripción"));
     await user.type(screen.getByLabelText("Descripción"), "Otra cosa");
@@ -134,7 +132,7 @@ describe("EditarItemModal", () => {
   it("cambiar categoría a 'Sin clasificar' guarda null", async () => {
     actualizarItemCatalogo.mockResolvedValue({ error: null });
     const user = userEvent.setup();
-    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={vi.fn()} onEliminado={vi.fn()} />);
+    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={vi.fn()} />);
 
     await user.selectOptions(screen.getByLabelText("Categoría"), "Sin clasificar");
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
@@ -146,7 +144,7 @@ describe("EditarItemModal", () => {
   it("destildar Activo lo guarda en false", async () => {
     actualizarItemCatalogo.mockResolvedValue({ error: null });
     const user = userEvent.setup();
-    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={vi.fn()} onEliminado={vi.fn()} />);
+    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={vi.fn()} />);
 
     await user.click(screen.getByLabelText("Activo"));
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
@@ -156,17 +154,16 @@ describe("EditarItemModal", () => {
   });
 });
 
-describe("EditarItemModal · dar de baja y eliminar", () => {
+describe("EditarItemModal · desactivar y reactivar (los ítems no se borran)", () => {
   beforeEach(() => {
     actualizarItemCatalogo.mockReset();
-    eliminarItemCatalogo.mockReset();
   });
 
-  it("dar de baja es apagar 'Activo' y guardar, sin tocar el resto", async () => {
+  it("desactivar es apagar 'Activo' y guardar, sin tocar el resto", async () => {
     actualizarItemCatalogo.mockResolvedValue({ error: null });
     const onGuardado = vi.fn();
     const user = userEvent.setup();
-    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={onGuardado} onEliminado={vi.fn()} />);
+    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={onGuardado} />);
 
     await user.click(screen.getByLabelText("Activo"));
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
@@ -178,96 +175,68 @@ describe("EditarItemModal · dar de baja y eliminar", () => {
     );
   });
 
-  it("eliminar pide confirmación y no borra nada hasta confirmar", async () => {
+  it("reactivar es volver a encender 'Activo' en un ítem desactivado", async () => {
+    actualizarItemCatalogo.mockResolvedValue({ error: null });
+    const onGuardado = vi.fn();
     const user = userEvent.setup();
-    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={vi.fn()} onEliminado={vi.fn()} />);
+    render(<EditarItemModal item={item({ activo: false })} onClose={vi.fn()} onGuardado={onGuardado} />);
 
-    await user.click(screen.getByRole("button", { name: "Eliminar ítem" }));
-    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "No, conservarlo" }));
+    expect(screen.getByLabelText("Activo")).not.toBeChecked();
+    await user.click(screen.getByLabelText("Activo"));
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
-    expect(eliminarItemCatalogo).not.toHaveBeenCalled();
-    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    await vi.waitFor(() => expect(onGuardado).toHaveBeenCalled());
+    expect(actualizarItemCatalogo).toHaveBeenCalledWith("id-1", expect.objectContaining({ activo: true }));
   });
 
-  it("confirmar elimina la fila y avisa con onEliminado", async () => {
-    eliminarItemCatalogo.mockResolvedValue({ error: null });
-    const onEliminado = vi.fn();
-    const user = userEvent.setup();
-    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={vi.fn()} onEliminado={onEliminado} />);
-
-    await user.click(screen.getByRole("button", { name: "Eliminar ítem" }));
-    await user.click(screen.getByRole("button", { name: "Sí, eliminar" }));
-
-    await vi.waitFor(() => expect(onEliminado).toHaveBeenCalledWith(expect.objectContaining({ id: "id-1" })));
-    expect(eliminarItemCatalogo).toHaveBeenCalledWith("id-1");
-  });
-
-  it("si falla el borrado muestra el error y no avisa onEliminado", async () => {
-    eliminarItemCatalogo.mockResolvedValue({ error: "No se pudo eliminar: sin permiso" });
-    const onEliminado = vi.fn();
-    const user = userEvent.setup();
-    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={vi.fn()} onEliminado={onEliminado} />);
-
-    await user.click(screen.getByRole("button", { name: "Eliminar ítem" }));
-    await user.click(screen.getByRole("button", { name: "Sí, eliminar" }));
-
-    expect(await screen.findByText("No se pudo eliminar: sin permiso")).toBeInTheDocument();
-    expect(onEliminado).not.toHaveBeenCalled();
-  });
-
-  it("un precio base de la calculadora se puede editar pero no eliminar", () => {
-    render(
-      <EditarItemModal
-        item={item({ tipo: "cercos", clave: "precioSin", descripcion: "Precio por ml sin instalación" })}
-        onClose={vi.fn()}
-        onGuardado={vi.fn()}
-        onEliminado={vi.fn()}
-      />
-    );
-    expect(screen.queryByRole("button", { name: "Eliminar ítem" })).not.toBeInTheDocument();
-    expect(screen.getByText(/no eliminar/)).toBeInTheDocument();
+  it("no ofrece eliminar: ni botón ni confirmación", () => {
+    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: /eliminar/i })).not.toBeInTheDocument();
   });
 });
 
 describe("EditarItemModal · stock", () => {
   beforeEach(() => actualizarItemCatalogo.mockReset());
 
-  it("un ítem sin stock no muestra el campo; tildar 'Llevar stock' lo habilita y guarda 0 si queda vacío", async () => {
+  it("las unidades no se editan acá: no hay campo de unidades, ni con stock", () => {
+    render(<EditarItemModal item={item({ stock: 2 })} onClose={vi.fn()} onGuardado={vi.fn()} />);
+    expect(screen.queryByLabelText("Unidades en stock")).not.toBeInTheDocument();
+    expect(screen.getByText(/Ingreso, Venta o Ajustar conteo/)).toBeInTheDocument();
+  });
+
+  it("tildar 'Llevar stock' en un ítem que no lo llevaba lo arranca en 0", async () => {
     actualizarItemCatalogo.mockResolvedValue({ error: null });
     const onGuardado = vi.fn();
     const user = userEvent.setup();
-    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={onGuardado} onEliminado={vi.fn()} />);
-    expect(screen.queryByLabelText("Unidades en stock")).not.toBeInTheDocument();
+    render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={onGuardado} />);
 
     await user.click(screen.getByLabelText("Llevar stock"));
-    expect(screen.getByLabelText("Unidades en stock")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
     await vi.waitFor(() => expect(onGuardado).toHaveBeenCalled());
     expect(actualizarItemCatalogo).toHaveBeenCalledWith("id-1", expect.objectContaining({ stock: 0 }));
   });
 
-  it("precarga las unidades y las guarda al cambiarlas", async () => {
+  it("guardar otros cambios de un ítem con stock NO manda el stock (no pisa un movimiento de otra persona)", async () => {
     actualizarItemCatalogo.mockResolvedValue({ error: null });
     const onGuardado = vi.fn();
     const user = userEvent.setup();
-    render(<EditarItemModal item={item({ stock: 2 })} onClose={vi.fn()} onGuardado={onGuardado} onEliminado={vi.fn()} />);
-    expect(screen.getByLabelText("Unidades en stock")).toHaveValue("2");
+    render(<EditarItemModal item={item({ stock: 2 })} onClose={vi.fn()} onGuardado={onGuardado} />);
 
-    await user.clear(screen.getByLabelText("Unidades en stock"));
-    await user.type(screen.getByLabelText("Unidades en stock"), "5");
+    await user.clear(screen.getByLabelText("Descripción"));
+    await user.type(screen.getByLabelText("Descripción"), "Otro nombre");
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
     await vi.waitFor(() => expect(onGuardado).toHaveBeenCalled());
-    expect(actualizarItemCatalogo).toHaveBeenCalledWith("id-1", expect.objectContaining({ stock: 5 }));
+    expect(actualizarItemCatalogo.mock.calls[0][1]).not.toHaveProperty("stock");
+    expect(onGuardado).toHaveBeenCalledWith(expect.objectContaining({ stock: 2 }));
   });
 
-  it("destildar 'Llevar stock' deja el ítem sin stock (null)", async () => {
+  it("destildar 'Llevar stock' manda null (la base sólo lo acepta con el conteo en 0)", async () => {
     actualizarItemCatalogo.mockResolvedValue({ error: null });
     const onGuardado = vi.fn();
     const user = userEvent.setup();
-    render(<EditarItemModal item={item({ stock: 2 })} onClose={vi.fn()} onGuardado={onGuardado} onEliminado={vi.fn()} />);
+    render(<EditarItemModal item={item({ stock: 0 })} onClose={vi.fn()} onGuardado={onGuardado} />);
 
     await user.click(screen.getByLabelText("Llevar stock"));
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));

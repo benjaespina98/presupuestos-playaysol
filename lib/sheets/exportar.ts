@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { z } from "zod";
 import { TAMANOS, type Material } from "@/lib/domain/abastecimiento/material";
 import type { Proveedor } from "@/lib/domain/abastecimiento/proveedor";
 import { CATEGORIAS } from "@/lib/domain/catalogo/categorias";
@@ -21,18 +22,20 @@ import { CATEGORIAS } from "@/lib/domain/catalogo/categorias";
  * Es puro (sin red ni base de datos) para poder probarlo.
  */
 
-export interface ItemPrecio {
-  tipo: string;
-  clave: string;
-  precio: number | null;
-  activo?: boolean;
+/** Una fila de `catalogo_items` tal como la lee la sincronización (sólo lectura). */
+export const ItemPrecio = z.object({
+  tipo: z.string(),
+  clave: z.string(),
+  precio: z.number().nullable(),
+  activo: z.boolean().optional(),
   /** Unidades en el local; null/undefined = no lleva stock. */
-  stock?: number | null;
-  descripcion?: string | null;
-  categoria?: string | null;
-  unidad?: string | null;
-  updated_at?: string | null;
-}
+  stock: z.number().nullish(),
+  descripcion: z.string().nullish(),
+  categoria: z.string().nullish(),
+  unidad: z.string().nullish(),
+  updated_at: z.string().nullish(),
+});
+export type ItemPrecio = z.infer<typeof ItemPrecio>;
 
 /** Nombre para mostrar de cada calculadora en la hoja "Catálogo web". */
 const NOMBRE_TIPO: Record<string, string> = {
@@ -75,7 +78,7 @@ export interface Exportacion {
   /** "tipo:clave" → precio de venta (null = a cotizar). Sólo ítems activos. */
   precios: Record<string, number | null>;
   /** Todos los precios de venta del catálogo con todos sus campos (9 columnas, ver ENCABEZADOS_CATALOGO),
-   *  incluidos los dados de baja (con Estado "De baja"): es la hoja "Catálogo web". */
+   *  incluidos los desactivados (con Estado "Desactivado"): es la hoja "Catálogo web". */
   catalogo: Celda[][];
   /** "tipo:clave" → unidades en stock. Sólo los ítems activos que llevan stock (0 = agotado). */
   stock: Record<string, number>;
@@ -103,7 +106,8 @@ function porOrden<T extends { orden: number | null; nombre: string }>(items: rea
 export function armarExportacion(entrada: EntradaExportacion, ahora: Date = new Date()): Exportacion {
   const nombreProveedor = new Map(entrada.proveedores.map((p) => [p.id, p.nombre]));
 
-  // Dados de baja no van a la planilla: es lo que "dar de baja" significa.
+  // Los desactivados no van a las hojas Proveedores y Artículos (las fórmulas de la planilla leen
+  // esos rangos tal cual y no tienen columna de estado); sí figuran, con su Estado, en "Catálogo web".
   const proveedores: Celda[][] = porOrden(entrada.proveedores.filter((p) => p.activo)).map((p) => [
     p.nombre,
     texto(p.rubro),
@@ -167,7 +171,7 @@ export function armarExportacion(entrada: EntradaExportacion, ahora: Date = new 
       texto(i.unidad),
       i.precio === null ? "A cotizar" : i.precio,
       typeof i.stock === "number" ? i.stock : "",
-      i.activo === false ? "De baja" : "Activo",
+      i.activo === false ? "Desactivado" : "Activo",
       fechaParaPlanilla(i.updated_at ?? null),
     ]);
 

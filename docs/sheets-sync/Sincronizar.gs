@@ -202,6 +202,23 @@ function celdaVacia_(c) {
   return c === null || c === undefined ? "" : c;
 }
 
+/**
+ * Lo que se escribe en la celda: igual que celdaVacia_, pero un TEXTO que empiece con
+ * = + - @ (o con tabulador / retorno de carro) lleva un apóstrofe adelante.
+ *
+ * Por qué: los textos vienen del catálogo web (nombres de materiales, proveedores,
+ * descripciones), que puede editar cualquier usuario del portal. setValues interpreta
+ * como FÓRMULA un texto que empieza con "=", y una fórmula como =IMPORTDATA("https://...")
+ * o =IMPORTXML(...) puede mandar el contenido de la planilla de costos a un sitio ajeno.
+ * Con el apóstrofe Sheets lo guarda como texto y no muestra el apóstrofe. Los números no
+ * se tocan. Sólo se aplica al escribir: al comparar se usa el valor sin apóstrofe.
+ */
+function celdaParaEscribir_(c) {
+  var v = celdaVacia_(c);
+  if (typeof v === "string" && /^[=+\-@\t\r]/.test(v)) return "'" + v;
+  return v;
+}
+
 // ───────────────────────────── Escritura en la planilla ─────────────────────────────
 
 /**
@@ -238,7 +255,7 @@ function escribirDiferencias_(hoja, filaInicio, columnas, filasNuevas, formulas,
     if (!nueva) {
       hoja.getRange(fila, 1, 1, columnas).clearContent();
     } else {
-      hoja.getRange(fila, 1, 1, columnas).setValues([nueva.map(celdaVacia_)]);
+      hoja.getRange(fila, 1, 1, columnas).setValues([nueva.map(celdaParaEscribir_)]);
       for (var k = 0; k < columnas; k++) {
         if (formulas && formulas[i] && formulas[i][k]) hoja.getRange(fila, k + 1).setFormula(formulas[i][k]);
       }

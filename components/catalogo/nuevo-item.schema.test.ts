@@ -47,8 +47,8 @@ describe("aNuevoItem · piscinas", () => {
     expect(aNuevoItem({ ...nuevoItemFormVacio(), alta: "indusplast", modelo: "spa", medida: 2.5 })).toBeNull();
   });
 
-  it("el stock de una piscina se guarda (0 si se tilda sin número)", () => {
-    expect(aNuevoItem({ ...nuevoItemFormVacio(), alta: "indusplast", modelo: "spa", medida: 240, llevaStock: true, stock: null })?.stock).toBe(0);
+  it("un ítem nuevo que lleva stock nace en 0 (las unidades se cargan con un Ingreso)", () => {
+    expect(aNuevoItem({ ...nuevoItemFormVacio(), alta: "indusplast", modelo: "spa", medida: 240, llevaStock: true })?.stock).toBe(0);
     expect(aNuevoItem({ ...nuevoItemFormVacio(), alta: "indusplast", modelo: "spa", medida: 240 })?.stock).toBeNull();
   });
 });
