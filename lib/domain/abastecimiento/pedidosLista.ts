@@ -1,9 +1,12 @@
+import { estaAnulado } from "@/lib/anulacion";
 import { ESTADOS_PEDIDO, numeroFormateado, type EstadoPedido, type PedidoGuardado } from "./pedidoDocumento";
 
 /** Filtros del historial de pedidos. */
 export interface FiltroPedidos {
   busqueda?: string;
   estado?: EstadoPedido | null;
+  /** Por defecto los pedidos anulados no figuran en la lista. */
+  incluirAnulados?: boolean;
 }
 
 /** Los nombres de proveedor distintos de un pedido, en el orden en que se piden. */
@@ -19,6 +22,7 @@ export function filtrarPedidos(items: readonly PedidoGuardado[], filtro: FiltroP
   const q = filtro.busqueda?.trim().toLowerCase() ?? "";
   return items
     .filter((p) => {
+      if (!filtro.incluirAnulados && estaAnulado(p)) return false;
       if (filtro.estado && p.estado !== filtro.estado) return false;
       if (!q) return true;
       const texto = [numeroFormateado(p.numero), String(p.numero), p.obra, p.solicitante, p.parametros.tamano, ...proveedoresDePedido(p)]
@@ -32,10 +36,11 @@ export function filtrarPedidos(items: readonly PedidoGuardado[], filtro: FiltroP
 /** Cuántos pedidos hay por estado, con la búsqueda aplicada (ignora el filtro de estado: son los contadores de los chips). */
 export function contarPorEstado(
   items: readonly PedidoGuardado[],
-  busqueda: string
+  busqueda: string,
+  incluirAnulados = false
 ): { total: number; porEstado: Record<EstadoPedido, number> } {
   const porEstado = Object.fromEntries(ESTADOS_PEDIDO.map((e) => [e, 0])) as Record<EstadoPedido, number>;
-  const coincidentes = filtrarPedidos(items, { busqueda });
+  const coincidentes = filtrarPedidos(items, { busqueda, incluirAnulados });
   for (const p of coincidentes) porEstado[p.estado] += 1;
   return { total: coincidentes.length, porEstado };
 }

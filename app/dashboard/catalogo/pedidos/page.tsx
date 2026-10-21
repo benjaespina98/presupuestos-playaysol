@@ -14,10 +14,12 @@ import {
 import { contarPorEstado, filtrarPedidos, proveedoresDePedido } from "@/lib/domain/abastecimiento/pedidosLista";
 import { formatARSExacto } from "@/lib/format/ars";
 import { PanelPortal } from "@/components/PanelPortal";
+import { EtiquetaAnulado } from "@/components/Anulado";
+import { contarAnulados, estaAnulado } from "@/lib/anulacion";
 import { IconSearch } from "@/components/icons";
 import { BarraFiltros } from "@/components/catalogo/BarraFiltros";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
-import { Chip } from "@/components/catalogo/FiltrosCatalogo";
+import { Chip, Interruptor } from "@/components/catalogo/FiltrosCatalogo";
 import { CLASE_ESTADO, DetallePedidoModal } from "@/components/pedidos/DetallePedidoModal";
 
 /** Columnas en pantallas medianas y grandes: N° · Fecha · Obra · Pileta · Proveedores · Costo · Estado · acción. */
@@ -28,6 +30,7 @@ export default function PedidosPage() {
   const [error, setError] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [estado, setEstado] = useState<EstadoPedido | "">("");
+  const [mostrarAnulados, setMostrarAnulados] = useState(false);
   const [abierto, setAbierto] = useState<PedidoGuardado | null>(null);
   const [mensaje, setMensaje] = useState<string | null>(null);
 
@@ -44,10 +47,11 @@ export default function PedidosPage() {
   }, []);
 
   const visibles = useMemo(
-    () => (pedidos ? filtrarPedidos(pedidos, { busqueda, estado: estado || null }) : null),
-    [pedidos, busqueda, estado]
+    () => (pedidos ? filtrarPedidos(pedidos, { busqueda, estado: estado || null, incluirAnulados: mostrarAnulados }) : null),
+    [pedidos, busqueda, estado, mostrarAnulados]
   );
-  const conteos = useMemo(() => contarPorEstado(pedidos ?? [], busqueda), [pedidos, busqueda]);
+  const conteos = useMemo(() => contarPorEstado(pedidos ?? [], busqueda, mostrarAnulados), [pedidos, busqueda, mostrarAnulados]);
+  const cantidadAnulados = useMemo(() => contarAnulados(pedidos ?? []), [pedidos]);
   const hayFiltros = !!(busqueda || estado);
 
   return (
@@ -88,6 +92,14 @@ export default function PedidosPage() {
           ))}
         </div>
       </BarraFiltros>
+
+      {cantidadAnulados > 0 && (
+        <div className="mb-3">
+          <Interruptor checked={mostrarAnulados} onChange={setMostrarAnulados}>
+            Mostrar anulados ({cantidadAnulados})
+          </Interruptor>
+        </div>
+      )}
 
       {mensaje && (
         <p role="status" className="mb-4 rounded-md bg-green-50 px-4 py-3 text-sm text-green-700">
@@ -162,10 +174,10 @@ export default function PedidosPage() {
             setPedidos((prev) => (prev ? prev.map((x) => (x.id === p.id ? p : x)) : prev));
             setAbierto(p);
           }}
-          onEliminado={(p) => {
-            setPedidos((prev) => (prev ? prev.filter((x) => x.id !== p.id) : prev));
+          onAnulado={(p) => {
+            setPedidos((prev) => (prev ? prev.map((x) => (x.id === p.id ? p : x)) : prev));
             setAbierto(null);
-            setMensaje(`Se eliminó ${numeroFormateado(p.numero)}.`);
+            setMensaje(`Se anuló ${numeroFormateado(p.numero)}.`);
           }}
         />
       )}
@@ -177,7 +189,7 @@ function FilaPedido({ pedido: p, onAbrir }: { pedido: PedidoGuardado; onAbrir: (
   const proveedores = proveedoresDePedido(p);
   return (
     <li
-      className={`flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 transition-colors hover:bg-gray-50/70 md:grid md:gap-x-4 md:gap-y-0 md:py-2.5 ${COLUMNAS} ${p.estado === "cancelado" ? "opacity-60" : ""}`}
+      className={`flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 transition-colors hover:bg-gray-50/70 md:grid md:gap-x-4 md:gap-y-0 md:py-2.5 ${COLUMNAS} ${p.estado === "cancelado" || estaAnulado(p) ? "opacity-60" : ""}`}
     >
       <p className="font-semibold tabular-nums text-[#1B3A5C]">{numeroFormateado(p.numero)}</p>
       <p className="text-sm tabular-nums text-gray-600">{fechaDocumento(new Date(p.created_at))}</p>
@@ -192,9 +204,13 @@ function FilaPedido({ pedido: p, onAbrir }: { pedido: PedidoGuardado; onAbrir: (
         {proveedores.length} {proveedores.length === 1 ? "proveedor" : "proveedores"}
       </p>
       <p className="ml-auto whitespace-nowrap font-medium tabular-nums text-gray-900 md:ml-0 md:text-right">{formatARSExacto(p.costo)}</p>
-      <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-medium ${CLASE_ESTADO[p.estado]}`}>
-        {ETIQUETA_ESTADO[p.estado]}
-      </span>
+      {estaAnulado(p) ? (
+        <EtiquetaAnulado />
+      ) : (
+        <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-medium ${CLASE_ESTADO[p.estado]}`}>
+          {ETIQUETA_ESTADO[p.estado]}
+        </span>
+      )}
       <button
         type="button"
         onClick={onAbrir}

@@ -1,6 +1,7 @@
 "use client";
 
 import { IconCloudUpload, IconFileText, IconPrinter } from "@/components/icons";
+import { SoloSiNoAnulado } from "@/components/Anulado";
 
 /**
  * Bloque de acciones final de las 4 calculadoras tradicionales (cercos,
@@ -56,14 +57,16 @@ export function AccionesDocumento({
           No se pudo generar el PDF: {errorPdf}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={guardando}
-        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#1B3A5C] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        <IconCloudUpload className="h-4 w-4" />
-        {guardando ? "Guardando..." : "Guardar en la nube"}
-      </button>
+      <SoloSiNoAnulado>
+        <button
+          type="submit"
+          disabled={guardando}
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#1B3A5C] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <IconCloudUpload className="h-4 w-4" />
+          {guardando ? "Guardando..." : "Guardar en la nube"}
+        </button>
+      </SoloSiNoAnulado>
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"

@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { cambiarEstadoPedido, eliminarPedido } from "@/lib/pedidos";
+import { anularPedido, cambiarEstadoPedido } from "@/lib/pedidos";
+import { estaAnulado } from "@/lib/anulacion";
+import { AnularDialog } from "@/components/AnularDialog";
+import { AvisoAnulado } from "@/components/Anulado";
 import {
   ESTADOS_PEDIDO,
   ETIQUETA_ESTADO,
@@ -13,7 +16,7 @@ import {
 import { exportarPedido, type FormatoPedido, type ModoPedido } from "@/lib/documentos/pedidos/exportar";
 import { compartirOdescargarArchivo } from "@/lib/documentos/compartir";
 import { formatARSExacto } from "@/lib/format/ars";
-import { ModalShell, ZonaEliminar } from "@/components/abastecimiento/modal-partes";
+import { ModalShell } from "@/components/abastecimiento/modal-partes";
 import { MenuExportar } from "./MenuExportar";
 
 const cantidad = (n: number) => new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(n);
@@ -35,15 +38,18 @@ export function DetallePedidoModal({
   pedido,
   onClose,
   onCambio,
-  onEliminado,
+  onAnulado,
 }: {
   pedido: PedidoGuardado;
   onClose: () => void;
   /** Avisa que el pedido cambió (por ahora, de estado) para actualizar la lista. */
   onCambio: (p: PedidoGuardado) => void;
-  onEliminado: (p: PedidoGuardado) => void;
+  /** Avisa que se anuló, con los datos de la anulación, para actualizar la lista. */
+  onAnulado: (p: PedidoGuardado) => void;
 }) {
   const [ocupado, setOcupado] = useState(false);
+  const [anulando, setAnulando] = useState(false);
+  const anulado = estaAnulado(pedido);
   const [mensaje, setMensaje] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
 
   const doc = useMemo(
@@ -88,10 +94,12 @@ export function DetallePedidoModal({
     }
   }
 
-  async function eliminar(): Promise<string | null> {
-    const { error } = await eliminarPedido(pedido.id);
+  /** Devuelve el mensaje de error (el diálogo queda abierto) o null si se anuló. */
+  async function anular(motivo: string): Promise<string | null> {
+    const { error } = await anularPedido(pedido.id, motivo);
     if (error) return error;
-    onEliminado(pedido);
+    setAnulando(false);
+    onAnulado({ ...pedido, anulado_at: new Date().toISOString(), anulado_motivo: motivo });
     return null;
   }
 
@@ -103,6 +111,9 @@ export function DetallePedidoModal({
       ocupado={ocupado}
       onClose={onClose}
     >
+      {anulado && (
+        <AvisoAnulado anulado={{ motivo: pedido.anulado_motivo ?? null, fecha: pedido.anulado_at ?? null }} que="pedido" />
+      )}
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <label htmlFor="estado-pedido" className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
@@ -111,7 +122,7 @@ export function DetallePedidoModal({
           <select
             id="estado-pedido"
             value={pedido.estado}
-            disabled={ocupado}
+            disabled={ocupado || anulado}
             onChange={(e) => cambiarEstado(e.target.value as EstadoPedido)}
             className={`min-h-11 rounded-lg border border-gray-200 px-3 text-sm font-medium focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 ${CLASE_ESTADO[pedido.estado]}`}
           >
@@ -211,13 +222,25 @@ export function DetallePedidoModal({
         </button>
       </div>
 
-      <ZonaEliminar
-        etiqueta="Eliminar pedido"
-        titulo="¿Eliminar este pedido?"
-        mensaje={`Se elimina ${doc.numero} del historial para todo el equipo y no se puede deshacer. Si sólo no se va a usar, cambiale el estado a Cancelado en lugar de eliminarlo.`}
-        deshabilitado={ocupado}
-        onEliminar={eliminar}
-      />
+      {!anulado && (
+        <div className="mt-5 border-t border-gray-200 pt-4">
+          <button
+            type="button"
+            onClick={() => setAnulando(true)}
+            disabled={ocupado}
+            className="min-h-11 w-full rounded-md border border-red-200 px-4 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Anular pedido
+          </button>
+          <AnularDialog
+            open={anulando}
+            titulo="¿Anular este pedido?"
+            mensaje={`Se anula ${doc.numero}: queda en el historial para todo el equipo (se puede ver y exportar), pero ya no se puede modificar. Si sólo cambió de estado, usá el selector de Estado en lugar de anularlo.`}
+            onConfirmar={anular}
+            onCancel={() => setAnulando(false)}
+          />
+        </div>
+      )}
     </ModalShell>
   );
 }

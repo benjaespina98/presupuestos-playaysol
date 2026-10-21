@@ -25,6 +25,7 @@ import { problemasTramos } from "@/lib/domain/plano/profundidad";
 import { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { PresupuestoLeido } from "@/lib/domain/presupuesto/adaptadores";
 import { guardarPresupuesto, actualizarPresupuesto } from "@/lib/presupuestos";
+import { SoloSiNoAnulado } from "@/components/Anulado";
 import { armarNombreArchivo } from "@/lib/documentos/nombreArchivo";
 import { compartirOdescargarArchivo } from "@/lib/documentos/compartir";
 import { generarImagenClientePlano, generarPdfClientePlano } from "@/lib/documentos/losetas/imagenCliente";
@@ -861,14 +862,16 @@ export function LosetasCalculadora({
                 calculadoras por igual — antes acá abajo era al revés
                 (terracotta = exportar arriba, navy outline = guardar abajo),
                 la única de las 5 con esa jerarquía invertida. */}
+            <SoloSiNoAnulado>
             <button
-              type="submit"
-              disabled={guardando}
-              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#1B3A5C] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <IconCloudUpload className="h-4 w-4" />
-              {guardando ? "Guardando..." : "Guardar en la nube"}
-            </button>
+                type="submit"
+                disabled={guardando}
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#1B3A5C] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <IconCloudUpload className="h-4 w-4" />
+                {guardando ? "Guardando..." : "Guardar en la nube"}
+              </button>
+            </SoloSiNoAnulado>
 
             <div className="grid grid-cols-2 gap-2">
               <button

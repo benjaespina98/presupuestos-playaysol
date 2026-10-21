@@ -112,7 +112,7 @@ describe("guardarPedido", () => {
   });
 });
 
-describe("cambiarEstadoPedido / eliminarPedido", () => {
+describe("cambiarEstadoPedido / anularPedido", () => {
   function clienteEscritura(resultado: { data: unknown; error: unknown }) {
     const select = vi.fn(() => Promise.resolve(resultado));
     const eq = vi.fn(() => ({ select }));
@@ -133,17 +133,40 @@ describe("cambiarEstadoPedido / eliminarPedido", () => {
 
   it("0 filas afectadas es un error, no un éxito silencioso", async () => {
     createClient.mockReturnValue(clienteEscritura({ data: [], error: null }).cliente);
-    const { cambiarEstadoPedido, eliminarPedido } = await import("./pedidos");
+    const { cambiarEstadoPedido, anularPedido } = await import("./pedidos");
     expect((await cambiarEstadoPedido("p1", "recibido")).error).toMatch(/ya no existe/);
-    expect((await eliminarPedido("p1")).error).toMatch(/ya no existe o no tenés permiso/);
+    expect((await anularPedido("p1", "Cargado dos veces")).error).toMatch(/ya no existe o no tenés permiso/);
   });
 
-  it("elimina de a uno, por id", async () => {
-    const { cliente, eq } = clienteEscritura({ data: [{ id: "p1" }], error: null });
+  it("anula de a uno, por id, mandando sólo el motivo (quién y cuándo los pone la base)", async () => {
+    const { cliente, update, eq } = clienteEscritura({ data: [{ id: "p1" }], error: null });
     createClient.mockReturnValue(cliente);
-    const { eliminarPedido } = await import("./pedidos");
-    expect((await eliminarPedido("p1")).error).toBeNull();
+    const { anularPedido } = await import("./pedidos");
+    expect((await anularPedido("p1", "  Cargado dos veces  ")).error).toBeNull();
+    expect(update.mock.calls[0][0]).toEqual({ anulado_motivo: "Cargado dos veces" });
     expect(eq).toHaveBeenCalledWith("id", "p1");
+  });
+
+  it("sin motivo válido ni siquiera llama a la base", async () => {
+    const { cliente, update } = clienteEscritura({ data: [{ id: "p1" }], error: null });
+    createClient.mockReturnValue(cliente);
+    const { anularPedido } = await import("./pedidos");
+    expect((await anularPedido("p1", "  ")).error).toMatch(/motivo/i);
+    expect((await anularPedido("p1", "a".repeat(501))).error).toMatch(/largo/i);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("traduce el rechazo de la base a un registro ya anulado", async () => {
+    createClient.mockReturnValue(
+      clienteEscritura({ data: null, error: { message: "El registro está anulado y no se puede modificar." } }).cliente
+    );
+    const { anularPedido } = await import("./pedidos");
+    expect((await anularPedido("p1", "Otra vez")).error).toMatch(/ya está anulado/);
+  });
+
+  it("no hay ningún .delete() sobre pedidos: se anulan, no se borran", () => {
+    const src = fs.readFileSync(path.join(process.cwd(), "lib", "pedidos.ts"), "utf8");
+    expect(src).not.toMatch(/\.delete\(/);
   });
 });
 
