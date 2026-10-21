@@ -24,7 +24,7 @@ export function VolverArriba({ umbral = 500 }: { umbral?: number }) {
       data-print-hide=""
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
       aria-label="Volver arriba"
-      className="fixed bottom-5 right-5 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-[#244B5A] text-white shadow-lg transition-colors hover:bg-[#142c46] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244B5A]"
+      className="fixed bottom-5 right-5 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-[#244B5A] text-white shadow-lg transition-colors hover:bg-marca-oscuro focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244B5A]"
     >
       <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M12 19V5M5 12l7-7 7 7" />

@@ -50,7 +50,7 @@ export function DuplicarUltimoBanner({ tipo, tipoLabel }: { tipo: TipoCalculador
       <div className="flex shrink-0 items-center gap-2">
         <a
           href={`?duplicar=${ultimo.id}`}
-          className="inline-flex min-h-11 items-center rounded-md bg-[#244B5A] px-3 text-sm font-medium text-white hover:bg-[#142c46]"
+          className="inline-flex min-h-11 items-center rounded-md bg-[#244B5A] px-3 text-sm font-medium text-white hover:bg-marca-oscuro"
         >
           Duplicar el último
         </a>

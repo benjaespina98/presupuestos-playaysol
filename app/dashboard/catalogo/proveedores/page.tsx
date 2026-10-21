@@ -79,7 +79,7 @@ export default function ProveedoresPage() {
             setMensaje(null);
             setCreando(true);
           }}
-          className="flex min-h-11 items-center gap-1.5 rounded-lg bg-[#244B5A] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#142c46]"
+          className="flex min-h-11 items-center gap-1.5 rounded-lg bg-[#244B5A] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-marca-oscuro"
         >
           <IconPlus className="h-4 w-4" />
           Agregar proveedor

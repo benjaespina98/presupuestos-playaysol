@@ -545,7 +545,7 @@ function Accion({
       disabled={deshabilitado}
       className={`min-h-11 rounded-lg px-4 text-sm font-semibold shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
         principal
-          ? "bg-[#244B5A] text-white hover:bg-[#142c46]"
+          ? "bg-[#244B5A] text-white hover:bg-marca-oscuro"
           : "border border-gray-200 bg-white text-[#244B5A] hover:border-gray-300 hover:bg-gray-50"
       }`}
     >

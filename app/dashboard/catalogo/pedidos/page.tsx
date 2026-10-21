@@ -59,7 +59,7 @@ export default function PedidosPage() {
       <EncabezadoPagina titulo="Pedidos" descripcion="Historial de pedidos de materiales, con su número y su estado.">
         <Link
           href="/dashboard/catalogo/pedido"
-          className="flex min-h-11 items-center rounded-lg bg-[#244B5A] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#142c46]"
+          className="flex min-h-11 items-center rounded-lg bg-[#244B5A] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-marca-oscuro"
         >
           Armar pedido nuevo
         </Link>

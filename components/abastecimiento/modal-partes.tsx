@@ -62,7 +62,7 @@ export function BotonesGuardar({
       <button
         type="submit"
         disabled={guardando}
-        className="min-h-11 w-full rounded-md bg-[#244B5A] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244B5A] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
+        className="min-h-11 w-full rounded-md bg-[#244B5A] px-4 text-sm font-semibold text-white transition-colors hover:bg-marca-oscuro focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244B5A] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
       >
         {guardando ? etiquetaGuardando : etiqueta}
       </button>

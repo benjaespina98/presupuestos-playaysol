@@ -48,7 +48,7 @@ export function ConfirmDialog({
             className={`w-full rounded-md px-4 py-2.5 text-sm font-semibold text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 ${
               danger
                 ? "bg-red-600 hover:bg-red-700 focus-visible:outline-red-600"
-                : "bg-[#244B5A] hover:bg-[#142c46] focus-visible:outline-[#244B5A]"
+                : "bg-[#244B5A] hover:bg-marca-oscuro focus-visible:outline-[#244B5A]"
             }`}
           >
             {loading ? "Un momento..." : confirmLabel}

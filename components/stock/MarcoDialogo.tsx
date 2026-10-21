@@ -49,7 +49,7 @@ export function MarcoDialogo({
 }
 
 export const CLASE_INPUT =
-  "min-h-11 w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#244B5A] focus:outline-none focus:ring-1 focus:ring-[#244B5A] disabled:opacity-50";
+  "min-h-11 w-full rounded-lg border border-gray-300 px-3 py-2 text-base text-gray-900 placeholder:text-gray-400 hover:border-gray-400 focus:border-marca focus:outline-none focus:ring-2 focus:ring-celeste/40 disabled:opacity-50";
 
 export const CLASE_BOTON_PRIMARIO = `${boton.base} ${boton.primario} w-full`;
 

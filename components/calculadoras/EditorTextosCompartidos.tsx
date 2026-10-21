@@ -118,7 +118,7 @@ export function EditorTextosCompartidos({
           type="button"
           onClick={onGuardar}
           disabled={guardando}
-          className="min-h-11 w-full rounded-md bg-[#244B5A] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-h-11 w-full rounded-md bg-[#244B5A] px-4 text-sm font-semibold text-white transition-colors hover:bg-marca-oscuro disabled:cursor-not-allowed disabled:opacity-50"
         >
           {guardando ? "Guardando..." : "Guardar como predeterminado para todos"}
         </button>
