@@ -105,7 +105,7 @@ export default function ProveedoresPage() {
           Sin teléfono
         </Chip>
         <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
-          Mostrar dados de baja
+          Mostrar desactivados
         </Interruptor>
         {hayFiltros && (
           <button
@@ -185,13 +185,6 @@ export default function ProveedoresPage() {
             setEditando(null);
             setMensaje(`Se guardó "${p.nombre}".`);
           }}
-          onEliminado={(p) => {
-            setProveedores((prev) => (prev ? prev.filter((x) => x.id !== p.id) : prev));
-            // Sus materiales quedan sin proveedor (on delete set null): el contador local lo refleja.
-            setMateriales((prev) => prev.map((m) => (m.proveedor_id === p.id ? { ...m, proveedor_id: null } : m)));
-            setEditando(null);
-            setMensaje(`Se eliminó "${p.nombre}".`);
-          }}
         />
       )}
 
@@ -204,7 +197,6 @@ export default function ProveedoresPage() {
             setCreando(false);
             setMensaje(`Se agregó "${p.nombre}".`);
           }}
-          onEliminado={() => undefined}
         />
       )}
     </PanelPortal>
@@ -230,7 +222,7 @@ function FilaProveedor({
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium text-gray-900">
           {p.nombre}
           {p.rubro && <span className="rounded-md bg-[#EEF2F6] px-2 py-0.5 text-xs font-medium text-[#1B3A5C]">{p.rubro}</span>}
-          {!p.activo && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">De baja</span>}
+          {!p.activo && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">Desactivado</span>}
         </p>
         {p.notas && (
           <p className="mt-0.5 line-clamp-1 text-xs text-gray-500" title={p.notas}>

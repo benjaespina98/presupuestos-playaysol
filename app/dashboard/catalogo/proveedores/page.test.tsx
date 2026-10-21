@@ -10,7 +10,6 @@ const mocks = vi.hoisted(() => ({
   listarProveedores: vi.fn(),
   listarMateriales: vi.fn(),
   guardarProveedor: vi.fn(),
-  eliminarProveedor: vi.fn(),
 }));
 vi.mock("@/lib/abastecimiento", () => mocks);
 
@@ -129,7 +128,7 @@ describe("Proveedores", () => {
     expect(mocks.guardarProveedor).not.toHaveBeenCalled();
   });
 
-  it("dar de baja es apagar 'Activo' en la edición", async () => {
+  it("desactivar es apagar 'Activo' en la edición", async () => {
     mocks.listarProveedores.mockResolvedValue({ items: [prov()], error: null });
     mocks.guardarProveedor.mockResolvedValue({ item: prov({ activo: false }), error: null });
     const user = userEvent.setup();
@@ -146,21 +145,28 @@ describe("Proveedores", () => {
     expect(await screen.findByText('Se guardó "Ranco".')).toBeInTheDocument();
   });
 
-  it("eliminar avisa cuántos materiales quedan sin proveedor y pide confirmación", async () => {
+  it("no se puede eliminar un proveedor, y al editarlo se avisa que sus materiales siguen", async () => {
     mocks.listarProveedores.mockResolvedValue({ items: [prov()], error: null });
-    mocks.eliminarProveedor.mockResolvedValue({ error: null });
     const user = userEvent.setup();
     render(<ProveedoresPage />);
     await screen.findByText("Ranco");
 
     await user.click(screen.getByRole("button", { name: "Editar Ranco" }));
-    await user.click(await screen.findByRole("button", { name: "Eliminar proveedor" }));
-    expect(screen.getByRole("alertdialog")).toHaveTextContent(/2 materiales quedan sin proveedor/);
-    expect(mocks.eliminarProveedor).not.toHaveBeenCalled();
+    await screen.findByLabelText("Activo");
+    expect(screen.queryByRole("button", { name: /eliminar/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/2 materiales siguen cargados/)).toBeInTheDocument();
+  });
 
-    await user.click(screen.getByRole("button", { name: "Sí, eliminar" }));
-    await waitFor(() => expect(mocks.eliminarProveedor).toHaveBeenCalledWith("p1"));
-    expect(await screen.findByText('Se eliminó "Ranco".')).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Editar Ranco" })).not.toBeInTheDocument();
+  it("'Mostrar desactivados' trae de vuelta a los desactivados, con su etiqueta", async () => {
+    mocks.listarProveedores.mockResolvedValue({ items: [prov(), prov({ id: "p2", nombre: "Viejo SA", activo: false })], error: null });
+    const user = userEvent.setup();
+    render(<ProveedoresPage />);
+    await screen.findByText("Ranco");
+    expect(screen.queryByText("Viejo SA")).not.toBeInTheDocument();
+
+    await user.click(screen.getByLabelText("Mostrar desactivados"));
+
+    expect(await screen.findByText("Viejo SA")).toBeInTheDocument();
+    expect(screen.getByText("Desactivado")).toBeInTheDocument();
   });
 });

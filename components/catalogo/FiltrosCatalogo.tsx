@@ -42,7 +42,7 @@ const FILA_CHIPS = "flex flex-wrap items-center gap-2";
  *  3. El stock, en un desplegable junto a la búsqueda (sólo si algún ítem lo lleva):
  *     con stock / agotado / a pedido.
  *
- * Debajo, sin quedarse fija: los interruptores ("dados de baja", "modo
+ * Debajo, sin quedarse fija: los interruptores ("desactivados", "modo
  * consulta") y "Limpiar filtros". Es controlada: el estado vive en la página.
  */
 export function FiltrosCatalogo({
@@ -119,7 +119,7 @@ export function FiltrosCatalogo({
 
       <div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-0.5">
         <Interruptor checked={incluirInactivos} onChange={onIncluirInactivos}>
-          Mostrar dados de baja
+          Mostrar desactivados
         </Interruptor>
         <Interruptor checked={modoConsulta} onChange={onModoConsulta}>
           Modo consulta rápida

@@ -5,18 +5,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ItemCatalogo } from "@/lib/domain/catalogo/item";
 import CatalogoPage from "./page";
 
-const { listarItemsCatalogo, actualizarItemCatalogo, crearItemCatalogo, eliminarItemCatalogo, guardarStockItem } = vi.hoisted(() => ({
+const { listarItemsCatalogo, actualizarItemCatalogo, crearItemCatalogo, guardarStockItem } = vi.hoisted(() => ({
   listarItemsCatalogo: vi.fn(),
   actualizarItemCatalogo: vi.fn(),
   crearItemCatalogo: vi.fn(),
-  eliminarItemCatalogo: vi.fn(),
   guardarStockItem: vi.fn(),
 }));
 vi.mock("@/lib/catalogo", () => ({
   listarItemsCatalogo,
   actualizarItemCatalogo,
   crearItemCatalogo,
-  eliminarItemCatalogo,
   guardarStockItem,
 }));
 
@@ -139,7 +137,7 @@ describe("CatalogoPage · lectura", () => {
     await screen.findAllByText("Activo");
     expect(screen.queryByText("Descontinuado")).not.toBeInTheDocument();
 
-    await user.click(screen.getByLabelText("Mostrar dados de baja"));
+    await user.click(screen.getByLabelText("Mostrar desactivados"));
 
     expect((await screen.findAllByText("Descontinuado"))[0]).toBeInTheDocument();
   });
@@ -393,29 +391,45 @@ describe("CatalogoPage · dar de baja/reactivar rápido", () => {
     await waitFor(() =>
       expect(actualizarItemCatalogo).toHaveBeenCalledWith("a", expect.objectContaining({ activo: false, precio: 240000 }))
     );
-    // Sin "Mostrar dados de baja" tildado, desaparece del listado.
+    // Sin "Mostrar desactivados" tildado, desaparece del listado.
     await waitFor(() => expect(screen.queryByText("Luces LED")).not.toBeInTheDocument());
   });
 
-  it("eliminar desde la edición lo saca del listado y avisa", async () => {
+  it("no se puede eliminar un ítem desde la edición: sólo desactivarlo", async () => {
     listarItemsCatalogo.mockResolvedValue({
-      items: [item({ id: "a", descripcion: "Luces LED" }), item({ id: "b", descripcion: "Kit de limpieza" })],
+      items: [item({ id: "a", descripcion: "Luces LED" })],
       error: null,
     });
-    eliminarItemCatalogo.mockResolvedValue({ error: null });
     const user = userEvent.setup();
     render(<CatalogoPage />);
     await screen.findAllByText("Luces LED");
 
-    // El listado va ordenado alfabéticamente: "Kit de limpieza" queda primero.
     await user.click(screen.getAllByRole("button", { name: /Editar/ })[0]);
-    await user.click(await screen.findByRole("button", { name: "Eliminar ítem" }));
-    await user.click(screen.getByRole("button", { name: "Sí, eliminar" }));
+    await screen.findByLabelText("Activo");
 
-    await waitFor(() => expect(eliminarItemCatalogo).toHaveBeenCalledWith("b"));
-    await waitFor(() => expect(screen.queryByText("Kit de limpieza")).not.toBeInTheDocument());
-    expect(screen.getAllByText("Luces LED")[0]).toBeInTheDocument();
-    expect(await screen.findByText('Se eliminó "Kit de limpieza".')).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /eliminar/i })).not.toBeInTheDocument();
+  });
+
+  it("un ítem desactivado vuelve con 'Mostrar desactivados', lleva su etiqueta y se puede reactivar", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: [item({ id: "a", descripcion: "Luces LED", activo: false })],
+      error: null,
+    });
+    actualizarItemCatalogo.mockResolvedValue({ error: null });
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+    await waitFor(() => expect(listarItemsCatalogo).toHaveBeenCalled());
+    expect(screen.queryByText("Luces LED")).not.toBeInTheDocument();
+
+    await user.click(screen.getByLabelText("Mostrar desactivados"));
+    expect((await screen.findAllByText("Luces LED")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Desactivado").length).toBeGreaterThan(0);
+
+    await user.click(screen.getAllByRole("button", { name: /Editar/ })[0]);
+    await user.click(await screen.findByLabelText("Activo"));
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    await waitFor(() => expect(actualizarItemCatalogo).toHaveBeenCalledWith("a", expect.objectContaining({ activo: true })));
   });
 });
 

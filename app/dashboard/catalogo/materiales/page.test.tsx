@@ -10,7 +10,6 @@ const mocks = vi.hoisted(() => ({
   listarProveedores: vi.fn(),
   listarMateriales: vi.fn(),
   guardarMaterial: vi.fn(),
-  eliminarMaterial: vi.fn(),
 }));
 vi.mock("@/lib/abastecimiento", () => mocks);
 
@@ -214,18 +213,32 @@ describe("Materiales", () => {
     expect(mocks.guardarMaterial.mock.calls[0][1].usd_ref).toBeNull();
   });
 
-  it("eliminar pide confirmación y lo saca del listado", async () => {
+  it("no se puede eliminar un material: sólo desactivarlo (apagar 'Activo')", async () => {
     mocks.listarMateriales.mockResolvedValue({ items: [mat()], error: null });
-    mocks.eliminarMaterial.mockResolvedValue({ error: null });
+    mocks.guardarMaterial.mockResolvedValue({ item: mat({ activo: false }), error: null });
     const user = userEvent.setup();
     render(<MaterialesPage />);
     await screen.findByText("Cemento 25 kg");
 
     await user.click(screen.getByRole("button", { name: "Editar Cemento 25 kg" }));
-    await user.click(await screen.findByRole("button", { name: "Eliminar material" }));
-    await user.click(screen.getByRole("button", { name: "Sí, eliminar" }));
+    expect(screen.queryByRole("button", { name: /eliminar/i })).not.toBeInTheDocument();
+    await user.click(await screen.findByLabelText("Activo"));
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
-    await waitFor(() => expect(mocks.eliminarMaterial).toHaveBeenCalledWith("m1"));
-    expect(await screen.findByText('Se eliminó "Cemento 25 kg".')).toBeInTheDocument();
+    await waitFor(() => expect(mocks.guardarMaterial).toHaveBeenCalled());
+    expect(mocks.guardarMaterial.mock.calls[0][1].activo).toBe(false);
+  });
+
+  it("el interruptor se llama 'Mostrar desactivados' y trae de vuelta los desactivados, con su etiqueta", async () => {
+    mocks.listarMateriales.mockResolvedValue({ items: [mat(), mat({ id: "m2", nombre: "Arena", activo: false })], error: null });
+    const user = userEvent.setup();
+    render(<MaterialesPage />);
+    await screen.findByText("Cemento 25 kg");
+    expect(screen.queryByText("Arena")).not.toBeInTheDocument();
+
+    await user.click(screen.getByLabelText("Mostrar desactivados"));
+
+    expect(await screen.findByText("Arena")).toBeInTheDocument();
+    expect(screen.getByText("Desactivado")).toBeInTheDocument();
   });
 });

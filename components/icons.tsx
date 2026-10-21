@@ -101,10 +101,10 @@ export function IconPlus({ className = "h-4 w-4" }: IconProps) {
   );
 }
 
-/** Dar de alta/baja un ítem del catálogo (`activo`) — nunca un borrado real:
- *  no hay política de RLS que permita `.delete()` sobre catalogo_items (ver
- *  lib/catalogo.test.ts), a propósito, porque presupuestos v0 sin congelar
- *  todavía leen precios del catálogo por clave. */
+/** Desactivar/reactivar un ítem del catálogo (`activo`) — nunca un borrado real:
+ *  no hay política de RLS ni privilegio que permita borrar catalogo_items (ver
+ *  supabase/migrations/20261021000300_desactivacion.sql), a propósito, porque
+ *  presupuestos v0 sin congelar todavía leen precios del catálogo por clave. */
 export function IconPower({ className = "h-4 w-4" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>

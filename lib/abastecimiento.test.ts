@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 const { createClient } = vi.hoisted(() => ({ createClient: vi.fn() }));
@@ -155,27 +157,27 @@ describe("guardarMaterial", () => {
   });
 });
 
-describe("eliminar", () => {
-  function clienteBorrado(resultado: { data: unknown; error: unknown }) {
-    const select = vi.fn(() => Promise.resolve(resultado));
-    const eq = vi.fn(() => ({ select }));
-    return { cliente: { from: () => ({ delete: () => ({ eq }) }) }, eq };
-  }
-
-  it("borra por id, de a uno", async () => {
-    const { cliente, eq } = clienteBorrado({ data: [{ id: "p1" }], error: null });
-    createClient.mockReturnValue(cliente);
-    const { eliminarProveedor } = await import("./abastecimiento");
-
-    expect((await eliminarProveedor("p1")).error).toBeNull();
-    expect(eq).toHaveBeenCalledWith("id", "p1");
+describe("proveedores y materiales no se borran", () => {
+  it("lib/abastecimiento.ts no tiene ningún .delete(): se desactivan (activo = false)", () => {
+    const src = fs.readFileSync(path.join(process.cwd(), "lib", "abastecimiento.ts"), "utf8");
+    expect(src).not.toMatch(/\.delete\(/);
+    expect(src).not.toMatch(/eliminarProveedor|eliminarMaterial/);
   });
 
-  it("0 filas afectadas es un error, no un éxito silencioso", async () => {
-    const { cliente } = clienteBorrado({ data: [], error: null });
-    createClient.mockReturnValue(cliente);
-    const { eliminarMaterial } = await import("./abastecimiento");
+  it("desactivar es un update de activo por id, como cualquier otra edición", async () => {
+    const select = vi.fn(() => Promise.resolve({ data: [{ ...FILA_MATERIAL, activo: false }], error: null }));
+    const eq = vi.fn(() => ({ select }));
+    const update = vi.fn<(fila: Record<string, unknown>) => { eq: typeof eq }>(() => ({ eq }));
+    createClient.mockReturnValue({ auth: AUTH, from: () => ({ update }) });
+    const { guardarMaterial } = await import("./abastecimiento");
 
-    expect((await eliminarMaterial("m1")).error).toMatch(/ya no existe o no tenés permiso/);
+    const r = await guardarMaterial("p1", { ...DATOS, activo: false });
+
+    expect(r.error).toBeNull();
+    expect(update.mock.calls[0][0]).toMatchObject({ activo: false });
+    // Quién y cuándo lo desactivó los fija la base (trigger), el cliente no los manda.
+    expect(update.mock.calls[0][0]).not.toHaveProperty("desactivado_at");
+    expect(update.mock.calls[0][0]).not.toHaveProperty("desactivado_por");
+    expect(eq).toHaveBeenCalledWith("id", "p1");
   });
 });

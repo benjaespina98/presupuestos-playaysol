@@ -126,12 +126,6 @@ export default function CatalogoPage() {
     }
   }
 
-  function itemEliminado(eliminado: ItemCatalogo) {
-    setItems((prev) => (prev ? prev.filter((it) => it.id !== eliminado.id) : prev));
-    setEditando(null);
-    setMensajeExito(`Se eliminó "${eliminado.descripcion || eliminado.clave}".`);
-  }
-
   function itemCreado(nuevo: ItemCatalogo) {
     setItems((prev) => (prev ? [...prev, nuevo] : [nuevo]));
     setCreando(false);
@@ -279,7 +273,6 @@ export default function CatalogoPage() {
           item={editando}
           onClose={() => setEditando(null)}
           onGuardado={guardarEdicion}
-          onEliminado={itemEliminado}
         />
       )}
 
@@ -381,7 +374,7 @@ function ItemDescripcion({ item }: { item: ItemCatalogo }) {
   // sigue a la raya larga ("contado, kit estándar instalado") va como detalle.
   const corto = nombreCortoLista(item.clave);
   const baja = !item.activo && (
-    <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 align-middle text-[11px] font-medium text-gray-500">De baja</span>
+    <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 align-middle text-[11px] font-medium text-gray-500">Desactivado</span>
   );
   if (corto) {
     const detalle = item.descripcion?.split("—")[1]?.trim();

@@ -54,21 +54,6 @@ async function listar<S extends z.ZodType>(tabla: string, schema: S): Promise<Re
   }
 }
 
-async function eliminar(tabla: string, id: string, qué: string): Promise<{ error: string | null }> {
-  try {
-    const supabase = createClient();
-    const { data, error } = await supabase.from(tabla).delete().eq("id", id).select("id");
-    if (error) return { error: mensaje(error, "") };
-    if (!data || data.length === 0) {
-      return { error: `No se pudo eliminar: ${qué} ya no existe o no tenés permiso para borrarlo.` };
-    }
-    return { error: null };
-  } catch (err) {
-    console.error(`No se pudo eliminar de ${tabla}`, err);
-    return { error: ERROR_DE_RED };
-  }
-}
-
 // ── Proveedores ──────────────────────────────────────────────────────────────
 
 export const listarProveedores = () => listar("proveedores", Proveedor);
@@ -106,7 +91,6 @@ export async function guardarProveedor(
   }
 }
 
-export const eliminarProveedor = (id: string) => eliminar("proveedores", id, "el proveedor");
 
 // ── Materiales ───────────────────────────────────────────────────────────────
 
@@ -163,4 +147,3 @@ export async function guardarMaterial(
   }
 }
 
-export const eliminarMaterial = (id: string) => eliminar("materiales", id, "el material");
