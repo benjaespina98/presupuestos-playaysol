@@ -51,7 +51,7 @@ export default function DashboardPage() {
           <Link
             key={c.tipo}
             href={`/dashboard/${c.tipo}`}
-            className="group flex items-center gap-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:border-[#244B5A] hover:shadow-md"
+            className="group flex min-h-24 items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-marca hover:shadow-md active:translate-y-0 sm:p-6"
           >
             <svg
               viewBox="0 0 24 24"
@@ -65,7 +65,10 @@ export default function DashboardPage() {
             >
               {c.icon}
             </svg>
-            <h2 className="text-xl font-bold text-gray-900">{c.nombre}</h2>
+            <h2 className="flex-1 text-xl font-bold text-gray-900">{c.nombre}</h2>
+            <span aria-hidden="true" className="text-2xl text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-marca">
+              ›
+            </span>
           </Link>
         ))}
       </div>
