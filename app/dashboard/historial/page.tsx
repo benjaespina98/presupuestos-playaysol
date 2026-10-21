@@ -298,10 +298,10 @@ function HistorialTabla() {
                             <Link
                               href={`/dashboard/${p.tipo}?id=${p.id}`}
                               title="Editar"
-                              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                              aria-label="Editar"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
                             >
-                              <IconEdit className="h-4 w-4" />
-                              Editar
+                              <IconEdit className="h-[18px] w-[18px]" />
                             </Link>
                           )}
                           <Link
@@ -374,10 +374,11 @@ function HistorialTabla() {
                     {esDueño && (
                       <Link
                         href={`/dashboard/${p.tipo}?id=${p.id}`}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-[#1B3A5C] px-3 py-2 text-sm font-medium text-white"
+                        title="Editar"
+                        aria-label="Editar"
+                        className="flex min-h-10 w-12 shrink-0 items-center justify-center rounded-md bg-[#1B3A5C] text-white"
                       >
-                        <IconEdit className="h-4 w-4" />
-                        Editar
+                        <IconEdit className="h-[18px] w-[18px]" />
                       </Link>
                     )}
                     <Link
