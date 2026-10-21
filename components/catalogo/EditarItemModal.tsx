@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useZodForm } from "@/lib/forms/useZodForm";
-import { MoneyField, NumberField, TextField, SelectField, CheckboxField } from "@/components/form";
+import { MoneyField, TextField, SelectField, CheckboxField } from "@/components/form";
 import { actualizarItemCatalogo } from "@/lib/catalogo";
 import { CATEGORIAS, UNIDADES } from "@/lib/domain/catalogo/categorias";
 import type { ItemCatalogo } from "@/lib/domain/catalogo/item";
@@ -53,7 +53,7 @@ export function EditarItemModal({
 
   async function onSubmit(valores: EditarItemForm) {
     setErrorGuardado(null);
-    const cambios = aCambios(valores);
+    const cambios = aCambios(valores, item.stock);
     const { error } = await actualizarItemCatalogo(item.id, cambios);
     if (error) {
       setErrorGuardado(error);
@@ -120,7 +120,12 @@ export function EditarItemModal({
               hint="Para artículos que se guardan en el local (como las piscinas de fibra). Los que se piden a pedido no lo llevan."
             />
             {llevaStock && (
-              <NumberField control={control} name="stock" label="Unidades en stock" hint="0 = agotado" />
+              <p className="text-xs text-gray-500">
+                {item.stock === null
+                  ? "Arranca en 0 unidades."
+                  : `Hoy hay ${item.stock}.`}{" "}
+                Las unidades se mueven con Ingreso, Venta o Ajustar conteo, desde la lista del catálogo. Para dejar de llevar stock, el conteo tiene que estar en 0.
+              </p>
             )}
           </div>
           <CheckboxField

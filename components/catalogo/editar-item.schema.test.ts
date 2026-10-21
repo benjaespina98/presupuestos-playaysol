@@ -46,36 +46,35 @@ describe("aFormulario", () => {
 
 describe("aCambios", () => {
   it("'' vuelve a ser null para categoría y unidad", () => {
-    const cambios = aCambios({ descripcion: "x", precio: 1, categoria: "", unidad: "", activo: true, llevaStock: false, stock: null });
+    const cambios = aCambios({ descripcion: "x", precio: 1, categoria: "", unidad: "", activo: true, llevaStock: false });
     expect(cambios.categoria).toBeNull();
     expect(cambios.unidad).toBeNull();
   });
 
   it("precio null se preserva como 'a cotizar', no se convierte en 0", () => {
-    const cambios = aCambios({ descripcion: "x", precio: null, categoria: "", unidad: "", activo: true, llevaStock: false, stock: null });
+    const cambios = aCambios({ descripcion: "x", precio: null, categoria: "", unidad: "", activo: true, llevaStock: false });
     expect(cambios.precio).toBeNull();
   });
 
   it("precio 0 se preserva como 0, no como null", () => {
-    const cambios = aCambios({ descripcion: "x", precio: 0, categoria: "", unidad: "", activo: true, llevaStock: false, stock: null });
+    const cambios = aCambios({ descripcion: "x", precio: 0, categoria: "", unidad: "", activo: true, llevaStock: false });
     expect(cambios.precio).toBe(0);
   });
 
   it("una descripción sólo con espacios se guarda como null", () => {
-    const cambios = aCambios({ descripcion: "   ", precio: 1, categoria: "", unidad: "", activo: true, llevaStock: false, stock: null });
+    const cambios = aCambios({ descripcion: "   ", precio: 1, categoria: "", unidad: "", activo: true, llevaStock: false });
     expect(cambios.descripcion).toBeNull();
   });
 
   it("ida y vuelta: aCambios(aFormulario(item)) reproduce los mismos valores editables", () => {
     const original = item({ categoria: "Piscinas", unidad: "m²", precio: 1500, activo: false });
-    const cambios = aCambios(aFormulario(original));
+    const cambios = aCambios(aFormulario(original), original.stock);
     expect(cambios).toEqual({
       descripcion: original.descripcion,
       precio: original.precio,
       categoria: original.categoria,
       unidad: original.unidad,
       activo: original.activo,
-      stock: null,
     });
   });
 });
@@ -139,24 +138,30 @@ describe("EditarItemSchema", () => {
 describe("stock en el formulario", () => {
   const base = { descripcion: "x", precio: 1, categoria: "" as const, unidad: "" as const, activo: true };
 
-  it("sin tildar 'Llevar stock' el ítem no lleva stock (null), aunque quede un número", () => {
-    expect(aCambios({ ...base, llevaStock: false, stock: 5 }).stock).toBeNull();
+  it("las unidades NO se mandan: sin cambiar 'Llevar stock' no viaja ningún stock (no pisa un movimiento ajeno)", () => {
+    expect(aCambios({ ...base, llevaStock: true }, 7)).not.toHaveProperty("stock");
+    expect(aCambios({ ...base, llevaStock: true }, 0)).not.toHaveProperty("stock");
+    expect(aCambios({ ...base, llevaStock: false }, null)).not.toHaveProperty("stock");
+    expect(aCambios({ ...base, llevaStock: true })).toHaveProperty("stock", 0); // sin dato previo = ítem que no llevaba
   });
 
-  it("tildado, guarda la cantidad; sin cantidad arranca en 0 (no null)", () => {
-    expect(aCambios({ ...base, llevaStock: true, stock: 4 }).stock).toBe(4);
-    expect(aCambios({ ...base, llevaStock: true, stock: null }).stock).toBe(0);
+  it("tildar 'Llevar stock' en un ítem que no lo llevaba lo arranca en 0", () => {
+    expect(aCambios({ ...base, llevaStock: true }, null).stock).toBe(0);
   });
 
-  it("el formulario distingue 'sin stock' (null) de 'agotado' (0)", () => {
-    expect(aFormulario(item({ stock: null }))).toMatchObject({ llevaStock: false, stock: null });
-    expect(aFormulario(item({ stock: 0 }))).toMatchObject({ llevaStock: true, stock: 0 });
+  it("destildarlo en un ítem que lo llevaba manda null (la base lo acepta sólo si está en 0)", () => {
+    expect(aCambios({ ...base, llevaStock: false }, 0).stock).toBeNull();
+    expect(aCambios({ ...base, llevaStock: false }, 4).stock).toBeNull();
   });
 
-  it("rechaza stock negativo o con decimales", () => {
-    const f = { ...base, llevaStock: true };
-    expect(EditarItemSchema.safeParse({ ...f, stock: -1 }).success).toBe(false);
-    expect(EditarItemSchema.safeParse({ ...f, stock: 1.5 }).success).toBe(false);
-    expect(EditarItemSchema.safeParse({ ...f, stock: 2 }).success).toBe(true);
+  it("el formulario distingue 'sin stock' (null) de 'agotado' (0) y de negativo", () => {
+    expect(aFormulario(item({ stock: null }))).toMatchObject({ llevaStock: false });
+    expect(aFormulario(item({ stock: 0 }))).toMatchObject({ llevaStock: true });
+    expect(aFormulario(item({ stock: -3 }))).toMatchObject({ llevaStock: true });
+  });
+
+  it("el formulario ya no tiene un campo de unidades", () => {
+    expect(aFormulario(item({ stock: 5 }))).not.toHaveProperty("stock");
+    expect(Object.keys(EditarItemSchema.shape)).not.toContain("stock");
   });
 });

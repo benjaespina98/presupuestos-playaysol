@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase";
 import type { TipoCalculadora } from "@/lib/presupuestos";
 import { esTextoCompartido } from "@/lib/domain/catalogo/categorias";
 import { ItemCatalogo } from "@/lib/domain/catalogo/item";
+import { mensajeErrorStock } from "@/lib/domain/stock/movimientos";
 
 // Actualiza (o crea, si no existía — caso losetas, que no tiene seed inicial)
 // el precio/descripción permanente de un ítem de catálogo para TODOS los
@@ -183,8 +184,18 @@ export interface CambiosItemCatalogo {
   categoria: ItemCatalogo["categoria"];
   unidad: string | null;
   activo: boolean;
-  /** null = no lleva stock. */
-  stock: number | null;
+  /** Sólo al tildar/destildar "Llevar stock": 0 = empieza a llevarlo, null = deja de llevarlo.
+   *  Ausente = no se toca (las unidades se mueven con lib/stock.ts, no con un update). */
+  stock?: 0 | null;
+}
+
+/** Los rechazos del stock (la base lo protege de escritura directa) se explican en castellano. */
+function mensajeErrorItem(error: { code?: string; message?: string }): string {
+  if (error.code === "ST010") {
+    return "Para dejar de llevar stock, el conteo tiene que estar en 0: hacé primero un «Ajustar conteo». Las unidades no se editan acá.";
+  }
+  if (error.code === "ST011") return mensajeErrorStock(error);
+  return error.message ?? "Error desconocido.";
 }
 
 const SIN_FILA_AFECTADA =
@@ -229,7 +240,7 @@ export async function actualizarItemCatalogo(
 
     if (error) {
       if (esErrorMigracionPendiente(error)) return { error: ERROR_MIGRACION_PENDIENTE };
-      return { error: error.message };
+      return { error: mensajeErrorItem(error) };
     }
     if (!data || data.length === 0) return { error: SIN_FILA_AFECTADA };
     return { error: null };
@@ -290,7 +301,7 @@ export async function crearItemCatalogo(
       if (esErrorMigracionPendiente(error)) return { item: null, error: ERROR_MIGRACION_PENDIENTE };
       // 23505 = unique_violation (Postgres): ya existe (tipo, clave).
       if (error.code === "23505") return { item: null, error: CLAVE_DUPLICADA };
-      return { item: null, error: error.message };
+      return { item: null, error: mensajeErrorItem(error) };
     }
 
     const resultado = ItemCatalogo.safeParse(data);
@@ -302,36 +313,5 @@ export async function crearItemCatalogo(
   } catch (err) {
     console.error("No se pudo crear el ítem de catálogo", err);
     return { item: null, error: ERROR_DE_RED };
-  }
-}
-
-const STOCK_SIN_MIGRACION =
-  "Todavía no se puede guardar el stock: falta correr supabase/migration_stock_piscinas.sql en Supabase.";
-
-/**
- * Cambia sólo el stock de un ítem (los botones − / + de la lista). `null`
- * deja de llevar stock. Mismo cuidado que `actualizarItemCatalogo`: pide
- * `.select("id")` para no dar por guardado un update que no tocó ninguna fila.
- */
-export async function guardarStockItem(id: string, stock: number | null): Promise<{ error: string | null }> {
-  if (stock !== null && (!Number.isInteger(stock) || stock < 0)) {
-    return { error: "El stock tiene que ser un número entero, 0 o más." };
-  }
-  try {
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    const { data, error } = await supabase
-      .from("catalogo_items")
-      .update({ stock, updated_by: user?.id })
-      .eq("id", id)
-      .select("id");
-    if (error) return { error: esErrorSinColumnaStock(error) ? STOCK_SIN_MIGRACION : error.message };
-    if (!data || data.length === 0) return { error: SIN_FILA_AFECTADA };
-    return { error: null };
-  } catch (err) {
-    console.error("No se pudo guardar el stock", err);
-    return { error: ERROR_DE_RED };
   }
 }

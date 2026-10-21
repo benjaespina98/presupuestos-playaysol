@@ -5,18 +5,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ItemCatalogo } from "@/lib/domain/catalogo/item";
 import CatalogoPage from "./page";
 
-const { listarItemsCatalogo, actualizarItemCatalogo, crearItemCatalogo, guardarStockItem } = vi.hoisted(() => ({
+const { listarItemsCatalogo, actualizarItemCatalogo, crearItemCatalogo } = vi.hoisted(() => ({
   listarItemsCatalogo: vi.fn(),
   actualizarItemCatalogo: vi.fn(),
   crearItemCatalogo: vi.fn(),
-  guardarStockItem: vi.fn(),
 }));
 vi.mock("@/lib/catalogo", () => ({
   listarItemsCatalogo,
   actualizarItemCatalogo,
   crearItemCatalogo,
-  guardarStockItem,
 }));
+
+const { registrarMovimiento, ajustarConteo, anularMovimiento, listarMovimientos } = vi.hoisted(() => ({
+  registrarMovimiento: vi.fn(),
+  ajustarConteo: vi.fn(),
+  anularMovimiento: vi.fn(),
+  listarMovimientos: vi.fn(),
+}));
+vi.mock("@/lib/stock", () => ({ registrarMovimiento, ajustarConteo, anularMovimiento, listarMovimientos }));
 
 const { copiarAlPortapapeles } = vi.hoisted(() => ({ copiarAlPortapapeles: vi.fn() }));
 vi.mock("@/lib/clipboard", () => ({ copiarAlPortapapeles }));
@@ -550,8 +556,7 @@ describe("CatalogoPage · stock", () => {
   ];
 
   beforeEach(() => {
-    guardarStockItem.mockReset();
-    guardarStockItem.mockResolvedValue({ error: null });
+    for (const m of [registrarMovimiento, ajustarConteo, anularMovimiento, listarMovimientos]) m.mockReset();
     listarItemsCatalogo.mockResolvedValue({ items: PISCINAS, error: null });
   });
 
@@ -578,33 +583,196 @@ describe("CatalogoPage · stock", () => {
     expect(screen.queryByLabelText("Filtrar por stock")).not.toBeInTheDocument();
   });
 
-  it("sumar una unidad se ve al instante y se guarda", async () => {
+  const resultado = (o: Record<string, unknown>) => ({
+    resultado: { movimiento_id: "m1", tipo: "ingreso", cantidad: 1, stock_resultante: 3, stock_negativo: false, repetido: false, ...o },
+    error: null,
+  });
+
+  it("un ítem que lleva stock muestra Ingreso, Venta, Ajustar conteo e Historial; uno que no, nada de eso", async () => {
+    render(<CatalogoPage />);
+    await screen.findAllByText("Caribe 550");
+
+    expect(screen.getAllByRole("button", { name: "Ingreso de Caribe 550" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Venta de Caribe 550" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Ajustar conteo de Caribe 550" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Historial de stock de Caribe 550" }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: /Ingreso de Hierro/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Historial de stock de Hierro/ })).not.toBeInTheDocument();
+  });
+
+  it("un ingreso llama a la función con una clave y el stock pasa a lo que devuelve la base", async () => {
+    registrarMovimiento.mockResolvedValue(resultado({ stock_resultante: 5, cantidad: 3 }));
     const user = userEvent.setup();
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await user.click(screen.getAllByRole("button", { name: "Sumar una unidad de Caribe 550" })[0]);
+    await user.click(screen.getAllByRole("button", { name: "Ingreso de Caribe 550" })[0]);
+    await user.type(screen.getByLabelText("Cantidad"), "3");
+    await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
 
-    expect(guardarStockItem).toHaveBeenCalledWith("p1", 3);
-    expect((await screen.findAllByTitle("3 en stock")).length).toBeGreaterThan(0);
+    await waitFor(() => expect(registrarMovimiento).toHaveBeenCalledTimes(1));
+    expect(registrarMovimiento.mock.calls[0][0]).toMatchObject({ itemId: "p1", tipo: "ingreso", cantidad: 3 });
+    expect(registrarMovimiento.mock.calls[0][0].idempotencyKey).toMatch(/^[0-9a-f-]{36}$/);
+    expect((await screen.findAllByTitle("5 en stock")).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("no deja bajar de 0", async () => {
-    render(<CatalogoPage />);
-    await screen.findAllByText("Caribe 650");
-    for (const b of screen.getAllByRole("button", { name: "Restar una unidad de Caribe 650" })) expect(b).toBeDisabled();
-  });
-
-  it("si no se pudo guardar, vuelve al valor anterior y avisa", async () => {
-    guardarStockItem.mockResolvedValue({ error: "Sin conexión" });
+  it("una venta que deja el stock en negativo pide confirmación antes de registrarse", async () => {
+    registrarMovimiento.mockResolvedValue(resultado({ tipo: "venta", cantidad: -5, stock_resultante: -3, stock_negativo: true }));
     const user = userEvent.setup();
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await user.click(screen.getAllByRole("button", { name: "Restar una unidad de Caribe 550" })[0]);
+    await user.click(screen.getAllByRole("button", { name: "Venta de Caribe 550" })[0]);
+    await user.type(screen.getByLabelText("Cantidad"), "5");
+    await user.click(screen.getByRole("button", { name: "Registrar venta" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Sin conexión");
-    expect(screen.getAllByTitle("2 en stock").length).toBeGreaterThan(0);
+    expect(registrarMovimiento).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/stock en negativo/);
+
+    await user.click(screen.getByRole("button", { name: "Vender igual" }));
+    await waitFor(() => expect(registrarMovimiento).toHaveBeenCalledTimes(1));
+    expect(registrarMovimiento.mock.calls[0][0]).toMatchObject({ tipo: "venta", cantidad: 5 });
+    // Queda una marca de aviso visible, tanto en el banner como en la fila.
+    expect(await screen.findByText(/quedó en stock negativo \(−3\)/)).toBeInTheDocument();
+    expect(screen.getAllByText("Stock negativo").length).toBeGreaterThan(0);
+  });
+
+  it("una venta que NO deja negativo se registra sin pedir confirmación", async () => {
+    registrarMovimiento.mockResolvedValue(resultado({ tipo: "venta", cantidad: -1, stock_resultante: 1 }));
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+    await screen.findAllByText("Caribe 550");
+
+    await user.click(screen.getAllByRole("button", { name: "Venta de Caribe 550" })[0]);
+    await user.type(screen.getByLabelText("Cantidad"), "1");
+    await user.click(screen.getByRole("button", { name: "Registrar venta" }));
+
+    await waitFor(() => expect(registrarMovimiento).toHaveBeenCalledTimes(1));
+  });
+
+  it("los reintentos tras un error reusan la clave; si cambia un dato, la clave es otra", async () => {
+    registrarMovimiento.mockResolvedValueOnce({ resultado: null, error: "No se pudo conectar. Revisá tu conexión a internet e intentá de nuevo." });
+    registrarMovimiento.mockResolvedValue(resultado({ stock_resultante: 3 }));
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+    await screen.findAllByText("Caribe 550");
+
+    await user.click(screen.getAllByRole("button", { name: "Ingreso de Caribe 550" })[0]);
+    await user.type(screen.getByLabelText("Cantidad"), "1");
+    await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
+    expect(await screen.findByText(/No se pudo conectar/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
+    await waitFor(() => expect(registrarMovimiento).toHaveBeenCalledTimes(2));
+    expect(registrarMovimiento.mock.calls[1][0].idempotencyKey).toBe(registrarMovimiento.mock.calls[0][0].idempotencyKey);
+  });
+
+  it("sin cantidad válida no llama a la base y lo explica", async () => {
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+    await screen.findAllByText("Caribe 550");
+
+    await user.click(screen.getAllByRole("button", { name: "Ingreso de Caribe 550" })[0]);
+    await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/Escribí la cantidad/);
+    await user.type(screen.getByLabelText("Cantidad"), "1.5");
+    await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/número entero/);
+    expect(registrarMovimiento).not.toHaveBeenCalled();
+  });
+
+  it("Ajustar conteo manda el conteo (no la diferencia) y exige motivo", async () => {
+    ajustarConteo.mockResolvedValue(resultado({ tipo: "ajuste", cantidad: 3, stock_resultante: 5 }));
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+    await screen.findAllByText("Caribe 550");
+
+    await user.click(screen.getAllByRole("button", { name: "Ajustar conteo de Caribe 550" })[0]);
+    await user.clear(screen.getByLabelText("Unidades que contaste"));
+    await user.type(screen.getByLabelText("Unidades que contaste"), "5");
+    await user.click(screen.getByRole("button", { name: "Guardar conteo" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/motivo/i);
+    expect(ajustarConteo).not.toHaveBeenCalled();
+
+    await user.type(screen.getByLabelText("Motivo"), "Conteo del depósito");
+    await user.click(screen.getByRole("button", { name: "Guardar conteo" }));
+
+    await waitFor(() => expect(ajustarConteo).toHaveBeenCalledTimes(1));
+    expect(ajustarConteo.mock.calls[0][0]).toMatchObject({ itemId: "p1", stockContado: 5, motivo: "Conteo del depósito" });
+    expect(ajustarConteo.mock.calls[0][0]).not.toHaveProperty("diferencia");
+    expect((await screen.findAllByTitle("5 en stock")).length).toBeGreaterThan(0);
+  });
+
+  it("un conteo que coincide con el stock de la base avisa que no hubo cambios", async () => {
+    ajustarConteo.mockResolvedValue(resultado({ movimiento_id: null, tipo: "ajuste", cantidad: 0, stock_resultante: 2 }));
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+    await screen.findAllByText("Caribe 550");
+
+    await user.click(screen.getAllByRole("button", { name: "Ajustar conteo de Caribe 550" })[0]);
+    await user.type(screen.getByLabelText("Motivo"), "Verificación");
+    await user.click(screen.getByRole("button", { name: "Guardar conteo" }));
+
+    expect(await screen.findByText(/coincidía con el stock cargado/)).toBeInTheDocument();
+  });
+
+  it("el historial muestra los movimientos con quién, motivo y anulados, y permite anular con motivo", async () => {
+    listarMovimientos.mockResolvedValue({
+      movimientos: [
+        { id: "m3", item_id: "p1", tipo: "anulacion", cantidad: 1, stock_resultante: 2, motivo: "Se cargó mal", referencia: null, anula_a: "m2", creado_por: "u1", creado_at: "2026-10-22T15:00:00Z", anulado: false, creadorNombre: "Benja" },
+        { id: "m2", item_id: "p1", tipo: "venta", cantidad: -1, stock_resultante: 1, motivo: null, referencia: "Pérez", anula_a: null, creado_por: "u1", creado_at: "2026-10-22T14:00:00Z", anulado: true, creadorNombre: "Benja" },
+        { id: "m1", item_id: "p1", tipo: "ingreso", cantidad: 2, stock_resultante: 2, motivo: null, referencia: "Remito 7", anula_a: null, creado_por: "u2", creado_at: "2026-10-22T10:00:00Z", anulado: false, creadorNombre: "Ana" },
+      ],
+      error: null,
+    });
+    anularMovimiento.mockResolvedValue(resultado({ tipo: "anulacion", cantidad: -2, stock_resultante: 0 }));
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+    await screen.findAllByText("Caribe 550");
+
+    await user.click(screen.getAllByRole("button", { name: "Historial de stock de Caribe 550" })[0]);
+    const dialogo = await screen.findByRole("dialog", { name: "Historial de stock" });
+    expect(within(dialogo).getByText("Contra-asiento")).toBeInTheDocument();
+    expect(within(dialogo).getAllByText("Anulado").length).toBeGreaterThan(0);
+    expect(within(dialogo).getByText(/Referencia: Remito 7/)).toBeInTheDocument();
+    expect(within(dialogo).getByText(/Motivo: Se cargó mal/)).toBeInTheDocument();
+    expect(within(dialogo).getByText(/Ana/)).toBeInTheDocument();
+    // Solo el ingreso sin anular se puede anular: la venta ya está anulada y la anulación no se anula.
+    expect(within(dialogo).getAllByRole("button", { name: "Anular" })).toHaveLength(1);
+
+    await user.click(within(dialogo).getByRole("button", { name: "Anular" }));
+    await user.type(screen.getByLabelText("Motivo de la anulación"), "Remito equivocado");
+    await user.click(screen.getAllByRole("button", { name: "Anular" }).at(-1)!);
+
+    await waitFor(() => expect(anularMovimiento).toHaveBeenCalledTimes(1));
+    expect(anularMovimiento.mock.calls[0][0]).toMatchObject({ movimientoId: "m1", motivo: "Remito equivocado" });
+    expect(listarMovimientos.mock.calls.length).toBeGreaterThanOrEqual(2); // se recargó
+  });
+
+  it("un error de la base se muestra en castellano y el diálogo queda abierto", async () => {
+    registrarMovimiento.mockResolvedValue({ resultado: null, error: "Este ítem no lleva stock." });
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+    await screen.findAllByText("Caribe 550");
+
+    await user.click(screen.getAllByRole("button", { name: "Ingreso de Caribe 550" })[0]);
+    await user.type(screen.getByLabelText("Cantidad"), "2");
+    await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
+
+    expect(await screen.findByText("Este ítem no lleva stock.")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("un stock negativo se ve en rojo, con la marca de aviso", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: [item({ id: "p9", clave: "indusplast_spa_240", descripcion: "Spa 240", categoria: "Piscinas", stock: -2 })],
+      error: null,
+    });
+    render(<CatalogoPage />);
+    await screen.findAllByText("Spa 240");
+    expect(screen.getAllByTitle("stock negativo: -2").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Stock negativo").length).toBeGreaterThan(0);
   });
 
   it("filtra por stock: con unidades / agotado / a pedido", async () => {
@@ -629,7 +797,7 @@ describe("CatalogoPage · stock", () => {
 
     await user.click(screen.getByLabelText("Modo consulta rápida"));
 
-    expect(screen.queryByRole("button", { name: /Sumar una unidad/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Ingreso de|Venta de|Ajustar conteo de|Historial de stock/ })).not.toBeInTheDocument();
     expect(screen.getAllByTitle("2 en stock").length).toBeGreaterThan(0);
   });
 });

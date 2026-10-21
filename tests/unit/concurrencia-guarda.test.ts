@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-// @ts-expect-error — script .mjs sin tipos; sólo se importa la función pura de validación.
 import { validarUrlLocal } from "../../scripts/test-concurrencia-stock.mjs";
 
 describe("la prueba de concurrencia sólo corre contra la base local de este proyecto", () => {
