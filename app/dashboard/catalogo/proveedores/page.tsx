@@ -79,7 +79,7 @@ export default function ProveedoresPage() {
             setMensaje(null);
             setCreando(true);
           }}
-          className="flex min-h-11 items-center gap-1.5 rounded-lg bg-[#1B3A5C] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#142c46]"
+          className="flex min-h-11 items-center gap-1.5 rounded-lg bg-[#244B5A] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#142c46]"
         >
           <IconPlus className="h-4 w-4" />
           Agregar proveedor
@@ -95,7 +95,7 @@ export default function ProveedoresPage() {
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar por nombre, rubro o contacto..."
             aria-label="Buscar proveedores"
-            className="min-h-11 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20"
+            className="min-h-11 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20"
           />
         </div>
       </BarraFiltros>
@@ -115,7 +115,7 @@ export default function ProveedoresPage() {
               setIncluirInactivos(false);
               setSoloSinTelefono(false);
             }}
-            className="min-h-11 rounded-lg px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8 sm:ml-auto"
+            className="min-h-11 rounded-lg px-3 text-sm font-medium text-[#244B5A] hover:bg-[#244B5A]/8 sm:ml-auto"
           >
             Limpiar filtros
           </button>
@@ -221,7 +221,7 @@ function FilaProveedor({
       <div className="min-w-0 basis-full md:basis-auto">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium text-gray-900">
           {p.nombre}
-          {p.rubro && <span className="rounded-md bg-[#EEF2F6] px-2 py-0.5 text-xs font-medium text-[#1B3A5C]">{p.rubro}</span>}
+          {p.rubro && <span className="rounded-md bg-[#EEF2F6] px-2 py-0.5 text-xs font-medium text-[#244B5A]">{p.rubro}</span>}
           {!p.activo && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">Desactivado</span>}
         </p>
         {p.notas && (
@@ -242,7 +242,7 @@ function FilaProveedor({
           </span>
         ) : (
           telefonosDe(p.telefono!).map((t) => (
-            <a key={t} href={`tel:${t.replace(/[^\d+]/g, "")}`} className="block text-[#1B3A5C] hover:underline">
+            <a key={t} href={`tel:${t.replace(/[^\d+]/g, "")}`} className="block text-[#244B5A] hover:underline">
               {t}
             </a>
           ))
@@ -259,7 +259,7 @@ function FilaProveedor({
         onClick={onEditar}
         aria-label={`Editar ${p.nombre}`}
         title="Editar"
-        className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-[#1B3A5C] hover:bg-[#1B3A5C]/8 md:ml-0"
+        className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-[#244B5A] hover:bg-[#244B5A]/8 md:ml-0"
       >
         <IconEdit className="h-[18px] w-[18px]" />
       </button>

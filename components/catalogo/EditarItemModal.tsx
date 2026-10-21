@@ -64,7 +64,7 @@ export function EditarItemModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#1B3A5C]/45 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#244B5A]/45 p-4"
       onClick={isSubmitting ? undefined : onClose}
     >
       <div
@@ -74,7 +74,7 @@ export function EditarItemModal({
         className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="editar-item-titulo" className="mb-1 text-base font-bold text-[#1B3A5C]">
+        <h2 id="editar-item-titulo" className="mb-1 text-base font-bold text-[#244B5A]">
           Editar ítem
         </h2>
         <p className="mb-4 text-xs text-gray-500">
@@ -146,7 +146,7 @@ export function EditarItemModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="min-h-11 w-full rounded-md bg-[#1B3A5C] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B3A5C] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
+              className="min-h-11 w-full rounded-md bg-[#244B5A] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244B5A] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
             >
               {isSubmitting ? "Guardando..." : "Guardar cambios"}
             </button>

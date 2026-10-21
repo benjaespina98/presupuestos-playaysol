@@ -25,7 +25,7 @@ export interface FiltrosCatalogoProps {
 }
 
 export const CLASE_SELECT =
-  "min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 sm:w-auto";
+  "min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 sm:w-auto";
 
 /** Las secciones se acomodan en varias líneas si no entran: así se ven TODAS, sin tener que deslizar. */
 const FILA_CHIPS = "flex flex-wrap items-center gap-2";
@@ -77,7 +77,7 @@ export function FiltrosCatalogo({
               onChange={(e) => onBusqueda(e.target.value)}
               placeholder="Buscar: Caribe 550, cerco, cobertor, climatización..."
               aria-label="Buscar en el catálogo"
-              className="min-h-11 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-10 text-sm text-gray-900 shadow-sm transition-shadow placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20"
+              className="min-h-11 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-10 text-sm text-gray-900 shadow-sm transition-shadow placeholder:text-gray-400 focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20"
             />
             {busqueda && (
               <button
@@ -128,7 +128,7 @@ export function FiltrosCatalogo({
           <button
             type="button"
             onClick={onLimpiar}
-            className="min-h-11 rounded-lg px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8 sm:ml-auto"
+            className="min-h-11 rounded-lg px-3 text-sm font-medium text-[#244B5A] hover:bg-[#244B5A]/8 sm:ml-auto"
           >
             Limpiar filtros
           </button>
@@ -154,9 +154,9 @@ export function Chip({
       type="button"
       onClick={onClick}
       aria-pressed={activo}
-      className={`inline-flex min-h-10 items-center gap-2 rounded-full border px-3.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1B3A5C]/30 ${
+      className={`inline-flex min-h-10 items-center gap-2 rounded-full border px-3.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#244B5A]/30 ${
         activo
-          ? "border-[#1B3A5C] bg-[#1B3A5C] text-white shadow-sm"
+          ? "border-[#244B5A] bg-[#244B5A] text-white shadow-sm"
           : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
       }`}
     >
@@ -184,7 +184,7 @@ export function Interruptor({
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="peer sr-only" />
       <span
         aria-hidden="true"
-        className="relative h-5 w-9 shrink-0 rounded-full bg-gray-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-[#1B3A5C] peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-[#1B3A5C]/30"
+        className="relative h-5 w-9 shrink-0 rounded-full bg-gray-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-[#244B5A] peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-[#244B5A]/30"
       />
       {children}
     </label>

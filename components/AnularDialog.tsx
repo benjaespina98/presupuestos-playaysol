@@ -60,7 +60,7 @@ function Contenido({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#1B3A5C]/45 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#244B5A]/45 p-4"
       onClick={enviando ? undefined : onCancel}
     >
       <div
@@ -70,7 +70,7 @@ function Contenido({
         className="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id={`${idCampo}-titulo`} className="mb-2 text-base font-bold text-[#1B3A5C]">
+        <h2 id={`${idCampo}-titulo`} className="mb-2 text-base font-bold text-[#244B5A]">
           {titulo}
         </h2>
         <p className="mb-4 text-sm leading-relaxed text-gray-600">{mensaje}</p>
@@ -92,7 +92,7 @@ function Contenido({
           aria-invalid={error !== null}
           aria-describedby={error ? `${idCampo}-error` : undefined}
           placeholder="Por ejemplo: cargado dos veces, el cliente no avanzó…"
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none focus:ring-1 focus:ring-[#1B3A5C] disabled:opacity-50"
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#244B5A] focus:outline-none focus:ring-1 focus:ring-[#244B5A] disabled:opacity-50"
         />
         <p className="mt-1 text-right text-xs text-gray-400">
           {motivo.length}/{MOTIVO_MAX}

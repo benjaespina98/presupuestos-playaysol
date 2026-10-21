@@ -54,7 +54,7 @@ function LoginForm() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none focus:ring-1 focus:ring-[#1B3A5C]"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#244B5A] focus:outline-none focus:ring-1 focus:ring-[#244B5A]"
               placeholder="tu@email.com"
             />
           </div>
@@ -68,7 +68,7 @@ function LoginForm() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none focus:ring-1 focus:ring-[#1B3A5C]"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#244B5A] focus:outline-none focus:ring-1 focus:ring-[#244B5A]"
               placeholder="••••••••"
             />
           </div>
@@ -82,7 +82,7 @@ function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-md bg-[#1B3A5C] px-4 py-2 text-sm font-medium text-white hover:bg-[#142c46] disabled:opacity-50"
+            className="w-full rounded-md bg-[#244B5A] px-4 py-2 text-sm font-medium text-white hover:bg-[#142c46] disabled:opacity-50"
           >
             {loading ? "Ingresando..." : "Ingresar"}
           </button>

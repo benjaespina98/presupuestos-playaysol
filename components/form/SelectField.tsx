@@ -10,7 +10,7 @@ import { FieldShell, describedBy } from "./FieldShell";
 
 const CLASE_BASE =
   "block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 " +
-  "focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/30 " +
+  "focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/30 " +
   "disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500 " +
   "aria-[invalid=true]:border-red-500 aria-[invalid=true]:focus:ring-red-500/30";
 

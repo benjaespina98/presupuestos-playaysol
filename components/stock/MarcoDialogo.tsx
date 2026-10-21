@@ -26,7 +26,7 @@ export function MarcoDialogo({
   const id = useId();
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-[#1B3A5C]/45 sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[#244B5A]/45 sm:items-center sm:p-4"
       onClick={ocupado ? undefined : onCerrar}
     >
       <div
@@ -36,7 +36,7 @@ export function MarcoDialogo({
         className={`max-h-[92dvh] w-full overflow-y-auto rounded-t-xl bg-white p-5 shadow-2xl sm:rounded-xl sm:p-6 ${ancho}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id={`${id}-titulo`} className="text-base font-bold text-[#1B3A5C]">
+        <h2 id={`${id}-titulo`} className="text-base font-bold text-[#244B5A]">
           {titulo}
         </h2>
         {subtitulo && <p className="mb-3 mt-0.5 text-sm text-gray-500">{subtitulo}</p>}
@@ -48,10 +48,10 @@ export function MarcoDialogo({
 }
 
 export const CLASE_INPUT =
-  "min-h-11 w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none focus:ring-1 focus:ring-[#1B3A5C] disabled:opacity-50";
+  "min-h-11 w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#244B5A] focus:outline-none focus:ring-1 focus:ring-[#244B5A] disabled:opacity-50";
 
 export const CLASE_BOTON_PRIMARIO =
-  "min-h-11 w-full rounded-md bg-[#1B3A5C] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B3A5C] disabled:cursor-not-allowed disabled:opacity-50";
+  "min-h-11 w-full rounded-md bg-[#244B5A] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244B5A] disabled:cursor-not-allowed disabled:opacity-50";
 
 export const CLASE_BOTON_PELIGRO =
   "min-h-11 w-full rounded-md bg-red-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:cursor-not-allowed disabled:opacity-50";

@@ -151,7 +151,7 @@ export default function CatalogoPage() {
           href={PLANILLA_COSTOS_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex min-h-11 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-[#1B3A5C] shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50"
+          className="flex min-h-11 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-[#244B5A] shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50"
         >
           <IconTable className="h-4 w-4" />
           Planilla de costos
@@ -160,7 +160,7 @@ export default function CatalogoPage() {
           <button
             type="button"
             onClick={() => setCreando(true)}
-            className="flex min-h-11 items-center gap-1.5 rounded-lg bg-[#1B3A5C] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#142c46]"
+            className="flex min-h-11 items-center gap-1.5 rounded-lg bg-[#244B5A] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#142c46]"
           >
             <IconPlus className="h-4 w-4" />
             Agregar ítem
@@ -200,7 +200,7 @@ export default function CatalogoPage() {
 
       {hayStockEnCatalogo && (
         <p className="mb-3 rounded-md bg-[#EEF2F6] px-4 py-2.5 text-sm text-gray-700">
-          <span className="font-semibold text-[#1B3A5C]">Stock · {LOCAL_STOCK}:</span>{" "}
+          <span className="font-semibold text-[#244B5A]">Stock · {LOCAL_STOCK}:</span>{" "}
           {resumen.unidades === 0
             ? "todavía no hay unidades cargadas"
             : `${resumen.unidades} ${resumen.unidades === 1 ? "unidad" : "unidades"} en ${resumen.conUnidades} ${resumen.conUnidades === 1 ? "modelo" : "modelos"}`}
@@ -300,8 +300,8 @@ export default function CatalogoPage() {
 function CategoriaHeader({ titulo, cantidad }: { titulo: string; cantidad: number }) {
   return (
     <div className="flex items-center gap-2.5 border-b border-gray-200 bg-[#F4F8F9] px-4 py-2.5">
-      <span aria-hidden="true" className="h-4 w-1 shrink-0 rounded-full bg-[#1B3A5C]" />
-      <h3 className="text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">{titulo}</h3>
+      <span aria-hidden="true" className="h-4 w-1 shrink-0 rounded-full bg-[#244B5A]" />
+      <h3 className="text-xs font-bold uppercase tracking-wide text-[#244B5A]">{titulo}</h3>
       <span className="text-xs text-gray-400">({cantidad})</span>
     </div>
   );
@@ -363,7 +363,7 @@ function FilaItem({
           <button
             type="button"
             onClick={onCopiar}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-[#244B5A] hover:bg-[#244B5A]/8"
           >
             <IconCopy className="h-4 w-4" />
             {copiado ? "¡Copiado!" : "Copiar"}
@@ -374,7 +374,7 @@ function FilaItem({
             onClick={onEditar}
             aria-label="Editar"
             title="Editar"
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-[#244B5A] hover:bg-[#244B5A]/8"
           >
             <IconEdit className="h-[18px] w-[18px]" />
           </button>

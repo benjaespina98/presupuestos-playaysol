@@ -106,7 +106,7 @@ export function DialogoAjuste({
         maxLength={MOTIVO_MAX}
         onChange={(e) => cambiar(setMotivo, e.target.value)}
         placeholder="Por ejemplo: conteo físico del depósito, rotura…"
-        className="w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none focus:ring-1 focus:ring-[#1B3A5C] disabled:opacity-50"
+        className="w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#244B5A] focus:outline-none focus:ring-1 focus:ring-[#244B5A] disabled:opacity-50"
       />
 
       {error && (

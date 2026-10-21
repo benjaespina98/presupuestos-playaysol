@@ -124,7 +124,7 @@ export function DetallePedidoModal({
             value={pedido.estado}
             disabled={ocupado || anulado}
             onChange={(e) => cambiarEstado(e.target.value as EstadoPedido)}
-            className={`min-h-11 rounded-lg border border-gray-200 px-3 text-sm font-medium focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 ${CLASE_ESTADO[pedido.estado]}`}
+            className={`min-h-11 rounded-lg border border-gray-200 px-3 text-sm font-medium focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 ${CLASE_ESTADO[pedido.estado]}`}
           >
             {ESTADOS_PEDIDO.map((e) => (
               <option key={e} value={e}>
@@ -138,11 +138,11 @@ export function DetallePedidoModal({
 
       <dl className="mb-4 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
         <div>
-          <dt className="inline font-medium text-[#1B3A5C]">Pide: </dt>
+          <dt className="inline font-medium text-[#244B5A]">Pide: </dt>
           <dd className="inline text-gray-700">{doc.solicitante || "—"}</dd>
         </div>
         <div>
-          <dt className="inline font-medium text-[#1B3A5C]">Condiciones: </dt>
+          <dt className="inline font-medium text-[#244B5A]">Condiciones: </dt>
           <dd className="inline text-gray-700">{doc.condiciones.join(" · ")}</dd>
         </div>
       </dl>
@@ -151,7 +151,7 @@ export function DetallePedidoModal({
         {doc.proveedores.map((s) => (
           <section key={s.nombre + s.telefono} aria-label={`Pedido a ${s.nombre}`} className="overflow-hidden rounded-lg border border-gray-200">
             <header className="flex flex-wrap items-baseline justify-between gap-x-3 bg-[#F4F8F9] px-3 py-2">
-              <h3 className="text-sm font-bold text-[#1B3A5C]">{s.nombre}</h3>
+              <h3 className="text-sm font-bold text-[#244B5A]">{s.nombre}</h3>
               <p className="text-xs text-gray-500">{[s.contacto, s.telefono].filter(Boolean).join(" · ")}</p>
             </header>
             <div className="overflow-x-auto">
@@ -181,7 +181,7 @@ export function DetallePedidoModal({
         ))}
       </div>
 
-      <p className="mt-3 flex items-baseline justify-between border-t-2 border-[#1B3A5C] pt-2 text-base font-bold text-[#1B3A5C]">
+      <p className="mt-3 flex items-baseline justify-between border-t-2 border-[#244B5A] pt-2 text-base font-bold text-[#244B5A]">
         <span>Total estimado</span>
         <span className="tabular-nums">{formatARSExacto(doc.total)}</span>
       </p>
@@ -192,7 +192,7 @@ export function DetallePedidoModal({
       )}
       {doc.observaciones && (
         <p className="mt-3 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
-          <span className="font-medium text-[#1B3A5C]">Observaciones: </span>
+          <span className="font-medium text-[#244B5A]">Observaciones: </span>
           {doc.observaciones}
         </p>
       )}
@@ -209,7 +209,7 @@ export function DetallePedidoModal({
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
         <Link
           href={`/dashboard/catalogo/pedido?desde=${pedido.id}`}
-          className="inline-flex min-h-11 items-center rounded-lg border border-gray-200 px-4 text-sm font-medium text-[#1B3A5C] hover:bg-gray-50"
+          className="inline-flex min-h-11 items-center rounded-lg border border-gray-200 px-4 text-sm font-medium text-[#244B5A] hover:bg-gray-50"
         >
           Volver a armar con estos datos
         </Link>

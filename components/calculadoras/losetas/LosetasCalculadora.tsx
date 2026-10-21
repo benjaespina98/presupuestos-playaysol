@@ -563,7 +563,7 @@ export function LosetasCalculadora({
           <button
             type="button"
             onClick={() => tramos.append({ desde: 0, hasta: 0, prof: 0 })}
-            className="min-h-11 rounded-md border border-gray-300 px-4 text-sm font-medium text-[#1B3A5C] transition-colors hover:bg-gray-50"
+            className="min-h-11 rounded-md border border-gray-300 px-4 text-sm font-medium text-[#244B5A] transition-colors hover:bg-gray-50"
           >
             + Agregar tramo con otra profundidad
           </button>
@@ -791,7 +791,7 @@ export function LosetasCalculadora({
                 type="button"
                 onClick={() => setAmpliado((v) => !v)}
                 aria-pressed={ampliado}
-                className="min-h-11 shrink-0 rounded-md border border-[#1B3A5C] px-4 text-sm font-medium text-[#1B3A5C] transition-colors hover:bg-[#1B3A5C]/5"
+                className="min-h-11 shrink-0 rounded-md border border-[#244B5A] px-4 text-sm font-medium text-[#244B5A] transition-colors hover:bg-[#244B5A]/5"
               >
                 {ampliado ? "Listo" : "Ampliar plano"}
               </button>
@@ -870,7 +870,7 @@ export function LosetasCalculadora({
             <button
                 type="submit"
                 disabled={guardando}
-                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#1B3A5C] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#244B5A] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <IconCloudUpload className="h-4 w-4" />
                 {guardando ? "Guardando..." : "Guardar en la nube"}
@@ -882,7 +882,7 @@ export function LosetasCalculadora({
                 type="button"
                 onClick={onExportarImagen}
                 disabled={generandoImagen}
-                className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#1B3A5C] px-4 text-sm font-medium text-[#1B3A5C] transition-colors hover:bg-[#1B3A5C]/5 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#244B5A] px-4 text-sm font-medium text-[#244B5A] transition-colors hover:bg-[#244B5A]/5 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <IconImage className="h-4 w-4" />
                 {generandoImagen ? "Generando..." : "Imagen"}
@@ -891,7 +891,7 @@ export function LosetasCalculadora({
                 type="button"
                 onClick={onExportarPdf}
                 disabled={generandoPdf}
-                className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#1B3A5C] px-4 text-sm font-medium text-[#1B3A5C] transition-colors hover:bg-[#1B3A5C]/5 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#244B5A] px-4 text-sm font-medium text-[#244B5A] transition-colors hover:bg-[#244B5A]/5 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <IconPrinter className="h-4 w-4" />
                 {generandoPdf ? "Generando..." : "PDF"}
@@ -903,7 +903,7 @@ export function LosetasCalculadora({
             </p>
 
             <div className="grid grid-cols-2 gap-2 border-t border-gray-100 pt-3">
-              <a href="/dashboard/historial?tipo=losetas" className="min-h-11 rounded-md px-4 py-2.5 text-center text-sm font-medium text-[#1B3A5C] hover:bg-gray-100">
+              <a href="/dashboard/historial?tipo=losetas" className="min-h-11 rounded-md px-4 py-2.5 text-center text-sm font-medium text-[#244B5A] hover:bg-gray-100">
                 Historial
               </a>
               <button

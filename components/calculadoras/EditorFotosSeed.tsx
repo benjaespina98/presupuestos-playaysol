@@ -27,7 +27,7 @@ export function EditorFotosSeed({
     <div className="space-y-2 rounded-md border border-gray-200 p-3">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-semibold text-gray-700">{etiqueta}</span>
-        <label className="min-h-8 cursor-pointer rounded px-2 py-1 text-xs font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/5">
+        <label className="min-h-8 cursor-pointer rounded px-2 py-1 text-xs font-medium text-[#244B5A] hover:bg-[#244B5A]/5">
           + Agregar
           <input
             type="file"
@@ -53,7 +53,7 @@ export function EditorFotosSeed({
                 type="button"
                 onClick={() => (sacada ? editor.restaurar(clave, f.url) : editor.quitar(clave, f.url))}
                 title={sacada ? "Volver a incluir esta foto" : "Sacar esta foto de la exportación"}
-                className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 bg-white text-xs font-bold text-[#1B3A5C] shadow-sm hover:bg-gray-50"
+                className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 bg-white text-xs font-bold text-[#244B5A] shadow-sm hover:bg-gray-50"
               >
                 {sacada ? "↺" : "×"}
               </button>

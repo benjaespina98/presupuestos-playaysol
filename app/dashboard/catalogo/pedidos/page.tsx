@@ -59,7 +59,7 @@ export default function PedidosPage() {
       <EncabezadoPagina titulo="Pedidos" descripcion="Historial de pedidos de materiales, con su número y su estado.">
         <Link
           href="/dashboard/catalogo/pedido"
-          className="flex min-h-11 items-center rounded-lg bg-[#1B3A5C] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#142c46]"
+          className="flex min-h-11 items-center rounded-lg bg-[#244B5A] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#142c46]"
         >
           Armar pedido nuevo
         </Link>
@@ -74,7 +74,7 @@ export default function PedidosPage() {
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar por número, obra, quién pidió o proveedor..."
             aria-label="Buscar pedidos"
-            className="min-h-11 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20"
+            className="min-h-11 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20"
           />
         </div>
         <div
@@ -120,7 +120,7 @@ export default function PedidosPage() {
           ) : (
             <>
               Todavía no hay pedidos guardados.{" "}
-              <Link href="/dashboard/catalogo/pedido" className="font-medium text-[#1B3A5C] hover:underline">
+              <Link href="/dashboard/catalogo/pedido" className="font-medium text-[#244B5A] hover:underline">
                 Armá el primero
               </Link>
               .
@@ -191,7 +191,7 @@ function FilaPedido({ pedido: p, onAbrir }: { pedido: PedidoGuardado; onAbrir: (
     <li
       className={`flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 transition-colors hover:bg-gray-50/70 md:grid md:gap-x-4 md:gap-y-0 md:py-2.5 ${COLUMNAS} ${p.estado === "cancelado" || estaAnulado(p) ? "opacity-60" : ""}`}
     >
-      <p className="font-semibold tabular-nums text-[#1B3A5C]">{numeroFormateado(p.numero)}</p>
+      <p className="font-semibold tabular-nums text-[#244B5A]">{numeroFormateado(p.numero)}</p>
       <p className="text-sm tabular-nums text-gray-600">{fechaDocumento(new Date(p.created_at))}</p>
       <div className="min-w-0 basis-full md:basis-auto">
         <p className="truncate font-medium text-gray-900" title={p.obra || undefined}>
@@ -215,7 +215,7 @@ function FilaPedido({ pedido: p, onAbrir }: { pedido: PedidoGuardado; onAbrir: (
         type="button"
         onClick={onAbrir}
         aria-label={`Abrir ${numeroFormateado(p.numero)}`}
-        className="ml-auto inline-flex min-h-11 items-center justify-end rounded-md px-2 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8 md:ml-0 md:justify-center"
+        className="ml-auto inline-flex min-h-11 items-center justify-end rounded-md px-2 text-sm font-medium text-[#244B5A] hover:bg-[#244B5A]/8 md:ml-0 md:justify-center"
       >
         Abrir
       </button>

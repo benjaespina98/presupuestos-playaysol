@@ -23,7 +23,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   // Que el contenido use toda la pantalla del celular (muescas) cuando se instala como app.
   viewportFit: "cover",
-  themeColor: "#1B3A5C",
+  themeColor: "#244B5A",
 };
 
 export default function RootLayout({

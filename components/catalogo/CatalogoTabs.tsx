@@ -41,7 +41,7 @@ export function CatalogoTabs() {
                 aria-current={activa ? "page" : undefined}
                 className={`-mb-px inline-flex min-h-11 items-center whitespace-nowrap border-b-2 px-4 text-sm font-medium transition-colors ${
                   activa
-                    ? "border-[#1B3A5C] text-[#1B3A5C]"
+                    ? "border-[#244B5A] text-[#244B5A]"
                     : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-800"
                 }`}
               >

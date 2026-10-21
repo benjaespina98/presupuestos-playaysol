@@ -100,7 +100,7 @@ export default function MaterialesPage() {
             setMensaje(null);
             setCreando(true);
           }}
-          className="flex min-h-11 items-center gap-1.5 rounded-lg bg-[#1B3A5C] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#142c46]"
+          className="flex min-h-11 items-center gap-1.5 rounded-lg bg-[#244B5A] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#142c46]"
         >
           <IconPlus className="h-4 w-4" />
           Agregar material
@@ -117,7 +117,7 @@ export default function MaterialesPage() {
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar material..."
               aria-label="Buscar materiales"
-              className="min-h-11 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20"
+              className="min-h-11 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20"
             />
           </div>
           <select value={proveedorId} onChange={(e) => setProveedorId(e.target.value)} aria-label="Filtrar por proveedor" className={CLASE_SELECT}>
@@ -154,7 +154,7 @@ export default function MaterialesPage() {
           Mostrar desactivados
         </Interruptor>
         {hayFiltros && (
-          <button type="button" onClick={limpiar} className="min-h-11 rounded-lg px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8 sm:ml-auto">
+          <button type="button" onClick={limpiar} className="min-h-11 rounded-lg px-3 text-sm font-medium text-[#244B5A] hover:bg-[#244B5A]/8 sm:ml-auto">
             Limpiar filtros
           </button>
         )}
@@ -275,7 +275,7 @@ function FilaMaterial({
       </p>
 
       <div className="flex min-w-0 flex-wrap items-center gap-1.5 md:block">
-        {m.rubro && <span className="inline-flex rounded-md bg-[#EEF2F6] px-2 py-0.5 text-xs font-medium text-[#1B3A5C]">{m.rubro}</span>}
+        {m.rubro && <span className="inline-flex rounded-md bg-[#EEF2F6] px-2 py-0.5 text-xs font-medium text-[#244B5A]">{m.rubro}</span>}
         {m.aplica && m.aplica !== "Siempre" && <p className="text-xs text-gray-500 md:mt-0.5">{m.aplica}</p>}
       </div>
 
@@ -301,7 +301,7 @@ function FilaMaterial({
         onClick={onEditar}
         aria-label={`Editar ${m.nombre}`}
         title="Editar"
-        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-[#244B5A] hover:bg-[#244B5A]/8"
       >
         <IconEdit className="h-[18px] w-[18px]" />
       </button>

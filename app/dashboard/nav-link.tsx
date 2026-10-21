@@ -28,8 +28,8 @@ export function NavLink({
     <Link
       href={href}
       aria-current={activo ? "page" : undefined}
-      className={`border-b-2 py-1 font-medium text-[#1B3A5C] transition-colors hover:border-[#1B3A5C]/40 ${
-        activo ? "border-[#1B3A5C]" : "border-transparent"
+      className={`border-b-2 py-1 font-medium text-[#244B5A] transition-colors hover:border-[#244B5A]/40 ${
+        activo ? "border-[#244B5A]" : "border-transparent"
       }`}
     >
       {children}
