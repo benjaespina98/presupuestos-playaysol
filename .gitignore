@@ -13,6 +13,7 @@
 # testing
 /coverage
 /test-results/
+/capturas-locales/
 /playwright-report/
 /blob-report/
 /playwright/.cache/

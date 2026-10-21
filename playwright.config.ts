@@ -5,6 +5,8 @@ export default defineConfig({
   // Solo *.spec.ts. Los *.test.ts son de Vitest (ver vitest.config.ts): sin esto,
   // Playwright levantaría un navegador para correr tests unitarios.
   testMatch: "**/*.spec.ts",
+  // tests/local/ lo corre scripts/e2e-local.mjs con su propia config (base local, puerto 3100).
+  testIgnore: "**/local/**",
   timeout: 60_000,
   fullyParallel: false,
   workers: 1,
