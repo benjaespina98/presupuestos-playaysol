@@ -89,7 +89,7 @@ function crearHoja(inicial: Record<string, unknown> = {}) {
 
 function cargarScript(opciones: { hojas: Record<string, Hoja>; respuesta: { codigo: number; cuerpo: unknown }; props?: Record<string, string> }) {
   const props: Record<string, string> = { URL: "https://ejemplo.test/api/sheets/catalogo", TOKEN: "t", ...opciones.props };
-  const pedidos: { url: string; headers: Record<string, string> }[] = [];
+  const pedidos: { url: string; headers: Record<string, string>; opciones: Record<string, unknown> }[] = [];
   const entorno = {
     SpreadsheetApp: { getActive: () => ({ getSheetByName: (n: string) => opciones.hojas[n] ?? null, insertSheet: (n: string) => (opciones.hojas[n] = crearHoja()) }), flush: () => undefined, CopyPasteType: { PASTE_FORMAT: "FORMAT", PASTE_FORMULA: "FORMULA" } },
     PropertiesService: {
@@ -102,7 +102,7 @@ function cargarScript(opciones: { hojas: Record<string, Hoja>; respuesta: { codi
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => undefined }) },
     UrlFetchApp: {
       fetch: (url: string, o: { headers: Record<string, string> }) => {
-        pedidos.push({ url, headers: o.headers });
+        pedidos.push({ url, headers: o.headers, opciones: o as unknown as Record<string, unknown> });
         return { getResponseCode: () => opciones.respuesta.codigo, getContentText: () => JSON.stringify(opciones.respuesta.cuerpo) };
       },
     },
@@ -197,6 +197,18 @@ describe("validarDatos", () => {
 });
 
 describe("sincronizar_", () => {
+  it("sólo LEE del portal: un GET sin cuerpo, nunca manda datos (la planilla no puede cambiar nada, stock incluido)", () => {
+    const s = cargarScript({ hojas: hojasBase(), respuesta: { codigo: 200, cuerpo: { ...DATOS, stock: { "piscinas:indusplast_caribe_550": 3 } } } });
+
+    s.sincronizar_(true);
+
+    expect(s.pedidos).toHaveLength(1);
+    const { opciones } = s.pedidos[0];
+    expect(opciones.method ?? "get").toMatch(/^get$/i);
+    expect(opciones).not.toHaveProperty("payload");
+    expect(opciones).not.toHaveProperty("contentType");
+  });
+
   it("manda el token en el encabezado y reemplaza proveedores y artículos", () => {
     const hojas = hojasBase();
     const s = cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: DATOS } });
@@ -383,7 +395,7 @@ describe("buscarEncabezadoStock · encabezados con otro texto", () => {
 describe("hoja 'Catálogo web' (todos los campos de los precios de venta)", () => {
   const FILAS = [
     ["Piscinas", "indusplast_caribe_550", "Piscina de fibra Caribe 550", "Piscinas", "obra", 8810000, 3, "Activo", "05/10/2026"],
-    ["Cercos", "precioCon", "Precio por metro lineal con instalación", "Cercos", "ml", "A cotizar", "", "De baja", "01/10/2026"],
+    ["Cercos", "precioCon", "Precio por metro lineal con instalación", "Cercos", "ml", "A cotizar", "", "Desactivado", "01/10/2026"],
   ];
   const conCatalogo = { ...DATOS, catalogo: FILAS };
 
@@ -399,7 +411,7 @@ describe("hoja 'Catálogo web' (todos los campos de los precios de venta)", () =
     expect(h.v(2, 6)).toBe(8810000);
     expect(h.v(2, 7)).toBe(3);
     expect(h.v(3, 6)).toBe("A cotizar");
-    expect(h.v(3, 8)).toBe("De baja");
+    expect(h.v(3, 8)).toBe("Desactivado");
     expect(r).toMatchObject({ catalogo: 2 });
   });
 
@@ -657,7 +669,7 @@ describe("piscinas nuevas: se agregan a 'Precios y margen' en su lugar", () => {
     const hoja = hojaPrecios();
     const hojas = { ...hojasBase(), "Precios y margen": hoja } as Record<string, Hoja>;
     const catalogo = [
-      ["Piscinas", "lista_hormigon_8x4_5", "x", "Piscinas", "obra", 1, "", "De baja", ""],
+      ["Piscinas", "lista_hormigon_8x4_5", "x", "Piscinas", "obra", 1, "", "Desactivado", ""],
       ["Cercos", "precioCon", "x", "Cercos", "ml", 1, "", "Activo", ""],
     ];
     const r = cargarScript({ hojas, respuesta: { codigo: 200, cuerpo: { ...DATOS, catalogo } } }).sincronizar_(true);

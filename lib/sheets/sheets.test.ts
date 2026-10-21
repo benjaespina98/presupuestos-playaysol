@@ -183,6 +183,10 @@ describe("autorización", () => {
     expect(tokenDeEncabezado("Basic abc123")).toBe("");
     expect(tokenDeEncabezado(null)).toBe("");
   });
+
+  it("ignora un encabezado absurdamente largo", () => {
+    expect(tokenDeEncabezado(`Bearer ${"a".repeat(2000)}`)).toBe("");
+  });
 });
 
 describe("armarExportacion · stock", () => {
@@ -227,7 +231,7 @@ describe("armarExportacion · hoja 'Catálogo web'", () => {
     });
     expect(e.catalogo).toHaveLength(2); // el texto compartido no va
     expect(e.catalogo[0]).toEqual(["Piscinas", "indusplast_caribe_550", "Caribe 550", "Piscinas", "obra", 8810000, 2, "Activo", "05/10/2026"]);
-    expect(e.catalogo[1]).toEqual(["Cercos", "precioCon", "", "", "ml", "A cotizar", "", "De baja", ""]);
+    expect(e.catalogo[1]).toEqual(["Cercos", "precioCon", "", "", "ml", "A cotizar", "", "Desactivado", ""]);
   });
 
   it("cambiar la descripción, la categoría o la unidad cambia la versión", () => {
