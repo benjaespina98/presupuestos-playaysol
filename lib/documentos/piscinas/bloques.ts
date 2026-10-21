@@ -15,7 +15,7 @@ const sinEdicion: ResolverFotosSeed = (_grupo, base) => base;
  * hoy viven en `components/calculadoras/piscinas/DocumentoPiscina.tsx` (ver
  * el comentario ahí — SUBTOTAL siempre, TOTAL sólo con adicionales,
  * opcionales TODOS con "No incluye", "Dimensión piscina" siempre visible,
- * "Modelos de referencia" al final después del pie). No se reinventa el
+ * "Modelos de referencia" antes del pie, que siempre va al final). No se reinventa el
  * documento, sólo se lo describe como datos en vez de JSX de pantalla.
  */
 export function armarBloquesPiscina(
@@ -71,15 +71,15 @@ export function armarBloquesPiscina(
     bloques.push({ tipo: "galeriaFotos", titulo: "Fotos ilustrativas", fotos: fotosUsuario });
   }
 
-  bloques.push({ tipo: "pie", footer: textos.footer });
-
-  // "Modelos de referencia": van al final, después del pie de la empresa —
-  // mismo lugar que en un presupuesto real ya entregado (ver DocumentoPiscina.tsx).
+  // "Modelos de referencia" van ANTES del pie: el pie de la empresa (contacto,
+  // dirección, redes) siempre es lo último del documento.
   bloques.push({
     tipo: "galeriaSeeds",
     titulo: "Modelos de referencia",
     fotos: resolverFotosSeed(GRUPO_SEED_GENERAL, FOTOS_GENERALES_PISCINAS),
   });
+
+  bloques.push({ tipo: "pie", footer: textos.footer });
 
   return bloques;
 }

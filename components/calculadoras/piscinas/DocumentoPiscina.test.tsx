@@ -148,6 +148,13 @@ describe("DocumentoPiscina · fotos de referencia por opcional", () => {
     expect(imgs).toHaveLength(3);
   });
 
+  it("el pie de la empresa va DESPUÉS de 'Modelos de referencia', siempre al final", () => {
+    render(<DocumentoPiscina snapshot={snapshotBase()} textos={TEXTOS_POR_DEFECTO_PISCINAS} fotos={[]} />);
+    const modelos = screen.getByText("Modelos de referencia");
+    const pie = screen.getByText(TEXTOS_POR_DEFECTO_PISCINAS.footer.empresa);
+    expect(modelos.compareDocumentPosition(pie) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("travertino: las fotos aparecen una sola vez, no repetidas en los dos opcionales", () => {
     const opcionTravertino = (clave: string, descripcion: string) =>
       crearLinea({

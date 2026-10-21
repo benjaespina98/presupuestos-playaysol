@@ -170,15 +170,14 @@ export function DocumentoPiscina({
           </section>
         )}
 
-        <PieDocumento textos={textos} />
-
-        {/* Modelos de referencia: van al final, después del pie de la empresa
-            — mismo lugar que en un presupuesto real ya entregado (no es un
-            error de orden, es la posición que el negocio ya usaba). */}
+        {/* Modelos de referencia van ANTES del pie: el pie de la empresa
+            (contacto, dirección, redes) siempre es lo último del documento. */}
         <section className="break-inside-avoid print:break-inside-avoid">
           <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#244B5A]">Modelos de referencia</h2>
           <FotosSeedGrid fotos={resolverFotosSeed(GRUPO_SEED_GENERAL, FOTOS_GENERALES_PISCINAS)} columnas={3} />
         </section>
+
+        <PieDocumento textos={textos} />
       </div>
     </div>
   );

@@ -103,9 +103,10 @@ describe("armarBloquesPiscina · reglas propias", () => {
     expect(tarjeta).toMatchObject({ monto: "$ 240.000" });
   });
 
-  it("'Modelos de referencia' va al final, después del pie", () => {
+  it("'Modelos de referencia' va antes del pie, y el pie es el último bloque", () => {
     const bloques = armar();
     const tipos = bloques.map((b) => b.tipo);
-    expect(tipos.indexOf("pie")).toBeLessThan(tipos.lastIndexOf("galeriaSeeds"));
+    expect(tipos.lastIndexOf("galeriaSeeds")).toBeLessThan(tipos.indexOf("pie"));
+    expect(tipos.at(-1)).toBe("pie");
   });
 });

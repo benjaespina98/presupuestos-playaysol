@@ -482,13 +482,13 @@ export async function generarDocxPiscinas(
   children.push(docxValidity(snapshot.validezDias));
   children.push(...docxBodyText(textos.legal, 19));
   children.push(...docxPhotoGallery(fotosGenerales));
-  children.push(...docxFooter());
 
-  // "Modelos de referencia": van al final, después del pie de la empresa —
-  // mismo lugar que en un presupuesto real ya entregado (no es un error de
-  // orden, es la posición que el negocio ya usaba).
+  // "Modelos de referencia" van ANTES del pie: el pie de la empresa (contacto,
+  // dirección, redes) siempre es lo último del documento.
   children.push(docxSectionTitle("Modelos de referencia"));
   children.push(...docxSeedPhotos(FOTOS_GENERALES_PISCINAS, 260));
+
+  children.push(...docxFooter());
 
   const doc = new Document({
     styles: { default: { document: { run: { font: "Calibri" } } } }, // manual de marca: Calibri para todo el texto de comunicación/lectura
