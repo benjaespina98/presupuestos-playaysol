@@ -25,7 +25,7 @@ import { problemasTramos } from "@/lib/domain/plano/profundidad";
 import { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import type { PresupuestoLeido } from "@/lib/domain/presupuesto/adaptadores";
 import { guardarPresupuesto, actualizarPresupuesto } from "@/lib/presupuestos";
-import { SoloSiNoAnulado } from "@/components/Anulado";
+import { CamposSoloLectura, SoloSiNoAnulado, useAnulado } from "@/components/Anulado";
 import { armarNombreArchivo } from "@/lib/documentos/nombreArchivo";
 import { compartirOdescargarArchivo } from "@/lib/documentos/compartir";
 import { generarImagenClientePlano, generarPdfClientePlano } from "@/lib/documentos/losetas/imagenCliente";
@@ -490,6 +490,8 @@ export function LosetasCalculadora({
     setConfirmarLimpiar(false);
   }
 
+  const anulado = useAnulado();
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 gap-6 pb-20 sm:pb-0 lg:grid-cols-[minmax(0,1fr)_460px] print:block print:pb-0">
       <div className="space-y-6">
@@ -500,6 +502,7 @@ export function LosetasCalculadora({
           </p>
         )}
 
+        <CamposSoloLectura>
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Presupuesto</h2>
           <TextField register={register} errors={errors} name="nombre" label="Cliente o referencia" placeholder="Ej: Gómez, Martín" />
@@ -761,6 +764,7 @@ export function LosetasCalculadora({
             </div>
           </div>
         </details>
+        </CamposSoloLectura>
       </div>
 
       <div>
@@ -805,7 +809,7 @@ export function LosetasCalculadora({
               >
             <PlanoLosetasSvg
               geometria={geometriaEditor}
-              interactive
+              interactive={!anulado}
               ariaLabel="Editor del plano de la piscina"
               onMoverLuz={onMoverLuz}
               onMoverEscalera={onMoverEscalera}

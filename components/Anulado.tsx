@@ -64,3 +64,23 @@ export function AvisoAnulado({ anulado, que = "presupuesto" }: { anulado: DatosA
 export function SoloSiNoAnulado({ children }: { children: ReactNode }) {
   return useContext(AnuladoContext) ? null : <>{children}</>;
 }
+
+/**
+ * Envuelve los campos del formulario de un presupuesto. Si el presupuesto está
+ * anulado, los deshabilita a todos (un <fieldset disabled> alcanza a inputs,
+ * selects, textareas y botones) y bloquea el puntero sobre lo que no es un campo
+ * (por ejemplo el plano). Las acciones de exportar quedan afuera: se puede ver y
+ * exportar, no editar. Sin anulación es un contenedor transparente.
+ */
+export function CamposSoloLectura({ children }: { children: ReactNode }) {
+  const anulado = useContext(AnuladoContext);
+  return (
+    <fieldset
+      disabled={!!anulado}
+      aria-readonly={anulado ? true : undefined}
+      className={`m-0 min-w-0 space-y-6 border-0 p-0 ${anulado ? "pointer-events-none opacity-90" : ""}`}
+    >
+      {children}
+    </fieldset>
+  );
+}
