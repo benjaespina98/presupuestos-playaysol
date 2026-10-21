@@ -33,6 +33,8 @@ cuál corrió. Desde ahora hay **migraciones versionadas** en `supabase/migratio
 | `20261021000100_auditoria.sql` | Tabla `auditoria` (sólo agregar) y triggers en presupuestos, pedidos, catálogo, proveedores y materiales. |
 | `20261021000200_anulacion.sql` | Anular presupuestos y pedidos con motivo; sin DELETE. |
 | `20261021000300_desactivacion.sql` | Desactivar (no borrar) catálogo, proveedores y materiales, con quién y cuándo; sin DELETE. |
+| `20261022000000_auditoria_ignora_stock.sql` | La auditoría deja de registrar el campo `stock` de `catalogo_items` (ahora es un caché; lo audita el libro). |
+| `20261022000100_stock_movimientos.sql` | Libro de movimientos de stock, funciones atómicas, aperturas, caché protegido. Ver "Stock con movimientos". |
 
 `supabase/seed.sql` carga el catálogo de precios inicial en la base **local**
 (se corre solo con `supabase db reset`; nunca en producción).
@@ -142,6 +144,18 @@ pero un script manual sí aparecería así).
 
 1. `supabase migration repair --status applied 20261021000000` (la baseline **no** se ejecuta).
 2. Con un respaldo nuevo hecho antes, y recién cuando se despliegue a `main` el código que usa anular/desactivar:
-   `20261021000100_auditoria.sql`, `20261021000200_anulacion.sql`, `20261021000300_desactivacion.sql`, **en ese orden**.
+   `20261021000100_auditoria.sql`, `20261021000200_anulacion.sql`, `20261021000300_desactivacion.sql`, `20261022000000_auditoria_ignora_stock.sql`, `20261022000100_stock_movimientos.sql`, **en ese orden**.
+   Antes de la última, correr `supabase/diagnostics/stock.sql` (sólo lectura) en el SQL Editor para ver qué ítems tienen stock y cuántas aperturas va a crear.
    El código nuevo ya no borra: aplicar las migraciones antes que el código rompería el borrado del código viejo, y aplicarlas después deja
    al código nuevo sin las columnas `anulado_*`. Por eso van juntos.
+
+## Stock con movimientos
+
+El stock ya no es un número que se edita: es la **suma de un libro de movimientos** (`movimientos_stock`, sólo se agregan filas). `catalogo_items.stock` es un caché que mantiene un trigger.
+
+- **Cómo se cambia:** sólo con `registrar_movimiento_stock` (ingreso / venta), `ajustar_stock` (el cliente manda el conteo; la base calcula la diferencia) y `anular_movimiento_stock` (contra-asiento). Todas bloquean el ítem, validan la sesión y son idempotentes por clave.
+- **Stock negativo:** se permite y se avisa (`stock_negativo = true`). La migración elimina el CHECK `catalogo_items_stock_no_negativo`.
+- **Corregir un error:** un ajuste (si el conteo está mal) o una anulación (si el movimiento está mal). Nunca se edita ni se borra.
+- **Escribir `stock` directo falla** (error ST010), también desde el SQL Editor. Excepciones: tildar/destildar "Llevar stock" (`null` <-> `0`) y un ítem nuevo con stock 0. Para cargar datos de prueba: `set session_replication_role = replica;`.
+- **Chequeo:** `select * from verificar_consistencia_stock();` tiene que devolver 0 filas (caché distinto de la suma del libro).
+- **Concurrencia:** `node scripts/test-concurrencia-stock.mjs` (sólo corre contra la base local; deja datos de prueba: `npx supabase db reset` los limpia).
