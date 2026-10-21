@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, type ReactNode } from "react";
+import { boton } from "@/components/ui/botones";
 
 /**
  * El marco común de los diálogos de stock (Ingreso, Venta, Ajustar conteo,
@@ -50,11 +51,9 @@ export function MarcoDialogo({
 export const CLASE_INPUT =
   "min-h-11 w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#244B5A] focus:outline-none focus:ring-1 focus:ring-[#244B5A] disabled:opacity-50";
 
-export const CLASE_BOTON_PRIMARIO =
-  "min-h-11 w-full rounded-md bg-[#244B5A] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244B5A] disabled:cursor-not-allowed disabled:opacity-50";
+export const CLASE_BOTON_PRIMARIO = `${boton.base} ${boton.primario} w-full`;
 
 export const CLASE_BOTON_PELIGRO =
-  "min-h-11 w-full rounded-md bg-red-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700 active:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50";
 
-export const CLASE_BOTON_SECUNDARIO =
-  "min-h-11 w-full rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 disabled:cursor-not-allowed disabled:opacity-50";
+export const CLASE_BOTON_SECUNDARIO = `${boton.base} ${boton.secundario} w-full font-medium`;

@@ -25,6 +25,7 @@ import { IconEdit, IconCopy, IconPlus, IconTable } from "@/components/icons";
 import { LOCAL_STOCK, PLANILLA_COSTOS_URL } from "@/lib/brand";
 import { FiltrosCatalogo } from "@/components/catalogo/FiltrosCatalogo";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
+import { botonDe } from "@/components/ui/botones";
 import { EditarItemModal } from "@/components/catalogo/EditarItemModal";
 import { CrearItemModal } from "@/components/catalogo/CrearItemModal";
 
@@ -288,6 +289,7 @@ export default function CatalogoPage() {
           item={editando}
           onClose={() => setEditando(null)}
           onGuardado={guardarEdicion}
+          onStockCambio={stockCambio}
         />
       )}
 
@@ -363,7 +365,7 @@ function FilaItem({
           <button
             type="button"
             onClick={onCopiar}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-[#244B5A] hover:bg-[#244B5A]/8"
+            className={botonDe("suave", "px-3")}
           >
             <IconCopy className="h-4 w-4" />
             {copiado ? "¡Copiado!" : "Copiar"}
@@ -374,7 +376,7 @@ function FilaItem({
             onClick={onEditar}
             aria-label="Editar"
             title="Editar"
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-[#244B5A] hover:bg-[#244B5A]/8"
+            className={botonDe("secundario", "w-11 px-0")}
           >
             <IconEdit className="h-[18px] w-[18px]" />
           </button>
