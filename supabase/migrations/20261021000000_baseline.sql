@@ -26,12 +26,17 @@
 -- acá: los datos de ejemplo para local viven en supabase/seed.sql.
 -- Hay que compararla con el esquema real (docs/migraciones.md) antes de marcarla.
 --
+-- Storage: la policy "Anyone can view presupuesto images" (select público) NO está
+-- en esta baseline porque en producción no existe (permitía LISTAR las fotos). El
+-- bucket sigue siendo público: sus archivos se sirven por URL sin pasar por esa policy.
+--
 -- A CONFIRMAR contra producción (el repo no lo dice):
---   * "Anyone can view presupuesto images" (select público sobre el bucket): acá
---     figura porque schema.sql la crea. migration_limpieza.sql sugiere borrarla
---     (permite LISTAR las fotos); si ya la borraste en producción, el diff va a
---     mostrarlo y ese es el estado correcto.
 --   * Que migration_stock_piscinas.sql (columna stock y su CHECK) esté aplicada.
+--
+-- Diferencias CONOCIDAS con producción hasta que se aplique supabase/migration_limpieza.sql
+-- (ver docs/migraciones.md): producción todavía tiene la columna presupuestos.imagen_url
+-- y le falta el índice idx_presupuestos_created_by. Esta baseline ya refleja el estado
+-- DESPUÉS de esa limpieza.
 --
 -- ROLLBACK: no aplica (es el estado base). En local, `supabase db reset`.
 -- =============================================================================
@@ -371,8 +376,6 @@ create policy "Authenticated users can upload presupuesto images"
 -- Sin policy de update (migration_storage_sin_update.sql).
 drop policy if exists "Authenticated users can update presupuesto images" on storage.objects;
 
+-- Sin policy de lectura pública (permitía listar las fotos); el bucket es público, así que
+-- los archivos se sirven por URL igual. Si existe de una base vieja, se quita.
 drop policy if exists "Anyone can view presupuesto images" on storage.objects;
-create policy "Anyone can view presupuesto images"
-  on storage.objects for select
-  to public
-  using (bucket_id = 'presupuestos');

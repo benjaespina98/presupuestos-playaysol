@@ -76,9 +76,20 @@ ningún chat ni lo subas al repo.
    autogenerados, `SET`s del volcado). Lo que importa: **tablas, columnas y
    tipos, policies, triggers y funciones**. Cualquier diferencia real se corrige
    **en la baseline** (no en producción).
-4. Dos cosas puntuales que el repo no puede confirmar:
-   - Si existe la policy `Anyone can view presupuesto images` en `storage.objects`.
-   - Si la columna `catalogo_items.stock` y su CHECK existen.
+4. Una cosa puntual que el repo no puede confirmar: si la columna `catalogo_items.stock` y su CHECK existen.
+
+### Antes de marcarla: la limpieza pendiente de producción
+
+La baseline refleja el esquema **después** de `supabase/migration_limpieza.sql`. Producción todavía no lo tiene aplicado:
+
+- conserva la columna `presupuestos.imagen_url` (la limpieza la elimina; nadie la usa);
+- le falta el índice `idx_presupuestos_created_by` (la limpieza lo crea).
+
+Por eso **`supabase/migration_limpieza.sql` se aplica en producción ANTES de marcar la baseline como aplicada**
+(el diff con tu esquema real va a mostrar esas dos diferencias hasta entonces). Es idempotente y no borra datos
+útiles. El paso a paso completo está en `docs/despliegue.md`.
+
+La policy pública de lectura del bucket (`Anyone can view presupuesto images`) **no** está en la baseline: en producción no existe.
 
 ### Marcarla como aplicada en producción
 
