@@ -30,6 +30,9 @@ cuál corrió. Desde ahora hay **migraciones versionadas** en `supabase/migratio
 | Archivo | Qué hace |
 |---|---|
 | `20261021000000_baseline.sql` | Reconstrucción del esquema actual (ver abajo). **No se ejecuta en producción.** |
+| `20261021000100_auditoria.sql` | Tabla `auditoria` (sólo agregar) y triggers en presupuestos, pedidos, catálogo, proveedores y materiales. |
+| `20261021000200_anulacion.sql` | Anular presupuestos y pedidos con motivo; sin DELETE. |
+| `20261021000300_desactivacion.sql` | Desactivar (no borrar) catálogo, proveedores y materiales, con quién y cuándo; sin DELETE. |
 
 `supabase/seed.sql` carga el catálogo de precios inicial en la base **local**
 (se corre solo con `supabase db reset`; nunca en producción).
@@ -95,7 +98,7 @@ otros proyectos en Docker, no se tocan.
 ```bash
 npx supabase start      # levanta SOLO este proyecto
 npx supabase db reset   # recrea la base local: migraciones en orden + seed.sql
-npx supabase test db    # corre los tests pgTAP de supabase/tests/database
+npx supabase test db    # corre los tests pgTAP de supabase/tests/database (usa un contenedor pg_prove efímero)
 npx supabase stop       # detiene SOLO este proyecto (sin --all)
 ```
 
@@ -134,3 +137,11 @@ order by a.fecha desc;
 `usuario_id` es `null` cuando el cambio se hizo desde el SQL Editor o con la
 clave de servicio (por ejemplo, la sincronización con la planilla no escribe,
 pero un script manual sí aparecería así).
+
+## Orden de aplicación en producción
+
+1. `supabase migration repair --status applied 20261021000000` (la baseline **no** se ejecuta).
+2. Con un respaldo nuevo hecho antes, y recién cuando se despliegue a `main` el código que usa anular/desactivar:
+   `20261021000100_auditoria.sql`, `20261021000200_anulacion.sql`, `20261021000300_desactivacion.sql`, **en ese orden**.
+   El código nuevo ya no borra: aplicar las migraciones antes que el código rompería el borrado del código viejo, y aplicarlas después deja
+   al código nuevo sin las columnas `anulado_*`. Por eso van juntos.
