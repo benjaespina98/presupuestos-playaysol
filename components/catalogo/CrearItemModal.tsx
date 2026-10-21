@@ -183,7 +183,7 @@ export function CrearItemModal({
               hint="Para artículos que se guardan en el local (como las piscinas de fibra). Los que se piden a pedido no lo llevan."
             />
             {llevaStock && (
-              <NumberField control={control} name="stock" label="Unidades en stock" hint="0 = agotado" />
+              <p className="text-xs text-gray-500">Arranca en 0 unidades. Cargá lo que hay con «Ingreso» desde la lista del catálogo.</p>
             )}
           </div>
           <CheckboxField register={register} errors={errors} name="activo" label="Activo" />

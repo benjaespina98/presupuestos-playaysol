@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { guardarStockItem, listarItemsCatalogo } from "@/lib/catalogo";
+import { listarItemsCatalogo } from "@/lib/catalogo";
+import type { ResultadoStock } from "@/lib/domain/stock/movimientos";
+import { StockControles } from "@/components/stock/StockControles";
 import {
   agruparParaListado,
   contarPorSeccion,
   contarPorStock,
   filtrarCatalogo,
-  llevaStock,
   ordenarCatalogo,
   resumenStock,
   textoParaCopiar,
-  textoStock,
   type FiltroStock,
   type ItemCatalogo,
 } from "@/lib/domain/catalogo/item";
@@ -34,7 +34,7 @@ import { CrearItemModal } from "@/components/catalogo/CrearItemModal";
  * Stock · Actualizado · acción. Sin la columna de stock cuando ningún ítem lo
  * lleva. Son anchos fijos (rem) y el producto toma el resto.
  */
-const COLUMNAS_CON_STOCK = "md:grid-cols-[minmax(0,1fr)_9.5rem_4.5rem_10rem_6.5rem_3.5rem]";
+const COLUMNAS_CON_STOCK = "md:grid-cols-[minmax(0,1fr)_9.5rem_4.5rem_17rem_6.5rem_3.5rem]";
 const COLUMNAS_SIN_STOCK = "md:grid-cols-[minmax(0,1fr)_9.5rem_4.5rem_6.5rem_3.5rem]";
 
 export default function CatalogoPage() {
@@ -45,6 +45,7 @@ export default function CatalogoPage() {
   const [stock, setStock] = useState<FiltroStock | "">("");
   const [incluirInactivos, setIncluirInactivos] = useState(false);
   const [errorStock, setErrorStock] = useState<string | null>(null);
+  const [avisoStock, setAvisoStock] = useState<string | null>(null);
   const [modoConsulta, setModoConsulta] = useState(false);
   const [editando, setEditando] = useState<ItemCatalogo | null>(null);
   const [creando, setCreando] = useState(false);
@@ -112,24 +113,26 @@ export default function CatalogoPage() {
     setTimeout(() => setCopiadoId((actual) => (actual === item.id ? null : actual)), 2000);
   }
 
-  /** Suma o resta unidades de un ítem: se ve al instante y, si no se pudo
-   *  guardar, vuelve al valor anterior y avisa. */
-  async function cambiarStock(item: ItemCatalogo, nuevo: number) {
-    if (nuevo < 0 || item.stock === null) return;
-    const anterior = item.stock;
+  /**
+   * Una operación de stock (Ingreso, Venta, Ajuste o Anulación) terminó bien: el
+   * stock de la lista pasa a lo que dice la base y se avisa lo que corresponda.
+   * El número NO se calcula acá: viene de la respuesta de la función de la base.
+   */
+  function stockCambio(item: ItemCatalogo, r: ResultadoStock) {
+    const nombre = item.descripcion || item.clave;
+    setItems((prev) => (prev ? prev.map((it) => (it.id === item.id ? { ...it, stock: r.stock_resultante } : it)) : prev));
     setErrorStock(null);
-    setItems((prev) => (prev ? prev.map((it) => (it.id === item.id ? { ...it, stock: nuevo } : it)) : prev));
-    const { error } = await guardarStockItem(item.id, nuevo);
-    if (error) {
-      setItems((prev) => (prev ? prev.map((it) => (it.id === item.id ? { ...it, stock: anterior } : it)) : prev));
-      setErrorStock(error);
+    setAvisoStock(null);
+    if (r.movimiento_id === null) {
+      setMensajeExito(`El conteo de "${nombre}" coincidía con el stock cargado: no hubo cambios.`);
+    } else if (r.repetido) {
+      setMensajeExito(`Esa operación de "${nombre}" ya estaba registrada: no se repitió.`);
+    } else if (r.stock_negativo) {
+      setMensajeExito(null);
+      setAvisoStock(`"${nombre}" quedó en stock negativo (−${Math.abs(r.stock_resultante)}). Revisá el conteo o cargá el ingreso que falta.`);
+    } else {
+      setMensajeExito(`Stock de "${nombre}": ${r.stock_resultante}.`);
     }
-  }
-
-  function itemEliminado(eliminado: ItemCatalogo) {
-    setItems((prev) => (prev ? prev.filter((it) => it.id !== eliminado.id) : prev));
-    setEditando(null);
-    setMensajeExito(`Se eliminó "${eliminado.descripcion || eliminado.clave}".`);
   }
 
   function itemCreado(nuevo: ItemCatalogo) {
@@ -211,6 +214,12 @@ export default function CatalogoPage() {
         </p>
       )}
 
+      {avisoStock && (
+        <p role="alert" className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+          ⚠ {avisoStock}
+        </p>
+      )}
+
       {mensajeExito && (
         <p role="status" className="mb-4 rounded-md bg-green-50 px-4 py-3 text-sm text-green-700">
           {mensajeExito}
@@ -263,7 +272,7 @@ export default function CatalogoPage() {
                       copiado={copiadoId === item.id}
                       onEditar={() => abrirEdicion(item)}
                       onCopiar={() => copiarItem(item)}
-                      onCambiarStock={cambiarStock}
+                      onStockCambio={stockCambio}
                     />
                   ))}
                 </ul>
@@ -279,7 +288,6 @@ export default function CatalogoPage() {
           item={editando}
           onClose={() => setEditando(null)}
           onGuardado={guardarEdicion}
-          onEliminado={itemEliminado}
         />
       )}
 
@@ -312,7 +320,7 @@ function FilaItem({
   copiado,
   onEditar,
   onCopiar,
-  onCambiarStock,
+  onStockCambio,
 }: {
   item: ItemCatalogo;
   columnas: string;
@@ -321,7 +329,7 @@ function FilaItem({
   copiado: boolean;
   onEditar: () => void;
   onCopiar: () => void;
-  onCambiarStock: (item: ItemCatalogo, nuevo: number) => void;
+  onStockCambio: (item: ItemCatalogo, resultado: ResultadoStock) => void;
 }) {
   return (
     <li
@@ -341,7 +349,7 @@ function FilaItem({
 
       {conStock && (
         <div className="col-start-1 row-start-3 md:col-auto md:row-auto md:text-center">
-          <StockItem item={item} editable={!modoConsulta} onCambiar={onCambiarStock} />
+          <StockControles item={item} editable={!modoConsulta} onResultado={onStockCambio} />
         </div>
       )}
 
@@ -381,7 +389,7 @@ function ItemDescripcion({ item }: { item: ItemCatalogo }) {
   // sigue a la raya larga ("contado, kit estándar instalado") va como detalle.
   const corto = nombreCortoLista(item.clave);
   const baja = !item.activo && (
-    <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 align-middle text-[11px] font-medium text-gray-500">De baja</span>
+    <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 align-middle text-[11px] font-medium text-gray-500">Desactivado</span>
   );
   if (corto) {
     const detalle = item.descripcion?.split("—")[1]?.trim();
@@ -427,50 +435,6 @@ function FechaActualizacion({ updatedAt }: { updatedAt: string }) {
   const relativa = formatFechaRelativa(updatedAt);
   if (!relativa) return null;
   return <span title={formatFechaCompleta(updatedAt)}>{relativa}</span>;
-}
-
-/**
- * El stock de un ítem. Los que no llevan stock (hierros, luces, cercos... se
- * piden a pedido) dicen "A pedido"; los que sí, muestran las unidades con un
- * − / + para ajustarlas rápido (el número exacto se carga desde Editar). En
- * modo consulta es sólo lectura. Agotado (0) se ve en rojo para detectarlo.
- */
-function StockItem({
-  item,
-  editable,
-  onCambiar,
-}: {
-  item: ItemCatalogo;
-  editable: boolean;
-  onCambiar: (item: ItemCatalogo, nuevo: number) => void;
-}) {
-  if (!llevaStock(item)) return <span className="text-xs text-gray-400">A pedido</span>;
-  const agotado = item.stock === 0;
-  const nombre = item.descripcion || item.clave;
-  const numero = (
-    <span
-      title={textoStock(item.stock)}
-      className={`inline-flex min-w-[2.75rem] justify-center rounded-full px-2.5 py-1 text-sm font-semibold tabular-nums ${
-        agotado ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"
-      }`}
-    >
-      {item.stock}
-    </span>
-  );
-  if (!editable) return numero;
-  const boton =
-    "inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-base leading-none text-gray-600 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1B3A5C] disabled:cursor-not-allowed disabled:opacity-40";
-  return (
-    <div className="inline-flex items-center gap-1.5">
-      <button type="button" aria-label={`Restar una unidad de ${nombre}`} disabled={agotado} onClick={() => onCambiar(item, item.stock - 1)} className={boton}>
-        −
-      </button>
-      {numero}
-      <button type="button" aria-label={`Sumar una unidad de ${nombre}`} onClick={() => onCambiar(item, item.stock + 1)} className={boton}>
-        +
-      </button>
-    </div>
-  );
 }
 
 function CatalogoSkeleton() {

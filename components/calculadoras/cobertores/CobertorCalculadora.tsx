@@ -28,6 +28,7 @@ import { DocumentoCobertor } from "./DocumentoCobertor";
 import { CobertorFormSchema, formularioVacio, type CobertorForm } from "./schema";
 import { AccionesDocumento } from "@/components/calculadoras/AccionesDocumento";
 import { FloatingSaveBar } from "@/components/calculadoras/FloatingSaveBar";
+import { CamposSoloLectura } from "@/components/Anulado";
 import { CamposObligatoriosHint } from "@/components/calculadoras/CamposObligatoriosHint";
 import { VistaPreviaMovil } from "@/components/calculadoras/VistaPreviaMovil";
 import { VarianteEncabezadoField } from "@/components/calculadoras/VarianteEncabezadoField";
@@ -469,6 +470,7 @@ export function CobertorCalculadora({
           </p>
         )}
 
+        <CamposSoloLectura>
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Datos del cliente</h2>
           <TextField register={register} errors={errors} name="cliente.nombre" label="Señor/Sra" placeholder="Apellido, Nombre" autoComplete="name" />
@@ -627,6 +629,8 @@ export function CobertorCalculadora({
             </div>
           )}
         </section>
+
+        </CamposSoloLectura>
 
         <AccionesDocumento
           errorGuardado={errorGuardado}

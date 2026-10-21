@@ -27,4 +27,29 @@ describe("armarNombreArchivo", () => {
       "Presupuesto_Cerco_Juan_el_Grande_Perez_2026-08-20"
     );
   });
+
+  it("saca los caracteres de control y de formato", () => {
+    // nulo, escape, borrar (DEL), espacio de ancho cero y marca de orden de bytes
+    expect(armarNombreArchivo("Cerco", "Ju\u0000an\u001B\u007F​﻿", "20/08/2026")).toBe(
+      "Presupuesto_Cerco_Juan_2026-08-20"
+    );
+  });
+
+  it("saca el RTL override que invierte cómo se ve la extensión", () => {
+    expect(armarNombreArchivo("Cerco", "Pepe‮gpj.exe", "20/08/2026")).toBe(
+      "Presupuesto_Cerco_Pepegpj.exe_2026-08-20"
+    );
+  });
+
+  it("tabs y saltos de línea siguen siendo un guion bajo, no se pegan las palabras", () => {
+    expect(armarNombreArchivo("Cerco", "Juan\tPérez\nGómez", "20/08/2026")).toBe(
+      "Presupuesto_Cerco_Juan_Perez_Gomez_2026-08-20"
+    );
+  });
+
+  it("un cliente hecho sólo de caracteres de control termina en 'Sin_nombre'", () => {
+    expect(armarNombreArchivo("Cerco", "\u0000​", "20/08/2026")).toBe(
+      "Presupuesto_Cerco_Sin_nombre_2026-08-20"
+    );
+  });
 });

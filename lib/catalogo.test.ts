@@ -292,22 +292,20 @@ describe("Lote 6 · guardas de seguridad de la pantalla de Catálogo", () => {
     expect(src).not.toMatch(/COLUMNAS_ITEM_CATALOGO\s*=[^;]*updated_by/);
   });
 
-  // Antes este test prohibía cualquier .delete(): no había policy de RLS que lo
-  // permitiera. Ahora se puede eliminar un ítem desde la pantalla (con
-  // confirmación), pero SÓLO de a uno por id: nunca un borrado masivo.
-  it("el único .delete() sobre catalogo_items es eliminarItemCatalogo, siempre acotado por id", () => {
-    const usos = src.match(/\.delete\(\)/g) ?? [];
-    expect(usos).toHaveLength(1);
-    expect(src).toMatch(/\.delete\(\)\.eq\("id", id\)/);
+  // Los ítems del catálogo ya no se borran desde la app: se desactivan (activo = false).
+  // La base tampoco lo permite (supabase/migrations/20261021000300_desactivacion.sql).
+  it("catalogo.ts no tiene ningún .delete(): los ítems se desactivan, no se borran", () => {
+    expect(src).not.toMatch(/\.delete\(/);
+    expect(src).not.toMatch(/eliminarItemCatalogo/);
   });
 
-  it("la migración habilita el delete sin tocar los textos compartidos (__legal, __footer_*)", () => {
+  it("la migración de desactivación quita la policy y el privilegio de delete del catálogo", () => {
     const sql = fs.readFileSync(
-      path.join(process.cwd(), "supabase", "migration_catalogo_eliminar.sql"),
+      path.join(process.cwd(), "supabase", "migrations", "20261021000300_desactivacion.sql"),
       "utf8"
     );
-    expect(sql).toMatch(/for delete/);
-    expect(sql).toMatch(/clave not like/);
+    expect(sql).toMatch(/drop policy if exists "Authenticated users can delete catalogo_items"/);
+    expect(sql).toMatch(/revoke delete/i);
   });
 
   // clave/tipo son la identidad de la fila (ver CambiosItemCatalogo): esto ya
@@ -346,44 +344,6 @@ describe("obtenerCatalogo", () => {
   });
 });
 
-describe("eliminarItemCatalogo", () => {
-  function clienteBorrado(resultado: { data: unknown; error: unknown }) {
-    const select = vi.fn(() => Promise.resolve(resultado));
-    const eq = vi.fn(() => ({ select }));
-    const del = vi.fn(() => ({ eq }));
-    return { cliente: { from: () => ({ delete: del }) }, del, eq };
-  }
-
-  it("borra por id y no dice 'listo' si no se afectó ninguna fila (policy ausente o ya borrado)", async () => {
-    const { cliente, eq } = clienteBorrado({ data: [], error: null });
-    createClient.mockReturnValue(cliente);
-    const { eliminarItemCatalogo } = await import("./catalogo");
-
-    const r = await eliminarItemCatalogo("id-1");
-
-    expect(eq).toHaveBeenCalledWith("id", "id-1");
-    expect(r.error).toMatch(/ya no existe/i);
-  });
-
-  it("devuelve error null cuando borró una fila", async () => {
-    const { cliente } = clienteBorrado({ data: [{ id: "id-1" }], error: null });
-    createClient.mockReturnValue(cliente);
-    const { eliminarItemCatalogo } = await import("./catalogo");
-
-    expect((await eliminarItemCatalogo("id-1")).error).toBeNull();
-  });
-
-  it("propaga el mensaje de Supabase y nunca rechaza la promesa", async () => {
-    const { cliente } = clienteBorrado({ data: null, error: { message: "permiso denegado" } });
-    createClient.mockReturnValue(cliente);
-    const { eliminarItemCatalogo } = await import("./catalogo");
-    expect((await eliminarItemCatalogo("id-1")).error).toBe("permiso denegado");
-
-    createClient.mockReturnValue({ from: () => ({ delete: () => { throw new TypeError("Failed to fetch"); } }) });
-    expect((await eliminarItemCatalogo("id-1")).error).toMatch(/no se pudo conectar/i);
-  });
-});
-
 describe("stock", () => {
   const fila = {
     id: "1", tipo: "piscinas", clave: "indusplast_caribe_550", descripcion: "Caribe 550", precio: 1,
@@ -405,38 +365,35 @@ describe("stock", () => {
     expect(select.mock.calls[1][0]).not.toContain("stock");
   });
 
-  it("guardarStockItem guarda el número y avisa si el ítem ya no existe", async () => {
+  it("catalogo.ts ya no escribe el stock: no existe guardarStockItem ni hay un update de stock", () => {
+    const src = fs.readFileSync(path.join(process.cwd(), "lib", "catalogo.ts"), "utf8");
+    expect(src).not.toMatch(/guardarStockItem/);
+    expect(src).not.toMatch(/update\(\{\s*stock/);
+  });
+
+  it("actualizarItemCatalogo no manda stock salvo al tildar/destildar 'Llevar stock'", async () => {
     const eq = vi.fn(() => ({ select: () => Promise.resolve({ data: [{ id: "1" }], error: null }) }));
     const update = vi.fn(() => ({ eq }));
     createClient.mockReturnValue(clienteFalso({ update: update as never }));
-    const { guardarStockItem } = await import("./catalogo");
+    const { actualizarItemCatalogo } = await import("./catalogo");
 
-    expect(await guardarStockItem("1", 3)).toEqual({ error: null });
-    expect(update).toHaveBeenCalledWith({ stock: 3, updated_by: "u1" });
+    await actualizarItemCatalogo("1", { descripcion: "x", precio: 1, categoria: null, unidad: null, activo: true });
+    expect((update.mock.calls as unknown[][])[0][0]).not.toHaveProperty("stock");
 
-    createClient.mockReturnValue(
-      clienteFalso({ update: (() => ({ eq: () => ({ select: () => Promise.resolve({ data: [], error: null }) }) })) as never })
-    );
-    expect((await guardarStockItem("1", 3)).error).toMatch(/ya no existe/);
+    await actualizarItemCatalogo("1", { descripcion: "x", precio: 1, categoria: null, unidad: null, activo: true, stock: 0 });
+    expect((update.mock.calls as unknown[][])[1][0]).toMatchObject({ stock: 0 });
   });
 
-  it("guardarStockItem rechaza negativos y decimales sin llamar a Supabase", async () => {
-    createClient.mockClear();
-    const { guardarStockItem } = await import("./catalogo");
-    expect((await guardarStockItem("1", -1)).error).toMatch(/entero/);
-    expect((await guardarStockItem("1", 1.5)).error).toMatch(/entero/);
-    expect(createClient).not.toHaveBeenCalled();
-  });
-
-  it("sin la migración, guardar el stock dice qué falta correr", async () => {
+  it("si la base rechaza dejar de llevar stock con unidades, lo explica en castellano", async () => {
     createClient.mockReturnValue(
       clienteFalso({
         update: (() => ({
-          eq: () => ({ select: () => Promise.resolve({ data: null, error: { code: "42703", message: "column \"stock\" of relation \"catalogo_items\" does not exist" } }) }),
+          eq: () => ({ select: () => Promise.resolve({ data: null, error: { code: "ST010", message: "El stock no se modifica directamente" } }) }),
         })) as never,
       })
     );
-    const { guardarStockItem } = await import("./catalogo");
-    expect((await guardarStockItem("1", 1)).error).toMatch(/migration_stock_piscinas/);
+    const { actualizarItemCatalogo } = await import("./catalogo");
+    const r = await actualizarItemCatalogo("1", { descripcion: "x", precio: 1, categoria: null, unidad: null, activo: true, stock: null });
+    expect(r.error).toMatch(/Ajustar conteo/);
   });
 });

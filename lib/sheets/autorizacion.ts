@@ -12,8 +12,12 @@ export function tokenValido(recibido: string, esperado: string): boolean {
   return timingSafeEqual(h(recibido), h(esperado));
 }
 
-/** Saca el token de un encabezado `Authorization: Bearer <token>`; "" si no hay. */
+/** Un token legítimo mide decenas de caracteres; un encabezado enorme es un ataque, no se procesa. */
+export const LARGO_MAXIMO_ENCABEZADO = 1024;
+
+/** Saca el token de un encabezado `Authorization: Bearer <token>`; "" si no hay (o si es absurdamente largo). */
 export function tokenDeEncabezado(encabezado: string | null): string {
+  if ((encabezado ?? "").length > LARGO_MAXIMO_ENCABEZADO) return "";
   const m = /^Bearer\s+(.+)$/i.exec((encabezado ?? "").trim());
   return m ? m[1].trim() : "";
 }

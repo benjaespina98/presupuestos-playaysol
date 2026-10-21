@@ -7,8 +7,10 @@ import {
   agruparParaListado,
   contarPorLinea,
   contarPorStock,
+  coincideStock,
   llevaStock,
   resumenStock,
+  stockNegativo,
   textoStock,
   type FiltroStock,
   disponibleEnCalculadora,
@@ -279,9 +281,23 @@ describe("stock", () => {
     expect(llevaStock(agotada)).toBe(true); // 0 también es llevar stock
   });
 
-  it("rechaza un stock negativo o con decimales", () => {
-    expect(() => item({ stock: -1 })).toThrow();
+  it("acepta un stock negativo (se vendió más de lo cargado) pero no decimales", () => {
+    expect(item({ stock: -1 }).stock).toBe(-1);
     expect(() => item({ stock: 1.5 })).toThrow();
+  });
+
+  it("stockNegativo sólo es true para un ítem que lleva stock y está por debajo de 0", () => {
+    expect(stockNegativo(item({ stock: -2 }))).toBe(true);
+    expect(stockNegativo(item({ stock: 0 }))).toBe(false);
+    expect(stockNegativo(item({ stock: null }))).toBe(false);
+  });
+
+  it("un stock negativo cuenta como agotado, y no resta unidades del resumen", () => {
+    const negativa = item({ id: "n", clave: "indusplast_spa_240", stock: -2 });
+    expect(coincideStock(negativa, "agotado")).toBe(true);
+    expect(coincideStock(negativa, "disponible")).toBe(false);
+    expect(textoStock(-2)).toBe("sin stock");
+    expect(resumenStock([negativa, conUnidades])).toEqual({ modelos: 2, conUnidades: 1, unidades: 3 });
   });
 
   it("textoStock", () => {

@@ -60,7 +60,7 @@ columna con el encabezado **Stock** de la hoja "Precios y margen":
 ## La hoja "Catálogo web": todos los campos
 Además de las hojas de siempre, el script crea (si no existe) y mantiene una hoja **Catálogo web**
 con **una fila por precio de venta del catálogo y todos sus campos**: calculadora, clave,
-descripción, categoría, unidad, precio, stock, estado (Activo / De baja) y fecha de actualización.
+descripción, categoría, unidad, precio, stock, estado (Activo / Desactivado) y fecha de actualización.
 Se reescribe entera en cada sincronización, así que **todo cambio del catálogo web aparece ahí**
 (incluido un ítem nuevo, un cambio de descripción o de categoría, o un ítem dado de baja). Es una
 hoja del script: no se edita a mano.
@@ -135,3 +135,20 @@ cuándo fue la última actualización y si hubo algún error.
   están probados contra una planilla simulada en `lib/sheets/script.test.ts`.
 - La planilla no tiene sesión de usuario, por eso se usa un token compartido y la clave de
   servicio de Supabase (sólo del lado del servidor).
+
+## Qué viaja y en qué dirección
+
+- **Sólo del portal a la planilla.** El script hace un único `GET` a
+  `/api/sheets/catalogo` con el token; no manda datos ni escribe nada en el
+  portal. La planilla **no puede cambiar el stock** ni ningún otro dato del
+  portal: el stock es un número de sólo lectura.
+- **Qué datos viajan:** proveedores (nombre, rubro, contacto, teléfono, forma
+  de pago, plazo, notas), materiales (precio de costo, USD de referencia,
+  cantidades por tamaño, notas) y el catálogo de precios de venta con su stock.
+  **No viaja ningún dato de clientes, presupuestos ni pedidos.**
+- **Desactivados:** los ítems desactivados del catálogo figuran en la hoja
+  "Catálogo web" con Estado `Desactivado`. Los proveedores y materiales
+  desactivados no van a las hojas Proveedores y Artículos (las fórmulas de la
+  planilla leen esos rangos tal cual y no tienen columna de estado).
+- **Anulados:** los presupuestos y pedidos anulados no se sincronizan porque
+  ningún presupuesto ni pedido se sincroniza.

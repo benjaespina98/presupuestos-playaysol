@@ -1,6 +1,7 @@
 "use client";
 
 import { IconCloudUpload } from "@/components/icons";
+import { SoloSiNoAnulado } from "@/components/Anulado";
 
 /**
  * Barra de "Guardar" fija al pie, sólo en celular (`sm:hidden` — el
@@ -18,6 +19,7 @@ import { IconCloudUpload } from "@/components/icons";
  */
 export function FloatingSaveBar({ guardando, label = "Guardar en la nube" }: { guardando: boolean; label?: string }) {
   return (
+    <SoloSiNoAnulado>
     <div
       className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] backdrop-blur sm:hidden"
       style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
@@ -31,5 +33,6 @@ export function FloatingSaveBar({ guardando, label = "Guardar en la nube" }: { g
         {guardando ? "Guardando..." : label}
       </button>
     </div>
+    </SoloSiNoAnulado>
   );
 }

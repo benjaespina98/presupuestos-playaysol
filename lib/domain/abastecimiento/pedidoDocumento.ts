@@ -61,6 +61,10 @@ export const PedidoGuardado = z.object({
   notas: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
+  /** Anulado = congelado, visible y exportable pero no editable (ver lib/anulacion.ts). */
+  anulado_at: z.string().nullable().optional(),
+  anulado_por: z.string().nullable().optional(),
+  anulado_motivo: z.string().nullable().optional(),
 });
 export type PedidoGuardado = z.infer<typeof PedidoGuardado>;
 

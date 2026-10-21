@@ -120,6 +120,33 @@ export interface Pedido {
 
 export const SIN_PROVEEDOR = "Sin proveedor";
 
+/** Lo que conviene avisar al armar un pedido cuando hay cosas desactivadas. */
+export interface AvisosDeDesactivados {
+  /** Materiales DESACTIVADOS que la cuenta pediría. Se dejan afuera del pedido: no se piden sin querer. */
+  materialesFuera: Material[];
+  /** Proveedores DESACTIVADOS a los que el pedido igual les pide algo (con los materiales que son suyos). */
+  proveedoresDesactivados: { proveedor: Proveedor; materiales: Material[] }[];
+}
+
+/**
+ * Qué hay de desactivado alrededor de un pedido ya armado. Un material desactivado
+ * nunca entra (`armarPedido` lo filtra) pero se avisa que quedó afuera; un material
+ * activo de un proveedor desactivado SÍ entra, y eso se avisa para que la pantalla
+ * pida confirmación antes de guardar o exportar un pedido a un proveedor dado de baja.
+ */
+export function avisosDeDesactivados(
+  materiales: readonly Material[],
+  pedido: Pedido,
+  parametros: ParametrosPedido
+): AvisosDeDesactivados {
+  const materialesFuera = materiales.filter((m) => !m.activo && cantidadDePedido(m, parametros) > 0);
+  const proveedoresDesactivados = pedido.grupos
+    .filter((g) => g.proveedor !== null && !g.proveedor.activo)
+    .map((g) => ({ proveedor: g.proveedor as Proveedor, materiales: g.lineas.map((l) => l.material) }));
+  return { materialesFuera, proveedoresDesactivados };
+}
+
+
 export function armarPedido(
   materiales: readonly Material[],
   proveedores: readonly Proveedor[],

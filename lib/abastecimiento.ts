@@ -2,6 +2,7 @@ import type { z } from "zod";
 import { createClient } from "@/lib/supabase";
 import { Proveedor, type DatosProveedor } from "@/lib/domain/abastecimiento/proveedor";
 import { Material, type DatosMaterial } from "@/lib/domain/abastecimiento/material";
+import { mensajeFilaInvalida } from "@/lib/logs";
 
 /**
  * Acceso a Supabase de las pestañas Proveedores y Materiales del catálogo.
@@ -44,27 +45,12 @@ async function listar<S extends z.ZodType>(tabla: string, schema: S): Promise<Re
     for (const fila of data ?? []) {
       const r = schema.safeParse(fila);
       if (r.success) items.push(r.data);
-      else console.error(`Fila de ${tabla} con forma inesperada, se omite`, fila, r.error);
+      else console.error(mensajeFilaInvalida(`Fila de ${tabla} con forma inesperada, se omite`, fila, r.error));
     }
     return { items, error: null };
   } catch (err) {
     console.error(`No se pudo leer ${tabla}`, err);
     return { items: null, error: ERROR_DE_RED };
-  }
-}
-
-async function eliminar(tabla: string, id: string, qué: string): Promise<{ error: string | null }> {
-  try {
-    const supabase = createClient();
-    const { data, error } = await supabase.from(tabla).delete().eq("id", id).select("id");
-    if (error) return { error: mensaje(error, "") };
-    if (!data || data.length === 0) {
-      return { error: `No se pudo eliminar: ${qué} ya no existe o no tenés permiso para borrarlo.` };
-    }
-    return { error: null };
-  } catch (err) {
-    console.error(`No se pudo eliminar de ${tabla}`, err);
-    return { error: ERROR_DE_RED };
   }
 }
 
@@ -105,7 +91,6 @@ export async function guardarProveedor(
   }
 }
 
-export const eliminarProveedor = (id: string) => eliminar("proveedores", id, "el proveedor");
 
 // ── Materiales ───────────────────────────────────────────────────────────────
 
@@ -162,4 +147,3 @@ export async function guardarMaterial(
   }
 }
 
-export const eliminarMaterial = (id: string) => eliminar("materiales", id, "el material");

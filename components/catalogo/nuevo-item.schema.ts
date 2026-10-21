@@ -38,9 +38,8 @@ export const NuevoItemSchema = z.object({
   categoria: z.union([Categoria, z.literal("")]),
   unidad: z.union([z.enum(UNIDADES), z.literal("")]),
   activo: z.boolean(),
-  /** Si el ítem se guarda en el local. Tildado → `stock` es la cantidad. */
+  /** Si el ítem se guarda en el local. Nace en 0: las unidades se cargan después con un Ingreso. */
   llevaStock: z.boolean(),
-  stock: z.number().int("El stock tiene que ser un número entero").nonnegative("El stock no puede ser negativo").nullable(),
 });
 export type NuevoItemForm = z.infer<typeof NuevoItemSchema>;
 
@@ -72,7 +71,6 @@ export function nuevoItemFormVacio(): NuevoItemForm {
     unidad: "",
     activo: true,
     llevaStock: false,
-    stock: null,
   };
 }
 
@@ -86,7 +84,7 @@ export function datosDeAlta(form: NuevoItemForm): { clave: string; descripcion: 
 /** Form → lo que espera `crearItemCatalogo`. Devuelve null si falta algo para armarlo (medidas de una
  *  piscina, o una clave/descripción de la que sacar la clave) — la pantalla lo trata como error de validación. */
 export function aNuevoItem(form: NuevoItemForm): NuevoItemCatalogo | null {
-  const stock = form.llevaStock ? (form.stock ?? 0) : null;
+  const stock = form.llevaStock ? 0 : null;
   if (form.alta !== "otro") {
     const piscina = datosDeAlta(form);
     if (!piscina) return null;

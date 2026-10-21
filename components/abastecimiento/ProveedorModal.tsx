@@ -4,9 +4,9 @@ import { useState } from "react";
 import { z } from "zod";
 import { useZodForm } from "@/lib/forms/useZodForm";
 import { TextField, CheckboxField } from "@/components/form";
-import { eliminarProveedor, guardarProveedor } from "@/lib/abastecimiento";
+import { guardarProveedor } from "@/lib/abastecimiento";
 import type { DatosProveedor, Proveedor } from "@/lib/domain/abastecimiento/proveedor";
-import { BotonesGuardar, ModalShell, ZonaEliminar } from "./modal-partes";
+import { BotonesGuardar, ModalShell } from "./modal-partes";
 
 /** Los opcionales viajan como string (un <input> no puede valer null); `aDatos`
  *  los vuelve null cuando quedan vacíos. */
@@ -52,8 +52,8 @@ function aFormulario(p: Proveedor | null): ProveedorForm {
 
 /**
  * Alta y edición de un proveedor, en un modal. `proveedor` null = alta. En la
- * edición viven también "dar de baja" (apagar Activo) y "Eliminar": igual que
- * en el catálogo de precios, el listado sólo tiene Editar.
+ * edición vive también "desactivar" (apagar Activo): igual que en el catálogo
+ * de precios, el listado sólo tiene Editar. Los proveedores no se borran.
  *
  * Se monta con `key` desde la pantalla, así cada proveedor abre un form nuevo.
  */
@@ -62,14 +62,12 @@ export function ProveedorModal({
   cantidadMateriales = 0,
   onClose,
   onGuardado,
-  onEliminado,
 }: {
   proveedor: Proveedor | null;
-  /** Cuántos materiales le compra la empresa: se avisa antes de eliminar. */
+  /** Cuántos materiales le compra la empresa: se avisa al desactivarlo. */
   cantidadMateriales?: number;
   onClose: () => void;
   onGuardado: (p: Proveedor, alta: boolean) => void;
-  onEliminado: (p: Proveedor) => void;
 }) {
   const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
   const {
@@ -88,18 +86,10 @@ export function ProveedorModal({
     onGuardado(item, proveedor === null);
   }
 
-  async function eliminar(): Promise<string | null> {
-    if (!proveedor) return null;
-    const { error } = await eliminarProveedor(proveedor.id);
-    if (error) return error;
-    onEliminado(proveedor);
-    return null;
-  }
-
   const sinMateriales =
     cantidadMateriales === 0
       ? ""
-      : ` Sus ${cantidadMateriales} ${cantidadMateriales === 1 ? "material queda" : "materiales quedan"} sin proveedor.`;
+      : ` Sus ${cantidadMateriales} ${cantidadMateriales === 1 ? "material sigue" : "materiales siguen"} cargados, con este proveedor.`;
 
   return (
     <ModalShell
@@ -121,7 +111,7 @@ export function ProveedorModal({
           errors={errors}
           name="activo"
           label="Activo"
-          hint="Desactivalo para dar de baja al proveedor sin perderlo: deja de ofrecerse al cargar materiales nuevos."
+          hint={`Desactivar al proveedor lo oculta al cargar materiales nuevos y de los pedidos, sin perderlo. Lo podés reactivar cuando quieras.${sinMateriales}`}
         />
 
         {errorGuardado && (
@@ -138,15 +128,6 @@ export function ProveedorModal({
         />
       </form>
 
-      {proveedor && (
-        <ZonaEliminar
-          etiqueta="Eliminar proveedor"
-          titulo="¿Eliminar este proveedor?"
-          mensaje={`Se elimina "${proveedor.nombre}" para todo el equipo y no se puede deshacer.${sinMateriales} Si sólo querés ocultarlo, desactivalo en lugar de eliminarlo.`}
-          deshabilitado={isSubmitting}
-          onEliminar={eliminar}
-        />
-      )}
     </ModalShell>
   );
 }
