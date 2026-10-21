@@ -34,7 +34,7 @@ import { CrearItemModal } from "@/components/catalogo/CrearItemModal";
  * Stock · Actualizado · acción. Sin la columna de stock cuando ningún ítem lo
  * lleva. Son anchos fijos (rem) y el producto toma el resto.
  */
-const COLUMNAS_CON_STOCK = "md:grid-cols-[minmax(0,1fr)_9.5rem_4.5rem_17rem_6.5rem_3.5rem]";
+const COLUMNAS_CON_STOCK = "md:grid-cols-[minmax(0,1fr)_8.5rem_4rem_26rem_6rem_3rem]";
 const COLUMNAS_SIN_STOCK = "md:grid-cols-[minmax(0,1fr)_9.5rem_4.5rem_6.5rem_3.5rem]";
 
 export default function CatalogoPage() {
