@@ -16,6 +16,54 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Marca de Playa y Sol: azul petróleo, amarillo y celeste. Tailwind los expone
+   como bg-marca, text-marca, bg-acento, ring-celeste, etc. */
+@theme {
+  --color-marca: #244b5a;
+  --color-marca-oscuro: #1a3844;
+  --color-acento: #ffc629;
+  --color-celeste: #16819a;
+}
+
+/* Tailwind 4 deja los botones con cursor de flecha y sin ningún foco propio: por
+   eso "Ingreso", "Venta" o "Historial" parecían texto. Esto lo corrige en todo
+   el portal de una vez, sin tocar cada pantalla:
+   - cursor de mano en todo lo que se puede tocar (y de "no permitido" si está deshabilitado);
+   - un anillo de foco visible, sólo al navegar con teclado (:focus-visible);
+   - un leve "hundido" al apretar un botón, para que se sienta que respondió. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+summary,
+select:not(:disabled),
+label[for],
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled) {
+  cursor: pointer;
+}
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-celeste);
+  outline-offset: 2px;
+}
+button:not(:disabled):active,
+[role="button"]:not([aria-disabled="true"]):active {
+  transform: translateY(1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
