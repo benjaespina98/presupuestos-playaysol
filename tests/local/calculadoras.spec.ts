@@ -144,3 +144,27 @@ for (const tipo of TIPOS) {
     expect(errores, "errores de JavaScript en la página").toEqual([]);
   });
 }
+
+test("Plano: la calculadora interna de losetas calcula piezas y no toca el plano ni lo guarda", async ({ page }, info) => {
+  await page.goto("/dashboard/losetas");
+  await num(page, "Largo (m)", "7");
+  await num(page, "Ancho (m)", "3");
+
+  await page.getByText("Calculadora de losetas").first().click();
+  await page.getByRole("button", { name: "Usar las medidas del plano" }).click();
+  const resultado = page.getByLabel("Resultado");
+  await expect(resultado).toContainText("44"); // de borde, igual que la hoja "Artículos" para 7x3
+  await expect(resultado).toContainText("50"); // total con las 6 planas
+  await captura(page, info, "calculadora-losetas");
+
+  await page.getByLabel("Desperdicio (%)").fill("10");
+  await expect(resultado).toContainText("49"); // 44 × 1,10 = 48,4 → 49
+
+  // Enter dentro de la calculadora no guarda el presupuesto del plano.
+  await page.getByLabel("Ancho de vereda (m)").press("Enter");
+  await expect(page.getByText(/guardado/i)).toHaveCount(0);
+  await expect(page).toHaveURL(/\/dashboard\/losetas$/);
+
+  // Cambiar la calculadora no cambia las medidas del plano.
+  await expect(page.getByLabel("Largo (m)", { exact: true }).locator("visible=true").first()).toHaveValue(/7/);
+});
