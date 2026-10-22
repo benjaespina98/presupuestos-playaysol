@@ -110,9 +110,13 @@ describe("EditarItemModal", () => {
     const user = userEvent.setup();
     render(<EditarItemModal item={item()} onClose={vi.fn()} onGuardado={onGuardado} />);
 
+    // Sin cambios, Guardar está deshabilitado (pero se lee): hay que cambiar algo.
+    expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeDisabled();
+    await user.type(screen.getByLabelText("Descripción"), " nueva");
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
-    expect(await screen.findByText("No se pudo guardar: motivo tal.")).toBeInTheDocument();
+    expect(await screen.findByText(/motivo tal/)).toBeInTheDocument();
+    expect(screen.getByText(/Lo que cargaste sigue acá/)).toBeInTheDocument();
     expect(onGuardado).not.toHaveBeenCalled();
   });
 

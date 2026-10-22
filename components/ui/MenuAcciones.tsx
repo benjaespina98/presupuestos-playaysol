@@ -28,7 +28,7 @@ export function MenuAcciones({ etiqueta, acciones }: { etiqueta: string; accione
   function abrir() {
     const r = boton.current?.getBoundingClientRect();
     if (!r) return;
-    const alto = acciones.length * 44 + 16;
+    const alto = acciones.length * 48 + 16;
     const hayLugarAbajo = window.innerHeight - r.bottom > alto + 8;
     setPosicion({
       right: Math.max(8, window.innerWidth - r.right),
@@ -78,7 +78,7 @@ export function MenuAcciones({ etiqueta, acciones }: { etiqueta: string; accione
         aria-expanded={posicion !== null}
         aria-controls={posicion ? `${id}-menu` : undefined}
         onClick={() => (posicion ? cerrar() : abrir())}
-        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-marca/40 bg-white text-lg font-bold leading-none text-marca shadow-sm transition-colors hover:border-marca hover:bg-marca/5 active:bg-marca/10"
+        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#8B969E] bg-[#FFFFFF] text-lg font-bold leading-none text-[#244B5A] transition-colors hover:border-[#244B5A] hover:bg-[#EAF0F2] active:bg-[#D5E0E4]"
       >
         <span aria-hidden="true">⋯</span>
       </button>
@@ -90,7 +90,7 @@ export function MenuAcciones({ etiqueta, acciones }: { etiqueta: string; accione
             role="menu"
             aria-label={etiqueta}
             style={{ position: "fixed", top: posicion.top, bottom: posicion.bottom, right: posicion.right }}
-            className="z-[60] min-w-48 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-xl"
+            className="z-[60] min-w-52 overflow-hidden rounded-xl border border-[#D9DFE3] bg-white py-1 shadow-xl"
           >
             {acciones.map((a) => (
               <button
@@ -101,7 +101,7 @@ export function MenuAcciones({ etiqueta, acciones }: { etiqueta: string; accione
                   cerrar();
                   a.onClick();
                 }}
-                className="flex min-h-11 w-full items-center px-4 text-left text-sm font-medium text-gray-800 hover:bg-marca/8 focus-visible:bg-marca/8 focus-visible:outline-none"
+                className="flex min-h-12 w-full items-center px-4 text-left text-base font-medium text-[#1F2A30] hover:bg-[#EAF0F2] active:bg-[#D5E0E4] focus-visible:bg-[#EAF0F2] focus-visible:outline-none"
               >
                 {a.etiqueta}
               </button>

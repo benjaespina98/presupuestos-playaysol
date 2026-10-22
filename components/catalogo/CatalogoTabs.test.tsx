@@ -22,25 +22,26 @@ describe("CatalogoTabs", () => {
     expect(screen.getByRole("link", { name: "Pedidos" })).not.toHaveAttribute("aria-current");
   });
 
-  it("muestra las cinco secciones y marca sólo la actual", () => {
+  it("en Compras muestra sus cuatro secciones y marca sólo la actual (Precios de venta es otra sección del menú)", () => {
     usePathname.mockReturnValue("/dashboard/catalogo/materiales");
     render(<CatalogoTabs />);
 
     expect(screen.getByRole("link", { name: "Materiales" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Precios de venta" })).not.toHaveAttribute("aria-current");
+    expect(screen.queryByRole("link", { name: "Precios de venta" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Proveedores" })).not.toHaveAttribute("aria-current");
     expect(screen.getByRole("link", { name: "Armar pedido" })).toHaveAttribute("href", "/dashboard/catalogo/pedido");
   });
 
-  it("'Precios de venta' es la raíz: no queda activa en las subsecciones", () => {
+  it("'Precios de venta' es su propia sección: ahí no se ven las de Compras, y viceversa", () => {
     usePathname.mockReturnValue("/dashboard/catalogo");
     const { unmount } = render(<CatalogoTabs />);
     expect(screen.getByRole("link", { name: "Precios de venta" })).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByRole("link", { name: "Materiales" })).not.toBeInTheDocument();
     unmount();
 
     usePathname.mockReturnValue("/dashboard/catalogo/proveedores");
     render(<CatalogoTabs />);
-    expect(screen.getByRole("link", { name: "Precios de venta" })).not.toHaveAttribute("aria-current");
+    expect(screen.queryByRole("link", { name: "Precios de venta" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Proveedores" })).toHaveAttribute("aria-current", "page");
   });
 });

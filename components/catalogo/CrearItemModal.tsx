@@ -8,6 +8,7 @@ import { CATEGORIAS, UNIDADES } from "@/lib/domain/catalogo/categorias";
 import type { ItemCatalogo } from "@/lib/domain/catalogo/item";
 import { MODELOS_INDUSPLAST } from "@/lib/domain/catalogo/listas";
 import { Hoja, PieAcciones } from "@/components/ui/Hoja";
+import { ZonaActivo } from "@/components/ui/SeccionForm";
 import { NuevoItemSchema, nuevoItemFormVacio, aNuevoItem, datosDeAlta, type NuevoItemForm } from "./nuevo-item.schema";
 import { TITULOS_TIPO } from "./titulos-tipo";
 
@@ -102,11 +103,12 @@ export function CrearItemModal({
       ocupado={isSubmitting}
       hayCambios={isDirty}
       ancho="lg"
+      alto="completo"
       onCerrar={onClose}
       aviso={
         errorGuardado ? (
-          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-            {errorGuardado}
+          <p role="alert" className="rounded-lg border border-[#FDA29B] bg-[#FEF3F2] px-3 py-2 text-[15px] font-medium text-[#B42318]">
+            No se guardó: {errorGuardado} Lo que cargaste sigue acá.
           </p>
         ) : undefined
       }
@@ -128,7 +130,7 @@ export function CrearItemModal({
             </div>
           )}
           {esPiscina && (
-            <p className="rounded-md bg-[#EEF2F6] px-3 py-2 text-xs text-gray-600">
+            <p className="rounded-md bg-[#EEF2F6] px-3 py-2 text-[13px] leading-snug text-[#3E4A52]">
               {previa ? (
                 <>
                   Se agrega como <b>{previa.descripcion.split(" — ")[0]}</b>, en Piscinas, unidad obra. Aparece solo en su sección
@@ -174,7 +176,7 @@ export function CrearItemModal({
               <SelectField register={register} errors={errors} name="unidad" label="Unidad" options={OPCIONES_UNIDAD} />
             </>
           )}
-          <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50/60 p-3">
+          <div className="space-y-3 rounded-xl border border-[#D9DFE3] px-4 py-3">
             <CheckboxField
               register={register}
               errors={errors}
@@ -183,12 +185,12 @@ export function CrearItemModal({
               hint="Para lo que se guarda en el local, como las piscinas de fibra."
             />
             {llevaStock && (
-              <p className="text-xs text-gray-500">Arranca en 0 unidades. Cargá lo que hay con «Ingreso» desde la lista del catálogo.</p>
+              <p className="text-[13px] leading-snug text-[#4A5861]">Arranca en 0 unidades. Cargá lo que hay con «Ingreso» desde la lista del catálogo.</p>
             )}
           </div>
-          <div className="rounded-xl border border-gray-200 px-4 py-1">
-            <CheckboxField register={register} errors={errors} name="activo" label="Activo" hint="Desactivado: no aparece en presupuestos nuevos." />
-          </div>
+          <ZonaActivo>
+            <CheckboxField register={register} errors={errors} name="activo" label="Activo" hint="Si lo desactivás, no aparece en presupuestos nuevos; no se pierde." />
+          </ZonaActivo>
       </form>
     </Hoja>
   );

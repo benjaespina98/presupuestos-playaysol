@@ -31,8 +31,8 @@ export interface MoneyInputProps {
 }
 
 const CLASE_BASE =
-  "block min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 hover:border-gray-400 " +
-  "placeholder:text-gray-400 focus:border-[#244B5A] focus:outline-none focus:ring-2 " +
+  "block min-h-12 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 hover:border-gray-400 " +
+  "placeholder:text-[#6B7680] focus:border-[#244B5A] focus:outline-none focus:ring-2 " +
   "focus:ring-celeste/40 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500 " +
   "aria-[invalid=true]:border-red-500 aria-[invalid=true]:focus:ring-red-500/30";
 

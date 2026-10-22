@@ -292,9 +292,10 @@ describe("stock", () => {
     expect(stockNegativo(item({ stock: null }))).toBe(false);
   });
 
-  it("un stock negativo cuenta como agotado, y no resta unidades del resumen", () => {
+  it("un stock negativo es 'negativo' (no 'sin stock'), y no resta unidades del resumen", () => {
     const negativa = item({ id: "n", clave: "indusplast_spa_240", stock: -2 });
-    expect(coincideStock(negativa, "agotado")).toBe(true);
+    expect(coincideStock(negativa, "negativo")).toBe(true);
+    expect(coincideStock(negativa, "agotado")).toBe(false);
     expect(coincideStock(negativa, "disponible")).toBe(false);
     expect(textoStock(-2)).toBe("sin stock");
     expect(resumenStock([negativa, conUnidades])).toEqual({ modelos: 2, conUnidades: 1, unidades: 3 });
@@ -315,8 +316,31 @@ describe("stock", () => {
   });
 
   it("cuenta por disponibilidad ignorando el propio filtro de stock", () => {
-    expect(contarPorStock(todos, {})).toEqual({ disponible: 1, agotado: 1, "sin-control": 1 });
-    expect(contarPorStock(todos, { busqueda: "caribe" })).toEqual({ disponible: 1, agotado: 1, "sin-control": 0 });
+    expect(contarPorStock(todos, {})).toEqual({ disponible: 1, agotado: 1, negativo: 0, "sin-control": 1 });
+    expect(contarPorStock(todos, { busqueda: "caribe" })).toEqual({ disponible: 1, agotado: 1, negativo: 0, "sin-control": 0 });
+  });
+
+  it("cada opción del filtro de stock devuelve exactamente los ítems que corresponden (mayor a 0, 0, negativo y sin control)", () => {
+    const datos = [
+      item({ id: "mas", clave: "indusplast_caribe_550", stock: 4 }),
+      item({ id: "uno", clave: "indusplast_caribe_650", stock: 1 }),
+      item({ id: "cero", clave: "indusplast_lagune_300", stock: 0 }),
+      item({ id: "neg", clave: "indusplast_spa_240", stock: -2 }),
+      item({ id: "neg2", clave: "indusplast_spa_300", stock: -1 }),
+      item({ id: "pedido", clave: "luces", stock: null }),
+      item({ id: "inactivo-neg", clave: "indusplast_viejo_1", stock: -5, activo: false }),
+    ];
+    const ids = (f: FiltroStock | null, extra = {}) => filtrarCatalogo(datos, { stock: f, ...extra }).map((i) => i.id).sort();
+    expect(ids(null)).toEqual(["cero", "mas", "neg", "neg2", "pedido", "uno"]);
+    expect(ids("disponible")).toEqual(["mas", "uno"]);
+    expect(ids("agotado")).toEqual(["cero"]);
+    expect(ids("negativo")).toEqual(["neg", "neg2"]);
+    expect(ids("sin-control")).toEqual(["pedido"]);
+    // Combina con "Mostrar desactivados" y con la búsqueda.
+    expect(ids("negativo", { incluirInactivos: true })).toEqual(["inactivo-neg", "neg", "neg2"]);
+    expect(ids("negativo", { busqueda: "spa_240" })).toEqual(["neg"]);
+    expect(contarPorStock(datos, {})).toEqual({ disponible: 2, agotado: 1, negativo: 2, "sin-control": 1 });
+    expect(contarPorStock(datos, { incluirInactivos: true }).negativo).toBe(3);
   });
 
   it("el resumen suma sólo los que llevan stock", () => {

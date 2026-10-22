@@ -2,8 +2,12 @@
 
 import { SECCIONES, type SeccionId } from "@/lib/domain/catalogo/secciones";
 import type { FiltroStock } from "@/lib/domain/catalogo/item";
-import { Buscador, FiltrosPlegables } from "@/components/ui/FiltrosPlegables";
-import { BarraFiltros } from "./BarraFiltros";
+import { etiquetaCortaDeOrden, opcionesDeOrden, type ClaveOrden } from "@/lib/ordenar";
+import { Buscador } from "@/components/ui/FiltrosPlegables";
+import { BarraListado, BotonFiltros, Chip, ChipsFila, Interruptor, MenuSeleccion, type OpcionMenu } from "@/components/ui/BarraListado";
+
+// Se re-exportan para las pantallas que ya los importaban de acá.
+export { Chip, Interruptor };
 
 export interface FiltrosCatalogoProps {
   busqueda: string;
@@ -16,6 +20,10 @@ export interface FiltrosCatalogoProps {
   onStock: (v: FiltroStock | "") => void;
   /** Ítems por disponibilidad; si ninguno lleva stock, el filtro se oculta. */
   conteosStock: Record<FiltroStock, number>;
+  /** Cuántos ítems hay con todos los filtros menos el de stock (el contador de "Todos"). */
+  totalStock: number;
+  orden: ClaveOrden;
+  onOrden: (v: ClaveOrden) => void;
   incluirInactivos: boolean;
   onIncluirInactivos: (v: boolean) => void;
   modoConsulta: boolean;
@@ -25,23 +33,14 @@ export interface FiltrosCatalogoProps {
 }
 
 export const CLASE_SELECT =
-  "min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 sm:w-auto";
+  "min-h-11 w-full rounded-lg border bg-white px-3 py-2.5 text-base text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 sm:w-auto sm:text-sm";
 
+const ORDENES = opcionesDeOrden(["nombre", "precio", "stock", "actualizado"]);
 
 /**
- * Filtros del Catálogo de precios, pensados para encontrar rápido lo que más se
- * consulta. En la barra fija (se queda arriba al bajar):
- *
- *  1. La búsqueda (y el stock, ver abajo).
- *  2. Las secciones como accesos directos de un toque: piscinas de hormigón,
- *     piscinas de fibra Indusplast, cobertores, cercos, climatización,
- *     revestimientos y otros, cada una con su cantidad.
- *     Se acomodan en varias líneas si no entran: todas quedan a la vista.
- *  3. El stock, en un desplegable junto a la búsqueda (sólo si algún ítem lo lleva):
- *     con stock / agotado / a pedido.
- *
- * Debajo, sin quedarse fija: los interruptores ("desactivados", "modo
- * consulta") y "Limpiar filtros". Es controlada: el estado vive en la página.
+ * La barra del Catálogo de precios: UNA fila en escritorio (buscador · secciones en una fila de chips ·
+ * stock · orden · "Filtros") y a lo sumo dos en el celular. "Filtros" abre un panel con "Mostrar desactivados",
+ * "Modo consulta rápida" y "Limpiar filtros".
  */
 export function FiltrosCatalogo({
   busqueda,
@@ -52,6 +51,9 @@ export function FiltrosCatalogo({
   stock,
   onStock,
   conteosStock,
+  totalStock,
+  orden,
+  onOrden,
   incluirInactivos,
   onIncluirInactivos,
   modoConsulta,
@@ -61,42 +63,45 @@ export function FiltrosCatalogo({
 }: FiltrosCatalogoProps) {
   // Sólo las secciones con algo adentro (más la elegida, para poder des-elegirla).
   const seccionesVisibles = SECCIONES.filter((s) => (conteos.porSeccion[s.id] ?? 0) > 0 || s.id === seccion);
-  const hayStock = conteosStock.disponible + conteosStock.agotado > 0 || stock !== "";
+  const hayStock = conteosStock.disponible + conteosStock.agotado + conteosStock.negativo > 0 || stock !== "";
 
-  const filtrosActivos = [seccion, stock, incluirInactivos, modoConsulta].filter(Boolean).length;
+  const opcionesStock: OpcionMenu<FiltroStock | "todos">[] = [
+    { id: "todos", etiqueta: "Todos", cantidad: totalStock },
+    { id: "disponible", etiqueta: "Con stock", cantidad: conteosStock.disponible, descripcion: "Más de 0 unidades" },
+    { id: "agotado", etiqueta: "Sin stock", cantidad: conteosStock.agotado, descripcion: "Exactamente 0 unidades" },
+    { id: "negativo", etiqueta: "Stock negativo", cantidad: conteosStock.negativo, tono: "aviso", descripcion: "Se vendió más de lo cargado" },
+    { id: "sin-control", etiqueta: "Sin control de stock", cantidad: conteosStock["sin-control"], descripcion: "Se piden a pedido" },
+  ];
+  const filtrosActivos = [incluirInactivos, modoConsulta].filter(Boolean).length;
 
   return (
-    <BarraFiltros>
-      <FiltrosPlegables
-        filtrosActivos={filtrosActivos}
-        buscador={
-          <Buscador
-            valor={busqueda}
-            onCambio={onBusqueda}
-            placeholder="Buscar: Caribe 550, cerco, cobertor..."
-            etiqueta="Buscar en el catálogo"
+    <BarraListado
+      buscador={<Buscador valor={busqueda} onCambio={onBusqueda} placeholder="Buscar: Caribe 550, cerco…" etiqueta="Buscar en el catálogo" />}
+      menus={
+        <>
+          {hayStock && (
+            <MenuSeleccion
+              etiqueta="Filtrar por stock"
+              titulo="Stock"
+              opciones={opcionesStock}
+              valor={stock === "" ? "todos" : stock}
+              porDefecto="todos"
+              onCambio={(v) => onStock(v === "todos" ? "" : v)}
+            />
+          )}
+          <MenuSeleccion
+            etiqueta="Ordenar"
+            titulo="Orden"
+            opciones={ORDENES.map((o) => ({ id: o.id, etiqueta: o.etiqueta }))}
+            valor={orden}
+            porDefecto="defecto"
+            onCambio={onOrden}
+            textoBoton={etiquetaCortaDeOrden(orden)}
           />
-        }
-      >
-        {hayStock && (
-          <select
-            value={stock}
-            onChange={(e) => onStock(e.target.value as FiltroStock | "")}
-            aria-label="Filtrar por stock"
-            className={CLASE_SELECT}
-          >
-            <option value="">Stock: todos</option>
-            <option value="disponible">Con stock ({conteosStock.disponible})</option>
-            <option value="agotado">Agotado ({conteosStock.agotado})</option>
-            <option value="sin-control">A pedido ({conteosStock["sin-control"]})</option>
-          </select>
-        )}
-
-        <div
-          role="group"
-          aria-label="Filtrar por sección"
-          className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0 [&::-webkit-scrollbar]:hidden"
-        >
+        </>
+      }
+      chips={
+        <ChipsFila etiqueta="Filtrar por sección">
           <Chip activo={seccion === ""} onClick={() => onSeccion("")} cantidad={conteos.total}>
             Todo
           </Chip>
@@ -105,79 +110,18 @@ export function FiltrosCatalogo({
               {s.etiqueta}
             </Chip>
           ))}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-0.5">
+        </ChipsFila>
+      }
+      filtros={
+        <BotonFiltros contador={filtrosActivos} hayFiltros={hayFiltros} onLimpiar={onLimpiar}>
           <Interruptor checked={incluirInactivos} onChange={onIncluirInactivos}>
             Mostrar desactivados
           </Interruptor>
           <Interruptor checked={modoConsulta} onChange={onModoConsulta}>
             Modo consulta rápida
           </Interruptor>
-          {hayFiltros && (
-            <button
-              type="button"
-              onClick={onLimpiar}
-              className="min-h-11 rounded-lg px-3 text-sm font-medium text-marca hover:bg-marca/8 sm:ml-auto"
-            >
-              Limpiar filtros
-            </button>
-          )}
-        </div>
-      </FiltrosPlegables>
-    </BarraFiltros>
-  );
-}
-
-export function Chip({
-  activo,
-  onClick,
-  cantidad,
-  children,
-}: {
-  activo: boolean;
-  onClick: () => void;
-  cantidad: number;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={activo}
-      className={`inline-flex min-h-11 items-center gap-2 rounded-full border px-3.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#244B5A]/30 ${
-        activo
-          ? "border-[#244B5A] bg-[#244B5A] text-white shadow-sm"
-          : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
-      }`}
-    >
-      {children}
-      <span className={`rounded-full px-1.5 py-0.5 text-xs tabular-nums ${activo ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
-        {cantidad}
-      </span>
-    </button>
-  );
-}
-
-/** Interruptor accesible: un checkbox real (por eso se prueba con su label) con
- *  el aspecto de un switch. */
-export function Interruptor({
-  checked,
-  onChange,
-  children,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm text-gray-700">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="peer sr-only" />
-      <span
-        aria-hidden="true"
-        className="relative h-5 w-9 shrink-0 rounded-full bg-gray-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-[#244B5A] peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-[#244B5A]/30"
-      />
-      {children}
-    </label>
+        </BotonFiltros>
+      }
+    />
   );
 }

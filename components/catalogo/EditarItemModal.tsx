@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { useZodForm } from "@/lib/forms/useZodForm";
 import { MoneyField, TextField, SelectField, CheckboxField } from "@/components/form";
 import { Hoja, PieAcciones } from "@/components/ui/Hoja";
+import { Seccion, ZonaActivo } from "@/components/ui/SeccionForm";
 import { HistorialStock } from "@/components/stock/HistorialStock";
 import { actualizarItemCatalogo } from "@/lib/catalogo";
 import { CATEGORIAS, UNIDADES } from "@/lib/domain/catalogo/categorias";
@@ -78,33 +79,35 @@ export function EditarItemModal({
   return (
     <Hoja
       titulo="Editar ítem"
-      subtitulo={`${item.clave} · ${TITULOS_TIPO[item.tipo]}`}
+      subtitulo={`${nombre} · ${TITULOS_TIPO[item.tipo]}`}
       ocupado={isSubmitting}
       hayCambios={isDirty}
       ancho="lg"
+      alto="completo"
       onCerrar={onClose}
       aviso={
         errorGuardado ? (
-          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-            {errorGuardado}
+          <p role="alert" className="rounded-lg border border-[#FDA29B] bg-[#FEF3F2] px-3 py-2 text-[15px] font-medium text-[#B42318]">
+            No se guardó: {errorGuardado} Lo que cargaste sigue acá.
           </p>
         ) : undefined
       }
-      pie={<PieAcciones formId={formId} guardando={isSubmitting} etiqueta="Guardar cambios" />}
+      pie={<PieAcciones formId={formId} guardando={isSubmitting} soloConCambios etiqueta="Guardar cambios" />}
     >
       <form id={formId} onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-        <fieldset className="space-y-4">
-          <legend className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-500">Datos</legend>
+        <Seccion titulo="Datos">
           <TextField register={register} errors={errors} name="descripcion" label="Descripción" multiline rows={3} autoFocus />
-          <MoneyField control={control} name="precio" label="Precio" hint="Vacío = a cotizar (sin precio fijo)" />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <SelectField register={register} errors={errors} name="categoria" label="Categoría" options={OPCIONES_CATEGORIA} />
+          <SelectField register={register} errors={errors} name="categoria" label="Categoría" options={OPCIONES_CATEGORIA} />
+        </Seccion>
+
+        <Seccion titulo="Precio">
+          <div className="grid grid-cols-2 gap-3">
+            <MoneyField control={control} name="precio" label="Precio" hint="Vacío = a cotizar" />
             <SelectField register={register} errors={errors} name="unidad" label="Unidad" options={OPCIONES_UNIDAD} />
           </div>
-        </fieldset>
+        </Seccion>
 
-        <fieldset className="space-y-2 rounded-xl border border-gray-200 bg-gray-50/70 p-4">
-          <legend className="-ml-1 bg-white px-1 text-xs font-bold uppercase tracking-wide text-gray-500">Stock</legend>
+        <Seccion titulo="Stock">
           <CheckboxField
             register={register}
             errors={errors}
@@ -113,7 +116,7 @@ export function EditarItemModal({
             hint="Para lo que se guarda en el local, como las piscinas de fibra."
           />
           {llevaStock && (
-            <div className="space-y-1.5 border-t border-gray-200 pt-3 text-sm">
+            <div className="space-y-1.5 text-base">
               {stockActual === null ? (
                 <p className="text-gray-700">Va a arrancar en 0 unidades.</p>
               ) : (
@@ -127,28 +130,22 @@ export function EditarItemModal({
                   <button
                     type="button"
                     onClick={() => setVerHistorial(true)}
-                    className="min-h-11 rounded-md px-2 font-semibold text-marca underline decoration-marca/40 underline-offset-2 hover:bg-marca/8 hover:decoration-marca sm:min-h-9"
+                    className="inline-flex min-h-11 items-center rounded-md px-2 font-semibold text-[#244B5A] underline underline-offset-2 hover:bg-[#EAF0F2] active:bg-[#D5E0E4]"
                   >
                     Ver historial
                   </button>
                 </p>
               )}
-              <p className="text-xs text-gray-500">
+              <p className="text-[13px] leading-snug text-[#4A5861]">
                 Las unidades se mueven con Ingreso, Venta o Ajustar conteo, desde la lista del catálogo. Para dejar de llevar stock, el conteo tiene que estar en 0.
               </p>
             </div>
           )}
-        </fieldset>
+        </Seccion>
 
-        <div className="rounded-xl border border-gray-200 px-4 py-1">
-          <CheckboxField
-            register={register}
-            errors={errors}
-            name="activo"
-            label="Activo"
-            hint="Desactivado: sale de presupuestos y pedidos nuevos; no se pierde."
-          />
-        </div>
+        <ZonaActivo>
+          <CheckboxField register={register} errors={errors} name="activo" label="Activo" hint="Si lo desactivás, sale de presupuestos y pedidos nuevos; no se pierde." />
+        </ZonaActivo>
       </form>
 
       {verHistorial && (

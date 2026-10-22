@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { MOTIVO_MAX, validarMotivo } from "@/lib/anulacion";
-import { boton, botonDe } from "@/components/ui/botones";
+import { botonDe } from "@/components/ui/botones";
 import { Hoja } from "@/components/ui/Hoja";
 
 /**
@@ -76,7 +76,7 @@ function Contenido({
             type="button"
             disabled={enviando}
             onClick={confirmar}
-            className={`${boton.base} flex-1 bg-red-600 text-white shadow-sm hover:bg-red-700 active:bg-red-800`}
+            className={botonDe("peligroLleno", "flex-1")}
           >
             {enviando ? "Un momento..." : "Anular"}
           </button>

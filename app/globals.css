@@ -23,6 +23,18 @@
   --color-marca-oscuro: #1a3844;
   --color-acento: #ffc629;
   --color-celeste: #16819a;
+  /* Nada visible por debajo de 13 px: "text-xs" pasa de 12 a 13 px en todo el portal. */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.2rem;
+  /* Los grises claros de texto (gray-400) quedaban en 2,5:1 sobre blanco: ahora 4,7:1. */
+  --color-gray-400: #6b7680;
+}
+
+/* Tokens de color de los controles (ver components/ui/botones.ts). Valores fijos, sin opacidad ni color-mix. */
+:root {
+  --borde-control: #7d8892; /* 3,6:1 sobre blanco: el borde de un campo o botón sin relleno se ve */
+  --texto-deshabilitado: #3e4a52;
+  --fondo-deshabilitado: #d9dfe3;
 }
 
 /* Tailwind 4 deja los botones con cursor de flecha y sin ningún foco propio: por
@@ -32,12 +44,22 @@
    - un anillo de foco visible, sólo al navegar con teclado (:focus-visible);
    - un leve "hundido" al apretar un botón, para que se sienta que respondió. */
 button:not(:disabled),
+a[href],
 [role="button"]:not([aria-disabled="true"]),
+[role="tab"],
+[role="menuitem"],
+[role="option"],
+[role="radio"],
+[role="switch"]:not(:disabled),
 summary,
 select:not(:disabled),
 label[for],
+label:has(> input[type="checkbox"]:not(:disabled)),
 input[type="checkbox"]:not(:disabled),
-input[type="radio"]:not(:disabled) {
+input[type="radio"]:not(:disabled),
+input[type="color"]:not(:disabled),
+input[type="file"]:not(:disabled),
+input[type="file"]:not(:disabled)::file-selector-button {
   cursor: pointer;
 }
 button:disabled,
@@ -88,6 +110,32 @@ select:not([multiple]):disabled {
   }
 }
 
+/* Todos los campos y combos con el mismo borde, que se ve (3:1 contra el fondo): gana a las clases de cada pantalla. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+select,
+textarea {
+  border-color: var(--borde-control);
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):hover:not(:disabled),
+select:hover:not(:disabled),
+textarea:hover:not(:disabled) {
+  border-color: #244b5a;
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):focus,
+select:focus,
+textarea:focus {
+  border-color: #244b5a;
+}
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-color: #b42318;
+}
+::placeholder {
+  color: #6b7680;
+  opacity: 1;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -126,4 +174,11 @@ body {
 }
 .pys-luz-drag:active {
   cursor: grabbing;
+}
+
+/* Un campo cuyo valor cambió respecto de lo guardado (cantidades por tamaño del material): borde de marca. */
+[data-cambiado="true"] input {
+  border-color: #244b5a;
+  background-color: #f1f6f8;
+  box-shadow: 0 0 0 1px #244b5a;
 }

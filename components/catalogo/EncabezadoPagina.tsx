@@ -1,7 +1,8 @@
 /**
- * El encabezado de cada pantalla del catálogo: título (y una línea de ayuda, sólo en pantallas
- * medianas y grandes) a la izquierda, acciones a la derecha. Es el mismo en todas las pestañas, así
- * la página se lee igual. En el celular ocupa una sola fila angosta para dejar lugar a la lista.
+ * El encabezado de cada pantalla del catálogo. El título ya lo dice la pestaña activa (arriba), así que acá
+ * queda sólo para los lectores de pantalla; lo visible son las acciones (agregar, exportar...): en escritorio
+ * flotan a la derecha, sobre la misma fila de las pestañas (para ganar altura de lista), y en el celular van en
+ * una fila angosta propia. Es el mismo en todas las pestañas, así la página se lee igual.
  */
 export function EncabezadoPagina({
   titulo,
@@ -14,10 +15,10 @@ export function EncabezadoPagina({
   children?: React.ReactNode;
 }) {
   return (
-    <div data-print-hide="" className="mb-2 flex items-center justify-between gap-3 sm:mb-4 sm:items-end sm:gap-6">
-      <div className="min-w-0 sm:flex-1">
-        <h1 className="text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">{titulo}</h1>
-        <p className="mt-1 hidden text-sm text-gray-500 sm:block">{descripcion}</p>
+    <div data-print-hide="" className="mb-1 flex items-center justify-end gap-3 lg:relative lg:z-30 lg:float-right lg:-mt-[4.1rem] lg:mb-0">
+      <div className="sr-only">
+        <h1>{titulo}</h1>
+        <p>{descripcion}</p>
       </div>
       {children && <div className="flex shrink-0 flex-wrap items-center gap-2">{children}</div>}
     </div>

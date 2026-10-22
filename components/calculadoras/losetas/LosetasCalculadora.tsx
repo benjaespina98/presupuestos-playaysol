@@ -1,5 +1,6 @@
 "use client";
 
+import { botonDe } from "@/components/ui/botones";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useFieldArray, useWatch } from "react-hook-form";
@@ -504,13 +505,12 @@ export function LosetasCalculadora({
         )}
 
         <CamposSoloLectura>
-        <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-gray-900">Presupuesto</h2>
+        <section className="space-y-4 rounded-xl border border-[#D9DFE3] bg-white p-5">
+          <h2 className="text-[13px] font-bold uppercase tracking-wide text-[#244B5A]">Pileta</h2>
           <TextField register={register} errors={errors} name="nombre" label="Cliente o referencia" placeholder="Ej: Gómez, Martín" />
-        </section>
 
-        <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-gray-900">Medidas de la pileta</h2>
+          <div className="space-y-4 border-t border-[#EEF1F3] pt-4">
+            <h3 className="text-[13px] font-bold uppercase tracking-wide text-[#4A5861]">Medidas</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <NumberField control={control} name="largo" label="Largo (m)" />
             <NumberField control={control} name="ancho" label="Ancho (m)" />
@@ -521,22 +521,20 @@ export function LosetasCalculadora({
             label="Borde que ya viene incluido (m)"
             hint="Igual en los cuatro lados."
           />
-        </section>
 
-        <CalculadoraLosetasInterna largoPlano={Number(valoresForm.largo) || 0} anchoPlano={Number(valoresForm.ancho) || 0} />
-
-        <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-gray-900">Profundidad</h2>
+          </div>
+          <div className="space-y-4 border-t border-[#EEF1F3] pt-4">
+            <h3 className="text-[13px] font-bold uppercase tracking-wide text-[#4A5861]">Profundidad</h3>
           <NumberField
             control={control}
             name="profundidad"
             label={tramos.fields.length > 0 ? "Profundidad del resto de la pileta (m)" : "Profundidad de toda la pileta (m)"}
-            hint="Sale en el título del plano. Dejala vacía si no querés mostrarla."
+            hint="Sale en el título del plano. Vacía = no se muestra."
           />
 
           {tramos.fields.length > 0 && (
             <div className="space-y-3">
-              <p className="text-xs text-gray-500">
+              <p className="text-[13px] leading-snug text-[#4A5861]">
                 Tramos con otra profundidad, medidos desde el <b>lado del solar</b> (el extremo izquierdo del plano). Lo
                 que no entra en ningún tramo tiene la profundidad de arriba.
               </p>
@@ -549,7 +547,7 @@ export function LosetasCalculadora({
                     type="button"
                     onClick={() => tramos.remove(i)}
                     aria-label={`Quitar el tramo ${i + 1}`}
-                    className="mb-0.5 min-h-11 rounded-md px-3 text-sm font-medium text-red-600 hover:bg-red-50"
+                    className="mb-0.5 min-h-11 rounded-lg px-3 text-sm font-medium text-[#B42318] hover:bg-[#FEF3F2] active:bg-[#FEE4E2]"
                   >
                     Quitar
                   </button>
@@ -566,20 +564,22 @@ export function LosetasCalculadora({
           <button
             type="button"
             onClick={() => tramos.append({ desde: 0, hasta: 0, prof: 0 })}
-            className="min-h-11 rounded-md border border-gray-300 px-4 text-sm font-medium text-[#244B5A] transition-colors hover:bg-gray-50"
+            className={botonDe("secundario", "px-4")}
           >
             + Agregar tramo con otra profundidad
           </button>
+
+          </div>
         </section>
 
-        <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-gray-900">Ancho final del borde, lado por lado</h2>
+        <section className="space-y-4 rounded-xl border border-[#D9DFE3] bg-white p-5">
+          <h2 className="text-[13px] font-bold uppercase tracking-wide text-[#244B5A]">Ancho final del borde, lado por lado</h2>
           <SelectField
             register={register}
             errors={errors}
             name="materialBorde"
             label="Material alrededor de la pileta"
-            hint="Lo que elige el cliente para el borde: se nombra así en el plano."
+            hint="Se nombra así en el plano."
             options={MATERIAL_BORDE_OPCIONES}
           />
           {nombreMaterial.conTono && (
@@ -588,11 +588,10 @@ export function LosetasCalculadora({
               errors={errors}
               name="tonoBorde"
               label={`Color de ${nombreMaterial.etiqueta.toLowerCase()}`}
-              hint="Las losetas y los decks vienen en marfil y en blanco."
               options={TONO_BORDE_OPCIONES}
             />
           )}
-          <p className="text-xs text-gray-500">
+          <p className="text-[13px] leading-snug text-[#4A5861]">
             Medida <b>terminada</b> de cada lado, incluyendo el borde de arriba.
           </p>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -613,14 +612,13 @@ export function LosetasCalculadora({
               <CheckboxField register={register} errors={errors} name="desbordeLateral2" label="Desborde infinito" />
             </div>
           </div>
-          <p className="text-xs text-gray-500">
-            Un lado con desborde infinito no lleva {nombreMaterial.singular} — se dibuja más grueso y sin la medida (el agua cae a una
-            canaleta, no a un piso caminable).
+          <p className="text-[13px] leading-snug text-[#4A5861]">
+            Desborde infinito: ese lado no lleva {nombreMaterial.singular}; se dibuja más grueso y sin medida.
           </p>
         </section>
 
-        <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-gray-900">Detalles de la pileta</h2>
+        <section className="space-y-4 rounded-xl border border-[#D9DFE3] bg-white p-5">
+          <h2 className="text-[13px] font-bold uppercase tracking-wide text-[#244B5A]">Detalles de la pileta</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <SelectField register={register} errors={errors} name="tipoPileta" label="Tipo" options={TIPO_PILETA_OPCIONES} />
             <SelectField register={register} errors={errors} name="revestimiento" label="Revestimiento interior" options={REVESTIMIENTO_OPCIONES} />
@@ -631,7 +629,7 @@ export function LosetasCalculadora({
               control={control}
               name="labios"
               label="Ancho de labios (m)"
-              hint="Va dentro del largo × ancho. No cambia los m²: sólo dibuja el agua real."
+              hint="Va dentro del largo × ancho; no cambia los m²."
             />
           )}
           {valoresForm.revestimiento === "otro" && (
@@ -652,7 +650,7 @@ export function LosetasCalculadora({
                     errors={errors}
                     name="escaleraMovible"
                     label="Ubicarla a mano"
-                    hint="Queda como un objeto chico que arrastrás en el plano, como las luces."
+                    hint="Un objeto que arrastrás en el plano."
                   />
                   {valoresForm.escaleraMovible ? (
                     <NumberField
@@ -668,7 +666,7 @@ export function LosetasCalculadora({
                         <NumberField control={control} name="escaleraEscalones" label="Escalones" />
                         <NumberField control={control} name="escaleraMedidaEscalon" label="Medida (m)" />
                       </div>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-[13px] leading-snug text-[#4A5861]">
                         {`Profundidad total: ${fmtM(num(valoresForm.escaleraEscalones) * num(valoresForm.escaleraMedidaEscalon))} m${
                           valoresForm.solarHumedo ? " — arranca justo después del solar húmedo si están del mismo lado." : "."
                         }`}
@@ -699,15 +697,16 @@ export function LosetasCalculadora({
           </div>
         </section>
 
-        <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <div>
-            <h2 className="text-sm font-semibold text-gray-900">Ubicación en el terreno</h2>
-            <p className="mt-1 text-xs text-gray-500">
-              Para orientar la pileta: hacia dónde está el norte y dónde quedan la sala de filtro y la casa. Se dibujan
-              <b> afuera</b> del borde, nunca sobre las {nombreMaterial.etiqueta.toLowerCase()}.
-            </p>
-          </div>
-
+        <details className="group rounded-xl border border-[#D9DFE3] bg-white" open={Boolean(valoresForm.puntosCardinales || valoresForm.salaFiltro || valoresForm.casa)}>
+          <summary className="flex min-h-12 list-none items-center justify-between gap-2 rounded-xl px-5 text-base font-semibold text-[#1F2A30] hover:bg-[#F4F8F9] [&::-webkit-details-marker]:hidden">
+            <span>
+              <span className="text-[13px] font-bold uppercase tracking-wide text-[#244B5A]">Ubicación en el terreno</span>
+              <span className="ml-2 text-[13px] font-normal text-[#4A5861]">norte, sala de filtro y casa</span>
+            </span>
+            <span aria-hidden="true" className="text-[#4A5861] transition-transform group-open:rotate-180">▾</span>
+          </summary>
+          <div className="space-y-4 border-t border-[#D9DFE3] p-5">
+            <p className="text-[13px] leading-snug text-[#4A5861]">Se dibujan <b>afuera</b> del borde, nunca sobre las {nombreMaterial.etiqueta.toLowerCase()}.</p>
           <div className="space-y-2">
             <CheckboxField register={register} errors={errors} name="puntosCardinales" label="Puntos cardinales" />
             {valoresForm.puntosCardinales && (
@@ -716,7 +715,7 @@ export function LosetasCalculadora({
                 errors={errors}
                 name="norte"
                 label="El norte está hacia…"
-                hint="Solar a la izquierda y lateral 1 arriba; se dibuja la rosa de los vientos."
+                hint="Solar a la izquierda, lateral 1 arriba."
                 options={NORTE_OPCIONES}
               />
             )}
@@ -729,7 +728,7 @@ export function LosetasCalculadora({
                 errors={errors}
                 name="salaFiltro"
                 label="Sala de filtro"
-                hint="Arrastrala en el plano al lado que quieras: queda siempre afuera del borde."
+                hint="Arrastrala en el plano."
               />
             </div>
             <div className="space-y-2">
@@ -738,24 +737,30 @@ export function LosetasCalculadora({
                 errors={errors}
                 name="casa"
                 label="Casa"
-                hint="Arrastrala en el plano para orientar dónde está respecto de la pileta."
+                hint="Arrastrala en el plano."
               />
             </div>
           </div>
-        </section>
 
-        <details className="rounded-lg border border-gray-200 bg-white shadow-sm">
-          <summary className="cursor-pointer px-5 py-3 text-sm font-semibold text-gray-900">
-            Apariencia del plano <span className="font-normal text-gray-500">— colores y nombres de los lados</span>
+          </div>
+        </details>
+
+        <details className="group rounded-xl border border-[#D9DFE3] bg-white">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 px-5 text-base font-semibold text-[#1F2A30] hover:bg-[#F4F8F9] [&::-webkit-details-marker]:hidden">
+            <span>
+              <span className="text-[13px] font-bold uppercase tracking-wide text-[#244B5A]">Apariencia del plano</span>
+              <span className="ml-2 text-[13px] font-normal text-[#4A5861]">colores y nombres de los lados</span>
+            </span>
+            <span aria-hidden="true" className="text-[#4A5861] transition-transform group-open:rotate-180">▾</span>
           </summary>
           <div className="space-y-4 border-t border-gray-100 p-5">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="colorAgua" className="mb-1 block text-xs text-gray-500">Color del agua</label>
+                <label htmlFor="colorAgua" className="mb-1 block text-[13px] leading-snug text-[#4A5861]">Color del agua</label>
                 <input id="colorAgua" type="color" className="h-11 w-full cursor-pointer rounded-md border border-gray-300" {...register("colorAgua")} />
               </div>
               <div>
-                <label htmlFor="colorLoseta" className="mb-1 block text-xs text-gray-500">Color del borde ({nombreDeBorde(materialBorde, tonoBorde)})</label>
+                <label htmlFor="colorLoseta" className="mb-1 block text-[13px] leading-snug text-[#4A5861]">Color del borde ({nombreDeBorde(materialBorde, tonoBorde)})</label>
                 <input id="colorLoseta" type="color" className="h-11 w-full cursor-pointer rounded-md border border-gray-300" {...register("colorLoseta")} />
               </div>
             </div>
@@ -767,6 +772,8 @@ export function LosetasCalculadora({
             </div>
           </div>
         </details>
+
+        <CalculadoraLosetasInterna largoPlano={Number(valoresForm.largo) || 0} anchoPlano={Number(valoresForm.ancho) || 0} />
         </CamposSoloLectura>
       </div>
 
@@ -783,18 +790,18 @@ export function LosetasCalculadora({
             className={
               ampliado
                 ? "fixed inset-0 z-[100] flex flex-col gap-3 bg-white p-3 sm:p-5"
-                : "rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                : "rounded-xl border border-[#D9DFE3] bg-white p-4"
             }
           >
             <div className="flex items-center justify-between gap-3">
-              <p className="text-xs text-gray-500">
+              <p className="text-[13px] leading-snug text-[#4A5861]">
                 {ampliado ? "Arrastrá los objetos para ubicarlos. Los cambios se guardan en el formulario." : "Editor del plano"}
               </p>
               <button
                 type="button"
                 onClick={() => setAmpliado((v) => !v)}
                 aria-pressed={ampliado}
-                className="min-h-11 shrink-0 rounded-md border border-[#244B5A] px-4 text-sm font-medium text-[#244B5A] transition-colors hover:bg-[#244B5A]/5"
+                className={botonDe("secundario", "shrink-0 px-4")}
               >
                 {ampliado ? "Listo" : "Ampliar plano"}
               </button>
@@ -834,15 +841,16 @@ export function LosetasCalculadora({
               un <div> oculto: así se nota antes de exportar si falta cargar
               el nombre o si una medida quedó mal, en vez de descubrirlo
               recién en el archivo descargado. */}
-          <details className="rounded-lg border border-gray-200 bg-white shadow-sm" open>
-            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-gray-900">
+          <details className="group rounded-xl border border-[#D9DFE3] bg-white">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 px-4 text-base font-semibold text-[#1F2A30] hover:bg-[#F4F8F9] [&::-webkit-details-marker]:hidden">
               Vista previa para el cliente
+              <span aria-hidden="true" className="text-[#4A5861] transition-transform group-open:rotate-180">▾</span>
             </summary>
             <div className="space-y-3 border-t border-gray-100 p-4">
               <div className="flex items-center justify-between border-b-2 border-[#00829C] pb-2">
                 <div>
                   <div className="text-sm font-bold uppercase tracking-wide text-[#244B5A]">Plano de Piscina</div>
-                  <div className="text-xs text-gray-500">{valoresForm.nombre || "Sin nombre de cliente"}</div>
+                  <div className="text-[13px] leading-snug text-[#4A5861]">{valoresForm.nombre || "Sin nombre de cliente"}</div>
                 </div>
               </div>
               <div className="rounded-lg border border-[#E1E7EC] bg-[#EEF2F6] p-4">
@@ -851,7 +859,7 @@ export function LosetasCalculadora({
             </div>
           </details>
 
-          <div className="space-y-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="space-y-3 rounded-xl border border-[#D9DFE3] bg-white p-4">
             {errorGuardado && (
               <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">No se pudo guardar: {errorGuardado}</p>
             )}
@@ -873,7 +881,7 @@ export function LosetasCalculadora({
             <button
                 type="submit"
                 disabled={guardando}
-                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#244B5A] px-4 text-sm font-semibold text-white transition-colors hover:bg-marca-oscuro disabled:cursor-not-allowed disabled:opacity-50"
+                className={botonDe("primario", "min-h-12 w-full gap-2 px-4")}
               >
                 <IconCloudUpload className="h-4 w-4" />
                 {guardando ? "Guardando..." : "Guardar en la nube"}
@@ -885,7 +893,7 @@ export function LosetasCalculadora({
                 type="button"
                 onClick={onExportarImagen}
                 disabled={generandoImagen}
-                className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#244B5A] px-4 text-sm font-medium text-[#244B5A] transition-colors hover:bg-[#244B5A]/5 disabled:cursor-not-allowed disabled:opacity-50"
+                className={botonDe("secundario", "px-4")}
               >
                 <IconImage className="h-4 w-4" />
                 {generandoImagen ? "Generando..." : "Imagen"}
@@ -894,25 +902,24 @@ export function LosetasCalculadora({
                 type="button"
                 onClick={onExportarPdf}
                 disabled={generandoPdf}
-                className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#244B5A] px-4 text-sm font-medium text-[#244B5A] transition-colors hover:bg-[#244B5A]/5 disabled:cursor-not-allowed disabled:opacity-50"
+                className={botonDe("secundario", "px-4")}
               >
                 <IconPrinter className="h-4 w-4" />
                 {generandoPdf ? "Generando..." : "PDF"}
               </button>
             </div>
-            <p className="text-xs text-gray-500">
-              Salen a escala, con las medidas y el nombre del cliente, sin precios. En el celular, &quot;Imagen&quot; y
-              &quot;PDF&quot; abren directo la hoja para compartir por WhatsApp.
+            <p className="text-[13px] leading-snug text-[#4A5861]">
+              Salen a escala y sin precios. En el celular abren la hoja para compartir.
             </p>
 
             <div className="grid grid-cols-2 gap-2 border-t border-gray-100 pt-3">
-              <a href="/dashboard/historial?tipo=losetas" className="min-h-11 rounded-md px-4 py-2.5 text-center text-sm font-medium text-[#244B5A] hover:bg-gray-100">
+              <a href="/dashboard/historial?tipo=losetas" className="inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-medium text-[#1A3844] hover:bg-[#EAF0F2] active:bg-[#D5E0E4]">
                 Historial
               </a>
               <button
                 type="button"
                 onClick={() => setConfirmarLimpiar(true)}
-                className="min-h-11 rounded-md px-4 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-100"
+                className="min-h-11 rounded-lg px-4 text-sm font-medium text-[#3E4A52] hover:bg-[#EAF0F2] active:bg-[#D5E0E4]"
               >
                 Limpiar formulario
               </button>

@@ -31,8 +31,8 @@ export default async function DashboardLayout({
       <div className="relative z-10">
         <header data-print-hide="" className="border-b border-[#244B5A]/15 bg-white">
           {/* Celular: logo y "Cerrar sesión" arriba, y los links debajo en una fila propia. */}
-          <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-2.5 sm:py-3">
-            <Link href="/dashboard" className="flex items-center gap-3">
+          <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-2 sm:py-2">
+            <Link href="/dashboard" className="flex min-h-11 items-center gap-3">
               <Wordmark className="h-6 sm:h-7" />
             </Link>
             {/* Este link decía "Presupuestos" pero lleva al historial — y la
@@ -44,7 +44,13 @@ export default async function DashboardLayout({
                 Nuevo
               </NavLink>
               <NavLink href="/dashboard/historial">Historial</NavLink>
-              <NavLink href="/dashboard/catalogo">Catálogo</NavLink>
+              {/* "Precios" es lo que se le cobra al cliente; "Compras" es lo que se le compra a los proveedores. */}
+              <NavLink href="/dashboard/catalogo" grupo="precios">
+                Precios
+              </NavLink>
+              <NavLink href="/dashboard/catalogo/materiales" grupo="compras">
+                Compras
+              </NavLink>
               </div>
               <span className="hidden text-gray-400 sm:inline">{user.email}</span>
               <LogoutButton />

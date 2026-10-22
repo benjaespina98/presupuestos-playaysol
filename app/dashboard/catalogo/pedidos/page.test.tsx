@@ -55,6 +55,11 @@ async function cargar() {
   await screen.findByText(/3 pedidos/);
 }
 
+/** Abre el panel "Filtros" (con "Mostrar anulados") si no está abierto. */
+async function abrirFiltros(user: ReturnType<typeof userEvent.setup>) {
+  if (!screen.queryByRole("dialog", { name: "Filtros" })) await user.click(screen.getByRole("button", { name: /^Filtros/ }));
+}
+
 describe("Pedidos", () => {
   beforeEach(() => {
     Object.values(mocks).forEach((m) => m.mockReset());
@@ -87,7 +92,7 @@ describe("Pedidos", () => {
 
     expect(screen.getByText("Familia Gómez")).toBeInTheDocument();
     expect(screen.queryByText("Familia Pérez")).not.toBeInTheDocument();
-    expect(screen.getByText(/1 pedido de 3/)).toBeInTheDocument();
+    expect(screen.getByText(/1 de 3 pedidos/)).toBeInTheDocument();
   });
 
   it("busca por número y por obra", async () => {
@@ -232,6 +237,7 @@ describe("Pedidos", () => {
       await screen.findByText(/3 pedidos/);
       expect(screen.queryByText("Anulada SA")).not.toBeInTheDocument();
 
+      await abrirFiltros(user);
       await user.click(screen.getByLabelText(/Mostrar anulados/));
       expect(await screen.findByText("Anulada SA")).toBeInTheDocument();
       expect(screen.getByText("Anulado")).toBeInTheDocument();

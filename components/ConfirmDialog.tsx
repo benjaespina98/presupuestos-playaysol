@@ -1,6 +1,6 @@
 "use client";
 
-import { boton, botonDe } from "@/components/ui/botones";
+import { botonDe } from "@/components/ui/botones";
 import { Hoja } from "@/components/ui/Hoja";
 
 // Diálogo de confirmación propio, con la identidad de marca, en vez del confirm() nativo del
@@ -48,7 +48,7 @@ export function ConfirmDialog({
             onClick={onConfirm}
             className={
               danger
-                ? `${boton.base} flex-1 bg-red-600 text-white shadow-sm hover:bg-red-700 active:bg-red-800`
+                ? botonDe("peligroLleno", "flex-1")
                 : botonDe("primario", "flex-1")
             }
           >
@@ -57,7 +57,7 @@ export function ConfirmDialog({
         </div>
       }
     >
-      <p className="text-sm leading-relaxed text-gray-600">{message}</p>
+      <p className="text-base leading-relaxed text-[#3E4A52]">{message}</p>
     </Hoja>
   );
 }

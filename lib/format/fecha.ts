@@ -38,3 +38,17 @@ export function formatFechaCompleta(iso: string): string {
   if (Number.isNaN(fecha.getTime())) return "";
   return fecha.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
 }
+
+/** La fecha relativa en una sola línea corta: "hoy", "ayer", "hace 3 d.", "hace 2 sem.", "hace 5 m.", "hace 2 a.". */
+export function formatFechaRelativaCorta(iso: string, ahora: Date = new Date()): string {
+  const fecha = new Date(iso);
+  if (Number.isNaN(fecha.getTime())) return "";
+  const inicioDia = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const dias = Math.round((inicioDia(ahora) - inicioDia(fecha)) / 86_400_000);
+  if (dias <= 0) return "hoy";
+  if (dias === 1) return "ayer";
+  if (dias < 7) return `hace ${dias} d.`;
+  if (dias < 30) return `hace ${Math.floor(dias / 7)} sem.`;
+  if (dias < 365) return `hace ${Math.floor(dias / 30)} m.`;
+  return `hace ${Math.floor(dias / 365)} a.`;
+}

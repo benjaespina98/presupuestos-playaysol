@@ -7,6 +7,7 @@ import { TextField, CheckboxField } from "@/components/form";
 import { guardarProveedor } from "@/lib/abastecimiento";
 import type { DatosProveedor, Proveedor } from "@/lib/domain/abastecimiento/proveedor";
 import { Hoja, PieAcciones } from "@/components/ui/Hoja";
+import { Seccion, SeccionPlegable, ZonaActivo } from "@/components/ui/SeccionForm";
 import { formatFechaRelativa } from "@/lib/format/fecha";
 
 /** Los opcionales viajan como string (un <input> no puede valer null); `aDatos`
@@ -93,19 +94,20 @@ export function ProveedorModal({
       ? ""
       : ` Sus ${cantidadMateriales} ${cantidadMateriales === 1 ? "material sigue" : "materiales siguen"} cargados, con este proveedor.`;
   const actualizado = proveedor?.updated_at ? formatFechaRelativa(proveedor.updated_at) : "";
-  const masOpcionesConDatos = !!(proveedor && (proveedor.forma_pago || proveedor.plazo || proveedor.notas));
 
   return (
     <Hoja
       titulo={proveedor ? "Editar proveedor" : "Agregar proveedor"}
+      subtitulo={proveedor?.nombre}
       ocupado={isSubmitting}
       hayCambios={isDirty}
       ancho="lg"
+      alto="completo"
       onCerrar={onClose}
       aviso={
         errorGuardado ? (
-          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-            {errorGuardado}
+          <p role="alert" className="rounded-lg border border-[#FDA29B] bg-[#FEF3F2] px-3 py-2 text-[15px] font-medium text-[#B42318]">
+            No se guardó: {errorGuardado} Lo que cargaste sigue acá.
           </p>
         ) : undefined
       }
@@ -113,47 +115,38 @@ export function ProveedorModal({
         <PieAcciones
           formId={formId}
           guardando={isSubmitting}
+          soloConCambios={proveedor !== null}
           etiqueta={proveedor ? "Guardar cambios" : "Agregar proveedor"}
           etiquetaGuardando={proveedor ? "Guardando..." : "Agregando..."}
         />
       }
     >
-      <form id={formId} onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-        <TextField register={register} errors={errors} name="nombre" label="Nombre" required autoFocus />
-        <div className="grid grid-cols-2 gap-3">
+      <form id={formId} onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+        <Seccion titulo="Datos">
+          <TextField register={register} errors={errors} name="nombre" label="Nombre" required autoFocus />
           <TextField register={register} errors={errors} name="rubro" label="Rubro" placeholder="Ej: Corralón" />
-          <TextField register={register} errors={errors} name="telefono" label="Teléfono" type="tel" />
-        </div>
-        <TextField register={register} errors={errors} name="contacto" label="Contacto" placeholder="Persona de contacto" />
+        </Seccion>
 
-        <details open={masOpcionesConDatos} className="group rounded-xl border border-gray-200 bg-gray-50/60">
-          <summary className="flex min-h-11 list-none items-center justify-between gap-2 rounded-xl px-4 text-sm font-semibold text-gray-700 hover:bg-gray-100/70 [&::-webkit-details-marker]:hidden">
-            Más opciones
-            <span aria-hidden="true" className="text-gray-400 transition-transform group-open:rotate-180">
-              ▾
-            </span>
-          </summary>
-          <div className="space-y-4 border-t border-gray-200 px-4 py-4">
-            <div className="grid grid-cols-2 gap-3">
-              <TextField register={register} errors={errors} name="forma_pago" label="Forma de pago" />
-              <TextField register={register} errors={errors} name="plazo" label="Plazo de entrega" placeholder="Ej: 10-15 días" />
-            </div>
-            <TextField register={register} errors={errors} name="notas" label="Qué se le compra / notas" multiline rows={3} />
-          </div>
-        </details>
+        <Seccion titulo="Contacto">
+          <TextField register={register} errors={errors} name="contacto" label="Persona de contacto" />
+          <TextField register={register} errors={errors} name="telefono" label="Teléfono" type="tel" hint="Si hay más de uno, separalos con /" />
+        </Seccion>
 
-        <div className="rounded-xl border border-gray-200 px-4 py-1">
-          <CheckboxField
-            register={register}
-            errors={errors}
-            name="activo"
-            label="Activo"
-            hint="Desactivado: no aparece en pedidos nuevos; no se pierde."
-          />
-          {sinMateriales && <p className="pb-2 pl-14 text-xs text-gray-500">{sinMateriales.trim()}</p>}
-        </div>
+        <Seccion titulo="Condiciones">
+          <TextField register={register} errors={errors} name="forma_pago" label="Forma de pago" />
+          <TextField register={register} errors={errors} name="plazo" label="Plazo de entrega" placeholder="Ej: 10-15 días" />
+        </Seccion>
 
-        {actualizado && <p className="text-xs text-gray-400">Actualizado {actualizado}</p>}
+        <SeccionPlegable titulo="Notas" abierta={!!proveedor?.notas}>
+          <TextField register={register} errors={errors} name="notas" label="Qué se le compra / notas" multiline rows={3} />
+        </SeccionPlegable>
+
+        <ZonaActivo>
+          <CheckboxField register={register} errors={errors} name="activo" label="Activo" hint="Si lo desactivás, no aparece en pedidos nuevos; no se pierde." />
+          {sinMateriales && <p className="pb-2 pl-14 text-[13px] leading-snug text-[#4A5861]">{sinMateriales.trim()}</p>}
+        </ZonaActivo>
+
+        {actualizado && <p className="text-[13px] text-[#4A5861]">Actualizado {actualizado}</p>}
       </form>
     </Hoja>
   );

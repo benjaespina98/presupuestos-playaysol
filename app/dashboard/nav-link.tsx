@@ -12,17 +12,24 @@ import { usePathname } from "next/navigation";
 export function NavLink({
   href,
   exacto = false,
+  grupo,
   children,
 }: {
   href: string;
   exacto?: boolean;
+  /** "precios" o "compras": las secciones del antiguo Catálogo (lo que se cobra / lo que se compra). */
+  grupo?: "precios" | "compras";
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const seccionesPropias = ["/dashboard/historial", "/dashboard/catalogo"];
-  const activo = exacto
-    ? pathname === href || !seccionesPropias.some((s) => pathname.startsWith(s))
-    : pathname === href || pathname.startsWith(`${href}/`);
+  const activo = grupo
+    ? grupo === "precios"
+      ? pathname === "/dashboard/catalogo"
+      : /^\/dashboard\/catalogo\/(materiales|proveedores|pedido|pedidos)(\/|$)/.test(pathname)
+    : exacto
+      ? pathname === href || !seccionesPropias.some((s) => pathname.startsWith(s))
+      : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <Link

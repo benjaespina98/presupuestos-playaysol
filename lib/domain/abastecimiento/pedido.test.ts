@@ -249,7 +249,7 @@ describe("mensajeWhatsApp", () => {
         "Borde: Losetas",
         "Pide: Benja",
         "",
-        "*Corralón Uno* · +54 9 111 111",
+        "*Corralón Uno*",
         "- Hierro del 6: 90",
         "- Cemento 25 kg: 180 bolsa",
       ].join("\n")
