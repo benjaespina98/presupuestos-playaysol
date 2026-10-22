@@ -70,7 +70,7 @@ export function EditorTextosCompartidos({
   }
 
   return (
-    <details className="rounded-lg border border-gray-200 bg-white shadow-sm">
+    <details className="rounded-lg border border-gray-200 bg-[#FFFFFF] shadow-sm">
       <summary className="flex min-h-12 cursor-pointer items-center px-5 py-3 text-base font-semibold text-gray-900">
         Texto legal y pie del presupuesto <span className="font-normal text-gray-500">— vale para los próximos, no cambia los ya generados</span>
       </summary>

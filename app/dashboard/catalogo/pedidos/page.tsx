@@ -150,7 +150,7 @@ export default function PedidosPage() {
           <p className="py-1 text-[13px] text-[#4A5861]" aria-live="polite">
             {visibles.length} {hayFiltros && pedidos ? `de ${pedidos.length} pedidos` : visibles.length === 1 ? "pedido" : "pedidos"}
           </p>
-          <div className="rounded-lg border border-[#D9DFE3] bg-white lg:rounded-none">
+          <div className="rounded-lg border border-[#D9DFE3] bg-[#FFFFFF] lg:rounded-none">
             <div
               aria-hidden="true"
               className={`hidden h-9 border-b border-[#D9DFE3] bg-[#F1F4F6] px-4 text-[13px] font-semibold uppercase tracking-wide text-[#4A5861] lg:sticky lg:top-[var(--catalogo-barra,0px)] lg:z-10 lg:grid lg:items-center lg:gap-x-4 ${COLUMNAS}`}

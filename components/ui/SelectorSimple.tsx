@@ -47,7 +47,7 @@ export function SelectorSimple({
         disabled={disabled}
         onClick={() => setAbierto(true)}
         style={{ borderColor: "var(--borde-control)" }}
-        className={`flex min-h-12 w-full items-center justify-between gap-2 rounded-lg border bg-white px-3 py-2 text-left text-base text-gray-900 hover:border-[#244B5A] disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-600 ${className}`}
+        className={`flex min-h-12 w-full items-center justify-between gap-2 rounded-lg border bg-[#FFFFFF] px-3 py-2 text-left text-base text-gray-900 hover:border-[#244B5A] disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-600 ${className}`}
       >
         <span className="min-w-0 break-words">{actual?.label ?? valor}</span>
         <svg className="h-5 w-5 shrink-0 text-[#244B5A]" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

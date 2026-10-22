@@ -33,7 +33,7 @@ export interface FiltrosCatalogoProps {
 }
 
 export const CLASE_SELECT =
-  "min-h-11 w-full rounded-lg border bg-white px-3 py-2.5 text-base text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 sm:w-auto sm:text-sm";
+  "min-h-11 w-full rounded-lg border bg-[#FFFFFF] px-3 py-2.5 text-base text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 sm:w-auto sm:text-sm";
 
 const ORDENES = opcionesDeOrden(["nombre", "precio", "stock", "actualizado"]);
 

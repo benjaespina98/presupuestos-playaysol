@@ -113,7 +113,7 @@ export function Hoja({
           role={rol}
           aria-modal="true"
           aria-labelledby={`${id}-titulo`}
-          className={`flex w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-h-[90%] sm:rounded-2xl ${
+          className={`flex w-full flex-col overflow-hidden rounded-t-2xl bg-[#FFFFFF] shadow-2xl sm:max-h-[90%] sm:rounded-2xl ${
             alto === "completo" ? "h-[92%] sm:h-auto" : "max-h-[92%]"
           } ${ANCHOS[ancho]}`}
           onClick={(e) => e.stopPropagation()}
@@ -139,7 +139,7 @@ export function Hoja({
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">{children}</div>
 
           {(pie || aviso) && (
-            <footer className="shrink-0 border-t border-[#D9DFE3] bg-white px-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+            <footer className="shrink-0 border-t border-[#D9DFE3] bg-[#FFFFFF] px-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
               {aviso && !descartando && <div className="mb-2">{aviso}</div>}
               {descartando ? (
                 <div role="alertdialog" aria-label="Cambios sin guardar" className="space-y-2">

@@ -505,7 +505,7 @@ export function LosetasCalculadora({
         )}
 
         <CamposSoloLectura>
-        <section className="space-y-4 rounded-xl border border-[#D9DFE3] bg-white p-5">
+        <section className="space-y-4 rounded-xl border border-[#D9DFE3] bg-[#FFFFFF] p-5">
           <h2 className="text-[13px] font-bold uppercase tracking-wide text-[#244B5A]">Pileta</h2>
           <TextField register={register} errors={errors} name="nombre" label="Cliente o referencia" placeholder="Ej: Gómez, Martín" />
 
@@ -572,7 +572,7 @@ export function LosetasCalculadora({
           </div>
         </section>
 
-        <section className="space-y-4 rounded-xl border border-[#D9DFE3] bg-white p-5">
+        <section className="space-y-4 rounded-xl border border-[#D9DFE3] bg-[#FFFFFF] p-5">
           <h2 className="text-[13px] font-bold uppercase tracking-wide text-[#244B5A]">Ancho final del borde, lado por lado</h2>
           <SelectField
             register={register}
@@ -617,7 +617,7 @@ export function LosetasCalculadora({
           </p>
         </section>
 
-        <section className="space-y-4 rounded-xl border border-[#D9DFE3] bg-white p-5">
+        <section className="space-y-4 rounded-xl border border-[#D9DFE3] bg-[#FFFFFF] p-5">
           <h2 className="text-[13px] font-bold uppercase tracking-wide text-[#244B5A]">Detalles de la pileta</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <SelectField register={register} errors={errors} name="tipoPileta" label="Tipo" options={TIPO_PILETA_OPCIONES} />
@@ -697,7 +697,7 @@ export function LosetasCalculadora({
           </div>
         </section>
 
-        <details className="group rounded-xl border border-[#D9DFE3] bg-white" open={Boolean(valoresForm.puntosCardinales || valoresForm.salaFiltro || valoresForm.casa)}>
+        <details className="group rounded-xl border border-[#D9DFE3] bg-[#FFFFFF]" open={Boolean(valoresForm.puntosCardinales || valoresForm.salaFiltro || valoresForm.casa)}>
           <summary className="flex min-h-12 list-none items-center justify-between gap-2 rounded-xl px-5 text-base font-semibold text-[#1F2A30] hover:bg-[#F4F8F9] [&::-webkit-details-marker]:hidden">
             <span>
               <span className="text-[13px] font-bold uppercase tracking-wide text-[#244B5A]">Ubicación en el terreno</span>
@@ -745,7 +745,7 @@ export function LosetasCalculadora({
           </div>
         </details>
 
-        <details className="group rounded-xl border border-[#D9DFE3] bg-white">
+        <details className="group rounded-xl border border-[#D9DFE3] bg-[#FFFFFF]">
           <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 px-5 text-base font-semibold text-[#1F2A30] hover:bg-[#F4F8F9] [&::-webkit-details-marker]:hidden">
             <span>
               <span className="text-[13px] font-bold uppercase tracking-wide text-[#244B5A]">Apariencia del plano</span>
@@ -789,8 +789,8 @@ export function LosetasCalculadora({
             aria-label={ampliado ? "Editor del plano ampliado" : undefined}
             className={
               ampliado
-                ? "fixed inset-0 z-[100] flex flex-col gap-3 bg-white p-3 sm:p-5"
-                : "rounded-xl border border-[#D9DFE3] bg-white p-4"
+                ? "fixed inset-0 z-[100] flex flex-col gap-3 bg-[#FFFFFF] p-3 sm:p-5"
+                : "rounded-xl border border-[#D9DFE3] bg-[#FFFFFF] p-4"
             }
           >
             <div className="flex items-center justify-between gap-3">
@@ -841,7 +841,7 @@ export function LosetasCalculadora({
               un <div> oculto: así se nota antes de exportar si falta cargar
               el nombre o si una medida quedó mal, en vez de descubrirlo
               recién en el archivo descargado. */}
-          <details className="group rounded-xl border border-[#D9DFE3] bg-white">
+          <details className="group rounded-xl border border-[#D9DFE3] bg-[#FFFFFF]">
             <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 px-4 text-base font-semibold text-[#1F2A30] hover:bg-[#F4F8F9] [&::-webkit-details-marker]:hidden">
               Vista previa para el cliente
               <span aria-hidden="true" className="text-[#4A5861] transition-transform group-open:rotate-180">▾</span>
@@ -859,7 +859,7 @@ export function LosetasCalculadora({
             </div>
           </details>
 
-          <div className="space-y-3 rounded-xl border border-[#D9DFE3] bg-white p-4">
+          <div className="space-y-3 rounded-xl border border-[#D9DFE3] bg-[#FFFFFF] p-4">
             {errorGuardado && (
               <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">No se pudo guardar: {errorGuardado}</p>
             )}

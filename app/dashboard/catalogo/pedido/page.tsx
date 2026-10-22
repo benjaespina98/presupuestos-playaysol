@@ -43,7 +43,7 @@ import { botonDe } from "@/components/ui/botones";
 import { SelectorSimple } from "@/components/ui/SelectorSimple";
 
 const CLASE_CAMPO =
-  "min-h-12 w-full rounded-lg border bg-white px-3 py-2.5 text-base text-gray-900 shadow-sm placeholder:text-[#6B7680] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20";
+  "min-h-12 w-full rounded-lg border bg-[#FFFFFF] px-3 py-2.5 text-base text-gray-900 shadow-sm placeholder:text-[#6B7680] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20";
 
 const BORDES: BordePedido[] = ["Losetas", "Deck"];
 
@@ -287,7 +287,7 @@ function PedidoContenido() {
           <section
             data-print-hide=""
             aria-label="Datos de la obra"
-            className="mb-5 space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm"
+            className="mb-5 space-y-4 rounded-lg border border-gray-200 bg-[#FFFFFF] p-5 shadow-sm"
           >
             <div className="grid gap-4 sm:grid-cols-2">
               <Campo etiqueta="Cliente / obra" id="obra">
@@ -347,8 +347,8 @@ function PedidoContenido() {
                       onClick={() => cambiar({ borde: b })}
                       className={`min-h-11 flex-1 rounded-lg border px-3 text-sm font-medium transition-colors ${
                         params.borde === b
-                          ? "border-[#244B5A] bg-[#244B5A] text-white shadow-sm"
-                          : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                          ? "border-[#244B5A] bg-[#244B5A] text-[#FFFFFF] shadow-sm"
+                          : "border-gray-200 bg-[#FFFFFF] text-gray-700 hover:bg-gray-50"
                       }`}
                     >
                       {b}
@@ -508,7 +508,7 @@ function PedidoContenido() {
               </div>
 
               {quitados.length > 0 && (
-                <section data-print-hide="" aria-label="Materiales quitados" className="mt-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <section data-print-hide="" aria-label="Materiales quitados" className="mt-4 rounded-lg border border-gray-200 bg-[#FFFFFF] p-4 shadow-sm">
                   <h2 className="mb-2 text-sm font-semibold text-gray-900">Quitados del pedido</h2>
                   <ul className="space-y-1">
                     {quitados.map((m) => (
@@ -574,7 +574,7 @@ function Campo({ etiqueta, id, children }: { etiqueta: string; id: string; child
 
 function Resumen({ etiqueta, valor, nota, interno = false }: { etiqueta: string; valor: string; nota?: string; interno?: boolean }) {
   return (
-    <div data-print-hide={interno ? "" : undefined} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+    <div data-print-hide={interno ? "" : undefined} className="rounded-lg border border-gray-200 bg-[#FFFFFF] p-4 shadow-sm">
       <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{etiqueta}</p>
       <p className="mt-1 text-2xl font-semibold tabular-nums text-[#244B5A]">{valor}</p>
       {nota && <p className="mt-1 text-xs text-amber-700">{nota}</p>}
@@ -624,7 +624,7 @@ function GrupoTabla({
   onEditarMaterial: (m: Material) => void;
 }) {
   return (
-    <section aria-label={`Pedido a ${grupo.nombre}`} className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+    <section aria-label={`Pedido a ${grupo.nombre}`} className="overflow-hidden rounded-lg border border-gray-200 bg-[#FFFFFF] shadow-sm">
       <header className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-gray-200 bg-[#F4F8F9] px-4 py-2.5">
         <div className="mr-auto min-w-0">
           <h2 className="text-sm font-bold text-[#244B5A]">{grupo.nombre}</h2>
@@ -690,7 +690,7 @@ function GrupoTabla({
                     onAjustar(l.material.id, n === l.calculada ? null : { cantidad: n });
                   }}
                   className={`min-h-12 w-28 rounded-lg border px-2 py-1.5 text-base tabular-nums focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 ${
-                    ajustada ? "bg-amber-50" : "bg-white"
+                    ajustada ? "bg-amber-50" : "bg-[#FFFFFF]"
                   }`}
                 />
                 <span className="text-[#4A5861]">{l.material.unidad ?? ""}</span>

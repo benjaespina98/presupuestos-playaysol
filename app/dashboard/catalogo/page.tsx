@@ -295,7 +295,7 @@ export default function CatalogoPage() {
 
           <div className="space-y-3 lg:space-y-0">
             {grupos.map((grupo) => (
-              <section key={grupo.id} aria-label={grupo.titulo} className="rounded-lg border border-[#D9DFE3] bg-white lg:rounded-none lg:border-t-0">
+              <section key={grupo.id} aria-label={grupo.titulo} className="rounded-lg border border-[#D9DFE3] bg-[#FFFFFF] lg:rounded-none lg:border-t-0">
                 <CategoriaHeader titulo={grupo.titulo} cantidad={grupo.items.length} />
                 <ul className="divide-y divide-[#EEF1F3]">
                   {grupo.items.map((item) => (
@@ -476,7 +476,7 @@ function CatalogoSkeleton() {
   return (
     <div className="space-y-4" aria-hidden="true">
       {[0, 1].map((g) => (
-        <div key={g} className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+        <div key={g} className="overflow-hidden rounded-lg border border-gray-200 bg-[#FFFFFF] shadow-sm">
           <div className="h-9 animate-pulse border-b border-gray-200 bg-gray-100" />
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="flex animate-pulse items-center justify-between gap-4 border-b border-gray-100 px-4 py-3.5 last:border-0">

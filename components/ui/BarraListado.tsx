@@ -115,7 +115,7 @@ export function Interruptor({ checked, onChange, children }: { checked: boolean;
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="peer sr-only" />
       <span
         aria-hidden="true"
-        className="relative h-5 w-9 shrink-0 rounded-full bg-[#7D8892] transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-[#244B5A] peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-[#244B5A]/40"
+        className="relative h-5 w-9 shrink-0 rounded-full bg-[#7D8892] transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-[#FFFFFF] after:shadow after:transition-transform peer-checked:bg-[#244B5A] peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-[#244B5A]/40"
       />
       {children}
     </label>
@@ -211,8 +211,8 @@ function Desplegable({
               style={pos === "hoja" ? undefined : { position: "fixed", top: pos.top, left: pos.left }}
               className={
                 pos === "hoja"
-                  ? "fixed inset-x-0 bottom-0 z-[60] max-h-[80dvh] overflow-y-auto rounded-t-2xl bg-white p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-2xl"
-                  : `z-[60] ${ancho} overflow-hidden rounded-xl border border-[#D9DFE3] bg-white p-1.5 shadow-xl`
+                  ? "fixed inset-x-0 bottom-0 z-[60] max-h-[80dvh] overflow-y-auto rounded-t-2xl bg-[#FFFFFF] p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-2xl"
+                  : `z-[60] ${ancho} overflow-hidden rounded-xl border border-[#D9DFE3] bg-[#FFFFFF] p-1.5 shadow-xl`
               }
             >
               {pos === "hoja" && <p className="px-3 pb-1 pt-2 text-lg font-bold text-[#244B5A]">{etiqueta}</p>}
@@ -284,7 +284,7 @@ export function MenuSeleccion<T extends string>({
               onChange={(e) => setQ(e.target.value)}
               placeholder="Buscar…"
               aria-label={`Buscar en ${titulo}`}
-              className="mb-1 min-h-12 w-full rounded-lg border bg-white px-3 text-base"
+              className="mb-1 min-h-12 w-full rounded-lg border bg-[#FFFFFF] px-3 text-base"
             />
           )}
           {visibles.map((o) => {
@@ -390,7 +390,7 @@ export function Toast({ mensaje, onCerrar, tipo = "ok" }: { mensaje: string | nu
         }`}
       >
         <span className="min-w-0 break-words">{mensaje}</span>
-        <button type="button" onClick={onCerrar} aria-label="Cerrar aviso" className="-my-2 -mr-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg hover:bg-white/15 active:bg-white/25">
+        <button type="button" onClick={onCerrar} aria-label="Cerrar aviso" className="-my-2 -mr-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg hover:bg-[#FFFFFF]/15 active:bg-[#FFFFFF]/25">
           <span aria-hidden="true">✕</span>
         </button>
       </p>

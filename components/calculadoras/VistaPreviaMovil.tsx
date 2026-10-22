@@ -26,7 +26,7 @@ export function VistaPreviaMovil({ formulario, documento }: { formulario: ReactN
     <>
       <div
         data-print-hide=""
-        className="sticky top-0 z-10 -mt-2 mb-4 flex gap-1 rounded-lg border border-gray-200 bg-white p-1 shadow-sm lg:hidden"
+        className="sticky top-0 z-10 -mt-2 mb-4 flex gap-1 rounded-lg border border-gray-200 bg-[#FFFFFF] p-1 shadow-sm lg:hidden"
       >
         <PestanaVista activa={vista === "editar"} onClick={() => setVista("editar")}>
           Editar
@@ -41,7 +41,7 @@ export function VistaPreviaMovil({ formulario, documento }: { formulario: ReactN
       </div>
 
       <div className={`${vista === "vista-previa" ? "block" : "hidden"} lg:block`}>
-        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm print:border-0 print:p-0 print:shadow-none">
+        <div className="rounded-lg border border-gray-200 bg-[#FFFFFF] p-4 shadow-sm print:border-0 print:p-0 print:shadow-none">
           {documento}
         </div>
       </div>
@@ -56,7 +56,7 @@ function PestanaVista({ activa, onClick, children }: { activa: boolean; onClick:
       onClick={onClick}
       aria-pressed={activa}
       className={`min-h-11 flex-1 rounded-md text-sm font-semibold transition-colors ${
-        activa ? "bg-[#244B5A] text-white" : "text-gray-600 hover:bg-gray-100"
+        activa ? "bg-[#244B5A] text-[#FFFFFF]" : "text-gray-600 hover:bg-gray-100"
       }`}
     >
       {children}

@@ -6,7 +6,7 @@ import { SelectorHoja, type OpcionSelector } from "@/components/ui/SelectorHoja"
 import { FieldShell, describedBy } from "./FieldShell";
 
 const CLASE_BOTON =
-  "flex min-h-12 w-full items-center justify-between gap-2 rounded-lg border bg-white px-3 py-2 text-left text-base text-gray-900 " +
+  "flex min-h-12 w-full items-center justify-between gap-2 rounded-lg border bg-[#FFFFFF] px-3 py-2 text-left text-base text-gray-900 " +
   "hover:border-[#244B5A] focus-visible:border-[#244B5A] disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-600 " +
   "data-[invalid=true]:border-[#B42318]";
 

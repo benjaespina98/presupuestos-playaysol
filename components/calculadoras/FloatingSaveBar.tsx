@@ -21,13 +21,13 @@ export function FloatingSaveBar({ guardando, label = "Guardar en la nube" }: { g
   return (
     <SoloSiNoAnulado>
     <div
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] backdrop-blur sm:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-[#FFFFFF]/95 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] backdrop-blur sm:hidden"
       style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
     >
       <button
         type="submit"
         disabled={guardando}
-        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-[#244B5A] px-4 text-sm font-semibold text-white transition-colors hover:bg-marca-oscuro disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-[#244B5A] px-4 text-sm font-semibold text-[#FFFFFF] transition-colors hover:bg-marca-oscuro disabled:cursor-not-allowed disabled:opacity-50"
       >
         <IconCloudUpload className="h-4 w-4" />
         {guardando ? "Guardando..." : label}

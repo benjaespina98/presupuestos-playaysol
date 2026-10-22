@@ -49,7 +49,7 @@ export function MenuExportar({
     <details open={abierto} onToggle={(e) => setAbierto(e.currentTarget.open)} className="group relative" data-print-hide="">
       <summary
         aria-label="Exportar"
-        className={`flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-lg border border-marca/40 bg-white px-4 text-sm font-semibold text-marca shadow-sm transition-colors hover:border-marca hover:bg-marca/5 active:bg-marca/10 [&::-webkit-details-marker]:hidden ${ocupado ? "pointer-events-none opacity-60" : ""}`}
+        className={`flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-lg border border-marca/40 bg-[#FFFFFF] px-4 text-sm font-semibold text-marca shadow-sm transition-colors hover:border-marca hover:bg-marca/5 active:bg-marca/10 [&::-webkit-details-marker]:hidden ${ocupado ? "pointer-events-none opacity-60" : ""}`}
       >
         {ocupado ? "Generando…" : "Exportar"}
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -61,7 +61,7 @@ export function MenuExportar({
       <div
         role="menu"
         aria-label="Opciones de exportación"
-        className="fixed inset-x-3 bottom-3 z-50 max-h-[85dvh] overflow-y-auto rounded-xl border border-gray-200 bg-white p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:z-30 sm:mt-1.5 sm:max-h-none sm:w-80 sm:rounded-lg sm:p-1.5 sm:shadow-xl"
+        className="fixed inset-x-3 bottom-3 z-50 max-h-[85dvh] overflow-y-auto rounded-xl border border-gray-200 bg-[#FFFFFF] p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:z-30 sm:mt-1.5 sm:max-h-none sm:w-80 sm:rounded-lg sm:p-1.5 sm:shadow-xl"
       >
         <p className="px-2 pb-1 pt-1 text-[13px] text-gray-600">Sin precios ni teléfonos: listo para mandarle al proveedor.</p>
         <p className="px-3 pb-1 pt-1.5 text-[13px] font-semibold uppercase tracking-wide text-gray-500">PDF</p>

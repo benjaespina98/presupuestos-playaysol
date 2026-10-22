@@ -52,7 +52,7 @@ export function CheckboxField<TFieldValues extends FieldValues>({
             peer-checked:bg-[#244B5A] peer-focus-visible:outline peer-focus-visible:outline-2
             peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#244B5A]
             before:absolute before:top-0.5 before:left-0.5 before:h-5 before:w-5 before:rounded-full
-            before:bg-white before:transition-transform before:content-[''] peer-checked:before:translate-x-5"
+            before:bg-[#FFFFFF] before:transition-transform before:content-[''] peer-checked:before:translate-x-5"
         />
         <span className="text-base font-medium text-[#1F2A30]">{label}</span>
       </label>

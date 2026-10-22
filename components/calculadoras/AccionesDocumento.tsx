@@ -36,7 +36,7 @@ export function AccionesDocumento({
   onGenerarPdf: () => void;
 }) {
   return (
-    <section className="space-y-3 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+    <section className="space-y-3 rounded-lg border border-gray-200 bg-[#FFFFFF] p-5 shadow-sm">
       {errorGuardado && (
         <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
           No se pudo guardar: {errorGuardado}
@@ -61,7 +61,7 @@ export function AccionesDocumento({
         <button
           type="submit"
           disabled={guardando}
-          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#244B5A] px-4 text-sm font-semibold text-white transition-colors hover:bg-marca-oscuro disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#244B5A] px-4 text-sm font-semibold text-[#FFFFFF] transition-colors hover:bg-marca-oscuro disabled:cursor-not-allowed disabled:opacity-50"
         >
           <IconCloudUpload className="h-4 w-4" />
           {guardando ? "Guardando..." : "Guardar en la nube"}

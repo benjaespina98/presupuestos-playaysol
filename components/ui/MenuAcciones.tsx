@@ -90,7 +90,7 @@ export function MenuAcciones({ etiqueta, acciones }: { etiqueta: string; accione
             role="menu"
             aria-label={etiqueta}
             style={{ position: "fixed", top: posicion.top, bottom: posicion.bottom, right: posicion.right }}
-            className="z-[60] min-w-52 overflow-hidden rounded-xl border border-[#D9DFE3] bg-white py-1 shadow-xl"
+            className="z-[60] min-w-52 overflow-hidden rounded-xl border border-[#D9DFE3] bg-[#FFFFFF] py-1 shadow-xl"
           >
             {acciones.map((a) => (
               <button

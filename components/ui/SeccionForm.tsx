@@ -83,7 +83,7 @@ export function InfoPopover({ etiqueta, children }: { etiqueta: string; children
         <span
           id={id}
           role="note"
-          className="absolute left-0 top-full z-20 mt-1 block w-64 rounded-xl border border-[#D9DFE3] bg-white p-3 text-[13px] font-normal leading-snug text-[#1F2A30] shadow-xl"
+          className="absolute left-0 top-full z-20 mt-1 block w-64 rounded-xl border border-[#D9DFE3] bg-[#FFFFFF] p-3 text-[13px] font-normal leading-snug text-[#1F2A30] shadow-xl"
         >
           {children}
         </span>

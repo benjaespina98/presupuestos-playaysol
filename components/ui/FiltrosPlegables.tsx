@@ -26,7 +26,7 @@ export function Buscador({
         onChange={(e) => onCambio(e.target.value)}
         placeholder={placeholder}
         aria-label={etiqueta}
-        className="min-h-11 w-full truncate rounded-lg border bg-white py-2.5 pl-10 pr-11 text-base text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-celeste/30 sm:text-sm"
+        className="min-h-11 w-full truncate rounded-lg border bg-[#FFFFFF] py-2.5 pl-10 pr-11 text-base text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-celeste/30 sm:text-sm"
       />
       {valor && (
         <button

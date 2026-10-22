@@ -17,7 +17,7 @@ function mensajeDeError(mensaje: string): string {
 }
 
 const CLASE_INPUT =
-  "min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 placeholder:text-gray-400 hover:border-gray-400 focus:border-marca focus:outline-none focus:ring-2 focus:ring-celeste/40";
+  "min-h-11 w-full rounded-lg border border-gray-300 bg-[#FFFFFF] px-3 py-2 text-base text-gray-900 placeholder:text-gray-400 hover:border-gray-400 focus:border-marca focus:outline-none focus:ring-2 focus:ring-celeste/40";
 
 function LoginForm() {
   const router = useRouter();
@@ -51,7 +51,7 @@ function LoginForm() {
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-md sm:p-8">
+      <div className="w-full max-w-sm overflow-hidden rounded-xl border border-gray-200 bg-[#FFFFFF] p-6 shadow-md sm:p-8">
         <div aria-hidden="true" className="-mx-6 -mt-6 mb-6 h-1.5 bg-acento sm:-mx-8 sm:-mt-8" />
         <div className="mb-6 flex flex-col items-center text-center">
           <Wordmark className="mb-2 h-10" />

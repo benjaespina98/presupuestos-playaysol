@@ -77,7 +77,7 @@ export function DocumentoCerco({
   return (
     <div
       id="documento-cerco"
-      className="mx-auto max-w-2xl bg-white text-[#1C2B33] [overflow-wrap:anywhere] print:max-w-none"
+      className="mx-auto max-w-2xl bg-[#FFFFFF] text-[#1C2B33] [overflow-wrap:anywhere] print:max-w-none"
       style={{ fontFamily: 'Calibri, "Carlito", Arial, sans-serif' }} // manual de marca: Calibri para todo el texto de comunicación/lectura
     >
       {/* El asset YA es el banner de marca completo, a todo lo ancho (ver

@@ -79,7 +79,7 @@ export function AgregarMaterial({
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Buscar por nombre o proveedor…"
-              className="min-h-12 w-full rounded-lg border bg-white px-3 text-base"
+              className="min-h-12 w-full rounded-lg border bg-[#FFFFFF] px-3 text-base"
             />
           </div>
           <ul role="listbox" aria-label="Materiales que se pueden agregar" className="max-h-64 divide-y divide-[#EEF1F3] overflow-y-auto rounded-xl border border-[#D9DFE3]">

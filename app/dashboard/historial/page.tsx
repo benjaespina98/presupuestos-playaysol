@@ -287,7 +287,7 @@ function HistorialTabla() {
       {presupuestosFiltrados && presupuestosFiltrados.length > 0 && (
         <>
           {/* Desktop / tablet: tabla completa */}
-          <div className="hidden rounded-lg border border-gray-200 bg-white sm:block lg:rounded-none">
+          <div className="hidden rounded-lg border border-gray-200 bg-[#FFFFFF] sm:block lg:rounded-none">
             {/* Anchos pensados para que el nombre del cliente no se parta en dos líneas (si es larguísimo se
                 recorta con "…" y el nombre completo queda en el tooltip) y el detalle tenga lugar. */}
             <table className="w-full table-fixed text-left text-sm">
@@ -396,7 +396,7 @@ function HistorialTabla() {
               return (
                 <div
                   key={p.id}
-                  className={`rounded-lg border border-gray-200 p-4 shadow-sm ${anulado ? "bg-gray-50" : "bg-white"}`}
+                  className={`rounded-lg border border-gray-200 p-4 shadow-sm ${anulado ? "bg-gray-50" : "bg-[#FFFFFF]"}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -483,7 +483,7 @@ function HistorialTabla() {
 function HistorialSkeleton() {
   return (
     <div>
-      <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm sm:block">
+      <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-[#FFFFFF] shadow-sm sm:block">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50 text-gray-700">
@@ -512,7 +512,7 @@ function HistorialSkeleton() {
 
       <div className="flex flex-col gap-3 sm:hidden">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="animate-pulse rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div key={i} className="animate-pulse rounded-lg border border-gray-200 bg-[#FFFFFF] p-4 shadow-sm">
             <div className="flex items-start justify-between gap-2">
               <div className="space-y-2">
                 <div className="h-4 w-32 rounded bg-gray-200" />

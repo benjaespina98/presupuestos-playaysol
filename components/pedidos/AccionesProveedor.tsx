@@ -76,7 +76,7 @@ export function AccionesProveedor({
   }
 
   return (
-    <div role="group" aria-label={`Acciones del pedido a ${seccion.nombre}`} className="flex flex-wrap gap-2 border-t border-gray-100 bg-white px-3 py-2.5" data-print-hide="">
+    <div role="group" aria-label={`Acciones del pedido a ${seccion.nombre}`} className="flex flex-wrap gap-2 border-t border-gray-100 bg-[#FFFFFF] px-3 py-2.5" data-print-hide="">
       {movil && (
         <button type="button" onClick={compartir} disabled={!archivo || ocupado} className={botonDe("primario", "min-h-12 flex-1")}>
           {archivo ? "Compartir" : "Preparando…"}

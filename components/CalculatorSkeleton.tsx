@@ -13,7 +13,7 @@ export function CalculatorSkeleton() {
       className="grid animate-pulse grid-cols-1 gap-6 md:grid-cols-[clamp(340px,32%,460px)_1fr]"
     >
       {/* Panel de formulario */}
-      <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="space-y-4 rounded-lg border border-gray-200 bg-[#FFFFFF] p-5 shadow-sm">
         <div className="h-6 w-2/3 rounded bg-gray-200" />
         <div className="flex gap-2">
           {[0, 1, 2, 3, 4].map((i) => (
@@ -34,7 +34,7 @@ export function CalculatorSkeleton() {
 
       {/* Panel de documento / preview (oculto en mobile, como el layout real que
           prioriza el formulario en pantalla angosta) */}
-      <div className="hidden rounded-lg border border-gray-200 bg-white p-8 shadow-sm md:block">
+      <div className="hidden rounded-lg border border-gray-200 bg-[#FFFFFF] p-8 shadow-sm md:block">
         <div className="mx-auto max-w-2xl space-y-4">
           <div className="mb-8 h-24 w-full rounded bg-gray-100" />
           <div className="h-4 w-1/2 rounded bg-gray-200" />

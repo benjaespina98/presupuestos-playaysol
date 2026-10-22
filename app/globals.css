@@ -66,6 +66,15 @@ button:disabled,
 [aria-disabled="true"] {
   cursor: not-allowed;
 }
+/* Un botón deshabilitado se ve gris medio con texto oscuro (legible), nunca con la mitad de opacidad
+   (blanco sobre blanco). Vale para todos los botones del portal, tengan la clase que tengan. */
+button:disabled {
+  opacity: 1 !important;
+  background-color: var(--fondo-deshabilitado) !important;
+  color: var(--texto-deshabilitado) !important;
+  border-color: #8b969e !important;
+  box-shadow: none !important;
+}
 :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
   outline: 2px solid var(--color-celeste);
   outline-offset: 2px;

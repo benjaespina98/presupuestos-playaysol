@@ -139,9 +139,8 @@ export async function medirPagina(page: Page): Promise<Medidas> {
         const fs = parseFloat(cs.fontSize);
         const grande = fs >= 24 || (fs >= 18.66 && Number(cs.fontWeight) >= 700);
         const minimo = grande ? 3 : 4.5;
-        const deshab = (el as HTMLButtonElement).disabled === true || el.getAttribute("aria-disabled") === "true";
         const x = razon(real, fondoOp);
-        if (x < minimo && !deshab) contraste.add(`texto ${x.toFixed(2)}:1 (<${minimo}) ${el.tagName.toLowerCase()} "${nombre(el)}"`);
+        if (x < minimo) contraste.add(`texto ${x.toFixed(2)}:1 (<${minimo}) ${el.tagName.toLowerCase()} "${nombre(el)}"`);
       }
       // Controles con borde propio y sin relleno (secundarios, campos): el borde contra su fondo real, 3:1.
       const bw = parseFloat(cs.borderTopWidth);
@@ -152,8 +151,7 @@ export async function medirPagina(page: Page): Promise<Medidas> {
       const padre = el.parentElement ? fondoReal(el.parentElement) : ([255, 255, 255, 1] as RGBA);
       if (borde && (!relleno || razon(mezclar(fondoPropio!, padre), padre) < 1.5)) {
         const x = razon(mezclar(bc!, padre), padre);
-        const deshab = (el as HTMLButtonElement).disabled === true;
-        if (x < 3 && !deshab) contraste.add(`borde ${x.toFixed(2)}:1 (<3) ${el.tagName.toLowerCase()} "${nombre(el)}"`);
+        if (x < 3) contraste.add(`borde ${x.toFixed(2)}:1 (<3) ${el.tagName.toLowerCase()} "${nombre(el)}"`);
       }
       // Ícono solo (sin texto): su color contra el fondo, 3:1.
       const svg = el.querySelector("svg");
