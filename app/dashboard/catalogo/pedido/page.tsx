@@ -33,7 +33,7 @@ import { guardarPedido, listarPedidos } from "@/lib/pedidos";
 import { formatARSExacto } from "@/lib/format/ars";
 import { copiarAlPortapapeles } from "@/lib/clipboard";
 import { PanelPortal } from "@/components/PanelPortal";
-import { Interruptor } from "@/components/catalogo/FiltrosCatalogo";
+import { Interruptor } from "@/components/ui/BarraListado";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
 import { MenuExportar } from "@/components/pedidos/MenuExportar";
 import { AgregarMaterial } from "@/components/pedidos/AgregarMaterial";
@@ -399,13 +399,13 @@ function PedidoContenido() {
               {/* Barra fija: al bajar por una tabla larga, el costo y los botones de exportar siguen a mano. */}
               <div
                 data-print-hide=""
-                className="-mx-4 mb-4 flex flex-wrap md:sticky md:top-0 md:z-20 items-center gap-x-4 gap-y-2 border-b border-gray-200 bg-gray-50 px-4 py-2.5"
+                className="-mx-4 mb-4 grid grid-cols-2 gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2.5 sm:flex sm:flex-wrap sm:items-center sm:gap-x-4 lg:sticky lg:top-0 lg:z-20"
               >
-                <p className="mr-auto text-sm tabular-nums text-gray-600">
+                <p className="col-span-2 text-sm tabular-nums text-gray-600 sm:mr-auto">
                   <b className="text-gray-900">{pedido.articulos}</b> artículos · <b className="text-gray-900">{pedido.proveedores}</b> proveedores ·{" "}
                   <b className="text-gray-900">{formatARSExacto(pedido.costo)}</b>
                 </p>
-                <Accion principal onClick={onGuardar} deshabilitado={ocupado || !!vigente || bloqueadoPorDesactivados}>
+                <Accion principal alto onClick={onGuardar} deshabilitado={ocupado || !!vigente || bloqueadoPorDesactivados}>
                   {vigente ? `Guardado · ${numeroFormateado(vigente.numero)}` : "Guardar pedido"}
                 </Accion>
                 <Accion onClick={() => setAgregando(true)}>Agregar material</Accion>
@@ -416,7 +416,7 @@ function PedidoContenido() {
                   aria-disabled={bloqueadoPorDesactivados || undefined}
                   inert={bloqueadoPorDesactivados}
                   title={bloqueadoPorDesactivados ? "Confirmá primero que querés pedir a un proveedor desactivado" : undefined}
-                  className={bloqueadoPorDesactivados ? "opacity-50" : undefined}
+                  className={`max-sm:[&_summary]:w-full max-sm:[&_summary]:justify-center ${bloqueadoPorDesactivados ? "opacity-50" : ""}`}
                 >
                   <MenuExportar onExportar={onExportar} onCsv={descargarCsv} variosProveedores={pedido.grupos.length > 1} ocupado={ocupado} />
                 </div>
@@ -425,7 +425,7 @@ function PedidoContenido() {
                   <button
                     type="button"
                     onClick={() => setAjustes({})}
-                    className="min-h-11 rounded-lg px-3 text-sm font-medium text-[#244B5A] hover:bg-[#244B5A]/8"
+                    className="col-span-2 min-h-11 rounded-lg px-3 text-sm font-medium text-[#244B5A] hover:bg-[#EAF0F2]"
                   >
                     Restablecer cantidades
                   </button>
@@ -518,7 +518,7 @@ function PedidoContenido() {
                           type="button"
                           onClick={() => ajustar(m.id, null)}
                           aria-label={`Volver a poner ${m.nombre}`}
-                          className="min-h-11 rounded-md px-3 font-medium text-[#244B5A] hover:bg-[#244B5A]/8"
+                          className="min-h-11 rounded-md px-3 font-medium text-[#244B5A] hover:bg-[#EAF0F2]"
                         >
                           Volver a poner
                         </button>
@@ -587,18 +587,21 @@ function Accion({
   onClick,
   principal = false,
   deshabilitado = false,
+  alto = false,
 }: {
   children: React.ReactNode;
   onClick: () => void;
   principal?: boolean;
   deshabilitado?: boolean;
+  /** En el celular ocupa el ancho entero de la barra (dos columnas). */
+  alto?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={deshabilitado}
-      className={botonDe(principal ? "primario" : "secundario", "px-4")}
+      className={botonDe(principal ? "primario" : "secundario", `px-3 max-sm:w-full sm:px-4 ${alto ? "max-sm:col-span-2" : ""}`)}
     >
       {children}
     </button>
@@ -606,7 +609,7 @@ function Accion({
 }
 
 /** Columnas desde md: artículo · cantidad · precio unit. · subtotal · quitar. */
-const COLUMNAS = "md:grid-cols-[minmax(0,1fr)_15rem_8rem_8rem_9.5rem]";
+const COLUMNAS = "lg:grid-cols-[minmax(0,1fr)_15rem_8rem_8rem_9.5rem]";
 
 function GrupoTabla({
   grupo,
@@ -639,17 +642,17 @@ function GrupoTabla({
           data-print-hide=""
           onClick={onCopiar}
           aria-label={`Copiar el pedido a ${grupo.nombre}`}
-          className="min-h-11 rounded-md px-3 text-sm font-medium text-[#244B5A] hover:bg-[#244B5A]/8"
+          className="min-h-11 rounded-md px-3 text-sm font-medium text-[#244B5A] hover:bg-[#EAF0F2]"
         >
           {copiado ? "¡Copiado!" : "Copiar"}
         </button>
       </header>
 
       {/* Una grilla en vez de <table>: en el celular cada artículo es una tarjeta (nombre arriba, cantidad
-          y subtotal abajo) y desde md las columnas quedan alineadas entre todos los proveedores. */}
+          y subtotal abajo) y desde lg las columnas quedan alineadas entre todos los proveedores. */}
       <div
         aria-hidden="true"
-        className={`hidden border-b border-gray-100 px-4 py-2 text-xs font-medium uppercase tracking-wide text-gray-500 md:grid md:items-center md:gap-x-4 ${COLUMNAS}`}
+        className={`hidden border-b border-gray-100 px-4 py-2 text-xs font-medium uppercase tracking-wide text-gray-500 lg:grid lg:items-center lg:gap-x-4 ${COLUMNAS}`}
       >
         <span>Artículo</span>
         <span>Cantidad</span>
@@ -663,11 +666,11 @@ function GrupoTabla({
           return (
             <li
               key={l.material.id}
-              className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-3 md:gap-x-4 md:py-2.5 ${COLUMNAS}`}
+              className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-2.5 lg:gap-x-4 lg:py-2.5 ${COLUMNAS}`}
             >
-              <p className="col-start-1 row-start-1 min-w-0 break-words text-gray-900 md:col-auto md:row-auto">{l.material.nombre}</p>
+              <p className="col-span-2 col-start-1 row-start-1 min-w-0 break-words text-gray-900 lg:col-span-1 lg:col-auto lg:row-auto">{l.material.nombre}</p>
 
-              <div className="col-start-1 row-start-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 md:col-auto md:row-auto">
+              <div className="col-start-1 row-start-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 lg:col-auto lg:row-auto">
                 {/* Se confirma al salir del campo (o con Enter): si cada tecla recalculara el pedido, borrar
                     el número para escribir otro sacaría la fila de la tabla en el medio. */}
                 <input
@@ -689,7 +692,7 @@ function GrupoTabla({
                     }
                     onAjustar(l.material.id, n === l.calculada ? null : { cantidad: n });
                   }}
-                  className={`min-h-12 w-28 rounded-lg border px-2 py-1.5 text-base tabular-nums focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 ${
+                  className={`min-h-12 w-24 rounded-lg border px-2 py-1.5 text-base tabular-nums focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 ${
                     ajustada ? "bg-amber-50" : "bg-[#FFFFFF]"
                   }`}
                 />
@@ -701,8 +704,8 @@ function GrupoTabla({
                 )}
               </div>
 
-              <p className="col-span-2 row-start-3 whitespace-nowrap print:invisible text-xs tabular-nums text-gray-500 md:col-auto md:row-auto md:text-right md:text-sm md:text-gray-700">
-                <span className="md:hidden">Precio unit. </span>
+              <p className="col-start-1 row-start-3 whitespace-nowrap print:invisible text-[13px] tabular-nums text-gray-600 lg:col-auto lg:row-auto lg:text-right lg:text-sm lg:text-gray-700">
+                <span className="lg:hidden">Precio unit. </span>
                 {l.precio === null ? (
                   <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">A confirmar</span>
                 ) : (
@@ -710,11 +713,11 @@ function GrupoTabla({
                 )}
               </p>
 
-              <p className="col-start-2 row-start-2 whitespace-nowrap print:invisible text-right font-medium tabular-nums text-gray-900 md:col-auto md:row-auto">
+              <p className="col-start-2 row-start-2 whitespace-nowrap print:invisible text-right font-medium tabular-nums text-gray-900 lg:col-auto lg:row-auto">
                 {l.precio === null ? "—" : formatARSExacto(l.subtotal)}
               </p>
 
-              <div data-print-hide="" className="col-start-2 row-start-1 flex items-center justify-end gap-1 md:col-auto md:row-auto">
+              <div data-print-hide="" className="col-start-2 row-start-3 flex items-center justify-end gap-1 lg:col-auto lg:row-auto">
                 <BotonLapiz nombre={l.material.nombre} onClick={() => onEditarMaterial(l.material)} />
                 <button
                   type="button"

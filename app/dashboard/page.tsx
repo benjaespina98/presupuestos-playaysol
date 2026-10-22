@@ -55,7 +55,7 @@ export default function DashboardPage() {
           >
             <svg
               viewBox="0 0 24 24"
-              className="h-8 w-8 shrink-0 text-[#244B5A]/70 transition group-hover:text-[#244B5A]"
+              className="h-8 w-8 shrink-0 text-[#647F8A] transition group-hover:text-[#244B5A]"
               fill="none"
               stroke="currentColor"
               strokeWidth="1.5"

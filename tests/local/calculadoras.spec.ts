@@ -139,7 +139,7 @@ for (const tipo of TIPOS) {
     }
 
     await page.goto("/dashboard/historial");
-    await page.getByPlaceholder("Buscar cliente...").fill(cliente);
+    await page.getByLabel("Buscar por nombre de cliente").fill(cliente);
     await expect(page.getByText(cliente).locator("visible=true").first()).toBeVisible();
     await captura(page, info, `historial-${tipo.ruta}`);
     expect(errores, "errores de JavaScript en la página").toEqual([]);

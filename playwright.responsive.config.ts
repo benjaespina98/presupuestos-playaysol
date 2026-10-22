@@ -6,10 +6,10 @@ import { defineConfig, devices } from "@playwright/test";
  * levanta el servidor en el puerto 3100 y ejecuta esto. Capturas en `capturas-locales/` (ignorada por git).
  *
  * Proyectos: 360x740, 390x844, 430x932, 768x1024, 1280x800 y 1366x768 en Chromium, más el iPhone 13 emulado
- * (Chromium y, si está instalado, WebKit). WebKit se instala con `npx playwright install webkit`.
+ * (Chromium y, si está instalado, WebKit), también con el teléfono en modo oscuro. WebKit se instala con `npx playwright install webkit`.
  */
 /** Uno o varios (separados por coma): recorrido, edicion, compartir, documentos. */
-const specs = (process.env.E2E_SPEC ?? "recorrido,edicion,compartir,documentos").split(",").map((s) => s.trim());
+const specs = (process.env.E2E_SPEC ?? "recorrido,edicion,compartir,documentos,autoprueba,gestos,estados,metricas").split(",").map((s) => s.trim());
 const solo = process.env.E2E_PROYECTOS?.split(",").map((s) => s.trim());
 
 const chrome = process.env.E2E_CHROMIUM_PATH ? { launchOptions: { executablePath: process.env.E2E_CHROMIUM_PATH } } : {};
@@ -25,6 +25,9 @@ const proyectos = [
   { name: "d-1366x768", use: escritorio(1366, 768) },
   { name: "iphone13-chromium", use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" as const, ...chrome } },
   { name: "iphone13-webkit", use: { ...devices["iPhone 13"] } },
+  // El teléfono en modo oscuro: el portal es sólo claro, tiene que verse igual (color-scheme: light).
+  { name: "iphone13-chromium-oscuro", use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" as const, colorScheme: "dark" as const, ...chrome } },
+  { name: "iphone13-webkit-oscuro", use: { ...devices["iPhone 13"], colorScheme: "dark" as const } },
 ];
 
 export default defineConfig({

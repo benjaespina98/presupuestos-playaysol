@@ -75,9 +75,14 @@ async function accion(page: Page, f: Locator, piscina: string, etiqueta: string)
   await page.getByRole("menuitem", { name: etiqueta, exact: true }).click();
 }
 
-/** "Mostrar desactivados", "Mostrar anulados" y "Modo consulta" están dentro del panel "Filtros": se abre para tocarlos. */
+/**
+ * "Mostrar desactivados", "Mostrar anulados" y "Modo consulta" están dentro de "Filtros" (la hoja, en el celular) o de
+ * "Más filtros" (el panel, en escritorio): se abre para tocarlos.
+ */
 async function abrirFiltros(page: Page) {
-  if (!(await page.getByRole("dialog", { name: "Filtros" }).isVisible())) await page.getByRole("button", { name: /^Filtros/ }).click();
+  const movil = (page.viewportSize()?.width ?? 1280) < 768;
+  const nombre = movil ? "Filtros" : "Más filtros";
+  if (!(await page.getByRole("dialog", { name: nombre }).isVisible())) await page.getByRole("button", { name: new RegExp(`^${nombre}`) }).click();
 }
 
 const abrirCatalogo = async (page: Page, nombre: string) => {
@@ -271,7 +276,7 @@ test("presupuesto anulado: etiqueta, toggle y campos deshabilitados", async ({ p
   const d = datosDe(info);
   await entrar(page);
   await page.goto("/dashboard/historial");
-  await page.getByPlaceholder("Buscar cliente...").fill(d.cliente);
+  await page.getByLabel("Buscar por nombre de cliente").fill(d.cliente);
   await expect(page.getByText(d.cliente).locator("visible=true").first()).toBeVisible();
   await captura(page, info, "historial-antes-de-anular");
 

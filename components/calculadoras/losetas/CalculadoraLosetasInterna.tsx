@@ -130,7 +130,7 @@ export function CalculadoraLosetasInterna({ largoPlano, anchoPlano }: { largoPla
                 <dt className="text-xs text-gray-500">Planas</dt>
                 <dd className="text-2xl font-bold tabular-nums text-gray-900">{r.planas}</dd>
               </div>
-              <div className="rounded-xl border border-marca/30 bg-marca/8 px-2 py-3">
+              <div className="rounded-xl border border-[#BDC9CD] bg-[#EAF0F2] px-2 py-3">
                 <dt className="text-xs text-marca">Total</dt>
                 <dd className="text-2xl font-bold tabular-nums text-marca">{r.total}</dd>
               </div>

@@ -47,9 +47,9 @@ const mat = (o: Partial<Material>): Material => ({
   ...o,
 });
 
-/** Abre el panel "Filtros" (con "Mostrar desactivados" y "Limpiar filtros") si no está abierto. */
+/** Abre el panel "Más filtros" (con "Mostrar desactivados" y "Limpiar filtros") si no está abierto. */
 async function abrirFiltros(user: ReturnType<typeof userEvent.setup>) {
-  if (!screen.queryByRole("dialog", { name: "Filtros" })) await user.click(screen.getByRole("button", { name: /^Filtros/ }));
+  if (!screen.queryByRole("dialog", { name: "Más filtros" })) await user.click(screen.getByRole("button", { name: /^Más filtros/ }));
 }
 
 describe("Proveedores", () => {
@@ -73,7 +73,7 @@ describe("Proveedores", () => {
     expect(screen.getByRole("link", { name: "+54 9 3534 00-0000" })).toHaveAttribute("href", "tel:+5493534000000");
   });
 
-  it("el chip 'Sin teléfono' deja sólo los que no lo tienen, y 'Limpiar filtros' lo deshace", async () => {
+  it("el filtro 'Sin teléfono' deja sólo los que no lo tienen, y 'Limpiar filtros' lo deshace", async () => {
     mocks.listarProveedores.mockResolvedValue({
       items: [prov(), prov({ id: "p2", nombre: "Vulcano", telefono: null })],
       error: null,
@@ -82,7 +82,8 @@ describe("Proveedores", () => {
     render(<ProveedoresPage />);
     await screen.findByText("Ranco");
 
-    await user.click(screen.getByRole("button", { name: /Sin teléfono/ }));
+    await user.click(screen.getByRole("button", { name: "Filtrar por teléfono" }));
+    await user.click(await screen.findByRole("radio", { name: /Sin teléfono/ }));
     expect(screen.queryByText("Ranco")).not.toBeInTheDocument();
     expect(screen.getByText("Vulcano")).toBeInTheDocument();
 

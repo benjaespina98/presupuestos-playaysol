@@ -2,12 +2,10 @@
 
 import { SECCIONES, type SeccionId } from "@/lib/domain/catalogo/secciones";
 import type { FiltroStock } from "@/lib/domain/catalogo/item";
-import { etiquetaCortaDeOrden, opcionesDeOrden, type ClaveOrden } from "@/lib/ordenar";
-import { Buscador } from "@/components/ui/FiltrosPlegables";
-import { BarraListado, BotonFiltros, Chip, ChipsFila, Interruptor, MenuSeleccion, type OpcionMenu } from "@/components/ui/BarraListado";
-
-// Se re-exportan para las pantallas que ya los importaban de acá.
-export { Chip, Interruptor };
+import { opcionesDeOrden, type ClaveOrden } from "@/lib/ordenar";
+import { PLANILLA_COSTOS_URL } from "@/lib/brand";
+import { IconTable } from "@/components/icons";
+import { BarraHerramientas, type SeccionFiltro } from "@/components/ui/BarraHerramientas";
 
 export interface FiltrosCatalogoProps {
   busqueda: string;
@@ -30,6 +28,11 @@ export interface FiltrosCatalogoProps {
   onModoConsulta: (v: boolean) => void;
   hayFiltros: boolean;
   onLimpiar: () => void;
+  /** Cuántos ítems da la lista con estos filtros. */
+  resultados: number;
+  contador?: React.ReactNode;
+  contadorDerecha?: React.ReactNode;
+  onAgregar?: () => void;
 }
 
 export const CLASE_SELECT =
@@ -38,9 +41,9 @@ export const CLASE_SELECT =
 const ORDENES = opcionesDeOrden(["nombre", "precio", "stock", "actualizado"]);
 
 /**
- * La barra del Catálogo de precios: UNA fila en escritorio (buscador · secciones en una fila de chips ·
- * stock · orden · "Filtros") y a lo sumo dos en el celular. "Filtros" abre un panel con "Mostrar desactivados",
- * "Modo consulta rápida" y "Limpiar filtros".
+ * La barra de Precios: buscador, Categoría, Stock (con sus contadores), Orden, "Mostrar desactivados" y "Modo
+ * consulta rápida", "Planilla de costos" y "Agregar ítem". Todo lo arma `BarraHerramientas` (la misma de todas
+ * las listas): en el celular, una fila con una hoja de filtros; en escritorio, una fila con menús.
  */
 export function FiltrosCatalogo({
   busqueda,
@@ -60,68 +63,61 @@ export function FiltrosCatalogo({
   onModoConsulta,
   hayFiltros,
   onLimpiar,
+  resultados,
+  contador,
+  contadorDerecha,
+  onAgregar,
 }: FiltrosCatalogoProps) {
-  // Sólo las secciones con algo adentro (más la elegida, para poder des-elegirla).
+  // Sólo las categorías con algo adentro (más la elegida, para poder des-elegirla).
   const seccionesVisibles = SECCIONES.filter((s) => (conteos.porSeccion[s.id] ?? 0) > 0 || s.id === seccion);
   const hayStock = conteosStock.disponible + conteosStock.agotado + conteosStock.negativo > 0 || stock !== "";
 
-  const opcionesStock: OpcionMenu<FiltroStock | "todos">[] = [
-    { id: "todos", etiqueta: "Todos", cantidad: totalStock },
-    { id: "disponible", etiqueta: "Con stock", cantidad: conteosStock.disponible, descripcion: "Más de 0 unidades" },
-    { id: "agotado", etiqueta: "Sin stock", cantidad: conteosStock.agotado, descripcion: "Exactamente 0 unidades" },
-    { id: "negativo", etiqueta: "Stock negativo", cantidad: conteosStock.negativo, tono: "aviso", descripcion: "Se vendió más de lo cargado" },
-    { id: "sin-control", etiqueta: "Sin control de stock", cantidad: conteosStock["sin-control"], descripcion: "Se piden a pedido" },
+  const secciones: SeccionFiltro[] = [
+    {
+      id: "categoria",
+      titulo: "Categoría",
+      opciones: [
+        { id: "", etiqueta: "Todas", cantidad: conteos.total },
+        ...seccionesVisibles.map((s) => ({ id: s.id as string, etiqueta: s.etiqueta, cantidad: conteos.porSeccion[s.id] ?? 0 })),
+      ],
+      valor: seccion,
+      onCambio: (v) => onSeccion(v as SeccionId | ""),
+    },
+    ...(hayStock
+      ? [
+          {
+            id: "stock",
+            titulo: "Stock",
+            opciones: [
+              { id: "", etiqueta: "Todos", cantidad: totalStock },
+              { id: "disponible", etiqueta: "Con stock", cantidad: conteosStock.disponible, descripcion: "Más de 0 unidades" },
+              { id: "agotado", etiqueta: "Sin stock", cantidad: conteosStock.agotado, descripcion: "Exactamente 0 unidades" },
+              { id: "negativo", etiqueta: "Stock negativo", cantidad: conteosStock.negativo, tono: "aviso" as const, descripcion: "Se vendió más de lo cargado" },
+              { id: "sin-control", etiqueta: "Sin control de stock", cantidad: conteosStock["sin-control"], descripcion: "Se piden a pedido" },
+            ],
+            valor: stock,
+            onCambio: (v: string) => onStock(v as FiltroStock | ""),
+          },
+        ]
+      : []),
   ];
-  const filtrosActivos = [incluirInactivos, modoConsulta].filter(Boolean).length;
 
   return (
-    <BarraListado
-      buscador={<Buscador valor={busqueda} onCambio={onBusqueda} placeholder="Buscar: Caribe 550, cerco…" etiqueta="Buscar en el catálogo" />}
-      menus={
-        <>
-          {hayStock && (
-            <MenuSeleccion
-              etiqueta="Filtrar por stock"
-              titulo="Stock"
-              opciones={opcionesStock}
-              valor={stock === "" ? "todos" : stock}
-              porDefecto="todos"
-              onCambio={(v) => onStock(v === "todos" ? "" : v)}
-            />
-          )}
-          <MenuSeleccion
-            etiqueta="Ordenar"
-            titulo="Orden"
-            opciones={ORDENES.map((o) => ({ id: o.id, etiqueta: o.etiqueta }))}
-            valor={orden}
-            porDefecto="defecto"
-            onCambio={onOrden}
-            textoBoton={etiquetaCortaDeOrden(orden)}
-          />
-        </>
-      }
-      chips={
-        <ChipsFila etiqueta="Filtrar por sección">
-          <Chip activo={seccion === ""} onClick={() => onSeccion("")} cantidad={conteos.total}>
-            Todo
-          </Chip>
-          {seccionesVisibles.map((s) => (
-            <Chip key={s.id} activo={seccion === s.id} onClick={() => onSeccion(seccion === s.id ? "" : s.id)} cantidad={conteos.porSeccion[s.id] ?? 0}>
-              {s.etiqueta}
-            </Chip>
-          ))}
-        </ChipsFila>
-      }
-      filtros={
-        <BotonFiltros contador={filtrosActivos} hayFiltros={hayFiltros} onLimpiar={onLimpiar}>
-          <Interruptor checked={incluirInactivos} onChange={onIncluirInactivos}>
-            Mostrar desactivados
-          </Interruptor>
-          <Interruptor checked={modoConsulta} onChange={onModoConsulta}>
-            Modo consulta rápida
-          </Interruptor>
-        </BotonFiltros>
-      }
+    <BarraHerramientas
+      buscador={{ valor: busqueda, onCambio: onBusqueda, placeholder: "Buscar ítem", etiqueta: "Buscar en el catálogo" }}
+      secciones={secciones}
+      orden={{ opciones: ORDENES, valor: orden, onCambio: onOrden }}
+      interruptores={[
+        { id: "inactivos", etiqueta: "Mostrar desactivados", valor: incluirInactivos, onCambio: onIncluirInactivos },
+        { id: "consulta", etiqueta: "Modo consulta rápida", valor: modoConsulta, onCambio: onModoConsulta },
+      ]}
+      acciones={[{ etiqueta: "Planilla de costos", texto: "Planilla", href: PLANILLA_COSTOS_URL, icono: <IconTable className="h-4 w-4" /> }]}
+      agregar={modoConsulta ? undefined : { etiqueta: "Agregar ítem", onClick: onAgregar }}
+      resultados={resultados}
+      contador={contador}
+      contadorDerecha={contadorDerecha}
+      hayFiltros={hayFiltros}
+      onLimpiar={onLimpiar}
     />
   );
 }

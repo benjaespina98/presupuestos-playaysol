@@ -3,7 +3,7 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { BotonFiltros, Chip, ChipsFila, Interruptor, MenuSeleccion, Toast } from "./BarraListado";
+import { Interruptor, MenuSeleccion, Toast } from "./BarraListado";
 
 describe("MenuSeleccion", () => {
   const opciones = [
@@ -57,49 +57,17 @@ describe("MenuSeleccion", () => {
   });
 });
 
-describe("BotonFiltros", () => {
-  it("muestra cuántos filtros hay activos y abre el panel con 'Limpiar filtros'", async () => {
-    const onLimpiar = vi.fn();
+describe("Interruptor", () => {
+  it("es un checkbox real con su etiqueta", async () => {
+    const alCambiar = vi.fn();
     const user = userEvent.setup();
     render(
-      <BotonFiltros contador={2} hayFiltros onLimpiar={onLimpiar}>
-        <Interruptor checked={false} onChange={() => {}}>
-          Mostrar desactivados
-        </Interruptor>
-      </BotonFiltros>
+      <Interruptor checked={false} onChange={alCambiar}>
+        Mostrar desactivados
+      </Interruptor>
     );
-    expect(screen.getByRole("button", { name: "Filtros" })).toHaveTextContent("2");
-    await user.click(screen.getByRole("button", { name: "Filtros" }));
-    const panel = await screen.findByRole("dialog", { name: "Filtros" });
-    expect(within(panel).getByLabelText("Mostrar desactivados")).toBeInTheDocument();
-    await user.click(within(panel).getByRole("button", { name: "Limpiar filtros" }));
-    expect(onLimpiar).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole("dialog", { name: "Filtros" })).not.toBeInTheDocument();
-  });
-
-  it("sin filtros no ofrece limpiar", async () => {
-    const user = userEvent.setup();
-    render(<BotonFiltros contador={0} hayFiltros={false} onLimpiar={() => {}} />);
-    await user.click(screen.getByRole("button", { name: "Filtros" }));
-    expect(screen.queryByRole("button", { name: "Limpiar filtros" })).not.toBeInTheDocument();
-  });
-});
-
-describe("ChipsFila y Chip", () => {
-  it("un chip marca si está activo y muestra su contador", () => {
-    render(
-      <ChipsFila etiqueta="Filtrar por rubro">
-        <Chip activo onClick={() => {}} cantidad={5}>
-          Áridos
-        </Chip>
-        <Chip activo={false} onClick={() => {}} cantidad={0}>
-          PVC
-        </Chip>
-      </ChipsFila>
-    );
-    const grupo = screen.getByRole("group", { name: "Filtrar por rubro" });
-    expect(within(grupo).getByRole("button", { name: /Áridos\s*5/ })).toHaveAttribute("aria-pressed", "true");
-    expect(within(grupo).getByRole("button", { name: /PVC\s*0/ })).toHaveAttribute("aria-pressed", "false");
+    await user.click(screen.getByLabelText("Mostrar desactivados"));
+    expect(alCambiar).toHaveBeenCalledWith(true);
   });
 });
 

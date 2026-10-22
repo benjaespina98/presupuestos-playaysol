@@ -61,7 +61,7 @@ export function MenuExportar({
       <div
         role="menu"
         aria-label="Opciones de exportación"
-        className="fixed inset-x-3 bottom-3 z-50 max-h-[85dvh] overflow-y-auto rounded-xl border border-gray-200 bg-[#FFFFFF] p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:z-30 sm:mt-1.5 sm:max-h-none sm:w-80 sm:rounded-lg sm:p-1.5 sm:shadow-xl"
+        className="fixed inset-x-3 bottom-3 z-50 pys-max-h-85 overflow-y-auto rounded-xl border border-gray-200 bg-[#FFFFFF] p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:z-30 sm:mt-1.5 sm:max-h-none sm:w-80 sm:rounded-lg sm:p-1.5 sm:shadow-xl"
       >
         <p className="px-2 pb-1 pt-1 text-[13px] text-gray-600">Sin precios ni teléfonos: listo para mandarle al proveedor.</p>
         <p className="px-3 pb-1 pt-1.5 text-[13px] font-semibold uppercase tracking-wide text-gray-500">PDF</p>

@@ -55,7 +55,7 @@ export function SelectorHoja({
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${id}-t`}
-        className="flex max-h-[80dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-[#FFFFFF] shadow-2xl sm:max-w-sm sm:rounded-2xl"
+        className="flex pys-max-h-80 w-full flex-col overflow-hidden rounded-t-2xl bg-[#FFFFFF] shadow-2xl sm:max-w-sm sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-3 border-b border-[#D9DFE3] px-5 py-2">

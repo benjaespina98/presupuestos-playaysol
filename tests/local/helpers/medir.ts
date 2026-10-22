@@ -19,7 +19,9 @@ export interface Medidas {
 }
 
 export async function medirPagina(page: Page): Promise<Medidas> {
-  return page.evaluate(() => {
+  // El ancho del DISPOSITIVO (configurado): con una página más ancha, el navegador del celular la achica y `innerWidth` la sigue.
+  const anchoDispositivo = page.viewportSize()?.width ?? 0;
+  return page.evaluate((anchoConfigurado) => {
     type RGBA = [number, number, number, number];
     // Los colores de Tailwind salen del navegador como oklch() o color(srgb ...): se pasan a rgba con un canvas.
     const lienzo = document.createElement("canvas");
@@ -169,7 +171,7 @@ export async function medirPagina(page: Page): Promise<Medidas> {
     });
 
     return {
-      scrollHorizontal: document.documentElement.scrollWidth > window.innerWidth + 1,
+      scrollHorizontal: document.documentElement.scrollWidth > (anchoConfigurado || window.innerWidth) + 1 || (!!window.visualViewport && window.visualViewport.scale < 0.98),
       textosChicos: [...textosChicos],
       textosDePlano,
       zonasChicas: [...zonasChicas],
@@ -177,5 +179,5 @@ export async function medirPagina(page: Page): Promise<Medidas> {
       cursores: [...cursores],
       controles,
     };
-  });
+  }, anchoDispositivo);
 }

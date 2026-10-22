@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Tailwind lee todo el repositorio buscando nombres de clases: la documentación y las pruebas hablan de clases (por ejemplo
+   `bg-marca/8`) y generaban reglas que ninguna pantalla usa. Sólo se escanea el código de la aplicación. */
+@source not "../docs";
+@source not "../tests";
+@source not "../supabase";
+@source not "../scripts";
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -111,12 +118,29 @@ button:not(:disabled):active,
 html {
   -webkit-tap-highlight-color: transparent;
 }
-/* Con la barra de filtros y el encabezado de la tabla fijos arriba (escritorio), lo que se lleva a la vista
-   (foco, scroll a un elemento) no queda tapado debajo de ellos. */
+/* Con la barra de herramientas (y, en escritorio, el encabezado de la tabla) fija arriba, lo que se lleva a la
+   vista (foco, scroll a un elemento) no queda tapado debajo de ella. */
+html {
+  scroll-padding-top: calc(var(--catalogo-barra, 0px) + 0.75rem);
+}
 @media (min-width: 1024px) {
   html {
     scroll-padding-top: calc(var(--catalogo-barra, 0px) + 3.25rem);
   }
+}
+
+/* Todo contenedor con scroll horizontal (clase "scroll-h"): sólo se mueve de costado; los gestos verticales
+   siguen moviendo la PÁGINA (nada de scroll vertical anidado), y el borde no le pasa el gesto a la página. */
+.scroll-h {
+  overflow-x: auto;
+  overflow-y: hidden;
+  touch-action: pan-x pan-y;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.scroll-h::-webkit-scrollbar {
+  display: none;
 }
 
 /* Combos con el mismo aspecto en todo el portal: flecha propia y uniforme (los nativos cambian
@@ -130,8 +154,11 @@ select:not([multiple]) {
   background-size: 1.1rem;
   padding-right: 2.5rem;
 }
-select:not([multiple]):disabled {
-  opacity: 0.6;
+select:not([multiple]):disabled,
+input:disabled,
+textarea:disabled {
+  background-color: #eef1f3;
+  color: var(--texto-deshabilitado);
 }
 
 /* En el celular, los campos de texto a 16 px: con menos, iOS hace zoom al tocarlos. */
@@ -214,4 +241,49 @@ body {
   border-color: #244b5a;
   background-color: #f1f6f8;
   box-shadow: 0 0 0 1px #244b5a;
+}
+
+/* Alturas con respaldo para los Safari de iOS anteriores a 15.4, que no conocen `dvh`: primero `vh`, y donde existe, `dvh`
+   (que descuenta la barra del navegador). Se usan en lugar de min-h-dvh / max-h-[80dvh] de Tailwind. */
+.pys-min-h-pantalla {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.pys-max-h-60 {
+  max-height: 60vh;
+  max-height: 60dvh;
+}
+.pys-max-h-80 {
+  max-height: 80vh;
+  max-height: 80dvh;
+}
+.pys-max-h-85 {
+  max-height: 85vh;
+  max-height: 85dvh;
+}
+
+/* Con `viewport-fit=cover` la página llega hasta los bordes del teléfono: en horizontal, la muesca (a los costados) no
+   debe tapar el contenido. En vertical y en el navegador estos valores son 0. */
+body {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Safari de iOS: botones y campos de texto con su aspecto nativo (degradados, sombras interiores, esquinas) cuando
+   tienen un fondo propio; y un campo deshabilitado pinta su texto con un color y una opacidad propios (texto casi
+   invisible). Se anula todo eso: lo que se ve es lo que dicen las clases. */
+button,
+[type="button"],
+[type="submit"],
+[type="reset"],
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+textarea {
+  -webkit-appearance: none;
+  appearance: none;
+}
+input:disabled,
+textarea:disabled,
+select:disabled {
+  -webkit-text-fill-color: currentColor;
+  opacity: 1;
 }

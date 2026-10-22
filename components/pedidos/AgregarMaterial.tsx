@@ -82,7 +82,7 @@ export function AgregarMaterial({
               className="min-h-12 w-full rounded-lg border bg-[#FFFFFF] px-3 text-base"
             />
           </div>
-          <ul role="listbox" aria-label="Materiales que se pueden agregar" className="max-h-64 divide-y divide-[#EEF1F3] overflow-y-auto rounded-xl border border-[#D9DFE3]">
+          <ul role="listbox" aria-label="Materiales que se pueden agregar" className="divide-y divide-[#EEF1F3] rounded-xl border border-[#D9DFE3]">
             {visibles.map((m) => {
               const actual = elegido?.id === m.id;
               return (

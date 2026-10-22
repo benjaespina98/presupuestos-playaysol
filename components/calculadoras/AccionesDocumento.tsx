@@ -72,7 +72,7 @@ export function AccionesDocumento({
           type="button"
           onClick={onDescargarWord}
           disabled={generandoWord}
-          className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#244B5A] px-4 text-sm font-medium text-[#244B5A] transition-colors hover:bg-[#244B5A]/5 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#244B5A] px-4 text-sm font-medium text-[#244B5A] transition-colors hover:bg-[#F1F6F8] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <IconFileText className="h-4 w-4" />
           {generandoWord ? "Generando..." : "Word"}
@@ -81,7 +81,7 @@ export function AccionesDocumento({
           type="button"
           onClick={onGenerarPdf}
           disabled={generandoPdf}
-          className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#244B5A] px-4 text-sm font-medium text-[#244B5A] transition-colors hover:bg-[#244B5A]/5 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#244B5A] px-4 text-sm font-medium text-[#244B5A] transition-colors hover:bg-[#F1F6F8] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <IconPrinter className="h-4 w-4" />
           {generandoPdf ? "Generando..." : "PDF"}
