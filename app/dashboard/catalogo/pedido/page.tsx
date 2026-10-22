@@ -36,7 +36,7 @@ import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
 import { MenuExportar } from "@/components/pedidos/MenuExportar";
 
 const CLASE_CAMPO =
-  "min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20";
+  "min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20";
 
 const BORDES: BordePedido[] = ["Losetas", "Deck"];
 
@@ -240,7 +240,7 @@ function PedidoContenido() {
   const hayAjustes = Object.keys(ajustes).length > 0;
 
   return (
-    <PanelPortal compacto>
+    <PanelPortal compacto amplio>
       <EncabezadoPagina
         titulo="Armar pedido"
         descripcion="Elegí el tamaño de la pileta y las opciones de la obra: te armo qué pedir, cuánto y a quién."
@@ -256,7 +256,7 @@ function PedidoContenido() {
       {!error && materiales !== null && materiales.length === 0 && (
         <div className="rounded-lg border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500">
           Todavía no hay materiales cargados.{" "}
-          <Link href="/dashboard/catalogo/materiales" className="font-medium text-[#1B3A5C] hover:underline">
+          <Link href="/dashboard/catalogo/materiales" className="font-medium text-[#244B5A] hover:underline">
             Cargalos en Materiales
           </Link>
           .
@@ -334,7 +334,7 @@ function PedidoContenido() {
                       onClick={() => cambiar({ borde: b })}
                       className={`min-h-11 flex-1 rounded-lg border px-3 text-sm font-medium transition-colors ${
                         params.borde === b
-                          ? "border-[#1B3A5C] bg-[#1B3A5C] text-white shadow-sm"
+                          ? "border-[#244B5A] bg-[#244B5A] text-white shadow-sm"
                           : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
                       }`}
                     >
@@ -368,7 +368,7 @@ function PedidoContenido() {
           {pedido.articulos === 0 ? (
             <div className="rounded-lg border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500">
               No hay cantidades cargadas para la pileta {params.tamano}. Se cargan en{" "}
-              <Link href="/dashboard/catalogo/materiales" className="font-medium text-[#1B3A5C] hover:underline">
+              <Link href="/dashboard/catalogo/materiales" className="font-medium text-[#244B5A] hover:underline">
                 Materiales
               </Link>
               .
@@ -403,7 +403,7 @@ function PedidoContenido() {
                   <button
                     type="button"
                     onClick={() => setAjustes({})}
-                    className="min-h-11 rounded-lg px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                    className="min-h-11 rounded-lg px-3 text-sm font-medium text-[#244B5A] hover:bg-[#244B5A]/8"
                   >
                     Restablecer cantidades
                   </button>
@@ -489,7 +489,7 @@ function PedidoContenido() {
                           type="button"
                           onClick={() => ajustar(m.id, null)}
                           aria-label={`Volver a poner ${m.nombre}`}
-                          className="min-h-11 rounded-md px-3 font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+                          className="min-h-11 rounded-md px-3 font-medium text-[#244B5A] hover:bg-[#244B5A]/8"
                         >
                           Volver a poner
                         </button>
@@ -521,7 +521,7 @@ function Resumen({ etiqueta, valor, nota }: { etiqueta: string; valor: string; n
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
       <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{etiqueta}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums text-[#1B3A5C]">{valor}</p>
+      <p className="mt-1 text-2xl font-semibold tabular-nums text-[#244B5A]">{valor}</p>
       {nota && <p className="mt-1 text-xs text-amber-700">{nota}</p>}
     </div>
   );
@@ -545,8 +545,8 @@ function Accion({
       disabled={deshabilitado}
       className={`min-h-11 rounded-lg px-4 text-sm font-semibold shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
         principal
-          ? "bg-[#1B3A5C] text-white hover:bg-[#142c46]"
-          : "border border-gray-200 bg-white text-[#1B3A5C] hover:border-gray-300 hover:bg-gray-50"
+          ? "bg-[#244B5A] text-white hover:bg-marca-oscuro"
+          : "border border-gray-200 bg-white text-[#244B5A] hover:border-gray-300 hover:bg-gray-50"
       }`}
     >
       {children}
@@ -574,7 +574,7 @@ function GrupoTabla({
     <section aria-label={`Pedido a ${grupo.nombre}`} className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
       <header className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-gray-200 bg-[#F4F8F9] px-4 py-2.5">
         <div className="mr-auto min-w-0">
-          <h2 className="text-sm font-bold text-[#1B3A5C]">{grupo.nombre}</h2>
+          <h2 className="text-sm font-bold text-[#244B5A]">{grupo.nombre}</h2>
           {grupo.telefono && <p className="text-xs text-gray-500">{grupo.telefono}</p>}
         </div>
         <p className="text-sm tabular-nums text-gray-700">
@@ -586,7 +586,7 @@ function GrupoTabla({
           data-print-hide=""
           onClick={onCopiar}
           aria-label={`Copiar el pedido a ${grupo.nombre}`}
-          className="min-h-11 rounded-md px-3 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+          className="min-h-11 rounded-md px-3 text-sm font-medium text-[#244B5A] hover:bg-[#244B5A]/8"
         >
           {copiado ? "¡Copiado!" : "Copiar"}
         </button>
@@ -636,7 +636,7 @@ function GrupoTabla({
                     }
                     onAjustar(l.material.id, n === l.calculada ? null : { cantidad: n });
                   }}
-                  className={`min-h-10 w-24 rounded-md border px-2 py-1.5 text-sm tabular-nums focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 ${
+                  className={`min-h-11 w-24 rounded-md border px-2 py-1.5 text-sm tabular-nums focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 ${
                     ajustada ? "border-amber-300 bg-amber-50" : "border-gray-200 bg-white"
                   }`}
                 />

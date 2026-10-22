@@ -61,7 +61,7 @@ export function AccionesDocumento({
         <button
           type="submit"
           disabled={guardando}
-          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#1B3A5C] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#244B5A] px-4 text-sm font-semibold text-white transition-colors hover:bg-marca-oscuro disabled:cursor-not-allowed disabled:opacity-50"
         >
           <IconCloudUpload className="h-4 w-4" />
           {guardando ? "Guardando..." : "Guardar en la nube"}
@@ -72,7 +72,7 @@ export function AccionesDocumento({
           type="button"
           onClick={onDescargarWord}
           disabled={generandoWord}
-          className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#1B3A5C] px-4 text-sm font-medium text-[#1B3A5C] transition-colors hover:bg-[#1B3A5C]/5 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#244B5A] px-4 text-sm font-medium text-[#244B5A] transition-colors hover:bg-[#244B5A]/5 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <IconFileText className="h-4 w-4" />
           {generandoWord ? "Generando..." : "Word"}
@@ -81,7 +81,7 @@ export function AccionesDocumento({
           type="button"
           onClick={onGenerarPdf}
           disabled={generandoPdf}
-          className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#1B3A5C] px-4 text-sm font-medium text-[#1B3A5C] transition-colors hover:bg-[#1B3A5C]/5 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#244B5A] px-4 text-sm font-medium text-[#244B5A] transition-colors hover:bg-[#244B5A]/5 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <IconPrinter className="h-4 w-4" />
           {generandoPdf ? "Generando..." : "PDF"}

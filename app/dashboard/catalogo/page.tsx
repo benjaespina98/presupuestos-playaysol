@@ -21,10 +21,12 @@ import { formatARS } from "@/lib/format/ars";
 import { formatFechaRelativa, formatFechaCompleta } from "@/lib/format/fecha";
 import { copiarAlPortapapeles } from "@/lib/clipboard";
 import { PanelPortal } from "@/components/PanelPortal";
+import { useEstadoPersistente } from "@/lib/useEstadoPersistente";
 import { IconEdit, IconCopy, IconPlus, IconTable } from "@/components/icons";
 import { LOCAL_STOCK, PLANILLA_COSTOS_URL } from "@/lib/brand";
 import { FiltrosCatalogo } from "@/components/catalogo/FiltrosCatalogo";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
+import { botonDe } from "@/components/ui/botones";
 import { EditarItemModal } from "@/components/catalogo/EditarItemModal";
 import { CrearItemModal } from "@/components/catalogo/CrearItemModal";
 
@@ -34,19 +36,28 @@ import { CrearItemModal } from "@/components/catalogo/CrearItemModal";
  * Stock · Actualizado · acción. Sin la columna de stock cuando ningún ítem lo
  * lleva. Son anchos fijos (rem) y el producto toma el resto.
  */
-const COLUMNAS_CON_STOCK = "md:grid-cols-[minmax(0,1fr)_9.5rem_4.5rem_17rem_6.5rem_3.5rem]";
+const COLUMNAS_CON_STOCK = "md:grid-cols-[minmax(0,1fr)_8.5rem_4rem_14rem_6rem_3rem]";
 const COLUMNAS_SIN_STOCK = "md:grid-cols-[minmax(0,1fr)_9.5rem_4.5rem_6.5rem_3.5rem]";
 
 export default function CatalogoPage() {
   const [items, setItems] = useState<ItemCatalogo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busqueda, setBusqueda] = useState("");
-  const [seccion, setSeccion] = useState<SeccionId | "">("");
-  const [stock, setStock] = useState<FiltroStock | "">("");
-  const [incluirInactivos, setIncluirInactivos] = useState(false);
+  // La búsqueda, los filtros y el modo consulta se conservan al abrir otra pantalla y volver.
+  const [prefs, setPrefs] = useEstadoPersistente<{
+    busqueda: string;
+    seccion: SeccionId | "";
+    stock: FiltroStock | "";
+    incluirInactivos: boolean;
+    modoConsulta: boolean;
+  }>("catalogo:filtros", { busqueda: "", seccion: "", stock: "", incluirInactivos: false, modoConsulta: false });
+  const { busqueda, seccion, stock, incluirInactivos, modoConsulta } = prefs;
+  const setBusqueda = (busqueda: string) => setPrefs({ ...prefs, busqueda });
+  const setSeccion = (seccion: SeccionId | "") => setPrefs({ ...prefs, seccion });
+  const setStock = (stock: FiltroStock | "") => setPrefs({ ...prefs, stock });
+  const setIncluirInactivos = (incluirInactivos: boolean) => setPrefs({ ...prefs, incluirInactivos });
+  const setModoConsulta = (modoConsulta: boolean) => setPrefs({ ...prefs, modoConsulta });
   const [errorStock, setErrorStock] = useState<string | null>(null);
   const [avisoStock, setAvisoStock] = useState<string | null>(null);
-  const [modoConsulta, setModoConsulta] = useState(false);
   const [editando, setEditando] = useState<ItemCatalogo | null>(null);
   const [creando, setCreando] = useState(false);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
@@ -88,10 +99,7 @@ export default function CatalogoPage() {
   const hayFiltros = !!(busqueda || seccion || stock || incluirInactivos);
 
   function limpiarFiltros() {
-    setBusqueda("");
-    setSeccion("");
-    setStock("");
-    setIncluirInactivos(false);
+    setPrefs({ ...prefs, busqueda: "", seccion: "", stock: "", incluirInactivos: false });
   }
 
   function abrirEdicion(item: ItemCatalogo) {
@@ -142,7 +150,7 @@ export default function CatalogoPage() {
   }
 
   return (
-    <PanelPortal compacto>
+    <PanelPortal compacto amplio>
       <EncabezadoPagina
         titulo="Precios de venta"
         descripcion="Lo que se le cobra al cliente en cada presupuesto: precios y descripciones compartidos por todo el equipo."
@@ -151,7 +159,7 @@ export default function CatalogoPage() {
           href={PLANILLA_COSTOS_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex min-h-11 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-[#1B3A5C] shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50"
+          className="flex min-h-11 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-[#244B5A] shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50"
         >
           <IconTable className="h-4 w-4" />
           Planilla de costos
@@ -160,7 +168,7 @@ export default function CatalogoPage() {
           <button
             type="button"
             onClick={() => setCreando(true)}
-            className="flex min-h-11 items-center gap-1.5 rounded-lg bg-[#1B3A5C] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#142c46]"
+            className="flex min-h-11 items-center gap-1.5 rounded-lg bg-[#244B5A] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-marca-oscuro"
           >
             <IconPlus className="h-4 w-4" />
             Agregar ítem
@@ -200,7 +208,7 @@ export default function CatalogoPage() {
 
       {hayStockEnCatalogo && (
         <p className="mb-3 rounded-md bg-[#EEF2F6] px-4 py-2.5 text-sm text-gray-700">
-          <span className="font-semibold text-[#1B3A5C]">Stock · {LOCAL_STOCK}:</span>{" "}
+          <span className="font-semibold text-[#244B5A]">Stock · {LOCAL_STOCK}:</span>{" "}
           {resumen.unidades === 0
             ? "todavía no hay unidades cargadas"
             : `${resumen.unidades} ${resumen.unidades === 1 ? "unidad" : "unidades"} en ${resumen.conUnidades} ${resumen.conUnidades === 1 ? "modelo" : "modelos"}`}
@@ -288,6 +296,7 @@ export default function CatalogoPage() {
           item={editando}
           onClose={() => setEditando(null)}
           onGuardado={guardarEdicion}
+          onStockCambio={stockCambio}
         />
       )}
 
@@ -300,8 +309,8 @@ export default function CatalogoPage() {
 function CategoriaHeader({ titulo, cantidad }: { titulo: string; cantidad: number }) {
   return (
     <div className="flex items-center gap-2.5 border-b border-gray-200 bg-[#F4F8F9] px-4 py-2.5">
-      <span aria-hidden="true" className="h-4 w-1 shrink-0 rounded-full bg-[#1B3A5C]" />
-      <h3 className="text-xs font-bold uppercase tracking-wide text-[#1B3A5C]">{titulo}</h3>
+      <span aria-hidden="true" className="h-4 w-1 shrink-0 rounded-full bg-[#244B5A]" />
+      <h3 className="text-xs font-bold uppercase tracking-wide text-[#244B5A]">{titulo}</h3>
       <span className="text-xs text-gray-400">({cantidad})</span>
     </div>
   );
@@ -348,13 +357,13 @@ function FilaItem({
       </p>
 
       {conStock && (
-        <div className="col-start-1 row-start-3 md:col-auto md:row-auto md:text-center">
+        <div className="col-span-2 col-start-1 row-start-3 md:col-auto md:col-span-1 md:row-auto md:text-center">
           <StockControles item={item} editable={!modoConsulta} onResultado={onStockCambio} />
         </div>
       )}
 
-      <p className="col-start-1 row-start-4 text-xs text-gray-400 md:col-auto md:row-auto md:text-sm md:text-gray-500">
-        <span className="md:hidden">Actualizado </span>
+      <p className="col-start-2 row-start-2 justify-self-end text-xs text-gray-400 md:col-auto md:row-auto md:justify-self-auto md:text-sm md:text-gray-500">
+        <span className="sr-only md:hidden">Actualizado </span>
         <FechaActualizacion updatedAt={item.updated_at} />
       </p>
 
@@ -363,7 +372,7 @@ function FilaItem({
           <button
             type="button"
             onClick={onCopiar}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+            className={botonDe("suave", "px-3")}
           >
             <IconCopy className="h-4 w-4" />
             {copiado ? "¡Copiado!" : "Copiar"}
@@ -374,7 +383,7 @@ function FilaItem({
             onClick={onEditar}
             aria-label="Editar"
             title="Editar"
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-[#1B3A5C] hover:bg-[#1B3A5C]/8"
+            className={botonDe("secundario", "w-11 px-0")}
           >
             <IconEdit className="h-[18px] w-[18px]" />
           </button>

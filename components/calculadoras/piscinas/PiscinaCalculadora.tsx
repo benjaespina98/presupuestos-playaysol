@@ -513,7 +513,7 @@ export function PiscinaCalculadora({
             errors={errors}
             name="detalle"
             label="Dimensión piscina"
-            hint="Se completa sola con Largo/Ancho, con el texto base de siempre. Reemplazá lo que está entre corchetes (profundidad, cama de agua, escalera) por la medida real de esta obra."
+            hint="Se completa con Largo y Ancho. Reemplazá lo que está entre [corchetes]."
             multiline
             rows={6}
           />
@@ -536,7 +536,7 @@ export function PiscinaCalculadora({
                 id="lista-precios"
                 value={listaElegida}
                 onChange={(e) => elegirLista(e.target.value)}
-                className="min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-[#1B3A5C] focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20"
+                className="min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20"
               >
                 <option value="">Elegir tamaño o modelo…</option>
                 {listasDePrecios.map((l) => (
@@ -635,7 +635,7 @@ export function PiscinaCalculadora({
               onAgregarFotos(e.target.files);
               e.target.value = "";
             }}
-            className="block w-full text-sm text-gray-700 file:mr-3 file:min-h-11 file:rounded-md file:border-0 file:bg-[#1B3A5C] file:px-4 file:text-sm file:font-medium file:text-white"
+            className="block w-full text-sm text-gray-700 file:mr-3 file:min-h-11 file:rounded-md file:border-0 file:bg-[#244B5A] file:px-4 file:text-sm file:font-medium file:text-white"
           />
           {fotos.length > 0 && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

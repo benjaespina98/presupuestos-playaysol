@@ -49,6 +49,7 @@ const mat = (o: Partial<Material>): Material => ({
 
 describe("Proveedores", () => {
   beforeEach(() => {
+    window.sessionStorage.clear();
     Object.values(mocks).forEach((m) => m.mockReset());
     mocks.listarMateriales.mockResolvedValue({ items: [mat({}), mat({ id: "m2", nombre: "Hierro" })], error: null });
   });

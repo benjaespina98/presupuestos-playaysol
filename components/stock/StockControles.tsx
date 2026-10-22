@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { llevaStock, stockNegativo, textoStock, type ItemCatalogo } from "@/lib/domain/catalogo/item";
 import type { ResultadoStock } from "@/lib/domain/stock/movimientos";
+import { botonDe } from "@/components/ui/botones";
+import { MenuAcciones } from "@/components/ui/MenuAcciones";
 import { DialogoAjuste } from "./DialogoAjuste";
 import { DialogoMovimiento } from "./DialogoMovimiento";
 import { HistorialStock } from "./HistorialStock";
@@ -37,15 +39,16 @@ export function StockControles({
   const sinUnidades = item.stock <= 0;
 
   const numero = (
-    <span className="inline-flex flex-col items-center gap-0.5">
+    <span className="inline-flex items-center gap-2 md:flex-col md:gap-0.5">
       <span
         title={negativo ? `stock negativo: ${item.stock}` : textoStock(item.stock)}
-        className={`inline-flex min-w-[2.75rem] justify-center rounded-full px-2.5 py-1 text-sm font-semibold tabular-nums ${
-          sinUnidades ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"
+        className={`inline-flex min-w-[3rem] justify-center rounded-full px-3 py-1 text-base font-bold tabular-nums ring-1 ring-inset ${
+          sinUnidades ? "bg-red-50 text-red-700 ring-red-200" : "bg-green-50 text-green-700 ring-green-200"
         }`}
       >
         {negativo ? `−${Math.abs(item.stock)}` : item.stock}
       </span>
+      {!negativo && <span className="text-xs text-gray-500 md:sr-only">en stock</span>}
       {negativo && (
         <span role="status" className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700">
           <span aria-hidden="true">⚠</span> Stock negativo
@@ -56,25 +59,28 @@ export function StockControles({
 
   if (!editable) return numero;
 
-  const boton =
-    "inline-flex min-h-11 items-center justify-center rounded-md border border-gray-200 px-2.5 text-sm font-medium text-[#1B3A5C] hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1B3A5C]";
-
+  // Una acción principal a la vista (Venta, la del día a día) y las demás en el menú "⋯": la fila
+  // no crece. El menú reúne Ingreso, Ajustar conteo e Historial.
   return (
-    <div className="flex flex-wrap items-center gap-1.5 md:justify-center">
+    <div className="flex items-center justify-between gap-2 md:justify-center">
       {numero}
-      <div className="flex flex-wrap items-center gap-1.5">
-        <button type="button" aria-label={`Ingreso de ${nombre}`} onClick={() => setDialogo("ingreso")} className={boton}>
-          Ingreso
-        </button>
-        <button type="button" aria-label={`Venta de ${nombre}`} onClick={() => setDialogo("venta")} className={boton}>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          aria-label={`Venta de ${nombre}`}
+          onClick={() => setDialogo("venta")}
+          className={botonDe("primario", "min-w-24 px-4")}
+        >
           Venta
         </button>
-        <button type="button" aria-label={`Ajustar conteo de ${nombre}`} onClick={() => setDialogo("ajuste")} className={boton}>
-          Ajustar conteo
-        </button>
-        <button type="button" aria-label={`Historial de stock de ${nombre}`} onClick={() => setDialogo("historial")} className={boton}>
-          Historial
-        </button>
+        <MenuAcciones
+          etiqueta={`Más acciones de ${nombre}`}
+          acciones={[
+            { etiqueta: "Ingreso", onClick: () => setDialogo("ingreso") },
+            { etiqueta: "Ajustar conteo", onClick: () => setDialogo("ajuste") },
+            { etiqueta: "Historial", onClick: () => setDialogo("historial") },
+          ]}
+        />
       </div>
 
       {(dialogo === "ingreso" || dialogo === "venta") && (

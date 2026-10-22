@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useZodForm } from "@/lib/forms/useZodForm";
 import { MoneyField, NumberField, TextField, SelectField, CheckboxField } from "@/components/form";
 import { crearItemCatalogo } from "@/lib/catalogo";
 import { CATEGORIAS, UNIDADES } from "@/lib/domain/catalogo/categorias";
 import type { ItemCatalogo } from "@/lib/domain/catalogo/item";
 import { MODELOS_INDUSPLAST } from "@/lib/domain/catalogo/listas";
+import { Hoja, PieAcciones } from "@/components/ui/Hoja";
 import { NuevoItemSchema, nuevoItemFormVacio, aNuevoItem, datosDeAlta, type NuevoItemForm } from "./nuevo-item.schema";
 import { TITULOS_TIPO } from "./titulos-tipo";
 
@@ -51,6 +52,7 @@ export function CrearItemModal({
   onClose: () => void;
   onCreado: (item: ItemCatalogo) => void;
 }) {
+  const formId = useId();
   const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
   const {
     control,
@@ -58,7 +60,7 @@ export function CrearItemModal({
     register,
     handleSubmit,
     setError,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useZodForm(NuevoItemSchema, { defaultValues: nuevoItemFormVacio() });
 
   const llevaStock = watch("llevaStock");
@@ -94,25 +96,23 @@ export function CrearItemModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#1B3A5C]/45 p-4"
-      onClick={isSubmitting ? undefined : onClose}
+    <Hoja
+      titulo="Agregar ítem al catálogo"
+      subtitulo="Queda disponible para todo el equipo en la calculadora que elijas."
+      ocupado={isSubmitting}
+      hayCambios={isDirty}
+      ancho="lg"
+      onCerrar={onClose}
+      aviso={
+        errorGuardado ? (
+          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {errorGuardado}
+          </p>
+        ) : undefined
+      }
+      pie={<PieAcciones formId={formId} guardando={isSubmitting} etiqueta="Agregar al catálogo" etiquetaGuardando="Agregando..." />}
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="crear-item-titulo"
-        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-6 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 id="crear-item-titulo" className="mb-1 text-base font-bold text-[#1B3A5C]">
-          Agregar ítem al catálogo
-        </h2>
-        <p className="mb-4 text-xs text-gray-500">
-          Queda disponible para todo el equipo en la calculadora que elijas.
-        </p>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+      <form id={formId} onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           <SelectField register={register} errors={errors} name="alta" label="¿Qué vas a agregar?" options={OPCIONES_ALTA} />
 
           {alta === "hormigon" && (
@@ -158,7 +158,7 @@ export function CrearItemModal({
                 name="clave"
                 label="Clave (opcional)"
                 placeholder="Se arma sola con la descripción"
-                hint="Identificador interno, sin espacios ni tildes. Si la dejás vacía se arma sola; una vez creado el ítem no se puede cambiar."
+                hint="Interna, sin espacios ni tildes; no se puede cambiar después."
               />
             </>
           )}
@@ -180,39 +180,16 @@ export function CrearItemModal({
               errors={errors}
               name="llevaStock"
               label="Llevar stock"
-              hint="Para artículos que se guardan en el local (como las piscinas de fibra). Los que se piden a pedido no lo llevan."
+              hint="Para lo que se guarda en el local, como las piscinas de fibra."
             />
             {llevaStock && (
               <p className="text-xs text-gray-500">Arranca en 0 unidades. Cargá lo que hay con «Ingreso» desde la lista del catálogo.</p>
             )}
           </div>
-          <CheckboxField register={register} errors={errors} name="activo" label="Activo" />
-
-          {errorGuardado && (
-            <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-              {errorGuardado}
-            </p>
-          )}
-
-          <div className="flex flex-col gap-2 pt-2 sm:flex-row-reverse">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="min-h-11 w-full rounded-md bg-[#1B3A5C] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B3A5C] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
-            >
-              {isSubmitting ? "Agregando..." : "Agregar al catálogo"}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="min-h-11 w-full rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
-            >
-              Cancelar
-            </button>
+          <div className="rounded-xl border border-gray-200 px-4 py-1">
+            <CheckboxField register={register} errors={errors} name="activo" label="Activo" hint="Desactivado: no aparece en presupuestos nuevos." />
           </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Hoja>
   );
 }

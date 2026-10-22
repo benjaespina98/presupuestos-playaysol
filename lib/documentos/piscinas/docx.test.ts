@@ -1,3 +1,4 @@
+import JSZip from "jszip";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PresupuestoV1 } from "@/lib/domain/presupuesto/v1";
 import { crearLinea } from "@/lib/domain/precios/tipos";
@@ -35,6 +36,16 @@ describe("generarDocxPiscinas", () => {
     const blob = await generarDocxPiscinas(snapshotBase(), [], TEXTOS_POR_DEFECTO_PISCINAS);
     const bytes = new Uint8Array(await blob.arrayBuffer());
     expect([bytes[0], bytes[1]]).toEqual([0x50, 0x4b]);
+  });
+
+  it("el pie de la empresa va después de 'Modelos de referencia' (es lo último del documento)", async () => {
+    const blob = await generarDocxPiscinas(snapshotBase(), [], TEXTOS_POR_DEFECTO_PISCINAS);
+    const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+    const xml = await zip.file("word/document.xml")!.async("string");
+    const modelos = xml.indexOf("Modelos de referencia");
+    const instagram = xml.lastIndexOf("Instagram: ");
+    expect(modelos).toBeGreaterThan(-1);
+    expect(instagram).toBeGreaterThan(modelos);
   });
 
   it("pide las fotos de referencia del opcional (cerco perimetral) además del logo y las generales", async () => {

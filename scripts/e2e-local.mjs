@@ -82,6 +82,46 @@ function matarArbol(proc) {
   else proc.kill("SIGTERM");
 }
 
+/** Casos difíciles (todo inventado) para comparar el portal, /api/sheets/catalogo y el script de la planilla. */
+const SQL_CASOS_SYNC = `
+  insert into public.proveedores (nombre, rubro, contacto, telefono, forma_pago, plazo, notas, activo) values
+    ($$SYNC Ñandú & Hijos S.R.L.$$, $$Corralón$$, $$Müller "el Gringo"$$, $$+54 9 3534 11-2233 / +54 9 3534 44-5566$$, $$Contado$$, $$10-15 días$$, $$Línea 1
+Línea 2 con "comillas" y 'simples'$$, true),
+    ($$=HYPERLINK("http://sitio-ajeno.test","click")$$, $$+cmd$$, $$-1+1$$, $$@SUM(1)$$, null, null, null, true),
+    ($$SYNC Proveedor desactivado$$, null, null, null, null, null, null, false);
+
+  insert into public.materiales (nombre, proveedor_id, unidad, precio, precio_actualizado, rubro, aplica, usd_ref, notas, cantidades, activo)
+    select $$SYNC Material con decimales$$, p.id, $$m2$$, 1234.56, '2026-10-05', $$Materiales$$, $$Siempre$$, null, $$Nota con salto
+de línea y "comillas"$$, '{"8x4": 12}'::jsonb, true from public.proveedores p where p.nombre like 'SYNC Ñandú%';
+  insert into public.materiales (nombre, proveedor_id, unidad, precio, rubro, usd_ref, cantidades, activo)
+    select $$SYNC Material a confirmar$$, p.id, $$unidad$$, null, $$Materiales$$, null, '{}'::jsonb, true from public.proveedores p where p.nombre like 'SYNC Ñandú%';
+  insert into public.materiales (nombre, unidad, precio, rubro, usd_ref, cantidades, activo) values
+    ($$SYNC Material en dólares$$, $$unidad$$, null, $$Hidráulica$$, 114.68, '{}'::jsonb, true),
+    ($$SYNC Material con precio enorme$$, $$unidad$$, 99999999999.99, $$Materiales$$, null, '{}'::jsonb, true),
+    ($$=IMPORTXML("https://sitio-ajeno.test","//a")$$, $$unidad$$, 10, $$Materiales$$, null, '{}'::jsonb, true),
+    ($$SYNC Material desactivado$$, $$unidad$$, 50, $$Materiales$$, null, '{}'::jsonb, false);
+
+  insert into public.catalogo_items (tipo, clave, descripcion, precio, categoria, unidad, activo) values
+    ('cercos', 'synctest_decimal', $$SYNC Precio con decimales$$, 1234.56, 'Cercos', 'ml', true),
+    ('cercos', 'synctest_acotizar', $$SYNC Ítem a cotizar$$, null, 'Cercos', 'ml', true),
+    ('cercos', 'synctest_enorme', $$SYNC Precio enorme$$, 9999999999.99, 'Cercos', 'obra', true),
+    ('cercos', 'synctest_tildes', $$SYNC Ñandú — "comillas" & 'simples' <b>html</b> ¿qué? ¡árbol! 100%$$, 99, 'Cercos', 'ml', true),
+    ('cercos', 'synctest_salto', $$SYNC Línea 1
+Línea 2 con "comillas"$$, 10, 'Cercos', 'ml', true),
+    ('cercos', 'synctest_formula1', $$=IMPORTXML("https://sitio-ajeno.test","//a")$$, 10, 'Cercos', 'ml', true),
+    ('cercos', 'synctest_formula2', $$+54 9 3534 cmd$$, 10, 'Cercos', 'ml', true),
+    ('cercos', 'synctest_formula3', $$-1+1$$, 10, 'Cercos', 'ml', true),
+    ('cercos', 'synctest_formula4', $$@SUM(1)$$, 10, 'Cercos', 'ml', true),
+    ('cercos', 'synctest_desactivado', $$SYNC Ítem desactivado$$, 500, 'Cercos', 'ml', false),
+    ('cercos', 'synctest_stock_null', $$SYNC Sin control de stock$$, 100, 'Cercos', 'ml', true),
+    ('cercos', 'synctest_stock_cero', $$SYNC Stock en cero$$, 100, 'Cercos', 'ml', true),
+    ('cercos', 'synctest_stock_neg', $$SYNC Stock negativo$$, 100, 'Cercos', 'ml', true);
+  set session_replication_role = replica;
+  update public.catalogo_items set stock = 0 where clave = 'synctest_stock_cero';
+  update public.catalogo_items set stock = -3 where clave = 'synctest_stock_neg';
+  set session_replication_role = origin;
+`;
+
 async function main() {
   const k = claves();
   const problema = validarUrlLocal(k.API_URL);
@@ -135,14 +175,43 @@ async function main() {
   });
   if (mat.error) fallar(`No pude crear el material de prueba: ${mat.error.message}`);
 
+  // Un catálogo de materiales de prueba más realista (nombres inventados): sirve para medir cuántas filas entran por pantalla.
+  const proveedoresDemo = ["Distribuidora Norte E2E", "Pileta Mayorista E2E", "Ferretería Sur E2E"];
+  for (const [i, nombre] of proveedoresDemo.entries()) {
+    const pr = await admin.from("proveedores").insert({ nombre }).select("id").single();
+    if (pr.error) fallar(`No pude crear el proveedor de prueba: ${pr.error.message}`);
+    for (let j = 1; j <= 4; j++) {
+      const m = await admin.from("materiales").insert({
+        nombre: `Material de prueba ${i + 1}-${j}`,
+        proveedor_id: pr.data.id,
+        unidad: j % 2 ? "unidad" : "m2",
+        precio: 1000 * (i + 1) * j + 0.5,
+        aplica: "Siempre",
+        cantidades: {},
+      });
+      if (m.error) fallar(`No pude crear el material de prueba: ${m.error.message}`);
+    }
+  }
+
   // Un ítem que no lleva stock existe en el seed (ITEM_SIN_STOCK).
   const sinStock = await admin.from("catalogo_items").select("stock").eq("clave", ITEM_SIN_STOCK.clave).limit(1).single();
   if (sinStock.error || sinStock.data.stock !== null) fallar("El ítem sin stock de la prueba no está como se esperaba en el seed.");
+
+  // Casos difíciles para la prueba de sincronización con la planilla (sólo con `node scripts/e2e-local.mjs sync`).
+  if (process.argv[2] === "sync") psqlLocal(SQL_CASOS_SYNC);
+
+  // Token de la sincronización con la planilla: se genera acá, vive sólo en el entorno de esta prueba.
+  const tokenSync = randomBytes(24).toString("hex");
 
   const entorno = {
     ...process.env,
     NEXT_PUBLIC_SUPABASE_URL: k.API_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: k.ANON_KEY,
+    // El endpoint /api/sheets/catalogo lee con la clave de servicio de la base LOCAL.
+    SUPABASE_SERVICE_ROLE_KEY: k.SERVICE_ROLE_KEY,
+    SHEETS_SYNC_TOKEN: tokenSync,
+    E2E_SYNC_TOKEN: tokenSync,
+    E2E_LOCAL_SERVICE_KEY: k.SERVICE_ROLE_KEY,
     E2E_LOCAL_EMAIL: email,
     E2E_LOCAL_PASSWORD: password,
     E2E_LOCAL_API: k.API_URL,
@@ -153,7 +222,8 @@ async function main() {
   let codigo = 1;
   try {
     await esperarServidor();
-    const prueba = spawn("npx playwright test -c playwright.local.config.ts", { env: entorno, shell: true, stdio: "inherit" });
+    const spec = process.argv[2];
+    const prueba = spawn("npx playwright test -c playwright.local.config.ts", { env: { ...entorno, ...(spec ? { E2E_SPEC: spec } : {}) }, shell: true, stdio: "inherit" });
     codigo = await new Promise((resolve) => prueba.on("exit", (c) => resolve(c ?? 1)));
   } finally {
     matarArbol(servidor);

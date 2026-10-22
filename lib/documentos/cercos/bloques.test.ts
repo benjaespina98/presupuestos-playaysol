@@ -75,4 +75,8 @@ describe("armarBloquesCerco", () => {
     if (meta?.tipo !== "meta") throw new Error("unreachable");
     expect(meta.pares).toContainEqual({ label: "Metros lineales a cercar:", value: "24 ml" });
   });
+
+  it("el pie de la empresa es siempre el último bloque", () => {
+    expect(armar().at(-1)?.tipo).toBe("pie");
+  });
 });

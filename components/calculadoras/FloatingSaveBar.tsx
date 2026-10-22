@@ -27,7 +27,7 @@ export function FloatingSaveBar({ guardando, label = "Guardar en la nube" }: { g
       <button
         type="submit"
         disabled={guardando}
-        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-[#1B3A5C] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-[#244B5A] px-4 text-sm font-semibold text-white transition-colors hover:bg-marca-oscuro disabled:cursor-not-allowed disabled:opacity-50"
       >
         <IconCloudUpload className="h-4 w-4" />
         {guardando ? "Guardando..." : label}

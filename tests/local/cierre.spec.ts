@@ -69,6 +69,18 @@ async function alternarActivo(page: Page, activo: boolean) {
   else await expect(interruptor).not.toBeChecked();
 }
 
+/** Abre el menú "⋯" de la fila y elige una acción (Ingreso, Ajustar conteo o Historial). */
+async function accion(page: Page, f: Locator, piscina: string, etiqueta: string) {
+  await f.getByRole("button", { name: new RegExp(`^Más acciones de .*${piscina}`) }).click();
+  await page.getByRole("menuitem", { name: etiqueta, exact: true }).click();
+}
+
+/** En el celular los filtros están plegados detrás del botón "Filtros": se despliegan para tocarlos. */
+async function abrirFiltros(page: Page) {
+  const boton = page.getByRole("button", { name: /^Filtros/ });
+  if (await boton.isVisible()) await boton.click();
+}
+
 const abrirCatalogo = async (page: Page, nombre: string) => {
   await page.goto("/dashboard/catalogo");
   await expect(page.locator("li").filter({ hasText: nombre }).first()).toBeVisible();
@@ -130,19 +142,19 @@ test("stock: ingreso, venta con negativo, ajustes, anulación e historial", asyn
   await captura(page, info, "catalogo-stock");
 
   // Ingreso: el número y el historial.
-  await f.getByRole("button", { name: new RegExp(`^Ingreso de .*${d.piscina}`) }).click();
+  await accion(page, f, d.piscina, "Ingreso");
   await page.getByLabel("Cantidad").fill("3");
   await page.getByLabel(/Referencia/).fill("Remito E2E");
   await captura(page, info, "dialogo-ingreso");
   await page.getByRole("button", { name: "Registrar ingreso" }).click();
   await expect(badge(f, STOCK_INICIAL + 3)).toBeVisible();
-  await f.getByRole("button", { name: new RegExp(`^Historial de stock de .*${d.piscina}`) }).click();
+  await accion(page, f, d.piscina, "Historial");
   const historial = page.getByRole("dialog", { name: "Historial de stock" });
   await expect(historial.getByText("Remito E2E")).toBeVisible();
   await expect(historial.getByText("+3").first()).toBeVisible();
   await expect(historial.getByText("Stock inicial", { exact: true })).toBeVisible();
   await captura(page, info, "historial-ingreso");
-  await historial.getByRole("button", { name: "Cerrar" }).click();
+  await historial.getByRole("button", { name: "Cerrar", exact: true }).click();
 
   // Venta mayor al stock: pide confirmación, queda negativo, marca y banner.
   const antes = STOCK_INICIAL + 3;
@@ -159,7 +171,7 @@ test("stock: ingreso, venta con negativo, ajustes, anulación e historial", asyn
 
   // Ajuste: a 6, a 4 (conteo menor) y otra vez a 4 (igual: avisa que no hubo cambios).
   const ajustar = async (conteo: number, motivo: string) => {
-    await f.getByRole("button", { name: new RegExp(`^Ajustar conteo de .*${d.piscina}`) }).click();
+    await accion(page, f, d.piscina, "Ajustar conteo");
     await page.getByLabel("Unidades que contaste").fill(String(conteo));
     await page.getByLabel("Motivo").fill(motivo);
     await page.getByRole("button", { name: "Guardar conteo" }).click();
@@ -174,7 +186,7 @@ test("stock: ingreso, venta con negativo, ajustes, anulación e historial", asyn
   await captura(page, info, "ajuste-igual-sin-cambios");
 
   // Anular el último movimiento (el ajuste a 4): contra-asiento, el stock vuelve a 6.
-  await f.getByRole("button", { name: new RegExp(`^Historial de stock de .*${d.piscina}`) }).click();
+  await accion(page, f, d.piscina, "Historial");
   const h = page.getByRole("dialog", { name: "Historial de stock" });
   await h.getByRole("button", { name: "Anular", exact: true }).first().click();
   const confirmar = page.getByRole("alertdialog");
@@ -183,11 +195,11 @@ test("stock: ingreso, venta con negativo, ajustes, anulación e historial", asyn
   await expect(h.getByText("Contra-asiento")).toBeVisible();
   await expect(h.getByText("Anulado", { exact: true }).first()).toBeVisible();
   await captura(page, info, "historial-contra-asiento");
-  await h.getByRole("button", { name: "Cerrar" }).click();
+  await h.getByRole("button", { name: "Cerrar", exact: true }).click();
   await expect(badge(f, 6)).toBeVisible();
 
   // Lo que no se puede anular: una anulación y un stock inicial (no tienen botón, dicen por qué).
-  await f.getByRole("button", { name: new RegExp(`^Historial de stock de .*${d.piscina}`) }).click();
+  await accion(page, f, d.piscina, "Historial");
   const h2 = page.getByRole("dialog", { name: "Historial de stock" });
   await expect(h2.getByText("Es una anulación")).toBeVisible();
   await expect(h2.getByText("Se corrige con un ajuste")).toBeVisible();
@@ -196,7 +208,7 @@ test("stock: ingreso, venta con negativo, ajustes, anulación e historial", asyn
   const filaApertura = h2.locator("li").filter({ hasText: "Stock inicial" });
   await expect(filaApertura.getByRole("button", { name: "Anular" })).toHaveCount(0);
   await captura(page, info, "historial-no-anulable");
-  await h2.getByRole("button", { name: "Cerrar" }).click();
+  await h2.getByRole("button", { name: "Cerrar", exact: true }).click();
   expect(bloqueados).toEqual([]);
 });
 
@@ -208,21 +220,21 @@ test("stock: ítem sin stock, doble toque y dos pestañas", async ({ page, conte
   // Un ítem que no lleva stock: sin botones ni historial.
   const sin = fila(page, ITEM_SIN_STOCK.texto);
   await expect(sin.getByText("A pedido")).toBeVisible();
-  await expect(sin.getByRole("button", { name: /Ingreso de|Venta de|Ajustar conteo de|Historial de stock/ })).toHaveCount(0);
+  await expect(sin.getByRole("button", { name: /Más acciones de|Venta de/ })).toHaveCount(0);
   await captura(page, info, "item-sin-stock");
 
   // Doble toque en Registrar: un solo movimiento.
   const f = fila(page, d.piscina);
   const antes = await stockDe(f);
-  await f.getByRole("button", { name: new RegExp(`^Ingreso de .*${d.piscina}`) }).click();
+  await accion(page, f, d.piscina, "Ingreso");
   await page.getByLabel("Cantidad").fill("1");
   await page.getByLabel(/Referencia/).fill("Doble toque E2E");
   await page.getByRole("button", { name: "Registrar ingreso" }).dblclick();
   await expect(badge(f, antes + 1)).toBeVisible();
-  await f.getByRole("button", { name: new RegExp(`^Historial de stock de .*${d.piscina}`) }).click();
+  await accion(page, f, d.piscina, "Historial");
   const h = page.getByRole("dialog", { name: "Historial de stock" });
   await expect(h.getByText("Referencia: Doble toque E2E")).toHaveCount(1);
-  await h.getByRole("button", { name: "Cerrar" }).click();
+  await h.getByRole("button", { name: "Cerrar", exact: true }).click();
 
   // El mismo ítem en dos pestañas, vendiendo en ambas a la vez: se suman las dos ventas.
   const base = await stockDe(f);
@@ -247,7 +259,7 @@ test("stock: ítem sin stock, doble toque y dos pestañas", async ({ page, conte
   const fRecargada = fila(page, d.piscina);
   await expect.poll(async () => stockDe(fRecargada)).toBe(base - 2);
   await captura(page, info, "dos-pestanas");
-  await fRecargada.getByRole("button", { name: new RegExp(`^Historial de stock de .*${d.piscina}`) }).click();
+  await accion(page, fRecargada, d.piscina, "Historial");
   const h2 = page.getByRole("dialog", { name: "Historial de stock" });
   await expect(h2.getByText("Venta").first()).toBeVisible();
   await captura(page, info, "dos-pestanas-historial");
@@ -259,7 +271,7 @@ test("presupuesto anulado: etiqueta, toggle y campos deshabilitados", async ({ p
   const d = datosDe(info);
   await entrar(page);
   await page.goto("/dashboard/historial");
-  await page.getByPlaceholder("Buscar por nombre de cliente...").fill(d.cliente);
+  await page.getByPlaceholder("Buscar cliente...").fill(d.cliente);
   await expect(page.getByText(d.cliente).locator("visible=true").first()).toBeVisible();
   await captura(page, info, "historial-antes-de-anular");
 
@@ -274,10 +286,15 @@ test("presupuesto anulado: etiqueta, toggle y campos deshabilitados", async ({ p
 
   // Sale de la lista; el toggle lo trae de vuelta, con su etiqueta.
   await expect(page.getByText("Ningún presupuesto coincide con el filtro.")).toBeVisible();
+  await abrirFiltros(page);
   await page.getByText(/Mostrar anulados/).click();
   await expect(page.getByText("Anulado", { exact: true }).locator("visible=true").first()).toBeVisible();
   await expect(page.getByText("Motivo: Prueba E2E de anulación").locator("visible=true").first()).toBeVisible();
   await captura(page, info, "historial-anulados");
+
+  // Un anulado se ve y se exporta, pero NO se duplica.
+  await expect(page.getByRole("link", { name: "Ver", exact: true }).locator("visible=true").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /Duplicar/ }).locator("visible=true")).toHaveCount(0);
 
   // Se puede ver, pero no editar: campos deshabilitados, sin Guardar.
   await page.getByRole("link", { name: "Ver", exact: true }).first().click();
@@ -303,6 +320,7 @@ test("catálogo: desactivar y reactivar un ítem", async ({ page }, info) => {
   await page.getByRole("button", { name: "Guardar cambios" }).click();
   await expect(page.locator("li").filter({ hasText: ITEM_SIN_STOCK.texto })).toHaveCount(0);
 
+  await abrirFiltros(page);
   await page.getByText("Mostrar desactivados").click();
   const desactivada = fila(page, ITEM_SIN_STOCK.texto);
   await expect(desactivada.getByText("Desactivado")).toBeVisible();

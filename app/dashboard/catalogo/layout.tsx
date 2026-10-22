@@ -8,7 +8,7 @@ import { VolverArriba } from "@/components/catalogo/VolverArriba";
 export default function CatalogoLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <div className="mx-auto max-w-5xl px-4 pt-6">
+      <div className="mx-auto max-w-7xl px-4 pt-4 sm:pt-6">
         <CatalogoTabs />
       </div>
       {children}
