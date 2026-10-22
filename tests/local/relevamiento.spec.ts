@@ -75,7 +75,7 @@ test("relevamiento de pantallas", async ({ page }, info) => {
             chicos.push(`${el.tagName.toLowerCase()} "${nombre}" ${Math.round(r.width)}x${Math.round(r.height)}`);
           }
         });
-      const filasVisibles = [...document.querySelectorAll<HTMLElement>("main li")].filter((li) => {
+      const filasVisibles = [...document.querySelectorAll<HTMLElement>("main li")].filter((li) => !li.closest("nav")).filter((li) => {
         const r = li.getBoundingClientRect();
         return r.height > 0 && r.top >= 0 && r.bottom <= window.innerHeight;
       }).length;

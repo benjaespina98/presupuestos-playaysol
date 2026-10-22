@@ -135,6 +135,24 @@ async function main() {
   });
   if (mat.error) fallar(`No pude crear el material de prueba: ${mat.error.message}`);
 
+  // Un catálogo de materiales de prueba más realista (nombres inventados): sirve para medir cuántas filas entran por pantalla.
+  const proveedoresDemo = ["Distribuidora Norte E2E", "Pileta Mayorista E2E", "Ferretería Sur E2E"];
+  for (const [i, nombre] of proveedoresDemo.entries()) {
+    const pr = await admin.from("proveedores").insert({ nombre }).select("id").single();
+    if (pr.error) fallar(`No pude crear el proveedor de prueba: ${pr.error.message}`);
+    for (let j = 1; j <= 4; j++) {
+      const m = await admin.from("materiales").insert({
+        nombre: `Material de prueba ${i + 1}-${j}`,
+        proveedor_id: pr.data.id,
+        unidad: j % 2 ? "unidad" : "m2",
+        precio: 1000 * (i + 1) * j + 0.5,
+        aplica: "Siempre",
+        cantidades: {},
+      });
+      if (m.error) fallar(`No pude crear el material de prueba: ${m.error.message}`);
+    }
+  }
+
   // Un ítem que no lleva stock existe en el seed (ITEM_SIN_STOCK).
   const sinStock = await admin.from("catalogo_items").select("stock").eq("clave", ITEM_SIN_STOCK.clave).limit(1).single();
   if (sinStock.error || sinStock.data.stock !== null) fallar("El ítem sin stock de la prueba no está como se esperaba en el seed.");
