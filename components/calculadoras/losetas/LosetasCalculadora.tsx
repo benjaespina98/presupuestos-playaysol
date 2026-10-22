@@ -33,6 +33,7 @@ import { PlanoLosetasSvg } from "./PlanoLosetasSvg";
 import { LosetasFormSchema, formularioVacio, type LosetasForm } from "./schema";
 import { IconCloudUpload, IconImage, IconPrinter } from "@/components/icons";
 import { FloatingSaveBar } from "@/components/calculadoras/FloatingSaveBar";
+import { CalculadoraLosetasInterna } from "./CalculadoraLosetasInterna";
 
 /**
  * Losetas — "Plano de Piscina": editor SVG interactivo, no un documento con
@@ -521,6 +522,8 @@ export function LosetasCalculadora({
             hint="Igual en los cuatro lados."
           />
         </section>
+
+        <CalculadoraLosetasInterna largoPlano={Number(valoresForm.largo) || 0} anchoPlano={Number(valoresForm.ancho) || 0} />
 
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Profundidad</h2>

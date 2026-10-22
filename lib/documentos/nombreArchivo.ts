@@ -8,6 +8,9 @@
  * explícitamente) — sólo que ahora es un módulo TS importable en vez de vivir
  * en `window`.
  */
+/** Largo máximo de la parte del cliente en el nombre del archivo. */
+const MAX_CLIENTE = 80;
+
 export function armarNombreArchivo(tipo: string, cliente: string, fechaStr: string): string {
   // Marcas de acento combinantes (rango Unicode ̀-ͯ), lo que queda
   // de una letra acentuada después de normalizar a NFD ("é" -> "e" + "´").
@@ -32,7 +35,9 @@ export function armarNombreArchivo(tipo: string, cliente: string, fechaStr: stri
       .replace(/\p{C}/gu, "");
   }
 
-  const clienteLimpio = limpiar(cliente) || "Sin_nombre";
+  // Un nombre larguísimo no puede hacer un archivo que Windows no deje guardar (el límite es 255 en total,
+  // y a veces menos con la ruta): se recorta a 80 caracteres, sin dejar un "_" colgado al final.
+  const clienteLimpio = limpiar(cliente).slice(0, MAX_CLIENTE).replace(/_+$/, "") || "Sin_nombre";
   const tipoLimpio = limpiar(tipo);
 
   let fecha = fechaStr;
