@@ -153,7 +153,7 @@ export function DetallePedidoModal({
               <h3 className="text-sm font-bold text-[#244B5A]">{s.nombre}</h3>
               <p className="text-xs text-gray-500">{[s.contacto, s.telefono].filter(Boolean).join(" · ")}</p>
             </header>
-            <div className="overflow-x-auto">
+            <div className="scroll-h" data-scroll-h="">
               <table className="w-full min-w-[30rem] text-left text-sm">
                 <tbody>
                   {s.lineas.map((l, i) => (

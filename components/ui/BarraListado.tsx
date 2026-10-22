@@ -4,109 +4,9 @@ import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 
 import { createPortal } from "react-dom";
 
 /**
- * La barra de búsqueda y filtros COMPACTA de todas las listas del portal (Precios de venta, Materiales,
- * Proveedores, Pedidos, Historial):
- *
- *  - Escritorio: UNA sola fila de 64 px (buscador · chips en una fila con scroll · menús de stock y orden ·
- *    botón "Filtros" con contador). Queda fija arriba al bajar por la página (la lista usa el scroll de la
- *    página, no uno propio).
- *  - Celular: a lo sumo dos filas (96 px): buscador y "Filtros", y debajo una fila que se desliza con los
- *    menús y los chips.
- *
- * Publica su alto en `--catalogo-barra` para que el encabezado de la tabla se pegue justo debajo.
+ * Las piezas sueltas de la barra de herramientas (`BarraHerramientas.tsx`): el interruptor, el panel que se
+ * abre desde un botón, el menú de opciones únicas con contadores y el aviso de "se guardó".
  */
-export function BarraListado({
-  buscador,
-  chips,
-  menus,
-  filtros,
-}: {
-  buscador: ReactNode;
-  /** Chips de categoría (una sola fila). */
-  chips?: ReactNode;
-  /** Menús: stock, orden... */
-  menus?: ReactNode;
-  /** El botón "Filtros" con su panel. */
-  filtros?: ReactNode;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const raiz = document.documentElement;
-    const publicar = () => raiz.style.setProperty("--catalogo-barra", `${el.offsetHeight}px`);
-    publicar();
-    if (typeof ResizeObserver === "undefined") return () => raiz.style.removeProperty("--catalogo-barra");
-    const obs = new ResizeObserver(publicar);
-    obs.observe(el);
-    return () => {
-      obs.disconnect();
-      raiz.style.removeProperty("--catalogo-barra");
-    };
-  }, []);
-
-  const hayFila2 = !!(chips || menus);
-  return (
-    <div
-      ref={ref}
-      data-barra-listado=""
-      className="flex flex-col gap-1 pb-0.5 lg:sticky lg:top-0 lg:z-20 lg:-mx-4 lg:h-16 lg:flex-row lg:items-center lg:gap-2 lg:bg-gray-50 lg:px-4 lg:pb-0"
-    >
-      <div className="flex items-center gap-2 lg:contents">
-        <div className="min-w-0 flex-1 lg:order-1 lg:w-72 lg:flex-none">{buscador}</div>
-        {filtros && <div className="shrink-0 lg:order-4">{filtros}</div>}
-      </div>
-      {hayFila2 && (
-        <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [mask-image:linear-gradient(to_right,#000_calc(100%-28px),transparent)] lg:contents lg:[mask-image:none] [&::-webkit-scrollbar]:hidden">
-          {menus && <div className="flex shrink-0 items-center gap-2 lg:order-3">{menus}</div>}
-          {chips && <div className="min-w-0 lg:order-2 lg:flex-1">{chips}</div>}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** Una fila de chips con scroll horizontal suave y degradé en los bordes. Nunca se parte en dos filas. */
-export function ChipsFila({ etiqueta, children }: { etiqueta: string; children: ReactNode }) {
-  return (
-    <div
-      role="group"
-      aria-label={etiqueta}
-      className="flex min-w-0 items-center gap-2 overflow-x-auto scroll-smooth px-3 [scrollbar-width:none] lg:[mask-image:linear-gradient(to_right,transparent,#000_12px,#000_calc(100%-24px),transparent)] [&::-webkit-scrollbar]:hidden"
-    >
-      {children}
-    </div>
-  );
-}
-
-export function Chip({
-  activo,
-  onClick,
-  cantidad,
-  children,
-}: {
-  activo: boolean;
-  onClick: () => void;
-  cantidad: number;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={activo}
-      className={`inline-flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-3.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#244B5A]/40 ${
-        activo
-          ? "border-[#244B5A] bg-[#244B5A] text-[#FFFFFF] shadow-sm"
-          : "border-[#7D8892] bg-[#FFFFFF] text-[#1F2A30] hover:border-[#244B5A] hover:bg-[#EAF0F2] active:bg-[#D5E0E4]"
-      }`}
-    >
-      {children}
-      <span className={`rounded-full px-1.5 py-0.5 text-xs tabular-nums ${activo ? "bg-[#FFFFFF]/20 text-[#FFFFFF]" : "bg-[#E3ECEF] text-[#3E4A52]"}`}>{cantidad}</span>
-    </button>
-  );
-}
 
 /** Interruptor accesible: un checkbox real (por eso se prueba con su label) con el aspecto de un switch. */
 export function Interruptor({ checked, onChange, children }: { checked: boolean; onChange: (v: boolean) => void; children: ReactNode }) {
@@ -131,7 +31,7 @@ const CLASE_ACTIVO = "border-[#244B5A] bg-[#E3ECEF] text-[#1A3844] hover:bg-[#D3
  * Un panel que se abre desde un botón. Se dibuja en el <body> (ningún `overflow` de la barra lo recorta); en
  * escritorio queda pegado al botón, en el celular sube como una hoja desde abajo. Se cierra tocando afuera o con Escape.
  */
-function Desplegable({
+export function Desplegable({
   etiqueta,
   boton,
   activo,
@@ -164,7 +64,7 @@ function Desplegable({
   function abrir() {
     const r = disparador.current?.getBoundingClientRect();
     if (!r) return;
-    if (window.innerWidth < 1024) return setPos("hoja");
+    if (window.innerWidth < 768) return setPos("hoja");
     const ancho = 320;
     setPos({ top: r.bottom + 6, left: Math.max(8, Math.min(r.right - ancho, window.innerWidth - ancho - 8)) });
   }
@@ -268,7 +168,7 @@ export function MenuSeleccion<T extends string>({
       activo={valor !== porDefecto}
       boton={
         <>
-          <span>{textoBoton ?? `${titulo}: ${actual?.etiqueta ?? ""}`}</span>
+          <span className="max-w-[12rem] truncate">{textoBoton ?? `${titulo}: ${actual?.etiqueta ?? ""}`}</span>
           <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path d="M5.3 7.3a1 1 0 0 1 1.4 0L10 10.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 0-1.4z" />
           </svg>
@@ -318,55 +218,6 @@ export function MenuSeleccion<T extends string>({
               </button>
             );
           })}
-        </div>
-      )}
-    </Desplegable>
-  );
-}
-
-/** El botón "Filtros" con la cantidad de filtros activos; abre un panel con los interruptores y "Limpiar filtros". */
-export function BotonFiltros({
-  contador,
-  hayFiltros,
-  onLimpiar,
-  children,
-}: {
-  contador: number;
-  hayFiltros: boolean;
-  onLimpiar: () => void;
-  children?: ReactNode;
-}) {
-  return (
-    <Desplegable
-      etiqueta="Filtros"
-      activo={contador > 0}
-      ancho="w-80"
-      boton={
-        <>
-          Filtros
-          {contador > 0 && (
-            <span className="rounded-full bg-[#244B5A] px-1.5 py-0.5 text-xs font-bold leading-none text-[#FFFFFF] tabular-nums" aria-label={`${contador} activos`}>
-              {contador}
-            </span>
-          )}
-        </>
-      }
-    >
-      {(cerrar) => (
-        <div className="space-y-1 px-2 py-1">
-          {children}
-          {hayFiltros && (
-            <button
-              type="button"
-              onClick={() => {
-                onLimpiar();
-                cerrar();
-              }}
-              className="mt-1 flex min-h-12 w-full items-center justify-center rounded-lg border border-[#244B5A] bg-[#FFFFFF] px-3 text-base font-semibold text-[#1A3844] hover:bg-[#EAF0F2] active:bg-[#D5E0E4] sm:text-sm"
-            >
-              Limpiar filtros
-            </button>
-          )}
         </div>
       )}
     </Desplegable>

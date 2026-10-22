@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase-server";
 import { LOGO_URL } from "@/lib/brand";
 import { Wordmark } from "@/components/Wordmark";
-import LogoutButton from "./logout-button";
+import MenuUsuario from "./menu-usuario";
 import { NavLink } from "./nav-link";
 
 export default async function DashboardLayout({
@@ -29,32 +29,27 @@ export default async function DashboardLayout({
         style={{ backgroundImage: `url(${LOGO_URL})`, backgroundSize: "480px" }}
       />
       <div className="relative z-10">
+        {/* Celular: el logo y el menú de usuario arriba (52 px) y, debajo, las cuatro secciones en una fila de 48 px
+            que reparte el ancho. Desde md, todo en una sola fila. */}
         <header data-print-hide="" className="border-b border-[#244B5A]/15 bg-[#FFFFFF]">
-          {/* Celular: logo y "Cerrar sesión" arriba, y los links debajo en una fila propia. */}
-          <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-2 sm:py-2">
-            <Link href="/dashboard" className="flex min-h-11 items-center gap-3">
+          <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-x-3 px-4 md:flex-nowrap md:gap-x-6">
+            <Link href="/dashboard" className="flex h-[3.25rem] items-center md:h-14">
               <Wordmark className="h-6 sm:h-7" />
             </Link>
-            {/* Este link decía "Presupuestos" pero lleva al historial — y la
-                pantalla de inicio también se titulaba "Presupuestos". Dos cosas
-                distintas con el mismo nombre. */}
-            <nav aria-label="Secciones del portal" className="contents text-sm sm:flex sm:items-center sm:gap-4">
-              <div className="order-3 flex w-full items-center gap-6 sm:order-none sm:w-auto sm:gap-4">
+            {/* "Precios" es lo que se le cobra al cliente; "Compras" es lo que se le compra a los proveedores. */}
+            <nav aria-label="Secciones del portal" className="order-3 flex w-full items-stretch text-[15px] md:order-none md:ml-2 md:w-auto md:flex-1 md:gap-5">
               <NavLink href="/dashboard" exacto>
                 Nuevo
               </NavLink>
               <NavLink href="/dashboard/historial">Historial</NavLink>
-              {/* "Precios" es lo que se le cobra al cliente; "Compras" es lo que se le compra a los proveedores. */}
               <NavLink href="/dashboard/catalogo" grupo="precios">
                 Precios
               </NavLink>
               <NavLink href="/dashboard/catalogo/materiales" grupo="compras">
                 Compras
               </NavLink>
-              </div>
-              <span className="hidden text-gray-400 sm:inline">{user.email}</span>
-              <LogoutButton />
             </nav>
+            <MenuUsuario email={user.email ?? "usuario"} />
           </div>
         </header>
         {/* Sin ancho máximo ni padding acá: las calculadoras necesitan todo el

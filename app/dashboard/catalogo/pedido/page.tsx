@@ -33,7 +33,7 @@ import { guardarPedido, listarPedidos } from "@/lib/pedidos";
 import { formatARSExacto } from "@/lib/format/ars";
 import { copiarAlPortapapeles } from "@/lib/clipboard";
 import { PanelPortal } from "@/components/PanelPortal";
-import { Interruptor } from "@/components/catalogo/FiltrosCatalogo";
+import { Interruptor } from "@/components/ui/BarraListado";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
 import { MenuExportar } from "@/components/pedidos/MenuExportar";
 import { AgregarMaterial } from "@/components/pedidos/AgregarMaterial";

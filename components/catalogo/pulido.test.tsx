@@ -1,49 +1,14 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BarraListado } from "@/components/ui/BarraListado";
 import { EncabezadoPagina } from "./EncabezadoPagina";
 import { VolverArriba } from "./VolverArriba";
 
 describe("EncabezadoPagina", () => {
-  it("muestra título, ayuda y las acciones", () => {
-    render(
-      <EncabezadoPagina titulo="Materiales" descripcion="Lo que se compra para las obras.">
-        <button type="button">Agregar material</button>
-      </EncabezadoPagina>
-    );
+  it("deja el título y la ayuda para los lectores de pantalla (lo visible lo dicen el menú y la barra de herramientas)", () => {
+    render(<EncabezadoPagina titulo="Materiales" descripcion="Lo que se compra para las obras." />);
     expect(screen.getByRole("heading", { level: 1, name: "Materiales" })).toBeInTheDocument();
     expect(screen.getByText("Lo que se compra para las obras.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Agregar material" })).toBeInTheDocument();
-  });
-
-  it("sin acciones no deja un hueco", () => {
-    const { container } = render(<EncabezadoPagina titulo="Pedido" descripcion="x" />);
-    expect(container.querySelectorAll("button")).toHaveLength(0);
-  });
-});
-
-describe("BarraListado", () => {
-  afterEach(() => document.documentElement.style.removeProperty("--catalogo-barra"));
-
-  it("publica su alto en --catalogo-barra (el encabezado de columnas se pega debajo) y lo limpia al irse", () => {
-    const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetHeight");
-    Object.defineProperty(HTMLElement.prototype, "offsetHeight", { configurable: true, value: 118 });
-    const { unmount } = render(
-      <BarraListado buscador={<input aria-label="buscar" />} />
-    );
-    expect(document.documentElement.style.getPropertyValue("--catalogo-barra")).toBe("118px");
-
-    unmount();
-    expect(document.documentElement.style.getPropertyValue("--catalogo-barra")).toBe("");
-    if (original) Object.defineProperty(HTMLElement.prototype, "offsetHeight", original);
-  });
-
-  it("deja pasar su contenido", () => {
-    render(
-      <BarraListado buscador={<input aria-label="buscar" />} />
-    );
-    expect(screen.getByLabelText("buscar")).toBeInTheDocument();
   });
 });
 

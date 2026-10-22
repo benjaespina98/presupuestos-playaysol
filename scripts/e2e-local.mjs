@@ -20,6 +20,7 @@
 // Las capturas quedan en capturas-locales/ (ignorada por git).
 
 import { spawn, spawnSync } from "node:child_process";
+import fs from "node:fs";
 import { randomBytes, randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { validarUrlLocal } from "./test-concurrencia-stock.mjs";
@@ -224,9 +225,19 @@ async function main() {
   try {
     await esperarServidor();
     const spec = process.argv[2];
+    // "servir": deja el portal y la base local levantados para trabajar a mano (y correr pruebas sueltas con
+    // `node scripts/e2e-contra-servidor.mjs <spec>`). Las variables quedan en capturas-locales/_entorno.json
+    // (carpeta ignorada por git; sólo valores de la base LOCAL). Se corta con Ctrl+C.
+    if (spec === "servir") {
+      fs.mkdirSync("capturas-locales", { recursive: true });
+      const claves = ["E2E_LOCAL_SERVICE_KEY", "E2E_LOCAL_EMAIL", "E2E_LOCAL_PASSWORD", "E2E_LOCAL_API", "E2E_SYNC_TOKEN"];
+      fs.writeFileSync("capturas-locales/_entorno.json", JSON.stringify(Object.fromEntries(claves.map((c) => [c, entorno[c]]))));
+      console.log(`Portal local listo en http://127.0.0.1:${PUERTO_WEB} (credenciales en capturas-locales/_entorno.json). Ctrl+C para cortar.`);
+      await new Promise(() => {});
+    }
     // "pantallas" (o recorrido, edicion, compartir, documentos): las pruebas de pantallas en todos los tamaños
     // (playwright.responsive.config.ts). Cualquier otra cosa: las pruebas de siempre (playwright.local.config.ts).
-    const PANTALLAS = ["pantallas", "recorrido", "edicion", "compartir", "documentos"];
+    const PANTALLAS = ["pantallas", "recorrido", "edicion", "compartir", "documentos", "metricas", "gestos"];
     const pantallas = spec && PANTALLAS.includes(spec);
     const config = pantallas ? "playwright.responsive.config.ts" : "playwright.local.config.ts";
     const especifica = pantallas ? (spec === "pantallas" ? {} : { E2E_SPEC: spec }) : spec ? { E2E_SPEC: spec } : {};

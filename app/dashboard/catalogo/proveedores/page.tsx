@@ -1,15 +1,13 @@
 "use client";
 
-import { botonDe } from "@/components/ui/botones";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listarMateriales, listarProveedores } from "@/lib/abastecimiento";
 import { filtrarProveedores, ordenarProveedores, sinTelefono, type Proveedor } from "@/lib/domain/abastecimiento/proveedor";
 import { materialesPorProveedor, type Material } from "@/lib/domain/abastecimiento/material";
-import { etiquetaCortaDeOrden, opcionesDeOrden, ordenarPor, type ClaveOrden } from "@/lib/ordenar";
+import { opcionesDeOrden, ordenarPor, type ClaveOrden } from "@/lib/ordenar";
 import { PanelPortal } from "@/components/PanelPortal";
-import { IconPlus } from "@/components/icons";
-import { Buscador } from "@/components/ui/FiltrosPlegables";
-import { BarraListado, BotonFiltros, Chip, ChipsFila, Interruptor, MenuSeleccion, Toast } from "@/components/ui/BarraListado";
+import { BarraHerramientas } from "@/components/ui/BarraHerramientas";
+import { Toast } from "@/components/ui/BarraListado";
 import { BotonLapiz, alTocarFila } from "@/components/ui/BotonLapiz";
 import { useEstadoPersistente } from "@/lib/useEstadoPersistente";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
@@ -106,64 +104,49 @@ export default function ProveedoresPage() {
   const totalActivos = useMemo(() => (proveedores ? proveedores.filter((p) => incluirInactivos || p.activo).length : 0), [proveedores, incluirInactivos]);
 
   const hayFiltros = !!(busqueda || rubro || telefono || incluirInactivos || orden !== "defecto");
-  const filtrosActivos = [incluirInactivos].filter(Boolean).length;
-  const cerrarToast = useCallback(() => setMensaje(null), []);
+    const cerrarToast = useCallback(() => setMensaje(null), []);
 
   return (
     <PanelPortal compacto amplio>
-      <EncabezadoPagina titulo="Proveedores" descripcion="A quién se le compra, cómo contactarlo y qué se le pide.">
-        <button
-          type="button"
-          onClick={() => {
+      <EncabezadoPagina titulo="Proveedores" descripcion="A quién se le compra, cómo contactarlo y qué se le pide." />
+
+      <BarraHerramientas
+        buscador={{ valor: busqueda, onCambio: (v) => cambiar({ busqueda: v }), placeholder: "Buscar proveedor", etiqueta: "Buscar proveedores" }}
+        secciones={[
+          {
+            id: "rubro",
+            titulo: "Rubro",
+            opciones: [{ id: "", etiqueta: "Todos", cantidad: totalActivos }, ...rubros.map(([r, n]) => ({ id: r, etiqueta: r, cantidad: n }))],
+            valor: rubro,
+            onCambio: (v) => cambiar({ rubro: v }),
+          },
+          {
+            id: "telefono",
+            titulo: "Teléfono",
+            opciones: [
+              { id: "", etiqueta: "Todos", cantidad: totalActivos },
+              { id: "con", etiqueta: "Con teléfono", cantidad: conTel },
+              { id: "sin", etiqueta: "Sin teléfono", cantidad: faltanTelefono },
+            ],
+            valor: telefono,
+            onCambio: (v) => cambiar({ telefono: v as Filtros["telefono"] }),
+          },
+        ]}
+        orden={{ opciones: ORDENES, valor: orden, onCambio: (v) => cambiar({ orden: v }) }}
+        interruptores={[{ id: "inactivos", etiqueta: "Mostrar desactivados", valor: incluirInactivos, onCambio: (v) => cambiar({ incluirInactivos: v }) }]}
+        agregar={{
+          etiqueta: "Agregar proveedor",
+          onClick: () => {
             setMensaje(null);
             setCreando(true);
-          }}
-          aria-label="Agregar proveedor"
-          className={botonDe("primario", "px-4")}
-        >
-          <IconPlus className="h-4 w-4" />
-          Agregar<span className="hidden sm:inline"> proveedor</span>
-        </button>
-      </EncabezadoPagina>
-
-      <BarraListado
-        buscador={<Buscador valor={busqueda} onCambio={(v) => cambiar({ busqueda: v })} placeholder="Buscar proveedor..." etiqueta="Buscar proveedores" />}
-        menus={
-          <MenuSeleccion
-            etiqueta="Ordenar"
-            titulo="Orden"
-            opciones={ORDENES.map((o) => ({ id: o.id, etiqueta: o.etiqueta }))}
-            valor={orden}
-            porDefecto="defecto"
-            onCambio={(v) => cambiar({ orden: v })}
-            textoBoton={etiquetaCortaDeOrden(orden)}
-          />
+          },
+        }}
+        resultados={visibles?.length ?? 0}
+        contador={
+          visibles && !error ? `${visibles.length} ${hayFiltros && proveedores ? `de ${proveedores.length} proveedores` : visibles.length === 1 ? "proveedor" : "proveedores"}` : undefined
         }
-        chips={
-          <ChipsFila etiqueta="Filtrar por rubro y teléfono">
-            <Chip activo={rubro === "" && telefono === ""} onClick={() => cambiar({ rubro: "", telefono: "" })} cantidad={totalActivos}>
-              Todos
-            </Chip>
-            {rubros.map(([r, n]) => (
-              <Chip key={r} activo={rubro === r} onClick={() => cambiar({ rubro: rubro === r ? "" : r })} cantidad={n}>
-                {r}
-              </Chip>
-            ))}
-            <Chip activo={telefono === "con"} onClick={() => cambiar({ telefono: telefono === "con" ? "" : "con" })} cantidad={conTel}>
-              Con teléfono
-            </Chip>
-            <Chip activo={telefono === "sin"} onClick={() => cambiar({ telefono: telefono === "sin" ? "" : "sin" })} cantidad={faltanTelefono}>
-              Sin teléfono
-            </Chip>
-          </ChipsFila>
-        }
-        filtros={
-          <BotonFiltros contador={filtrosActivos} hayFiltros={hayFiltros} onLimpiar={() => setFiltros(SIN_FILTROS)}>
-            <Interruptor checked={incluirInactivos} onChange={(v) => cambiar({ incluirInactivos: v })}>
-              Mostrar desactivados
-            </Interruptor>
-          </BotonFiltros>
-        }
+        hayFiltros={hayFiltros}
+        onLimpiar={() => setFiltros(SIN_FILTROS)}
       />
 
       {error && (
@@ -181,9 +164,6 @@ export default function ProveedoresPage() {
 
       {!error && visibles && visibles.length > 0 && (
         <>
-          <p className="py-1 text-[13px] text-[#4A5861]" aria-live="polite">
-            {visibles.length} {hayFiltros && proveedores ? `de ${proveedores.length} proveedores` : visibles.length === 1 ? "proveedor" : "proveedores"}
-          </p>
           <div className="rounded-lg border border-[#D9DFE3] bg-[#FFFFFF] lg:rounded-none">
             <div
               aria-hidden="true"
@@ -253,7 +233,7 @@ function FilaProveedor({ proveedor: p, materiales, onEditar }: { proveedor: Prov
   return (
     <li
       onClick={alTocarFila(onEditar)}
-      className={`flex min-h-[3.25rem] cursor-pointer items-center gap-3 px-4 py-1 text-[15px] leading-5 transition-colors hover:bg-[#F4F8F9] active:bg-[#EAF0F2] lg:grid lg:min-h-[2.75rem] lg:gap-x-4 lg:py-0 ${COLUMNAS} ${p.activo ? "" : "opacity-70"}`}
+      className={`flex min-h-[3.25rem] cursor-pointer items-center gap-3 px-4 py-1 text-[15px] leading-5 transition-colors hover:bg-[#F4F8F9] active:bg-[#EAF0F2] lg:grid lg:min-h-[3rem] lg:gap-x-4 lg:py-0 ${COLUMNAS} ${p.activo ? "" : "opacity-70"}`}
     >
       <div className="min-w-0 flex-1 lg:contents">
         <div className="flex min-w-0 items-center gap-2">
@@ -274,7 +254,7 @@ function FilaProveedor({ proveedor: p, materiales, onEditar }: { proveedor: Prov
             <span className="flex min-w-0 items-center gap-2">
               <a
                 href={`tel:${telefonosDe(p.telefono!)[0].replace(/[^\d+]/g, "")}`}
-                className="inline-flex min-h-11 min-w-0 items-center truncate text-[#1A3844] underline underline-offset-2 hover:no-underline"
+                className="relative inline-flex min-w-0 items-center truncate text-[#1A3844] underline underline-offset-2 after:absolute after:-inset-x-1 after:-inset-y-3 after:content-[''] hover:no-underline"
               >
                 {telefonosDe(p.telefono!)[0]}
               </a>

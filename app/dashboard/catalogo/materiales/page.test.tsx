@@ -47,9 +47,9 @@ function mat(o: Partial<Material> = {}): Material {
   };
 }
 
-/** Abre el panel "Filtros" (con "Mostrar desactivados" y "Limpiar filtros") si no está abierto. */
+/** Abre el panel "Más filtros" (con "Mostrar desactivados" y "Limpiar filtros") si no está abierto. */
 async function abrirFiltros(user: ReturnType<typeof userEvent.setup>) {
-  if (!screen.queryByRole("dialog", { name: "Filtros" })) await user.click(screen.getByRole("button", { name: /^Filtros/ }));
+  if (!screen.queryByRole("dialog", { name: "Más filtros" })) await user.click(screen.getByRole("button", { name: /^Más filtros/ }));
 }
 
 describe("Materiales", () => {
@@ -83,9 +83,10 @@ describe("Materiales", () => {
     render(<MaterialesPage />);
     await screen.findByText("Cemento 25 kg");
 
-    const grupo = screen.getByRole("group", { name: "Filtrar por rubro" });
-    expect(within(grupo).getByRole("button", { name: /^Todos\s*2$/ })).toBeInTheDocument();
-    await user.click(within(grupo).getByRole("button", { name: /^Hidráulica/ }));
+    await user.click(screen.getByRole("button", { name: "Filtrar por rubro" }));
+    const grupo = await screen.findByRole("radiogroup", { name: "Filtrar por rubro" });
+    expect(within(grupo).getByRole("radio", { name: /^Todos.*2/ })).toBeInTheDocument();
+    await user.click(within(grupo).getByRole("radio", { name: /^Hidráulica/ }));
     expect(screen.queryByText("Cemento 25 kg")).not.toBeInTheDocument();
     expect(screen.getByText("Filtro VC30")).toBeInTheDocument();
 
@@ -97,7 +98,7 @@ describe("Materiales", () => {
     expect(screen.getByText("Cemento 25 kg")).toBeInTheDocument();
   });
 
-  it("el chip 'A confirmar' deja sólo los que no tienen precio", async () => {
+  it("el interruptor 'Sólo A confirmar' deja sólo los que no tienen precio", async () => {
     mocks.listarMateriales.mockResolvedValue({
       items: [mat(), mat({ id: "m2", nombre: "Sin precio", precio: null })],
       error: null,
@@ -106,7 +107,8 @@ describe("Materiales", () => {
     render(<MaterialesPage />);
     await screen.findByText("Cemento 25 kg");
 
-    await user.click(screen.getByRole("button", { name: /^A confirmar/ }));
+    await abrirFiltros(user);
+    await user.click(screen.getByLabelText(/Sólo "A confirmar"/));
     expect(screen.queryByText("Cemento 25 kg")).not.toBeInTheDocument();
     expect(screen.getByText("Sin precio")).toBeInTheDocument();
   });

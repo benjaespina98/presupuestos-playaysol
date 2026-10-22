@@ -1,6 +1,5 @@
 "use client";
 
-import { botonDe } from "@/components/ui/botones";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listarMateriales, listarProveedores } from "@/lib/abastecimiento";
 import {
@@ -13,13 +12,12 @@ import {
 import type { Proveedor } from "@/lib/domain/abastecimiento/proveedor";
 import { formatARS } from "@/lib/format/ars";
 import { formatFechaCompleta, formatFechaRelativaCorta } from "@/lib/format/fecha";
-import { etiquetaCortaDeOrden, opcionesDeOrden, ordenarPor, type ClaveOrden } from "@/lib/ordenar";
+import { opcionesDeOrden, ordenarPor, type ClaveOrden } from "@/lib/ordenar";
 import { useEstadoPersistente } from "@/lib/useEstadoPersistente";
 import { PanelPortal } from "@/components/PanelPortal";
-import { IconPlus } from "@/components/icons";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
-import { Buscador } from "@/components/ui/FiltrosPlegables";
-import { BarraListado, BotonFiltros, Chip, ChipsFila, Interruptor, MenuSeleccion, Toast } from "@/components/ui/BarraListado";
+import { BarraHerramientas } from "@/components/ui/BarraHerramientas";
+import { Toast } from "@/components/ui/BarraListado";
 import { BotonLapiz, alTocarFila } from "@/components/ui/BotonLapiz";
 import { MaterialModal } from "@/components/abastecimiento/MaterialModal";
 
@@ -109,8 +107,7 @@ export default function MaterialesPage() {
 
   const rubrosVisibles = [...RUBROS_MATERIAL, "Sin rubro"].filter((r) => (conteos.porRubro[r] ?? 0) > 0 || r === rubro);
   const hayFiltros = !!(busqueda || rubro || proveedorId || soloSinPrecio || incluirInactivos || orden !== "defecto");
-  const filtrosActivos = [incluirInactivos].filter(Boolean).length;
-  const cerrarToast = useCallback(() => setMensaje(null), []);
+    const cerrarToast = useCallback(() => setMensaje(null), []);
 
   const opcionesProveedor = [{ id: "", etiqueta: "Todos los proveedores" }, ...proveedores.map((p) => ({ id: p.id, etiqueta: p.nombre }))];
 
@@ -119,68 +116,44 @@ export default function MaterialesPage() {
       <EncabezadoPagina
         titulo="Materiales"
         descripcion="Lo que se compra para las obras: proveedor, precio de costo y cantidades por tamaño de pileta."
-      >
-        <button
-          type="button"
-          onClick={() => {
+      />
+
+      <BarraHerramientas
+        buscador={{ valor: busqueda, onCambio: (v) => cambiar({ busqueda: v }), placeholder: "Buscar material", etiqueta: "Buscar materiales" }}
+        secciones={[
+          {
+            id: "rubro",
+            titulo: "Rubro",
+            opciones: [{ id: "", etiqueta: "Todos", cantidad: conteos.total }, ...rubrosVisibles.map((r) => ({ id: r, etiqueta: r, cantidad: conteos.porRubro[r] ?? 0 }))],
+            valor: rubro,
+            onCambio: (v) => cambiar({ rubro: v }),
+          },
+          {
+            id: "proveedor",
+            titulo: "Proveedor",
+            opciones: opcionesProveedor,
+            valor: proveedorId,
+            onCambio: (v) => cambiar({ proveedorId: v }),
+          },
+        ]}
+        orden={{ opciones: ORDENES, valor: orden, onCambio: (v) => cambiar({ orden: v }) }}
+        interruptores={[
+          { id: "a-confirmar", etiqueta: `Sólo "A confirmar" (${sinPrecio})`, valor: soloSinPrecio, onCambio: (v) => cambiar({ soloSinPrecio: v }) },
+          { id: "inactivos", etiqueta: "Mostrar desactivados", valor: incluirInactivos, onCambio: (v) => cambiar({ incluirInactivos: v }) },
+        ]}
+        agregar={{
+          etiqueta: "Agregar material",
+          onClick: () => {
             setMensaje(null);
             setCreando(true);
-          }}
-          aria-label="Agregar material"
-          className={botonDe("primario", "px-4")}
-        >
-          <IconPlus className="h-4 w-4" />
-          Agregar<span className="hidden sm:inline"> material</span>
-        </button>
-      </EncabezadoPagina>
-
-      <BarraListado
-        buscador={<Buscador valor={busqueda} onCambio={(v) => cambiar({ busqueda: v })} placeholder="Buscar material..." etiqueta="Buscar materiales" />}
-        menus={
-          <>
-            <MenuSeleccion
-              etiqueta="Filtrar por proveedor"
-              titulo="Proveedor"
-              opciones={opcionesProveedor}
-              valor={proveedorId}
-              porDefecto=""
-              onCambio={(v) => cambiar({ proveedorId: v })}
-              buscable={opcionesProveedor.length > 8}
-              textoBoton={proveedorId ? (nombreProveedor.get(proveedorId) ?? "Proveedor") : "Proveedor"}
-            />
-            <MenuSeleccion
-              etiqueta="Ordenar"
-              titulo="Orden"
-              opciones={ORDENES.map((o) => ({ id: o.id, etiqueta: o.etiqueta }))}
-              valor={orden}
-              porDefecto="defecto"
-              onCambio={(v) => cambiar({ orden: v })}
-              textoBoton={etiquetaCortaDeOrden(orden)}
-            />
-          </>
+          },
+        }}
+        resultados={visibles?.length ?? 0}
+        contador={
+          visibles && !error ? `${visibles.length} ${hayFiltros && materiales ? `de ${materiales.length} materiales` : visibles.length === 1 ? "material" : "materiales"}` : undefined
         }
-        chips={
-          <ChipsFila etiqueta="Filtrar por rubro">
-            <Chip activo={rubro === ""} onClick={() => cambiar({ rubro: "" })} cantidad={conteos.total}>
-              Todos
-            </Chip>
-            {rubrosVisibles.map((r) => (
-              <Chip key={r} activo={rubro === r} onClick={() => cambiar({ rubro: rubro === r ? "" : r })} cantidad={conteos.porRubro[r] ?? 0}>
-                {r}
-              </Chip>
-            ))}
-            <Chip activo={soloSinPrecio} onClick={() => cambiar({ soloSinPrecio: !soloSinPrecio })} cantidad={sinPrecio}>
-              A confirmar
-            </Chip>
-          </ChipsFila>
-        }
-        filtros={
-          <BotonFiltros contador={filtrosActivos} hayFiltros={hayFiltros} onLimpiar={() => setFiltros(SIN_FILTROS)}>
-            <Interruptor checked={incluirInactivos} onChange={(v) => cambiar({ incluirInactivos: v })}>
-              Mostrar desactivados
-            </Interruptor>
-          </BotonFiltros>
-        }
+        hayFiltros={hayFiltros}
+        onLimpiar={() => setFiltros(SIN_FILTROS)}
       />
 
       {error && (
@@ -207,9 +180,6 @@ export default function MaterialesPage() {
 
       {!error && visibles && visibles.length > 0 && (
         <>
-          <p className="py-1 text-[13px] text-[#4A5861]" aria-live="polite">
-            {visibles.length} {hayFiltros && materiales ? `de ${materiales.length} materiales` : visibles.length === 1 ? "material" : "materiales"}
-          </p>
           <div className="rounded-lg border border-[#D9DFE3] bg-[#FFFFFF] lg:rounded-none">
             <div
               aria-hidden="true"
@@ -226,7 +196,7 @@ export default function MaterialesPage() {
             {grupos.map(([nombre, items]) => (
               <section key={nombre} aria-label={nombre || "Materiales"} className="border-t border-gray-100 first:border-t-0 lg:border-t-0">
                 {nombre && (
-                  <h3 className="sticky top-0 z-[5] border-y border-[#D9DFE3] bg-[#F4F8F9] px-4 py-1.5 text-[13px] font-bold uppercase tracking-wide text-[#244B5A] first:border-t-0 lg:hidden">
+                  <h3 className="sticky top-[var(--catalogo-barra,0px)] z-[5] flex h-9 items-center gap-1.5 border-y border-[#D9DFE3] bg-[#F4F8F9] px-4 text-[13px] font-bold uppercase tracking-wide text-[#244B5A] first:border-t-0 lg:hidden">
                     {nombre} <span className="font-normal text-[#4A5861]">({items.length})</span>
                   </h3>
                 )}
@@ -297,7 +267,7 @@ function FilaMaterial({ material: m, proveedor, onEditar }: { material: Material
   return (
     <li
       onClick={alTocarFila(onEditar)}
-      className={`flex min-h-[3.25rem] cursor-pointer items-center gap-3 px-4 py-1 text-[15px] leading-5 transition-colors hover:bg-[#F4F8F9] active:bg-[#EAF0F2] lg:grid lg:min-h-[2.75rem] lg:gap-x-4 lg:py-0 ${COLUMNAS} ${m.activo ? "" : "opacity-70"}`}
+      className={`flex min-h-[3.25rem] cursor-pointer items-center gap-3 px-4 py-1 text-[15px] leading-5 transition-colors hover:bg-[#F4F8F9] active:bg-[#EAF0F2] lg:grid lg:min-h-[3rem] lg:gap-x-4 lg:py-0 ${COLUMNAS} ${m.activo ? "" : "opacity-70"}`}
     >
       <span className="min-w-0 flex-1 lg:flex-none">
         <span className="flex items-center gap-2">

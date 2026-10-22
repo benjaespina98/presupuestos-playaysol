@@ -24,8 +24,8 @@ import { ordenarPor, type ClaveOrden } from "@/lib/ordenar";
 import { copiarAlPortapapeles } from "@/lib/clipboard";
 import { PanelPortal } from "@/components/PanelPortal";
 import { useEstadoPersistente } from "@/lib/useEstadoPersistente";
-import { IconCopy, IconPlus, IconTable } from "@/components/icons";
-import { LOCAL_STOCK, PLANILLA_COSTOS_URL } from "@/lib/brand";
+import { IconCopy } from "@/components/icons";
+import { LOCAL_STOCK } from "@/lib/brand";
 import { FiltrosCatalogo } from "@/components/catalogo/FiltrosCatalogo";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
 import { botonDe } from "@/components/ui/botones";
@@ -190,19 +190,7 @@ export default function CatalogoPage() {
       <EncabezadoPagina
         titulo="Precios de venta"
         descripcion="Lo que se le cobra al cliente en cada presupuesto: precios y descripciones compartidos por todo el equipo."
-      >
-        <a href={PLANILLA_COSTOS_URL} target="_blank" rel="noopener noreferrer" aria-label="Planilla de costos" className={botonDe("secundario", "px-4")}>
-          <IconTable className="h-4 w-4" />
-          <span className="hidden sm:inline">Planilla de costos</span>
-          <span className="sm:hidden">Planilla</span>
-        </a>
-        {!modoConsulta && (
-          <button type="button" onClick={() => setCreando(true)} aria-label="Agregar ítem" className={botonDe("primario", "px-4")}>
-            <IconPlus className="h-4 w-4" />
-            Agregar<span className="hidden sm:inline"> ítem</span>
-          </button>
-        )}
-      </EncabezadoPagina>
+      />
 
       <FiltrosCatalogo
         busqueda={busqueda}
@@ -222,6 +210,23 @@ export default function CatalogoPage() {
         onModoConsulta={setModoConsulta}
         hayFiltros={hayFiltros}
         onLimpiar={limpiarFiltros}
+        resultados={visibles?.length ?? 0}
+        onAgregar={() => setCreando(true)}
+        contador={
+          visibles && !error
+            ? `${visibles.length} ${hayFiltros && items ? `de ${items.length} ítems` : visibles.length === 1 ? "ítem" : "ítems"}`
+            : undefined
+        }
+        contadorDerecha={
+          hayStockEnCatalogo && visibles && visibles.length > 0 ? (
+            <>
+              <span className="font-semibold text-[#244B5A]">Stock · {LOCAL_STOCK}:</span>{" "}
+              {resumen.unidades === 0
+                ? "sin unidades cargadas"
+                : `${resumen.unidades} ${resumen.unidades === 1 ? "unidad" : "unidades"} en ${resumen.conUnidades} ${resumen.conUnidades === 1 ? "modelo" : "modelos"}`}
+            </>
+          ) : undefined
+        }
       />
 
       {modoConsulta && (
@@ -265,20 +270,6 @@ export default function CatalogoPage() {
 
       {!error && visibles && visibles.length > 0 && (
         <>
-          <p className="flex flex-wrap items-baseline justify-between gap-x-4 py-1 text-[13px] text-[#4A5861]" aria-live="polite">
-            <span>
-              {visibles.length} {hayFiltros && items ? `de ${items.length} ítems` : visibles.length === 1 ? "ítem" : "ítems"}
-            </span>
-            {hayStockEnCatalogo && (
-              <span className="hidden sm:inline">
-                <span className="font-semibold text-[#244B5A]">Stock · {LOCAL_STOCK}:</span>{" "}
-                {resumen.unidades === 0
-                  ? "sin unidades cargadas"
-                  : `${resumen.unidades} ${resumen.unidades === 1 ? "unidad" : "unidades"} en ${resumen.conUnidades} ${resumen.conUnidades === 1 ? "modelo" : "modelos"}`}
-              </span>
-            )}
-          </p>
-
           {/* Encabezado de columnas único, pegado debajo de la barra: las columnas son las mismas en todos los bloques. */}
           <div
             aria-hidden="true"
@@ -332,7 +323,7 @@ export default function CatalogoPage() {
 /** Encabezado de cada bloque (un modelo, una sección): liviano, y fijo debajo de la barra y del encabezado de columnas al bajar. */
 function CategoriaHeader({ titulo, cantidad }: { titulo: string; cantidad: number }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-t-lg border-b border-[#D9DFE3] bg-[#F4F8F9] px-4 py-1.5 lg:sticky lg:top-[calc(var(--catalogo-barra,0px)+2.25rem)] lg:z-[5] lg:rounded-none">
+    <div className="sticky top-[var(--catalogo-barra,0px)] z-[5] flex h-9 items-center gap-2.5 rounded-t-lg border-b border-[#D9DFE3] bg-[#F4F8F9] px-4 lg:top-[calc(var(--catalogo-barra,0px)+2.25rem)] lg:rounded-none">
       <span aria-hidden="true" className="h-3.5 w-1 shrink-0 rounded-full bg-[#244B5A]" />
       <h3 className="text-[13px] font-bold uppercase tracking-wide text-[#244B5A]">{titulo}</h3>
       <span className="text-[13px] text-[#4A5861]">({cantidad})</span>
@@ -367,47 +358,47 @@ function FilaItem({
   const [dialogo, setDialogo] = useState<DialogoStock>(null);
   const nombre = item.descripcion || item.clave;
   const editable = !modoConsulta;
+  const tieneAcciones = editable && conStock && llevaStock(item);
+  // Desde lg, cada celda vuelve a su columna de la grilla (se anulan las posiciones del celular).
+  const alta = "lg:col-auto lg:col-span-1 lg:row-auto lg:row-span-1 lg:justify-self-auto";
   return (
     <li
       onClick={editable ? alTocarFila(onEditar) : undefined}
-      className={`flex min-h-[3.25rem] items-center gap-2 px-4 py-1 text-[15px] leading-5 transition-colors hover:bg-[#F4F8F9] lg:grid lg:min-h-[2.75rem] lg:gap-x-4 lg:py-0 ${columnas} ${editable ? "cursor-pointer" : ""} ${item.activo ? "" : "opacity-70"}`}
+      className={`grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-1.5 gap-y-0.5 px-4 py-1.5 text-[15px] leading-5 transition-colors hover:bg-[#F4F8F9] lg:min-h-[3rem] lg:gap-x-4 lg:py-0 ${columnas} ${editable ? "cursor-pointer" : ""} ${item.activo ? "" : "opacity-70"}`}
     >
-      {/* Izquierda en el celular (nombre y, debajo, precio y stock); desde lg, cada dato en su columna. */}
-      <div className="min-w-0 flex-1 lg:contents">
-        <div className="min-w-0">
-          <ItemDescripcion item={item} />
-        </div>
-        <p className="flex items-center gap-2 lg:contents">
-          <span className="tabular-nums lg:text-center">
-            <PrecioItem item={item} />
-          </span>
-          <span className="hidden whitespace-nowrap text-[13px] text-[#4A5861] lg:block lg:text-center">{item.precio !== null && item.unidad ? `${item.unidad}` : ""}</span>
-          {conStock && (
-            <span className="lg:text-center">
-              <StockNumero item={item} />
-            </span>
-          )}
-        </p>
+      {/* Celular, dos renglones. Con acciones de stock: arriba el nombre y el stock; abajo el precio, "Venta", "…" y el lápiz.
+          Sin acciones: el nombre y el precio a la izquierda y el lápiz a la derecha. Desde lg, la grilla de columnas. */}
+      <div className={`col-span-2 col-start-1 row-start-1 min-w-0 ${alta}`}>
+        <ItemDescripcion item={item} />
       </div>
+      <span className={`col-start-1 row-start-2 justify-self-start tabular-nums lg:text-center ${alta}`}>
+        <PrecioItem item={item} />
+      </span>
+      <span className={`hidden whitespace-nowrap text-[13px] text-[#4A5861] lg:block lg:text-center`}>{item.precio !== null && item.unidad ? `${item.unidad}` : ""}</span>
+      {conStock && (
+        <span className={`row-start-1 justify-self-end ${tieneAcciones ? "col-span-2 col-start-2" : "col-start-2 row-start-2"} ${alta} lg:text-center`}>
+          <StockNumero item={item} />
+        </span>
+      )}
 
-      {/* Derecha: acciones de stock (Venta y "…"), la fecha (sólo desde lg) y el lápiz. */}
-      <div className="flex shrink-0 items-center gap-2 lg:contents">
-        {conStock && (
-          <div className="flex items-center justify-end gap-2">{editable && <AccionesStock item={item} onAbrir={setDialogo} />}</div>
-        )}
-        <p className="hidden whitespace-nowrap text-center text-[13px] text-[#4A5861] lg:block">
-          <FechaActualizacion updatedAt={item.updated_at} />
-        </p>
-        <div className="flex justify-end lg:justify-center">
-          {modoConsulta ? (
-            <button type="button" onClick={onCopiar} className={botonDe("suave", "px-3")}>
-              <IconCopy className="h-4 w-4" />
-              {copiado ? "¡Copiado!" : "Copiar"}
-            </button>
-          ) : (
-            <BotonLapiz nombre={nombre} etiqueta="Editar" onClick={onEditar} />
-          )}
+      {/* Acciones de stock (Venta y "…"), la fecha (sólo desde lg) y el lápiz. */}
+      {conStock && (
+        <div className={`col-start-2 row-start-2 flex items-center justify-end gap-1.5 ${alta} lg:gap-2`}>
+          {tieneAcciones && <AccionesStock item={item} onAbrir={setDialogo} />}
         </div>
+      )}
+      <p className="hidden whitespace-nowrap text-center text-[13px] text-[#4A5861] lg:block">
+        <FechaActualizacion updatedAt={item.updated_at} />
+      </p>
+      <div className={`col-start-3 flex justify-end ${tieneAcciones ? "row-start-2" : "row-span-2 row-start-1"} ${alta} lg:justify-center`}>
+        {modoConsulta ? (
+          <button type="button" onClick={onCopiar} className={botonDe("suave", "px-3")}>
+            <IconCopy className="h-4 w-4" />
+            {copiado ? "¡Copiado!" : "Copiar"}
+          </button>
+        ) : (
+          <BotonLapiz nombre={nombre} etiqueta="Editar" onClick={onEditar} />
+        )}
       </div>
       <DialogosStock item={item} dialogo={dialogo} onCerrar={() => setDialogo(null)} onResultado={onStockCambio} />
     </li>
@@ -458,9 +449,14 @@ function PrecioItem({ item }: { item: ItemCatalogo }) {
     );
   }
   return (
-    <span className="whitespace-nowrap font-semibold text-gray-900">
-      {formatARS(item.precio)}
-      {item.unidad && <span className="text-[13px] font-normal text-[#4A5861] lg:hidden"> / {item.unidad}</span>}
+    <span className="font-semibold text-gray-900">
+      <span className="whitespace-nowrap">{formatARS(item.precio)}</span>
+      {item.unidad && (
+        <>
+          {" "}
+          <span className="whitespace-nowrap text-[13px] font-normal text-[#4A5861] lg:hidden">/ {item.unidad}</span>
+        </>
+      )}
     </span>
   );
 }
