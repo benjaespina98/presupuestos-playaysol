@@ -513,7 +513,7 @@ export function PiscinaCalculadora({
             errors={errors}
             name="detalle"
             label="Dimensión piscina"
-            hint="Se completa sola con Largo/Ancho, con el texto base de siempre. Reemplazá lo que está entre corchetes (profundidad, cama de agua, escalera) por la medida real de esta obra."
+            hint="Se completa con Largo y Ancho. Reemplazá lo que está entre [corchetes]."
             multiline
             rows={6}
           />

@@ -162,7 +162,7 @@ function HistorialTabla() {
       <div className="mb-3">
         <FiltrosPlegables
           filtrosActivos={[tipoFiltro, usuarioParam, mostrarAnulados].filter(Boolean).length}
-          buscador={<Buscador valor={busqueda} onCambio={setBusqueda} placeholder="Buscar por nombre de cliente..." etiqueta="Buscar por nombre de cliente" />}
+          buscador={<Buscador valor={busqueda} onCambio={setBusqueda} placeholder="Buscar cliente..." etiqueta="Buscar por nombre de cliente" />}
         >
           <select
             value={tipoFiltro ?? ""}

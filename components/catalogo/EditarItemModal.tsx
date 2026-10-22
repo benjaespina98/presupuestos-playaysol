@@ -110,7 +110,7 @@ export function EditarItemModal({
             errors={errors}
             name="llevaStock"
             label="Llevar stock"
-            hint="Para artículos que se guardan en el local, como las piscinas de fibra; los que se piden a pedido no lo llevan."
+            hint="Para lo que se guarda en el local, como las piscinas de fibra."
           />
           {llevaStock && (
             <div className="space-y-1.5 border-t border-gray-200 pt-3 text-sm">

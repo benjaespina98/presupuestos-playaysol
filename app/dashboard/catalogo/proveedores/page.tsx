@@ -100,7 +100,7 @@ export default function ProveedoresPage() {
       <BarraFiltros>
         <FiltrosPlegables
           filtrosActivos={filtrosActivos}
-          buscador={<Buscador valor={busqueda} onCambio={(v) => cambiar({ busqueda: v })} placeholder="Buscar por nombre, rubro o contacto..." etiqueta="Buscar proveedores" />}
+          buscador={<Buscador valor={busqueda} onCambio={(v) => cambiar({ busqueda: v })} placeholder="Buscar proveedor..." etiqueta="Buscar proveedores" />}
         >
           <div className="flex flex-wrap items-center gap-x-5 gap-y-0.5">
             <Chip activo={soloSinTelefono} onClick={() => cambiar({ soloSinTelefono: !soloSinTelefono })} cantidad={faltanTelefono}>

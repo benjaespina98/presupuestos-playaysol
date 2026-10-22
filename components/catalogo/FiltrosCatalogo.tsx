@@ -73,7 +73,7 @@ export function FiltrosCatalogo({
           <Buscador
             valor={busqueda}
             onCambio={onBusqueda}
-            placeholder="Buscar: Caribe 550, cerco, cobertor, climatización..."
+            placeholder="Buscar: Caribe 550, cerco, cobertor..."
             etiqueta="Buscar en el catálogo"
           />
         }

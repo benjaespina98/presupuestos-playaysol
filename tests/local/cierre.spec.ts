@@ -271,7 +271,7 @@ test("presupuesto anulado: etiqueta, toggle y campos deshabilitados", async ({ p
   const d = datosDe(info);
   await entrar(page);
   await page.goto("/dashboard/historial");
-  await page.getByPlaceholder("Buscar por nombre de cliente...").fill(d.cliente);
+  await page.getByPlaceholder("Buscar cliente...").fill(d.cliente);
   await expect(page.getByText(d.cliente).locator("visible=true").first()).toBeVisible();
   await captura(page, info, "historial-antes-de-anular");
 

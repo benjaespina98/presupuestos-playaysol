@@ -631,7 +631,7 @@ export function LosetasCalculadora({
               control={control}
               name="labios"
               label="Ancho de labios (m)"
-              hint="Ya está dentro del largo × ancho de arriba. No cambia los m² a cotizar: solo dibuja el espejo de agua real dentro de la medida exterior."
+              hint="Va dentro del largo × ancho. No cambia los m²: sólo dibuja el agua real."
             />
           )}
           {valoresForm.revestimiento === "otro" && (
@@ -652,7 +652,7 @@ export function LosetasCalculadora({
                     errors={errors}
                     name="escaleraMovible"
                     label="Ubicarla a mano"
-                    hint="En vez de una franja fija, queda como un objeto chico que arrastrás en el plano — igual que las luces."
+                    hint="Queda como un objeto chico que arrastrás en el plano, como las luces."
                   />
                   {valoresForm.escaleraMovible ? (
                     <NumberField
@@ -716,7 +716,7 @@ export function LosetasCalculadora({
                 errors={errors}
                 name="norte"
                 label="El norte está hacia…"
-                hint="En el plano, el solar queda a la izquierda y el lateral 1 arriba. Se dibuja una rosa de los vientos (N, E, S, O) arriba a la derecha."
+                hint="Solar a la izquierda y lateral 1 arriba; se dibuja la rosa de los vientos."
                 options={NORTE_OPCIONES}
               />
             )}
