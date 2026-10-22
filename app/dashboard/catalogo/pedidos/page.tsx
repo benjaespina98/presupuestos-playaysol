@@ -55,7 +55,7 @@ export default function PedidosPage() {
   const hayFiltros = !!(busqueda || estado);
 
   return (
-    <PanelPortal compacto>
+    <PanelPortal compacto amplio>
       <EncabezadoPagina titulo="Pedidos" descripcion="Historial de pedidos de materiales, con su número y su estado.">
         <Link
           href="/dashboard/catalogo/pedido"
@@ -120,7 +120,7 @@ export default function PedidosPage() {
           ) : (
             <>
               Todavía no hay pedidos guardados.{" "}
-              <Link href="/dashboard/catalogo/pedido" className="font-medium text-[#244B5A] hover:underline">
+              <Link href="/dashboard/catalogo/pedido" className="inline-flex min-h-11 items-center font-medium text-marca underline-offset-2 hover:underline">
                 Armá el primero
               </Link>
               .

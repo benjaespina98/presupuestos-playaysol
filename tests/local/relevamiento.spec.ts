@@ -70,6 +70,9 @@ test("relevamiento de pantallas", async ({ page }, info) => {
           const r = el.getBoundingClientRect();
           const visible = r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== "hidden";
           if (!visible || el.closest("[aria-hidden=true]")) return;
+          // Interruptores ocultos (sr-only, 1x1) y botones "estirados" (su ::after cubre toda la fila): la zona real es la fila.
+          if (r.width <= 2 && r.height <= 2) return;
+          if (getComputedStyle(el, "::after").position === "absolute") return;
           if (r.height < 43.5 || r.width < 43.5) {
             const nombre = (el.getAttribute("aria-label") || el.textContent || el.getAttribute("placeholder") || el.tagName).trim().slice(0, 40);
             chicos.push(`${el.tagName.toLowerCase()} "${nombre}" ${Math.round(r.width)}x${Math.round(r.height)}`);

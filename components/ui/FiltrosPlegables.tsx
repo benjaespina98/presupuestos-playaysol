@@ -78,7 +78,7 @@ export function FiltrosPlegables({
           )}
         </button>
       </div>
-      <div id={`${id}-filtros`} className={`${abierto ? "block" : "hidden"} space-y-2.5 md:block`}>
+      <div id={`${id}-filtros`} className={`${abierto ? "block" : "hidden"} space-y-2.5 md:flex md:flex-wrap md:items-center md:gap-x-3 md:gap-y-2 md:space-y-0`}>
         {children}
       </div>
     </div>

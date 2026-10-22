@@ -240,7 +240,7 @@ function PedidoContenido() {
   const hayAjustes = Object.keys(ajustes).length > 0;
 
   return (
-    <PanelPortal compacto>
+    <PanelPortal compacto amplio>
       <EncabezadoPagina
         titulo="Armar pedido"
         descripcion="Elegí el tamaño de la pileta y las opciones de la obra: te armo qué pedir, cuánto y a quién."

@@ -219,7 +219,7 @@ function FilaProveedor({
   const falta = sinTelefono(p);
   return (
     <li
-      className={`relative grid min-h-[3.6rem] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-1.5 transition-colors hover:bg-marca/5 has-[button:active]:bg-marca/10 md:min-h-12 md:gap-x-4 ${COLUMNAS} ${p.activo ? "" : "opacity-60"}`}
+      className={`relative grid min-h-[3.35rem] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-1 transition-colors hover:bg-marca/5 has-[button:active]:bg-marca/10 md:min-h-12 md:gap-x-4 ${COLUMNAS} ${p.activo ? "" : "opacity-60"}`}
     >
       <div className="min-w-0 md:contents">
         <button
@@ -233,7 +233,7 @@ function FilaProveedor({
           {!p.activo && <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500">Desactivado</span>}
         </button>
         <p className="min-w-0 truncate text-xs text-gray-500 md:text-sm md:text-gray-700" title={p.contacto ?? undefined}>
-          {p.contacto ?? <span className="text-gray-400">{p.rubro ?? "—"}</span>}
+          {p.contacto ?? <span className="text-gray-400">{p.rubro ?? ""}</span>}
         </p>
       </div>
 

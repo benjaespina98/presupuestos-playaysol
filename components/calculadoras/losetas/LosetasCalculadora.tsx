@@ -749,11 +749,11 @@ export function LosetasCalculadora({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="colorAgua" className="mb-1 block text-xs text-gray-500">Color del agua</label>
-                <input id="colorAgua" type="color" className="h-10 w-full cursor-pointer rounded-md border border-gray-300" {...register("colorAgua")} />
+                <input id="colorAgua" type="color" className="h-11 w-full cursor-pointer rounded-md border border-gray-300" {...register("colorAgua")} />
               </div>
               <div>
                 <label htmlFor="colorLoseta" className="mb-1 block text-xs text-gray-500">Color del borde ({nombreDeBorde(materialBorde, tonoBorde)})</label>
-                <input id="colorLoseta" type="color" className="h-10 w-full cursor-pointer rounded-md border border-gray-300" {...register("colorLoseta")} />
+                <input id="colorLoseta" type="color" className="h-11 w-full cursor-pointer rounded-md border border-gray-300" {...register("colorLoseta")} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">

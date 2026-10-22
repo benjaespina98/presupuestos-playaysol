@@ -14,7 +14,7 @@ export function EncabezadoPagina({
   children?: React.ReactNode;
 }) {
   return (
-    <div data-print-hide="" className="mb-3 flex items-center justify-between gap-3 sm:mb-4 sm:items-end sm:gap-6">
+    <div data-print-hide="" className="mb-2 flex items-center justify-between gap-3 sm:mb-4 sm:items-end sm:gap-6">
       <div className="min-w-0 sm:flex-1">
         <h1 className="text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">{titulo}</h1>
         <p className="mt-1 hidden text-sm text-gray-500 sm:block">{descripcion}</p>

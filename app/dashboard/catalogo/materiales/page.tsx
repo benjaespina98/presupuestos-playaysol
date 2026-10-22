@@ -295,7 +295,7 @@ function FilaMaterial({
         type="button"
         onClick={onEditar}
         aria-label={`Editar ${m.nombre}`}
-        className={`grid min-h-[3.6rem] w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-1.5 text-left transition-colors hover:bg-marca/5 active:bg-marca/10 md:min-h-12 md:gap-x-4 ${COLUMNAS}`}
+        className={`grid min-h-[3.35rem] w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-1 text-left transition-colors hover:bg-marca/5 active:bg-marca/10 md:min-h-12 md:gap-x-4 ${COLUMNAS}`}
       >
         <span className="min-w-0">
           <span className="flex items-center gap-2">
