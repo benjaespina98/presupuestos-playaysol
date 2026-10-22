@@ -143,7 +143,7 @@ export default function CatalogoPage() {
   }
 
   return (
-    <PanelPortal compacto>
+    <PanelPortal compacto amplio>
       <EncabezadoPagina
         titulo="Precios de venta"
         descripcion="Lo que se le cobra al cliente en cada presupuesto: precios y descripciones compartidos por todo el equipo."

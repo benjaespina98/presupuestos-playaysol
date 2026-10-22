@@ -150,7 +150,7 @@ function HistorialTabla() {
   const hayFiltros = !!(busqueda || tipoFiltro || usuarioParam);
 
   return (
-    <PanelPortal>
+    <PanelPortal amplio>
       <h1 className="text-2xl font-semibold text-gray-900">Historial</h1>
       <p className="mb-6 mt-1 text-sm text-gray-500">
         Todos los presupuestos guardados en la nube por el equipo.

@@ -1,5 +1,6 @@
 "use client";
 
+import { botonDe } from "@/components/ui/botones";
 import { useEffect, useMemo, useState } from "react";
 import { listarMateriales, listarProveedores } from "@/lib/abastecimiento";
 import {
@@ -259,7 +260,7 @@ function FilaProveedor({
         onClick={onEditar}
         aria-label={`Editar ${p.nombre}`}
         title="Editar"
-        className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-[#244B5A] hover:bg-[#244B5A]/8 md:ml-0"
+        className={botonDe("secundario", "ml-auto w-11 px-0 md:ml-0")}
       >
         <IconEdit className="h-[18px] w-[18px]" />
       </button>
