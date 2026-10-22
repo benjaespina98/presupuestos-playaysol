@@ -207,7 +207,7 @@ describe("PiscinaCalculadora · precio de lista", () => {
     const user = userEvent.setup();
     render(<PiscinaCalculadora catalogo={CATALOGO_CON_LISTAS} />);
 
-    await user.selectOptions(screen.getByLabelText(/Precio de lista/), "lista_hormigon_8x4");
+    await user.selectOptions(screen.getByRole("combobox", { name: /Precio de lista/ }), "lista_hormigon_8x4");
 
     expect(totales().getByText("$ 15.390.000")).toBeInTheDocument();
     await cargarSubtotal(user, "14000000");
@@ -218,7 +218,7 @@ describe("PiscinaCalculadora · precio de lista", () => {
     render(<PiscinaCalculadora catalogo={CATALOGO_CON_LISTAS} />);
 
     expect(screen.queryByLabelText(/Piscina de hormigón 8x4 — \$/)).not.toBeInTheDocument();
-    const select = screen.getByLabelText(/Precio de lista/);
+    const select = screen.getByRole("combobox", { name: /Precio de lista/ });
     const opciones = within(select).getAllByRole("option").map((o) => o.textContent);
     expect(opciones.join("|")).toContain("Indusplast Caribe 550");
     expect(opciones.join("|")).not.toContain("Spa 240");

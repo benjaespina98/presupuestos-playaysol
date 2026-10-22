@@ -35,9 +35,16 @@ async function captura(page: Page, proyecto: string, nombre: string) {
 /** Contraste del texto de un control contra su fondo real (opacidad incluida). */
 async function contrasteDe(l: Locator): Promise<number> {
   return l.evaluate((el) => {
+    const lienzo = document.createElement("canvas");
+    lienzo.width = lienzo.height = 1;
+    const ctx2d = lienzo.getContext("2d", { willReadFrequently: true })!;
     const parse = (c: string) => {
-      const p = (c.match(/[\d.]+/g) ?? []).map(Number);
-      return [p[0], p[1], p[2], p[3] ?? 1] as [number, number, number, number];
+      ctx2d.clearRect(0, 0, 1, 1);
+      ctx2d.fillStyle = "#000000";
+      ctx2d.fillStyle = c;
+      ctx2d.fillRect(0, 0, 1, 1);
+      const d = ctx2d.getImageData(0, 0, 1, 1).data;
+      return [d[0], d[1], d[2], d[3] / 255] as [number, number, number, number];
     };
     const mezclar = (a: number[], b: number[]) => [a[0] * a[3] + b[0] * (1 - a[3]), a[1] * a[3] + b[1] * (1 - a[3]), a[2] * a[3] + b[2] * (1 - a[3]), 1];
     const lum = (c: number[]) => {

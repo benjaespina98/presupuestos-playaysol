@@ -257,7 +257,7 @@ function FilaProveedor({ proveedor: p, materiales, onEditar }: { proveedor: Prov
     >
       <div className="min-w-0 flex-1 lg:contents">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-sm font-medium text-gray-900">{p.nombre}</span>
+          <span className="line-clamp-2 break-words lg:truncate text-sm font-medium text-gray-900">{p.nombre}</span>
           {p.rubro && <span className="hidden shrink-0 rounded-md bg-[#EEF2F6] px-2 py-0.5 text-[13px] font-medium text-[#244B5A] lg:inline">{p.rubro}</span>}
           {!p.activo && <span className="shrink-0 rounded-full bg-[#E3ECEF] px-2 py-0.5 text-[13px] font-medium text-[#3E4A52]">Desactivado</span>}
         </div>

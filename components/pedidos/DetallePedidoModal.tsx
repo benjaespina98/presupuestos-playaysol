@@ -19,6 +19,7 @@ import { formatARSExacto } from "@/lib/format/ars";
 import { ModalShell } from "@/components/abastecimiento/modal-partes";
 import { MenuExportar } from "./MenuExportar";
 import { AccionesProveedor } from "./AccionesProveedor";
+import { SelectorSimple } from "@/components/ui/SelectorSimple";
 
 const cantidad = (n: number) => new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(n);
 
@@ -120,19 +121,16 @@ export function DetallePedidoModal({
           <label htmlFor="estado-pedido" className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-gray-600">
             Estado
           </label>
-          <select
-            id="estado-pedido"
-            value={pedido.estado}
-            disabled={ocupado || anulado}
-            onChange={(e) => cambiarEstado(e.target.value as EstadoPedido)}
-            className={`min-h-11 rounded-lg border border-gray-200 px-3 text-sm font-medium focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 ${CLASE_ESTADO[pedido.estado]}`}
-          >
-            {ESTADOS_PEDIDO.map((e) => (
-              <option key={e} value={e}>
-                {ETIQUETA_ESTADO[e]}
-              </option>
-            ))}
-          </select>
+          <div className="min-w-44">
+            <SelectorSimple
+              id="estado-pedido"
+              titulo="Estado"
+              valor={pedido.estado}
+              opciones={ESTADOS_PEDIDO.map((e) => ({ value: e, label: ETIQUETA_ESTADO[e] }))}
+              disabled={ocupado || anulado}
+              onCambio={(v) => cambiarEstado(v as EstadoPedido)}
+            />
+          </div>
         </div>
         <MenuExportar onExportar={exportar} variosProveedores={doc.proveedores.length > 1} ocupado={ocupado} />
       </div>

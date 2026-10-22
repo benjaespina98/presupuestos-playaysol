@@ -40,6 +40,7 @@ import { AgregarMaterial } from "@/components/pedidos/AgregarMaterial";
 import { MaterialModal } from "@/components/abastecimiento/MaterialModal";
 import { BotonLapiz } from "@/components/ui/BotonLapiz";
 import { botonDe } from "@/components/ui/botones";
+import { SelectorSimple } from "@/components/ui/SelectorSimple";
 
 const CLASE_CAMPO =
   "min-h-12 w-full rounded-lg border bg-white px-3 py-2.5 text-base text-gray-900 shadow-sm placeholder:text-[#6B7680] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20";
@@ -310,13 +311,7 @@ function PedidoContenido() {
 
             <div className="grid gap-4 sm:grid-cols-4">
               <Campo etiqueta="Tamaño de pileta" id="tamano">
-                <select id="tamano" value={params.tamano} onChange={(e) => cambiar({ tamano: e.target.value })} className={CLASE_CAMPO}>
-                  {TAMANOS.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
+                <SelectorSimple id="tamano" titulo="Tamaño de pileta" valor={params.tamano} opciones={TAMANOS.map((t) => ({ value: t, label: t }))} onCambio={(v) => cambiar({ tamano: v })} />
               </Campo>
               <Campo etiqueta="Cantidad de obras" id="obras">
                 <input

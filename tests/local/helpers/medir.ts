@@ -19,18 +19,28 @@ export interface Medidas {
 export async function medirPagina(page: Page): Promise<Medidas> {
   return page.evaluate(() => {
     type RGBA = [number, number, number, number];
+    // Los colores de Tailwind salen del navegador como oklch() o color(srgb ...): se pasan a rgba con un canvas.
+    const lienzo = document.createElement("canvas");
+    lienzo.width = lienzo.height = 1;
+    const ctx2d = lienzo.getContext("2d", { willReadFrequently: true })!;
+    const cacheColor = new Map<string, RGBA | null>();
     const parse = (c: string): RGBA | null => {
-      const m = c.match(/rgba?\(([^)]+)\)/);
+      if (cacheColor.has(c)) return cacheColor.get(c)!;
+      const m = c.match(/^rgba?\(([^)]+)\)$/);
+      let r: RGBA | null = null;
       if (m) {
         const p = m[1].split(/[ ,/]+/).filter(Boolean).map(Number);
-        return [p[0], p[1], p[2], p[3] ?? 1];
+        r = [p[0], p[1], p[2], p[3] ?? 1];
+      } else if (c) {
+        ctx2d.clearRect(0, 0, 1, 1);
+        ctx2d.fillStyle = "#000000";
+        ctx2d.fillStyle = c;
+        ctx2d.fillRect(0, 0, 1, 1);
+        const d = ctx2d.getImageData(0, 0, 1, 1).data;
+        r = [d[0], d[1], d[2], d[3] / 255];
       }
-      const ok = c.match(/color\(srgb ([\d. ]+)(?:\/ ([\d.]+))?\)/);
-      if (ok) {
-        const p = ok[1].trim().split(/\s+/).map(Number);
-        return [p[0] * 255, p[1] * 255, p[2] * 255, ok[2] ? Number(ok[2]) : 1];
-      }
-      return null;
+      cacheColor.set(c, r);
+      return r;
     };
     const mezclar = (sobre: RGBA, fondo: RGBA): RGBA => {
       const a = sobre[3];

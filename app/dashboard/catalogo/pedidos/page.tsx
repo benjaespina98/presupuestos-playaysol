@@ -217,7 +217,7 @@ function FilaPedido({ pedido: p, onAbrir }: { pedido: PedidoGuardado; onAbrir: (
           <span className="whitespace-nowrap text-[13px] tabular-nums text-[#4A5861] lg:text-sm lg:text-gray-600">{fechaDocumento(new Date(p.created_at))}</span>
         </p>
         <div className="min-w-0 lg:order-none">
-          <p className="truncate text-sm font-medium text-gray-900" title={p.obra || undefined}>
+          <p className="line-clamp-2 break-words lg:truncate text-sm font-medium text-gray-900" title={p.obra || undefined}>
             {p.obra || <span className="font-normal text-[#4A5861]">Sin obra</span>}
           </p>
           {p.solicitante && <p className="hidden truncate text-[13px] text-[#4A5861] lg:block">Pide: {p.solicitante}</p>}

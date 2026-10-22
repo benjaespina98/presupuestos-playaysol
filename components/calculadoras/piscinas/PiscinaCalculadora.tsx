@@ -21,6 +21,7 @@ import { armarBloquesPiscina } from "@/lib/documentos/piscinas/bloques";
 import { generarPdfPresupuesto } from "@/lib/documentos/pdfGenerator";
 import { compartirOdescargarArchivo } from "@/lib/documentos/compartir";
 import { armarNombreArchivo } from "@/lib/documentos/nombreArchivo";
+import { SelectorSimple } from "@/components/ui/SelectorSimple";
 import { redimensionarImagen, MAX_DIM_SUBIDA, CALIDAD_SUBIDA } from "@/lib/documentos/imagenes";
 import { FOTOS_GENERALES_PISCINAS, GRUPO_SEED_GENERAL, fotosSeedDeOpcional } from "@/lib/documentos/fotosSeed";
 import { useEditorFotosSeed } from "@/lib/documentos/useEditorFotosSeed";
@@ -529,23 +530,20 @@ export function PiscinaCalculadora({
           <h2 className="text-sm font-semibold text-gray-900">Ítems</h2>
           {listasDePrecios.length > 0 && (
             <div>
-              <label htmlFor="lista-precios" className="mb-1 block text-sm font-medium text-gray-700">
+              <label htmlFor="lista-precios" className="mb-1 block text-[15px] font-medium text-[#1F2A30]">
                 Precio de lista (completa el subtotal)
               </label>
-              <select
+              <SelectorSimple
                 id="lista-precios"
-                value={listaElegida}
-                onChange={(e) => elegirLista(e.target.value)}
-                className="min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20"
-              >
-                <option value="">Elegir tamaño o modelo…</option>
-                {listasDePrecios.map((l) => (
-                  <option key={l.clave} value={l.clave}>
-                    {formatARS(l.precio)} — {l.descripcion ?? l.clave}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-xs text-gray-500">
+                titulo="Precio de lista"
+                valor={listaElegida}
+                opciones={[
+                  { value: "", label: "Elegir tamaño o modelo…" },
+                  ...listasDePrecios.map((l) => ({ value: l.clave, label: `${formatARS(l.precio)} — ${l.descripcion ?? l.clave}` })),
+                ]}
+                onCambio={elegirLista}
+              />
+              <p className="mt-1 text-[13px] text-[#4A5861]">
                 Después podés editar el subtotal a mano si se acordó un precio distinto.
               </p>
             </div>

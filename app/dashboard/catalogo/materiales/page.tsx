@@ -301,7 +301,7 @@ function FilaMaterial({ material: m, proveedor, onEditar }: { material: Material
     >
       <span className="min-w-0 flex-1 lg:flex-none">
         <span className="flex items-center gap-2">
-          <span className="truncate text-sm font-medium text-gray-900">{m.nombre}</span>
+          <span className="line-clamp-2 break-words lg:truncate text-sm font-medium text-gray-900">{m.nombre}</span>
           {!m.activo && <span className="shrink-0 rounded-full bg-[#E3ECEF] px-2 py-0.5 text-[13px] font-medium text-[#3E4A52]">Desactivado</span>}
         </span>
         <span className="block truncate text-[13px] text-[#4A5861] lg:hidden">{proveedor ?? "Sin proveedor"}</span>

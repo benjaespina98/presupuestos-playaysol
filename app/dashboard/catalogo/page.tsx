@@ -425,7 +425,7 @@ function ItemDescripcion({ item }: { item: ItemCatalogo }) {
     const detalle = item.descripcion?.split("—")[1]?.trim();
     return (
       <>
-        <p className="truncate font-semibold text-gray-900">
+        <p className="line-clamp-2 break-words lg:truncate font-semibold text-gray-900">
           {corto}
           {baja}
         </p>
@@ -435,7 +435,7 @@ function ItemDescripcion({ item }: { item: ItemCatalogo }) {
   }
   return (
     <>
-      <p className="truncate font-medium text-gray-900" title={item.descripcion || item.clave}>
+      <p className="line-clamp-2 break-words lg:truncate font-medium text-gray-900" title={item.descripcion || item.clave}>
         {item.descripcion || item.clave}
         {baja}
       </p>
