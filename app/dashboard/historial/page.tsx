@@ -15,10 +15,12 @@ import {
 import { AnularDialog } from "@/components/AnularDialog";
 import { EtiquetaAnulado } from "@/components/Anulado";
 import { botonDe } from "@/components/ui/botones";
+import { Buscador, FiltrosPlegables } from "@/components/ui/FiltrosPlegables";
 import { Interruptor } from "@/components/catalogo/FiltrosCatalogo";
+import { useEstadoPersistente } from "@/lib/useEstadoPersistente";
 import { contarAnulados, estaAnulado } from "@/lib/anulacion";
 import { PanelPortal } from "@/components/PanelPortal";
-import { IconEdit, IconCopy, IconTrash, IconSearch } from "@/components/icons";
+import { IconEdit, IconCopy, IconTrash } from "@/components/icons";
 
 const TIPOS_VALIDOS: TipoCalculadora[] = [
   "piscinas",
@@ -64,9 +66,10 @@ function HistorialTabla() {
 
   const [presupuestos, setPresupuestos] = useState<Presupuesto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busqueda, setBusqueda] = useState("");
+  // La búsqueda y "mostrar anulados" se conservan al abrir un presupuesto y volver (tipo y usuario van en la URL).
+  const [busqueda, setBusqueda] = useEstadoPersistente("historial:busqueda", "");
   const [porAnular, setPorAnular] = useState<Presupuesto | null>(null);
-  const [mostrarAnulados, setMostrarAnulados] = useState(false);
+  const [mostrarAnulados, setMostrarAnulados] = useEstadoPersistente("historial:anulados", false);
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const usuarioParam = searchParams.get("usuario");
@@ -156,52 +159,59 @@ function HistorialTabla() {
         Todos los presupuestos guardados en la nube por el equipo.
       </p>
 
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <select
-          value={tipoFiltro ?? ""}
-          onChange={(e) => cambiarTipo(e.target.value)}
-          className="min-h-11 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#244B5A] focus:outline-none sm:w-auto"
+      <div className="mb-3">
+        <FiltrosPlegables
+          filtrosActivos={[tipoFiltro, usuarioParam, mostrarAnulados].filter(Boolean).length}
+          buscador={<Buscador valor={busqueda} onCambio={setBusqueda} placeholder="Buscar por nombre de cliente..." etiqueta="Buscar por nombre de cliente" />}
         >
-          <option value="">Todos los tipos</option>
-          {TIPOS_VALIDOS.map((t) => (
-            <option key={t} value={t}>
-              {TITULOS[t]}
-            </option>
-          ))}
-        </select>
+          <select
+            value={tipoFiltro ?? ""}
+            onChange={(e) => cambiarTipo(e.target.value)}
+            aria-label="Filtrar por tipo"
+            className="min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm hover:border-gray-300 focus:border-marca focus:outline-none focus:ring-2 focus:ring-celeste/30 sm:w-auto"
+          >
+            <option value="">Todos los tipos</option>
+            {TIPOS_VALIDOS.map((t) => (
+              <option key={t} value={t}>
+                {TITULOS[t]}
+              </option>
+            ))}
+          </select>
 
-        <select
-          value={usuarioParam ?? ""}
-          onChange={(e) => cambiarUsuario(e.target.value)}
-          className="min-h-11 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#244B5A] focus:outline-none sm:w-auto"
-        >
-          <option value="">Todos los usuarios</option>
-          {usuarios.map(([id, nombre]) => (
-            <option key={id} value={id}>
-              {nombre}
-            </option>
-          ))}
-        </select>
+          <select
+            value={usuarioParam ?? ""}
+            onChange={(e) => cambiarUsuario(e.target.value)}
+            aria-label="Filtrar por usuario"
+            className="min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm hover:border-gray-300 focus:border-marca focus:outline-none focus:ring-2 focus:ring-celeste/30 sm:w-auto"
+          >
+            <option value="">Todos los usuarios</option>
+            {usuarios.map(([id, nombre]) => (
+              <option key={id} value={id}>
+                {nombre}
+              </option>
+            ))}
+          </select>
 
-        <div className="relative w-full sm:max-w-sm">
-          <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar por nombre de cliente..."
-            className="min-h-11 w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-base sm:text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#244B5A] focus:outline-none"
-          />
-        </div>
+          {cantidadAnulados > 0 && (
+            <Interruptor checked={mostrarAnulados} onChange={setMostrarAnulados}>
+              Mostrar anulados ({cantidadAnulados})
+            </Interruptor>
+          )}
+          {hayFiltros && (
+            <button
+              type="button"
+              onClick={() => {
+                setBusqueda("");
+                setMostrarAnulados(false);
+                router.push("/dashboard/historial");
+              }}
+              className="min-h-11 rounded-lg px-3 text-sm font-medium text-marca hover:bg-marca/8"
+            >
+              Limpiar filtros
+            </button>
+          )}
+        </FiltrosPlegables>
       </div>
-
-      {cantidadAnulados > 0 && (
-        <div className="mb-3">
-          <Interruptor checked={mostrarAnulados} onChange={setMostrarAnulados}>
-            Mostrar anulados ({cantidadAnulados})
-          </Interruptor>
-        </div>
-      )}
 
       {error && (
         <p className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">

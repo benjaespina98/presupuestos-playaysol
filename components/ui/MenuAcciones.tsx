@@ -38,7 +38,8 @@ export function MenuAcciones({ etiqueta, acciones }: { etiqueta: string; accione
 
   useEffect(() => {
     if (!posicion) return;
-    menu.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    menu.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus({ preventScroll: true });
+    const yAlAbrir = window.scrollY;
     const alTocar = (e: MouseEvent) => {
       if (!menu.current?.contains(e.target as Node) && !boton.current?.contains(e.target as Node)) cerrar();
     };
@@ -48,10 +49,13 @@ export function MenuAcciones({ etiqueta, acciones }: { etiqueta: string; accione
         e.preventDefault();
         const items = [...(menu.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
         const i = items.indexOf(document.activeElement as HTMLElement);
-        items[(i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length]?.focus();
+        items[(i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length]?.focus({ preventScroll: true });
       }
     };
-    const alMover = () => cerrar();
+    // Se cierra si la página se mueve de verdad (no por el foco o un ajuste de unos pocos píxeles).
+    const alMover = () => {
+      if (Math.abs(window.scrollY - yAlAbrir) > 24) cerrar();
+    };
     document.addEventListener("mousedown", alTocar);
     document.addEventListener("keydown", alTeclear);
     window.addEventListener("scroll", alMover, true);

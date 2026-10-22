@@ -75,6 +75,12 @@ async function accion(page: Page, f: Locator, piscina: string, etiqueta: string)
   await page.getByRole("menuitem", { name: etiqueta, exact: true }).click();
 }
 
+/** En el celular los filtros están plegados detrás del botón "Filtros": se despliegan para tocarlos. */
+async function abrirFiltros(page: Page) {
+  const boton = page.getByRole("button", { name: /^Filtros/ });
+  if (await boton.isVisible()) await boton.click();
+}
+
 const abrirCatalogo = async (page: Page, nombre: string) => {
   await page.goto("/dashboard/catalogo");
   await expect(page.locator("li").filter({ hasText: nombre }).first()).toBeVisible();
@@ -148,7 +154,7 @@ test("stock: ingreso, venta con negativo, ajustes, anulación e historial", asyn
   await expect(historial.getByText("+3").first()).toBeVisible();
   await expect(historial.getByText("Stock inicial", { exact: true })).toBeVisible();
   await captura(page, info, "historial-ingreso");
-  await historial.getByRole("button", { name: "Cerrar" }).click();
+  await historial.getByRole("button", { name: "Cerrar", exact: true }).click();
 
   // Venta mayor al stock: pide confirmación, queda negativo, marca y banner.
   const antes = STOCK_INICIAL + 3;
@@ -189,7 +195,7 @@ test("stock: ingreso, venta con negativo, ajustes, anulación e historial", asyn
   await expect(h.getByText("Contra-asiento")).toBeVisible();
   await expect(h.getByText("Anulado", { exact: true }).first()).toBeVisible();
   await captura(page, info, "historial-contra-asiento");
-  await h.getByRole("button", { name: "Cerrar" }).click();
+  await h.getByRole("button", { name: "Cerrar", exact: true }).click();
   await expect(badge(f, 6)).toBeVisible();
 
   // Lo que no se puede anular: una anulación y un stock inicial (no tienen botón, dicen por qué).
@@ -202,7 +208,7 @@ test("stock: ingreso, venta con negativo, ajustes, anulación e historial", asyn
   const filaApertura = h2.locator("li").filter({ hasText: "Stock inicial" });
   await expect(filaApertura.getByRole("button", { name: "Anular" })).toHaveCount(0);
   await captura(page, info, "historial-no-anulable");
-  await h2.getByRole("button", { name: "Cerrar" }).click();
+  await h2.getByRole("button", { name: "Cerrar", exact: true }).click();
   expect(bloqueados).toEqual([]);
 });
 
@@ -228,7 +234,7 @@ test("stock: ítem sin stock, doble toque y dos pestañas", async ({ page, conte
   await accion(page, f, d.piscina, "Historial");
   const h = page.getByRole("dialog", { name: "Historial de stock" });
   await expect(h.getByText("Referencia: Doble toque E2E")).toHaveCount(1);
-  await h.getByRole("button", { name: "Cerrar" }).click();
+  await h.getByRole("button", { name: "Cerrar", exact: true }).click();
 
   // El mismo ítem en dos pestañas, vendiendo en ambas a la vez: se suman las dos ventas.
   const base = await stockDe(f);
@@ -280,6 +286,7 @@ test("presupuesto anulado: etiqueta, toggle y campos deshabilitados", async ({ p
 
   // Sale de la lista; el toggle lo trae de vuelta, con su etiqueta.
   await expect(page.getByText("Ningún presupuesto coincide con el filtro.")).toBeVisible();
+  await abrirFiltros(page);
   await page.getByText(/Mostrar anulados/).click();
   await expect(page.getByText("Anulado", { exact: true }).locator("visible=true").first()).toBeVisible();
   await expect(page.getByText("Motivo: Prueba E2E de anulación").locator("visible=true").first()).toBeVisible();
@@ -313,6 +320,7 @@ test("catálogo: desactivar y reactivar un ítem", async ({ page }, info) => {
   await page.getByRole("button", { name: "Guardar cambios" }).click();
   await expect(page.locator("li").filter({ hasText: ITEM_SIN_STOCK.texto })).toHaveCount(0);
 
+  await abrirFiltros(page);
   await page.getByText("Mostrar desactivados").click();
   const desactivada = fila(page, ITEM_SIN_STOCK.texto);
   await expect(desactivada.getByText("Desactivado")).toBeVisible();
