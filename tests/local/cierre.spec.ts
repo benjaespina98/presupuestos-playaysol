@@ -288,6 +288,7 @@ test("presupuesto anulado: etiqueta, toggle y campos deshabilitados", async ({ p
   await expect(page.getByText("Ningún presupuesto coincide con el filtro.")).toBeVisible();
   await abrirFiltros(page);
   await page.getByText(/Mostrar anulados/).click();
+  await page.keyboard.press("Escape"); // cierra el panel de filtros
   await expect(page.getByText("Anulado", { exact: true }).locator("visible=true").first()).toBeVisible();
   await expect(page.getByText("Motivo: Prueba E2E de anulación").locator("visible=true").first()).toBeVisible();
   await captura(page, info, "historial-anulados");
@@ -322,6 +323,7 @@ test("catálogo: desactivar y reactivar un ítem", async ({ page }, info) => {
 
   await abrirFiltros(page);
   await page.getByText("Mostrar desactivados").click();
+  await page.keyboard.press("Escape"); // cierra el panel de filtros
   const desactivada = fila(page, ITEM_SIN_STOCK.texto);
   await expect(desactivada.getByText("Desactivado")).toBeVisible();
   await captura(page, info, "catalogo-desactivados");

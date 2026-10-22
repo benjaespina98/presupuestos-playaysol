@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import fs from "node:fs";
 import { iniciarSesion } from "./helpers/sesion";
 import path from "node:path";
-import { asegurarMaterialDeEdicion, cantidadGuardada } from "./helpers/datos";
+import { asegurarDatosDePantallas, asegurarMaterialDeEdicion, cantidadGuardada } from "./helpers/datos";
 
 /**
  * La ventana de edición (hoja compartida) y las filas de las listas, en todos los tamaños:
@@ -77,6 +77,7 @@ test.describe.configure({ mode: "serial" });
 
 test.beforeAll(async () => {
   await asegurarMaterialDeEdicion(MATERIAL);
+  await asegurarDatosDePantallas(); // incluye un proveedor con teléfono
 });
 
 test("cada fila tiene su lápiz de 44×44; tocar la fila abre la edición y un teléfono no", async ({ page }, info) => {
@@ -100,12 +101,12 @@ test("cada fila tiene su lápiz de 44×44; tocar la fila abre la edición y un t
 
   // Proveedores: el link del teléfono no abre la edición; el resto de la fila sí.
   await page.goto("/dashboard/catalogo/proveedores");
-  await expect(page.getByRole("button", { name: /^Editar Distribuidora Norte E2E/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Editar Corralón Pantallas E2E/ })).toBeVisible();
   const tel = page.getByRole("link", { name: /\+54 9 3534/ }).first();
   await tel.evaluate((a) => a.addEventListener("click", (e) => e.preventDefault(), { once: true })); // no navegar a tel:
   await tel.click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await page.getByText("Distribuidora Norte E2E", { exact: true }).first().click();
+  await page.getByText("Corralón Pantallas E2E", { exact: true }).first().click();
   await expect(page.getByRole("dialog", { name: "Editar proveedor" })).toBeVisible();
   await captura(page, info.project.name, "proveedor-editar");
   await page.keyboard.press("Escape");
@@ -213,6 +214,7 @@ test("botones: en reposo, con el mouse encima, apretados y con foco siguen tenie
     expect(await c.evaluate((el) => getComputedStyle(el).cursor), `${nombre}: cursor`).toBe("pointer");
     if (!toque) {
       await c.hover();
+      await page.waitForTimeout(300);
       expect(await contrasteDe(c), `${nombre} con el mouse encima`).toBeGreaterThanOrEqual(4.5);
       await page.mouse.down();
       expect(await contrasteDe(c), `${nombre} apretado`).toBeGreaterThanOrEqual(4.5);
@@ -236,6 +238,7 @@ test("botones: en reposo, con el mouse encima, apretados y con foco siguen tenie
   const valorInicial = await hoja.getByLabel("8x4").inputValue();
   await hoja.getByLabel("8x4").fill(valorInicial === "9" ? "8" : "9");
   const guardar = hoja.getByRole("button", { name: "Guardar cambios" });
+  await page.waitForTimeout(300); // termina la transición de color del botón al habilitarse
   for (const [nombre, c] of [["Guardar", guardar], ["Cancelar", hoja.getByRole("button", { name: "Cancelar" })]] as [string, Locator][]) {
     if (!toque) {
       await c.hover();

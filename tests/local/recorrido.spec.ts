@@ -106,7 +106,13 @@ const PASOS: Paso[] = [
   { nombre: "proveedor-nuevo", ruta: "/dashboard/catalogo/proveedores", preparar: (p) => tocar(p, /^Agregar proveedor/) },
   { nombre: "proveedor-editar", ruta: "/dashboard/catalogo/proveedores", preparar: (p) => tocar(p, /^Editar Distribuidora Norte E2E/) },
   { nombre: "catalogo-armar-pedido", ruta: "/dashboard/catalogo/pedido" },
-  { nombre: "pedido-menu-exportar", ruta: "/dashboard/catalogo/pedido", preparar: (p) => p.getByLabel("Exportar").first().click({ timeout: 8_000 }) },
+  { nombre: "pedido-menu-exportar", ruta: "/dashboard/catalogo/pedido", preparar: async (p) => {
+      // Con un proveedor desactivado en el pedido, exportar pide confirmar antes.
+      const confirmar = p.getByLabel("Pedir igual a proveedores desactivados");
+      if (await confirmar.count()) await confirmar.check();
+      await p.getByLabel("Exportar").first().click({ timeout: 8_000 });
+    },
+  },
   { nombre: "catalogo-pedidos", ruta: "/dashboard/catalogo/pedidos" },
   { nombre: "pedido-detalle", ruta: "/dashboard/catalogo/pedidos", preparar: (p) => tocar(p, /^Abrir PED/) },
   {
@@ -152,6 +158,7 @@ test("recorrido: mide todas las pantallas y ventanas", async ({ page }, info) =>
   fs.mkdirSync(dir, { recursive: true });
 
   const medir = async (nombre: string, extra?: string) => {
+    await page.waitForTimeout(400); // que terminen las transiciones de color antes de medir
     const m = await medirPagina(page);
     resultados.set(`${proyecto}|${nombre}`, { ...m, omitido: extra });
     await page.screenshot({ path: path.join(dir, `${nombre}.png`), fullPage: false });
