@@ -13,7 +13,7 @@ const PASSWORD = process.env.E2E_LOCAL_PASSWORD ?? "";
 const FASE = process.env.E2E_FASE ?? "despues";
 const HOSTS_PERMITIDOS = new Set(["127.0.0.1", "localhost"]);
 
-type Tipo = { ruta: string; nombre: string; etiquetaCliente?: string; completar: (page: Page) => Promise<void>; exporta: boolean };
+type Tipo = { ruta: string; nombre: string; etiquetaCliente?: string; completar: (page: Page) => Promise<void>; exporta: boolean; esPlano?: boolean };
 
 const num = async (page: Page, etiqueta: string | RegExp, valor: string) => {
   const campo = page.getByLabel(etiqueta, { exact: typeof etiqueta === "string" }).locator("visible=true").first();
@@ -59,7 +59,8 @@ const TIPOS: Tipo[] = [
     ruta: "losetas",
     nombre: "Plano",
     etiquetaCliente: "Cliente o referencia",
-    exporta: false,
+    exporta: true,
+    esPlano: true,
     completar: async (page) => {
       await num(page, "Largo (m)", "8");
       await num(page, "Ancho (m)", "4");
@@ -93,7 +94,7 @@ for (const tipo of TIPOS) {
     test.setTimeout(180_000);
     const errores: string[] = [];
     page.on("pageerror", (e) => errores.push(e.message));
-    const cliente = `Cliente Calc ${tipo.nombre} ${info.project.name}`;
+    const cliente = `Ñandú "Calc" <${tipo.nombre}> ${info.project.name}`;
 
     await page.goto(`/dashboard/${tipo.ruta}`);
     await page.getByLabel(tipo.etiquetaCliente ?? "Señor/Sra").locator("visible=true").first().fill(cliente);
@@ -104,15 +105,36 @@ for (const tipo of TIPOS) {
     await page.getByRole("button", { name: /Guardar en la nube/ }).locator("visible=true").first().click();
     await expect(page.getByText(/guardado|actualizado/i).locator("visible=true").first()).toBeVisible({ timeout: 30_000 });
 
-    // Exportar: el navegador recibe el archivo (Word y PDF).
+    // Exportar: el navegador recibe el archivo. Presupuestos: Word y PDF. Plano: imagen y PDF.
+    // Los archivos se guardan en capturas-locales/exports (ignorada por git) para mirarlos.
     if (tipo.exporta) {
-      const word = page.waitForEvent("download", { timeout: 90_000 });
-      await page.getByRole("button", { name: /^Word/ }).locator("visible=true").first().click();
-      expect((await word).suggestedFilename()).toMatch(/\.docx$/i);
-
-      const pdf = page.waitForEvent("download", { timeout: 90_000 });
-      await page.getByRole("button", { name: /^PDF/ }).locator("visible=true").first().click();
-      expect((await pdf).suggestedFilename()).toMatch(/\.pdf$/i);
+      const carpeta = path.join("capturas-locales", "exports", info.project.name);
+      fs.mkdirSync(carpeta, { recursive: true });
+      const pedir = async (boton: RegExp, extension: RegExp) => {
+        const descarga = page.waitForEvent("download", { timeout: 90_000 });
+        await page.getByRole("button", { name: boton }).locator("visible=true").first().click();
+        const d = await descarga;
+        const nombre = d.suggestedFilename();
+        expect(nombre).toMatch(extension);
+        // Nombre saneado: nada que Windows no acepte y sin los caracteres raros del cliente.
+        expect(nombre).not.toMatch(/[\/:*?"<>|]/);
+        expect(nombre).toMatch(/^Presupuesto_/);
+        const destino = path.join(carpeta, `${tipo.ruta}-${nombre}`);
+        await d.saveAs(destino);
+        expect(fs.statSync(destino).size, `${nombre} está vacío`).toBeGreaterThan(2000);
+        return destino;
+      };
+      if (tipo.esPlano) {
+        const png = await pedir(/^Imagen/, /.png$/i);
+        const cabecera = fs.readFileSync(png).subarray(0, 24);
+        expect(cabecera.subarray(1, 4).toString()).toBe("PNG");
+        expect(cabecera.readUInt32BE(16), "ancho de la imagen").toBeGreaterThan(300);
+        expect(cabecera.readUInt32BE(20), "alto de la imagen").toBeGreaterThan(300);
+        await pedir(/^PDF/, /.pdf$/i);
+      } else {
+        await pedir(/^Word/, /.docx$/i);
+        await pedir(/^PDF/, /.pdf$/i);
+      }
     }
 
     await page.goto("/dashboard/historial");
