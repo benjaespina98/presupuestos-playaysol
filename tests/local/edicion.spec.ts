@@ -216,8 +216,9 @@ test("botones: en reposo, con el mouse encima, apretados y con foco siguen tenie
       expect(await contrasteDe(c), `${nombre} con el mouse encima`).toBeGreaterThanOrEqual(4.5);
       await page.mouse.down();
       expect(await contrasteDe(c), `${nombre} apretado`).toBeGreaterThanOrEqual(4.5);
-      await page.mouse.up();
+      // Se suelta afuera del botón: no cuenta como toque (si no, abriría la ventana).
       await page.mouse.move(0, 0);
+      await page.mouse.up();
     }
     await c.focus();
     await page.keyboard.press("Shift+Tab");
@@ -281,7 +282,7 @@ test("'Cuándo se pide' es una lista propia con descripciones claras (los valore
   // Elegir cierra la lista y cambia el valor (el <select> de abajo guarda el valor interno "Luz").
   await lista.getByRole("option", { name: /Por luz/ }).click();
   await expect(page.getByRole("dialog", { name: "Cuándo se pide" })).toHaveCount(0);
-  await expect(hoja.getByLabel("Cuándo se pide")).toHaveValue("Luz");
+  await expect(hoja.locator("#aplica")).toHaveValue("Luz");
   await expect(hoja.getByRole("button", { name: "Guardar cambios" })).toBeEnabled();
   await page.keyboard.press("Escape"); // pide confirmar el descarte
   await page.getByRole("button", { name: "Descartar" }).click();

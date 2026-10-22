@@ -111,6 +111,13 @@ button:not(:disabled):active,
 html {
   -webkit-tap-highlight-color: transparent;
 }
+/* Con la barra de filtros y el encabezado de la tabla fijos arriba (escritorio), lo que se lleva a la vista
+   (foco, scroll a un elemento) no queda tapado debajo de ellos. */
+@media (min-width: 1024px) {
+  html {
+    scroll-padding-top: calc(var(--catalogo-barra, 0px) + 3.25rem);
+  }
+}
 
 /* Combos con el mismo aspecto en todo el portal: flecha propia y uniforme (los nativos cambian
    de un navegador a otro). Siguen siendo <select> nativos, que en el celular abren el selector
