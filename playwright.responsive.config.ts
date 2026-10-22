@@ -9,7 +9,7 @@ import { defineConfig, devices } from "@playwright/test";
  * (Chromium y, si está instalado, WebKit), también con el teléfono en modo oscuro. WebKit se instala con `npx playwright install webkit`.
  */
 /** Uno o varios (separados por coma): recorrido, edicion, compartir, documentos. */
-const specs = (process.env.E2E_SPEC ?? "recorrido,edicion,compartir,documentos,autoprueba").split(",").map((s) => s.trim());
+const specs = (process.env.E2E_SPEC ?? "recorrido,edicion,compartir,documentos,autoprueba,gestos,estados,metricas").split(",").map((s) => s.trim());
 const solo = process.env.E2E_PROYECTOS?.split(",").map((s) => s.trim());
 
 const chrome = process.env.E2E_CHROMIUM_PATH ? { launchOptions: { executablePath: process.env.E2E_CHROMIUM_PATH } } : {};

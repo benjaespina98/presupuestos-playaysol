@@ -261,13 +261,19 @@ test("recorrido: mide todas las pantallas y ventanas", async ({ page }, info) =>
   const dir = path.join("capturas-locales", FASE, proyecto);
   fs.mkdirSync(dir, { recursive: true });
 
+  // La flecha de "volver arriba" se va sola a los 2,5 s: en ese paso se la vuelve a mostrar (un toque de scroll hacia arriba)
+  // justo antes de medir y de sacar la captura, para que esté a la vista.
+  const reavivar = (nombre: string) => (nombre === "catalogo-flecha" ? page.evaluate(() => window.scrollBy(0, -3)).then(() => page.waitForTimeout(120)) : Promise.resolve());
   const medir = async (nombre: string, extra?: string) => {
     await page.waitForTimeout(450); // que terminen las transiciones de color antes de medir
+    await reavivar(nombre);
     const m = await medirPagina(page);
+    await reavivar(nombre);
     const l = await medirLayout(page);
     resultados.set(`${proyecto}|${nombre}`, { ...m, ...l, omitido: extra });
     // El indicador de desarrollo de Next no es del portal: no sale en la captura.
     await page.addStyleTag({ content: "nextjs-portal{display:none!important}" });
+    await reavivar(nombre);
     await page.screenshot({ path: path.join(dir, `${nombre}.png`), fullPage: false });
   };
 

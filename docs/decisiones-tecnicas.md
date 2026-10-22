@@ -361,3 +361,32 @@ documento con líneas de precio — en vez de forzarla dentro del molde de
   *Decisión tomada:* "agotado" pasó de "≤ 0" a "= 0" y los negativos tienen su propia opción (antes caían en "agotado").
 - **Menú**: "Catálogo" se partió en "Precios" y "Compras" porque mezclaba lo que se le cobra al cliente con lo que se le compra a
   los proveedores. Las rutas no cambian.
+
+## 14 · Filtros y barra de herramientas "mobile primero" (PROMPT G)
+
+- **Una sola barra para todas las listas** (`BarraHerramientas`, ver `docs/interfaz.md`): celular = buscador + Filtros + "+" en una fila
+  de 56 px con todos los filtros en una hoja de 92 %; escritorio (768 px o más) = una fila de 64 px con menús. Reemplaza a las barras de
+  chips con scroll horizontal. *Decisión tomada:* los chips no se usan en escritorio (seis opciones nunca caben junto al resto de la barra
+  sin scroll) y el encabezado del celular no se oculta al bajar (mide 52 px; sólo la barra de herramientas queda fija).
+- **Filtros por pantalla**: Precios (Categoría, Stock, Orden, desactivados, modo consulta), Materiales (Rubro, Proveedor, "Sólo A confirmar",
+  Orden), Proveedores (Rubro, Teléfono, Orden), Pedidos (Estado, Fecha, Orden) e Historial (Tipo, Usuario, Fecha, Orden). El filtro de fecha
+  es sólo de la lista (`lib/filtroFecha.ts`); no cambia ningún dato ni cálculo. Los contadores dicen "N de M" con M = lo que se ve sin filtros
+  (sin desactivados ni anulados, salvo que se pidan).
+- **Auditoría del CSS para Safari de iOS** (sobre el CSS de producción, `.next/static/chunks/*.css`):
+  - `color-mix()`: 7 reglas, todas con respaldo sólido anterior (Tailwind lo genera) y sólo en anillos de foco, sombras y el fondo de un
+    menú; los botones, textos y bordes críticos ya usaban hex fijos y se reemplazaron las pocas opacidades que quedaban (`bg-marca/8`, `hover:bg-[#244B5A]/8`, `border-marca/30`...).
+  - `oklch()`: ninguno (la paleta compilada es hex). `lab()`: sólo dentro de `@supports`, con respaldo.
+  - `@property` (57) y `@layer` (5): son de Tailwind 4, que pide Safari 16.4 o más; Tailwind trae su propio respaldo para Safari anteriores a 16.4
+    (bloque `@supports` que define los valores iniciales). *No se puede probar en un iPhone viejo:* por debajo de iOS 15.4 (sin `@layer`) el CSS no se
+    aplica; no se agregó ningún plugin de PostCSS para aplanarlo porque sumaría una dependencia sin necesidad comprobada.
+  - `:has()` (5, sólo para el cursor de los interruptores), `@container` (ninguno), `dvh` (ahora con respaldo en `vh`: `pys-min-h-pantalla`, `pys-max-h-*`),
+    `env(safe-area-inset-*)` (se agregó el de los costados: la página usa `viewport-fit=cover`), `color-scheme: light` (ahora también en el `<meta>` por el
+    `viewport` de Next), `-webkit-appearance: none` en botones y campos, `-webkit-text-fill-color` en los deshabilitados.
+  - **Un hallazgo del propio test**: las pruebas de "scroll horizontal de la página" comparaban con `window.innerWidth`; en el celular, Safari y el Chromium
+    emulado **achican** una página más ancha que la pantalla para que entre y `innerWidth` pasa a valer lo mismo que la página: el scroll horizontal no se veía.
+    Ahora se compara con el ancho del dispositivo (y con `visualViewport.scale`), y una autoprueba (`autoprueba.spec.ts`) confirma que detecta cada falla.
+  - Modo oscuro del teléfono: se prueban `iphone13-webkit-oscuro` y `iphone13-chromium-oscuro`; el portal se ve igual que en claro.
+- **Next 16.4.2**: `npm audit` marcaba como críticos tres avisos de Next 16.3.8 (ejecución remota en el optimizador de imágenes con SVG y en funciones `use cache`, y
+  denegación de servicio con Server Actions). Se subió a 16.4.2 (mismo major, sin cambios de código) y se corrió toda la verificación. Quedan 7 avisos
+  (`eslint-config-next` y `exceljs`/`uuid`) que sólo se arreglan con `--force` bajando de versión mayor.
+- **Gestos**: `Input.synthesizeScrollGesture` de Chromium no mueve nada con la emulación táctil; se usan toques reales (`Input.dispatchTouchEvent`).
