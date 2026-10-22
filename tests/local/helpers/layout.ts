@@ -198,12 +198,13 @@ export async function medirLayout(page: Page): Promise<ProblemasDeLayout> {
     document.querySelectorAll<HTMLElement>("body *").forEach((el) => {
       const cs = getComputedStyle(el);
       if (cs.position !== "fixed" && cs.position !== "sticky") return;
-      if (!visible(el)) return;
+      // (Un encabezado de tabla pegado puede ser aria-hidden y de celdas angostas: igual tapa lo que se desliza debajo.)
+      if (cs.visibility === "hidden" || cs.display === "none" || el.closest("nextjs-portal")) return;
       const r = el.getBoundingClientRect();
-      if (r.width <= ancho * 0.5) return;
+      if (r.width <= 0 || r.height <= 0) return;
       // Las barras y encabezados pegados arriba (la barra de herramientas, el encabezado de la tabla, el del grupo).
       if (r.top < alto * 0.3 && r.bottom > 0 && r.bottom < alto * 0.5) tope = Math.max(tope, r.bottom);
-      if (r.bottom >= alto - 1 && r.top > alto * 0.5) piso = Math.min(piso, r.top);
+      if (r.width > ancho * 0.5 && r.bottom >= alto - 1 && r.top > alto * 0.5) piso = Math.min(piso, r.top);
     });
     /** Un fondo que cubre toda la pantalla (detrás de un menú abierto, para cerrarlo al tocar afuera). */
     const esFondo = (el: Element) => {
@@ -223,6 +224,8 @@ export async function medirLayout(page: Page): Promise<ProblemasDeLayout> {
       // están tapados por otra cosa (una flecha flotante que le muerde una esquina, una barra), está tapado.
       const vista = vistaDe(el);
       if (!vista) continue; // recortado por un contenedor con scroll
+      // Medio escondido por el borde de su contenedor con scroll: se llega deslizando, no está tapado.
+      if ((vista.right - vista.left) * (vista.bottom - vista.top) < 0.6 * r.width * r.height) continue;
       let tapadoEn = 0;
       let culpable: Element | null = null;
       for (const fx of [0.12, 0.5, 0.88]) {
@@ -239,6 +242,8 @@ export async function medirLayout(page: Page): Promise<ProblemasDeLayout> {
           if (arriba.closest("label") && arriba.closest("label")!.contains(el)) continue;
           if ((arriba as HTMLElement).closest?.("nextjs-portal")) continue;
           if (esFondo(arriba)) continue;
+          // Un ícono o botón "absoluto" que vive dentro del propio campo (el ✕ de limpiar de un buscador).
+          if (el.parentElement?.contains(arriba) && (getComputedStyle(arriba).position === "absolute" || !!arriba.closest("[class*='absolute']"))) continue;
           // Un menú o panel flotante abierto pasa por encima de lo de abajo a propósito.
           if (enSuperpuesto(arriba) && !enSuperpuesto(el)) continue;
           tapadoEn++;

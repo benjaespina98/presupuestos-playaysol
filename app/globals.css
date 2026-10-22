@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Tailwind lee todo el repositorio buscando nombres de clases: la documentación y las pruebas hablan de clases (por ejemplo
+   `bg-marca/8`) y generaban reglas que ninguna pantalla usa. Sólo se escanea el código de la aplicación. */
+@source not "../docs";
+@source not "../tests";
+@source not "../supabase";
+@source not "../scripts";
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

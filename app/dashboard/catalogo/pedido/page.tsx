@@ -399,7 +399,7 @@ function PedidoContenido() {
               {/* Barra fija: al bajar por una tabla larga, el costo y los botones de exportar siguen a mano. */}
               <div
                 data-print-hide=""
-                className="-mx-4 mb-4 grid grid-cols-2 gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2.5 sm:flex sm:flex-wrap sm:items-center sm:gap-x-4 md:sticky md:top-0 md:z-20"
+                className="-mx-4 mb-4 grid grid-cols-2 gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2.5 sm:flex sm:flex-wrap sm:items-center sm:gap-x-4 lg:sticky lg:top-0 lg:z-20"
               >
                 <p className="col-span-2 text-sm tabular-nums text-gray-600 sm:mr-auto">
                   <b className="text-gray-900">{pedido.articulos}</b> artículos · <b className="text-gray-900">{pedido.proveedores}</b> proveedores ·{" "}
@@ -692,7 +692,7 @@ function GrupoTabla({
                     }
                     onAjustar(l.material.id, n === l.calculada ? null : { cantidad: n });
                   }}
-                  className={`min-h-12 w-28 rounded-lg border px-2 py-1.5 text-base tabular-nums focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 ${
+                  className={`min-h-12 w-24 rounded-lg border px-2 py-1.5 text-base tabular-nums focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 ${
                     ajustada ? "bg-amber-50" : "bg-[#FFFFFF]"
                   }`}
                 />
