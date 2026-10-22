@@ -144,7 +144,8 @@ test("recorrido: mide todas las pantallas y ventanas", async ({ page }, info) =>
   expect(EMAIL && PASSWORD, "faltan las credenciales de la prueba").toBeTruthy();
   const bloqueados: string[] = [];
   const errores: string[] = [];
-  page.on("pageerror", (e) => errores.push(e.message));
+  // WebKit avisa como error una consulta que se cortó porque se cambió de pantalla en el medio: no es del portal.
+  page.on("pageerror", (e) => !/due to access control checks/.test(e.message) && errores.push(e.message));
   await soloLocal(page, bloqueados);
   const proyecto = info.project.name;
   const dir = path.join("capturas-locales", FASE, proyecto);
