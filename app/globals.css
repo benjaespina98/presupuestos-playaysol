@@ -75,6 +75,23 @@ button:disabled {
   border-color: #8b969e !important;
   box-shadow: none !important;
 }
+/* Red de seguridad: los botones, links y resúmenes con borde gris claro (o de marca/rojo con opacidad) pasan al borde
+   de control, que se ve (3:1 contra el fondo). Los hex fijos de botones.ts ya lo cumplen. */
+button[class*="border-gray-"],
+a[class*="border-gray-"],
+summary[class*="border-gray-"],
+label[class*="border-gray-"] {
+  border-color: var(--borde-control);
+}
+button[class*="border-red-"],
+a[class*="border-red-"] {
+  border-color: #b42318;
+}
+button[class*="border-marca"],
+a[class*="border-marca"],
+summary[class*="border-marca"] {
+  border-color: #244b5a;
+}
 :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
   outline: 2px solid var(--color-celeste);
   outline-offset: 2px;

@@ -9,6 +9,8 @@ import type { Page } from "@playwright/test";
 export interface Medidas {
   scrollHorizontal: boolean;
   textosChicos: string[];
+  /** Rótulos del dibujo del plano (SVG escalado con el dibujo): se cuentan aparte, no son texto de la interfaz. */
+  textosDePlano: number;
   zonasChicas: string[];
   contraste: string[];
   /** Controles que al pasar el mouse no muestran la manito (en escritorio no parecen botones). */
@@ -89,6 +91,7 @@ export async function medirPagina(page: Page): Promise<Medidas> {
 
     // 1) Textos visibles con tipografía menor a 13 px.
     const textosChicos = new Set<string>();
+    let textosDePlano = 0;
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
       const t = (n.textContent ?? "").trim();
@@ -98,7 +101,8 @@ export async function medirPagina(page: Page): Promise<Medidas> {
       // El texto de un dibujo SVG (el plano) se escala con el dibujo: cuenta el tamaño con que se ve en pantalla.
       const svgEl = p as unknown as SVGGraphicsElement;
       if (typeof svgEl.getScreenCTM === "function" && p.namespaceURI === "http://www.w3.org/2000/svg") fs *= svgEl.getScreenCTM()?.a ?? 1;
-      if (fs < 12.99) textosChicos.add(`${fs.toFixed(1)}px "${t.slice(0, 30)}" <${p.tagName.toLowerCase()}>`);
+      if (fs < 12.99 && p.closest("svg")) textosDePlano++;
+      else if (fs < 12.99) textosChicos.add(`${fs.toFixed(1)}px "${t.slice(0, 30)}" <${p.tagName.toLowerCase()}>`);
     }
 
     // 2) Controles visibles: zona táctil y contraste.
@@ -167,6 +171,7 @@ export async function medirPagina(page: Page): Promise<Medidas> {
     return {
       scrollHorizontal: document.documentElement.scrollWidth > window.innerWidth + 1,
       textosChicos: [...textosChicos],
+      textosDePlano,
       zonasChicas: [...zonasChicas],
       contraste: [...contraste],
       cursores: [...cursores],

@@ -36,7 +36,7 @@ export function NavLink({
       href={href}
       aria-current={activo ? "page" : undefined}
       className={`-mb-px inline-flex min-h-11 items-center border-b-[3px] px-1 font-semibold transition-colors ${
-        activo ? "border-acento text-marca" : "border-transparent text-marca/70 hover:border-marca/30 hover:text-marca"
+        activo ? "border-acento text-marca" : "border-transparent text-[#4A5861] hover:border-[#9DB0B8] hover:text-marca"
       }`}
     >
       {children}

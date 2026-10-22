@@ -173,7 +173,7 @@ test("recorrido: mide todas las pantallas y ventanas", async ({ page }, info) =>
     if (!clave.startsWith(`${proyecto}|`)) continue;
     const n = clave.split("|")[1];
     lineas.push(
-      `${n}: controles=${m.controles} contraste=${m.contraste.length} textos<13px=${m.textosChicos.length} zonas<44px=${m.zonasChicas.length} cursor=${m.cursores.length} scrollH=${m.scrollHorizontal}${m.omitido ? ` OMITIDO(${m.omitido})` : ""}`
+      `${n}: controles=${m.controles} contraste=${m.contraste.length} textos<13px=${m.textosChicos.length} plano=${m.textosDePlano} zonas<44px=${m.zonasChicas.length} cursor=${m.cursores.length} scrollH=${m.scrollHorizontal}${m.omitido ? ` OMITIDO(${m.omitido})` : ""}`
     );
     for (const c of m.contraste) lineas.push(`   contraste: ${c}`);
     for (const c of m.textosChicos) lineas.push(`   texto chico: ${c}`);

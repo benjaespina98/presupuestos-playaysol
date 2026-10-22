@@ -58,7 +58,7 @@ export function DuplicarUltimoBanner({ tipo, tipoLabel }: { tipo: TipoCalculador
           type="button"
           onClick={() => setDescartado(true)}
           aria-label="Descartar sugerencia"
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-[#3E4A52] hover:bg-[#EAF0F2] active:bg-[#D5E0E4]"
         >
           ✕
         </button>

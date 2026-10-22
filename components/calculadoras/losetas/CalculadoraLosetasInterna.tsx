@@ -94,7 +94,7 @@ export function CalculadoraLosetasInterna({ largoPlano, anchoPlano }: { largoPla
             type="button"
             onClick={() => cambiar({ largo: largoPlano, ancho: anchoPlano })}
             disabled={!largoPlano || !anchoPlano}
-            className="min-h-11 rounded-lg px-3 text-sm font-semibold text-marca hover:bg-marca/8 disabled:opacity-40"
+            className="min-h-11 rounded-lg px-3 text-sm font-semibold text-[#1A3844] hover:bg-[#EAF0F2] active:bg-[#D5E0E4]"
           >
             Usar las medidas del plano
           </button>
