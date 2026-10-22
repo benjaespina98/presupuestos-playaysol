@@ -462,7 +462,7 @@ export function LosetasCalculadora({
     setErrorImagen(null);
     try {
       const blob = await generarImagenClientePlano(parametrosImagenCliente());
-      const nombreArchivo = armarNombreArchivo("Loseta", getValues("nombre") || "", "") + "_cliente";
+      const nombreArchivo = armarNombreArchivo("Plano de piscina", getValues("nombre") || "", "");
       await compartirOdescargarArchivo(blob, nombreArchivo, "image/png");
     } catch (err) {
       setErrorImagen(err instanceof Error ? err.message : String(err));
@@ -476,7 +476,7 @@ export function LosetasCalculadora({
     setErrorPdf(null);
     try {
       const blob = await generarPdfClientePlano(parametrosImagenCliente());
-      const nombreArchivo = armarNombreArchivo("Loseta", getValues("nombre") || "", "") + "_cliente";
+      const nombreArchivo = armarNombreArchivo("Plano de piscina", getValues("nombre") || "", "");
       await compartirOdescargarArchivo(blob, nombreArchivo, "application/pdf");
     } catch (err) {
       setErrorPdf(err instanceof Error ? err.message : String(err));

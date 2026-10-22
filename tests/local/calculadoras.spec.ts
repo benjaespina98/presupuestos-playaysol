@@ -118,7 +118,8 @@ for (const tipo of TIPOS) {
         expect(nombre).toMatch(extension);
         // Nombre saneado: nada que Windows no acepte y sin los caracteres raros del cliente.
         expect(nombre).not.toMatch(/[\/:*?"<>|]/);
-        expect(nombre).toMatch(/^Presupuesto_/);
+        // Convención "<Cliente> - <Tipo> - DD-MM-AAAA".
+        expect(nombre).toMatch(/ - [^-]+ - \d{2}-\d{2}-\d{4}\.[a-z]+$/);
         const destino = path.join(carpeta, `${tipo.ruta}-${nombre}`);
         await d.saveAs(destino);
         expect(fs.statSync(destino).size, `${nombre} está vacío`).toBeGreaterThan(2000);
