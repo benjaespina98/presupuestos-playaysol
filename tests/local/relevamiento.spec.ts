@@ -75,8 +75,13 @@ test("relevamiento de pantallas", async ({ page }, info) => {
             chicos.push(`${el.tagName.toLowerCase()} "${nombre}" ${Math.round(r.width)}x${Math.round(r.height)}`);
           }
         });
-      return { scrollHorizontal: document.documentElement.scrollWidth > window.innerWidth + 1, chicos: [...new Set(chicos)].slice(0, 12) };
+      const filasVisibles = [...document.querySelectorAll<HTMLElement>("main li")].filter((li) => {
+        const r = li.getBoundingClientRect();
+        return r.height > 0 && r.top >= 0 && r.bottom <= window.innerHeight;
+      }).length;
+      return { scrollHorizontal: document.documentElement.scrollWidth > window.innerWidth + 1, chicos: [...new Set(chicos)].slice(0, 12), filasVisibles };
     });
+    hallazgos.push(`METRICA ${nombre}: filas visibles sin scroll=${medidas.filasVisibles}`);
     if (medidas.scrollHorizontal) hallazgos.push(`${nombre}: SCROLL HORIZONTAL`);
     for (const c of medidas.chicos) hallazgos.push(`${nombre}: zona chica ${c}`);
   }
