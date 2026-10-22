@@ -9,7 +9,7 @@ const API = process.env.E2E_LOCAL_API ?? "";
 const SERVICE = process.env.E2E_LOCAL_SERVICE_KEY ?? "";
 const EMAIL = process.env.E2E_LOCAL_EMAIL ?? "";
 
-export const OBRA_PANTALLAS = "Familia Pérez 3534 55 66 77";
+export const OBRA_PANTALLAS = "Obra Pantallas E2E 3534 55 66 77";
 export const NOTA_INTERNA = "NOTA-INTERNA-no-mostrar-margen-30";
 export const TELEFONO_PROVEEDOR = "+54 9 3534 11-2233";
 

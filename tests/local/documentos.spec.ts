@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import fs from "node:fs";
+import { iniciarSesion } from "./helpers/sesion";
 import path from "node:path";
 
 /**
@@ -20,11 +21,7 @@ const EMAIL_LARGO = "familia.rodriguez.de.la.fuente.echeverria@ejemplo-muy-largo
 const CALCULADORAS = ["piscinas", "cercos", "cobertores", "revestimientos"];
 
 async function entrar(page: Page) {
-  await page.goto("/login");
-  await page.getByPlaceholder("tu@email.com").fill(EMAIL);
-  await page.getByPlaceholder("••••••••").fill(PASSWORD);
-  await page.getByRole("button", { name: "Ingresar" }).click();
-  await page.waitForURL(/\/dashboard/);
+  await iniciarSesion(page, EMAIL, PASSWORD);
 }
 
 for (const ruta of CALCULADORAS) {

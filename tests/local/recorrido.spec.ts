@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import fs from "node:fs";
+import { iniciarSesion } from "./helpers/sesion";
 import path from "node:path";
 import { medirPagina, type Medidas } from "./helpers/medir";
 import { asegurarDatosDePantallas } from "./helpers/datos";
@@ -62,6 +63,22 @@ const PASOS: Paso[] = [
     preparar: async (p) => {
       await tocar(p, /^Más acciones de/);
       await p.getByRole("menuitem", { name: "Ingreso" }).click();
+    },
+  },
+  {
+    nombre: "catalogo-ajuste",
+    ruta: "/dashboard/catalogo",
+    preparar: async (p) => {
+      await tocar(p, /^Más acciones de/);
+      await p.getByRole("menuitem", { name: "Ajustar conteo" }).click();
+    },
+  },
+  {
+    nombre: "catalogo-historial-stock",
+    ruta: "/dashboard/catalogo",
+    preparar: async (p) => {
+      await tocar(p, /^Más acciones de/);
+      await p.getByRole("menuitem", { name: "Historial" }).click();
     },
   },
   { nombre: "catalogo-materiales", ruta: "/dashboard/catalogo/materiales" },
@@ -143,10 +160,7 @@ test("recorrido: mide todas las pantallas y ventanas", async ({ page }, info) =>
   await page.goto("/login");
   await page.waitForLoadState("networkidle");
   await medir("login");
-  await page.getByPlaceholder("tu@email.com").fill(EMAIL);
-  await page.getByPlaceholder("••••••••").fill(PASSWORD);
-  await page.getByRole("button", { name: "Ingresar" }).click();
-  await page.waitForURL(/\/dashboard/);
+  await iniciarSesion(page, EMAIL, PASSWORD);
   conSesion = true;
 
   for (const paso of PASOS) {

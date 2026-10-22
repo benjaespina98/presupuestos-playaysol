@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import fs from "node:fs";
+import { iniciarSesion } from "./helpers/sesion";
 import path from "node:path";
 import { textoDePdf } from "../helpers/pdfTexto";
 import { problemasDeSalida } from "../helpers/salidasPedido";
@@ -22,13 +23,9 @@ const PROVEEDOR = "Corralón Pantallas E2E";
 const OTRO = "Filtros Pantallas E2E";
 
 async function abrirDetalle(page: Page) {
-  await page.goto("/login");
-  await page.getByPlaceholder("tu@email.com").fill(EMAIL);
-  await page.getByPlaceholder("••••••••").fill(PASSWORD);
-  await page.getByRole("button", { name: "Ingresar" }).click();
-  await page.waitForURL(/\/dashboard/);
+  await iniciarSesion(page, EMAIL, PASSWORD);
   await page.goto("/dashboard/catalogo/pedidos");
-  await page.locator("li").filter({ hasText: "Familia Pérez" }).getByRole("button", { name: /^Abrir PED/ }).first().click();
+  await page.locator("li").filter({ hasText: "Obra Pantallas E2E" }).getByRole("button", { name: /^Abrir PED/ }).first().click();
   await expect(page.getByRole("dialog")).toBeVisible();
 }
 
@@ -158,4 +155,28 @@ test.describe("iPhone emulado", () => {
       expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(47.5);
     }
   });
+});
+
+test("imprimir: la hoja que sale por la impresora no muestra precios, costos, teléfonos ni notas internas", async ({ page }, info) => {
+  await asegurarDatosDePantallas();
+  await iniciarSesion(page, EMAIL, PASSWORD);
+  await page.goto("/dashboard/catalogo/pedido");
+  await expect(page.getByRole("region", { name: "Resumen del pedido" })).toBeVisible();
+  await page.getByLabel("Cliente / obra").fill("Familia Gómez 3534 55 66 77");
+  await page.getByLabel("Pide (quién hace el pedido)").fill("Benja");
+  await page.getByLabel(/Notas internas/).fill(NOTA_INTERNA);
+
+  // En pantalla, la app muestra los precios (son internos).
+  expect(await page.evaluate(() => document.body.innerText)).toMatch(/\$/);
+
+  // Al imprimir, no.
+  await page.emulateMedia({ media: "print" });
+  const impreso = await page.evaluate(() => document.body.innerText);
+  expect(problemasDeSalida(impreso, NOTA_INTERNA)).toEqual([]);
+  expect(impreso).toContain("PEDIDO DE MATERIALES");
+  expect(impreso).toContain("Familia Gómez"); // la obra sale, sin el teléfono
+  expect(impreso).not.toContain("3534 55 66 77");
+  fs.mkdirSync(path.join("capturas-locales", FASE, info.project.name), { recursive: true });
+  await page.screenshot({ path: path.join("capturas-locales", FASE, info.project.name, "pedido-impresion.png"), fullPage: true });
+  await page.emulateMedia({ media: "screen" });
 });

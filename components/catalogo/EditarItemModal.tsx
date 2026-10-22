@@ -12,6 +12,7 @@ import type { ItemCatalogo } from "@/lib/domain/catalogo/item";
 import type { ResultadoStock } from "@/lib/domain/stock/movimientos";
 import { aCambios, aFormulario, EditarItemSchema, type EditarItemForm } from "./editar-item.schema";
 import { TITULOS_TIPO } from "./titulos-tipo";
+import { formatFechaRelativa } from "@/lib/format/fecha";
 
 const OPCIONES_CATEGORIA = [
   { value: "", label: "Sin clasificar" },
@@ -146,6 +147,8 @@ export function EditarItemModal({
         <ZonaActivo>
           <CheckboxField register={register} errors={errors} name="activo" label="Activo" hint="Si lo desactivás, sale de presupuestos y pedidos nuevos; no se pierde." />
         </ZonaActivo>
+
+        {item.updated_at && formatFechaRelativa(item.updated_at) && <p className="text-[13px] text-[#4A5861]">Actualizado {formatFechaRelativa(item.updated_at)}</p>}
       </form>
 
       {verHistorial && (

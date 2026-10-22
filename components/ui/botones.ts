@@ -23,13 +23,13 @@ export const boton = {
     "bg-[#244B5A] text-[#FFFFFF] shadow-sm hover:bg-[#1A3844] active:bg-[#12293A] disabled:bg-[#D9DFE3] disabled:text-[#3E4A52] disabled:shadow-none",
   /** Acción importante pero no principal: borde marcado y fondo blanco. */
   secundario:
-    "border border-[#244B5A] bg-[#FFFFFF] text-[#1A3844] shadow-sm hover:bg-[#EAF0F2] active:bg-[#D5E0E4] disabled:border-[#8B969E] disabled:bg-[#EEF1F3] disabled:text-[#3E4A52] disabled:shadow-none",
+    "border border-[#244B5A] bg-[#FFFFFF] text-[#1A3844] shadow-sm hover:bg-[#EAF0F2] active:bg-[#D5E0E4] disabled:border-[#7D8892] disabled:bg-[#EEF1F3] disabled:text-[#3E4A52] disabled:shadow-none",
   /** Acción de apoyo: sin borde, con un fondo suave para que se note que se toca. */
   suave:
     "bg-[#E3ECEF] text-[#1A3844] hover:bg-[#D3E1E6] active:bg-[#C2D4DB] disabled:bg-[#EEF1F3] disabled:text-[#3E4A52]",
   /** Acción destructiva (anular, desactivar): borde y texto rojo sobre blanco. */
   peligro:
-    "border border-[#B42318] bg-[#FFFFFF] text-[#B42318] hover:bg-[#FEF3F2] active:bg-[#FEE4E2] disabled:border-[#8B969E] disabled:bg-[#EEF1F3] disabled:text-[#3E4A52]",
+    "border border-[#B42318] bg-[#FFFFFF] text-[#B42318] hover:bg-[#FEF3F2] active:bg-[#FEE4E2] disabled:border-[#7D8892] disabled:bg-[#EEF1F3] disabled:text-[#3E4A52]",
   /** Confirmar una acción destructiva: relleno rojo con texto blanco. */
   peligroLleno:
     "bg-[#B42318] text-[#FFFFFF] shadow-sm hover:bg-[#912018] active:bg-[#7A1A13] disabled:bg-[#D9DFE3] disabled:text-[#3E4A52] disabled:shadow-none",
@@ -41,4 +41,4 @@ export const botonDe = (variante: Exclude<keyof typeof boton, "base">, extra = "
 
 /** El botón de lápiz de las filas de una lista: 44×44, borde sutil, hover, foco y estado activo. */
 export const BOTON_LAPIZ =
-  "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#8B969E] bg-[#FFFFFF] text-[#244B5A] transition-colors hover:border-[#244B5A] hover:bg-[#EAF0F2] active:bg-[#D5E0E4]";
+  "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#7D8892] bg-[#FFFFFF] text-[#244B5A] transition-colors hover:border-[#244B5A] hover:bg-[#EAF0F2] active:bg-[#D5E0E4]";

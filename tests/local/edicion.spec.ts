@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import fs from "node:fs";
+import { iniciarSesion } from "./helpers/sesion";
 import path from "node:path";
 import { asegurarMaterialDeEdicion, cantidadGuardada } from "./helpers/datos";
 
@@ -19,11 +20,7 @@ const FASE = process.env.E2E_FASE ?? "despues";
 const MATERIAL = "Material de cantidades E2E";
 
 async function entrar(page: Page) {
-  await page.goto("/login");
-  await page.getByPlaceholder("tu@email.com").fill(EMAIL);
-  await page.getByPlaceholder("••••••••").fill(PASSWORD);
-  await page.getByRole("button", { name: "Ingresar" }).click();
-  await page.waitForURL(/\/dashboard/);
+  await iniciarSesion(page, EMAIL, PASSWORD);
 }
 
 async function captura(page: Page, proyecto: string, nombre: string) {
@@ -151,9 +148,9 @@ test("Guardar siempre se ve y se lee: sin cambios (deshabilitado), con cambios y
   const campo = hoja.getByLabel("8x4");
   await campo.fill("9");
   await expect(guardar).toBeEnabled();
+  await expect(guardar).toHaveCSS("background-color", "rgb(36, 75, 90)"); // espera a que termine la transición
+  await expect(guardar).toHaveCSS("color", "rgb(255, 255, 255)");
   expect(await contrasteDe(guardar), "Guardar con cambios").toBeGreaterThanOrEqual(4.5);
-  expect(await guardar.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe("rgb(36, 75, 90)");
-  expect(await guardar.evaluate((el) => getComputedStyle(el).color)).toBe("rgb(255, 255, 255)");
   await captura(page, info.project.name, "material-con-cambios");
 
   // Teclado abierto: la pantalla queda en la mitad (el teclado de un celular ocupa 40-50 %). Guardar sigue a la vista.
@@ -205,7 +202,7 @@ test("botones: en reposo, con el mouse encima, apretados y con foco siguen tenie
   const toque = (info.project.use.hasTouch ?? false) && (info.project.use.viewport?.width ?? 1280) < 768;
 
   const controles: [string, Locator][] = [
-    ["Agregar material", page.getByRole("button", { name: "Agregar material" })],
+    ["Agregar material", page.getByRole("button", { name: "Agregar material" }).first()],
     ["lápiz", page.getByRole("button", { name: `Editar ${MATERIAL}` })],
     ["chip Todos", page.getByRole("group", { name: "Filtrar por rubro" }).getByRole("button", { name: /^Todos/ })],
     ["Filtros", page.getByRole("button", { name: /^Filtros/ })],
@@ -273,12 +270,12 @@ test("'Cuándo se pide' es una lista propia con descripciones claras (los valore
   await hoja.getByRole("button", { name: /^Cuándo se pide:/ }).click();
   const lista = page.getByRole("dialog", { name: "Cuándo se pide" });
   for (const t of ["Siempre", "Losetas", "Deck", "Por luz", "Una vez si hay luces", "Luz de cama de agua", "Baño químico"]) {
-    await expect(lista.getByRole("option", { name: new RegExp(t) })).toBeVisible();
+    await expect(lista.getByRole("option", { name: new RegExp("^" + t) })).toBeVisible();
   }
   await expect(lista.getByText("Se multiplica por la cantidad de luces")).toBeVisible();
   await expect(lista.getByText("Va en todas las obras").first()).toBeVisible();
   // Opciones de 48 px, la actual con tilde.
-  const op = (await lista.getByRole("option", { name: /Siempre/ }).getByRole("button").boundingBox())!;
+  const op = (await lista.getByRole("option", { name: /^Siempre/ }).getByRole("button").boundingBox())!;
   expect(op.height).toBeGreaterThanOrEqual(47.5);
   await captura(page, info.project.name, "material-cuando-se-pide");
   // Elegir cierra la lista y cambia el valor (el <select> de abajo guarda el valor interno "Luz").
