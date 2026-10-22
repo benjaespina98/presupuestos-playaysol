@@ -21,7 +21,7 @@ export function FloatingSaveBar({ guardando, label = "Guardar en la nube" }: { g
   return (
     <SoloSiNoAnulado>
     <div
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-[#FFFFFF]/95 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] backdrop-blur sm:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-[#FFFFFF] px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] backdrop-blur sm:hidden"
       style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
     >
       <button

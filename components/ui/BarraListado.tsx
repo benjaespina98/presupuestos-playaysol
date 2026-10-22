@@ -111,7 +111,7 @@ export function Desplegable({
               style={pos === "hoja" ? undefined : { position: "fixed", top: pos.top, left: pos.left }}
               className={
                 pos === "hoja"
-                  ? "fixed inset-x-0 bottom-0 z-[60] max-h-[80dvh] overflow-y-auto rounded-t-2xl bg-[#FFFFFF] p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-2xl"
+                  ? "fixed inset-x-0 bottom-0 z-[60] pys-max-h-80 overflow-y-auto rounded-t-2xl bg-[#FFFFFF] p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-2xl"
                   : `z-[60] ${ancho} overflow-hidden rounded-xl border border-[#D9DFE3] bg-[#FFFFFF] p-1.5 shadow-xl`
               }
             >
@@ -176,7 +176,7 @@ export function MenuSeleccion<T extends string>({
       }
     >
       {(cerrar) => (
-        <div role="radiogroup" aria-label={etiqueta} className="max-h-[60dvh] overflow-y-auto">
+        <div role="radiogroup" aria-label={etiqueta} className="pys-max-h-60 overflow-y-auto">
           {buscable && (
             <input
               type="search"

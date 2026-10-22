@@ -21,7 +21,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="relative min-h-dvh bg-gray-50">
+    <div className="relative pys-min-h-pantalla bg-gray-50">
       <div
         aria-hidden="true"
         data-print-hide=""
@@ -31,7 +31,7 @@ export default async function DashboardLayout({
       <div className="relative z-10">
         {/* Celular: el logo y el menú de usuario arriba (52 px) y, debajo, las cuatro secciones en una fila de 48 px
             que reparte el ancho. Desde md, todo en una sola fila. */}
-        <header data-print-hide="" className="border-b border-[#244B5A]/15 bg-[#FFFFFF]">
+        <header data-print-hide="" className="border-b border-[#DEE4E6] bg-[#FFFFFF]">
           <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-x-3 px-4 md:flex-nowrap md:gap-x-6">
             <Link href="/dashboard" className="flex h-[3.25rem] items-center md:h-14">
               <Wordmark className="h-6 sm:h-7" />

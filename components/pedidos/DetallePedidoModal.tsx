@@ -153,26 +153,26 @@ export function DetallePedidoModal({
               <h3 className="text-sm font-bold text-[#244B5A]">{s.nombre}</h3>
               <p className="text-xs text-gray-500">{[s.contacto, s.telefono].filter(Boolean).join(" · ")}</p>
             </header>
-            <div className="scroll-h" data-scroll-h="">
-              <table className="w-full min-w-[30rem] text-left text-sm">
-                <tbody>
-                  {s.lineas.map((l, i) => (
-                    <tr key={i} className="border-t border-gray-100">
-                      <td className="px-3 py-1.5 text-gray-900">{l.descripcion}</td>
-                      <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums text-gray-700">
-                        {cantidad(l.cantidad)} <span className="text-gray-400">{l.unidad}</span>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums text-gray-700">
-                        {l.precio === null ? <span className="text-xs text-amber-700">A confirmar</span> : formatARSExacto(l.precio)}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-1.5 text-right font-medium tabular-nums text-gray-900">
-                        {l.subtotal === null ? "—" : formatARSExacto(l.subtotal)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {/* Celular: el artículo y su subtotal arriba, y debajo "cantidad × precio" (sin tabla que haya que deslizar). */}
+            <ul className="divide-y divide-gray-100 text-sm">
+              {s.lineas.map((l, i) => (
+                <li key={i} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 px-3 py-1.5 sm:grid-cols-[minmax(0,1fr)_6rem_8rem_8rem] sm:items-baseline">
+                  <p className="break-words text-gray-900">{l.descripcion}</p>
+                  <p className="col-start-2 row-start-1 whitespace-nowrap text-right font-medium tabular-nums text-gray-900 sm:col-start-4">
+                    {l.subtotal === null ? "—" : formatARSExacto(l.subtotal)}
+                  </p>
+                  <p className="col-span-2 whitespace-nowrap text-[13px] tabular-nums text-gray-700 sm:contents">
+                    <span className="sm:col-start-2 sm:row-start-1 sm:text-right sm:text-sm">
+                      {cantidad(l.cantidad)} <span className="text-gray-500">{l.unidad}</span>
+                    </span>
+                    <span className="sm:col-start-3 sm:row-start-1 sm:text-right sm:text-sm">
+                      <span className="sm:hidden"> × </span>
+                      {l.precio === null ? <span className="text-xs text-amber-700">A confirmar</span> : formatARSExacto(l.precio)}
+                    </span>
+                  </p>
+                </li>
+              ))}
+            </ul>
             <p className="border-t border-gray-100 bg-gray-50 px-3 py-1.5 text-right text-sm font-semibold tabular-nums text-gray-900">
               Subtotal {formatARSExacto(s.subtotal)}
             </p>

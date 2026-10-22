@@ -237,7 +237,7 @@ async function main() {
     }
     // "pantallas" (o recorrido, edicion, compartir, documentos): las pruebas de pantallas en todos los tamaños
     // (playwright.responsive.config.ts). Cualquier otra cosa: las pruebas de siempre (playwright.local.config.ts).
-    const PANTALLAS = ["pantallas", "recorrido", "edicion", "compartir", "documentos", "metricas", "gestos"];
+    const PANTALLAS = ["pantallas", "recorrido", "edicion", "compartir", "documentos", "metricas", "gestos", "autoprueba", "estados"];
     const pantallas = spec && PANTALLAS.includes(spec);
     const config = pantallas ? "playwright.responsive.config.ts" : "playwright.local.config.ts";
     const especifica = pantallas ? (spec === "pantallas" ? {} : { E2E_SPEC: spec }) : spec ? { E2E_SPEC: spec } : {};

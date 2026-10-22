@@ -309,7 +309,7 @@ function HistorialTabla() {
                   const anulado = estaAnulado(p);
                   const esDueño = !!userId && p.created_by === userId && !anulado;
                   return (
-                    <tr key={p.id} className={`border-b border-gray-100 last:border-0 ${anulado ? "bg-gray-50/70 text-gray-500" : ""}`}>
+                    <tr key={p.id} className={`border-b border-gray-100 last:border-0 ${anulado ? "bg-gray-50 text-gray-500" : ""}`}>
                       <td className="px-4 py-3">
                         <span className="inline-flex whitespace-nowrap rounded-full bg-[#E3ECEF] px-2.5 py-0.5 text-xs font-semibold text-[#244B5A]">
                           {TITULOS[p.tipo]}

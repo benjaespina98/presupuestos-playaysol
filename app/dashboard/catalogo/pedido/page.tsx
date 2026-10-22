@@ -425,7 +425,7 @@ function PedidoContenido() {
                   <button
                     type="button"
                     onClick={() => setAjustes({})}
-                    className="min-h-11 rounded-lg px-3 text-sm font-medium text-[#244B5A] hover:bg-[#244B5A]/8"
+                    className="min-h-11 rounded-lg px-3 text-sm font-medium text-[#244B5A] hover:bg-[#EAF0F2]"
                   >
                     Restablecer cantidades
                   </button>
@@ -518,7 +518,7 @@ function PedidoContenido() {
                           type="button"
                           onClick={() => ajustar(m.id, null)}
                           aria-label={`Volver a poner ${m.nombre}`}
-                          className="min-h-11 rounded-md px-3 font-medium text-[#244B5A] hover:bg-[#244B5A]/8"
+                          className="min-h-11 rounded-md px-3 font-medium text-[#244B5A] hover:bg-[#EAF0F2]"
                         >
                           Volver a poner
                         </button>
@@ -639,7 +639,7 @@ function GrupoTabla({
           data-print-hide=""
           onClick={onCopiar}
           aria-label={`Copiar el pedido a ${grupo.nombre}`}
-          className="min-h-11 rounded-md px-3 text-sm font-medium text-[#244B5A] hover:bg-[#244B5A]/8"
+          className="min-h-11 rounded-md px-3 text-sm font-medium text-[#244B5A] hover:bg-[#EAF0F2]"
         >
           {copiado ? "¡Copiado!" : "Copiar"}
         </button>

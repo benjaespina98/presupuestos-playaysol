@@ -168,7 +168,7 @@ export default function MaterialesPage() {
           {hayFiltros ? (
             <>
               Ningún material coincide con el filtro.{" "}
-              <button type="button" onClick={() => setFiltros(SIN_FILTROS)} className="font-semibold text-[#244B5A] underline underline-offset-2">
+              <button type="button" onClick={() => setFiltros(SIN_FILTROS)} className="inline-flex min-h-11 items-center font-semibold text-[#244B5A] underline underline-offset-2">
                 Limpiar filtros
               </button>
             </>

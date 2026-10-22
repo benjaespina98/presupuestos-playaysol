@@ -50,7 +50,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-gray-50 px-4">
+    <div className="flex pys-min-h-pantalla items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm overflow-hidden rounded-xl border border-gray-200 bg-[#FFFFFF] p-6 shadow-md sm:p-8">
         <div aria-hidden="true" className="-mx-6 -mt-6 mb-6 h-1.5 bg-acento sm:-mx-8 sm:-mt-8" />
         <div className="mb-6 flex flex-col items-center text-center">
