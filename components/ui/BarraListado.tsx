@@ -23,7 +23,7 @@ export function Interruptor({ checked, onChange, children }: { checked: boolean;
 }
 
 const CLASE_DISPARADOR =
-  "relative inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#244B5A]/40";
+  "relative inline-flex min-h-11 min-w-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#244B5A]/40";
 const CLASE_INACTIVO = "border-[#7D8892] bg-[#FFFFFF] text-[#1F2A30] hover:border-[#244B5A] hover:bg-[#EAF0F2] active:bg-[#D5E0E4]";
 const CLASE_ACTIVO = "border-[#244B5A] bg-[#E3ECEF] text-[#1A3844] hover:bg-[#D3E1E6] active:bg-[#C2D4DB]";
 

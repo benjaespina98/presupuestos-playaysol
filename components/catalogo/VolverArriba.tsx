@@ -1,21 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
- * Flecha para volver al principio de una lista larga. Aparece recién cuando se bajó un buen trecho, y va chica, en
- * la esquina de abajo a la izquierda, con margen del borde y del área segura del iPhone: no tapa los lápices ni los
- * botones de las filas (que están a la derecha).
+ * Flecha para volver al principio de una lista larga. Aparece cuando se SUBE la página (ya pasado un buen trecho) y se va
+ * sola a los 2,5 segundos: así nunca queda quieta encima de un botón o de un lápiz (en el celular, tapaba la esquina de los
+ * botones del final de la página). Va chica, en la esquina de abajo a la izquierda, con margen del borde y del área segura
+ * del iPhone.
  */
-export function VolverArriba({ umbral = 400 }: { umbral?: number }) {
+export function VolverArriba({ umbral = 400, tiempo = 2500 }: { umbral?: number; tiempo?: number }) {
   const [visible, setVisible] = useState(false);
+  const ultimo = useRef(0);
+  const reloj = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const alScrollear = () => setVisible(window.scrollY > umbral);
-    alScrollear();
+    ultimo.current = window.scrollY;
+    const alScrollear = () => {
+      const y = window.scrollY;
+      const sube = y < ultimo.current - 2;
+      ultimo.current = y;
+      if (y <= umbral) {
+        if (reloj.current) clearTimeout(reloj.current);
+        setVisible(false);
+        return;
+      }
+      if (!sube) return;
+      setVisible(true);
+      if (reloj.current) clearTimeout(reloj.current);
+      reloj.current = setTimeout(() => setVisible(false), tiempo);
+    };
     window.addEventListener("scroll", alScrollear, { passive: true });
-    return () => window.removeEventListener("scroll", alScrollear);
-  }, [umbral]);
+    return () => {
+      window.removeEventListener("scroll", alScrollear);
+      if (reloj.current) clearTimeout(reloj.current);
+    };
+  }, [umbral, tiempo]);
 
   if (!visible) return null;
 

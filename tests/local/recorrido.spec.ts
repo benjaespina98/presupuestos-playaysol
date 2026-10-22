@@ -105,6 +105,17 @@ const PASOS: Paso[] = [
   },
   { nombre: "catalogo-vacio", ruta: "/dashboard/catalogo", preparar: (p) => buscar(p, /Buscar en el cat/, "zzzzzz") },
   { nombre: "catalogo-bajado", ruta: "/dashboard/catalogo", preparar: (p) => bajar(p, 1400) },
+  {
+    nombre: "catalogo-flecha",
+    ruta: "/dashboard/catalogo",
+    preparar: async (p) => {
+      // La flecha de "volver arriba" aparece al SUBIR la página, pasado un buen trecho.
+      await bajar(p, 1500);
+      await p.waitForTimeout(200);
+      await p.evaluate(() => window.scrollTo(0, 1380));
+      await p.getByRole("button", { name: "Volver arriba" }).waitFor({ timeout: 4_000 });
+    },
+  },
   { nombre: "catalogo-agregar-item", ruta: "/dashboard/catalogo", preparar: (p) => tocar(p, /^Agregar/) },
   { nombre: "catalogo-editar-item", ruta: "/dashboard/catalogo", preparar: (p) => tocar(p, /^Editar$/) },
   { nombre: "catalogo-menu-fila", ruta: "/dashboard/catalogo", preparar: (p) => tocar(p, /^Más acciones de/) },

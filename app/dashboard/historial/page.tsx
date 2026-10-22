@@ -229,7 +229,7 @@ function HistorialTabla() {
         resultados={presupuestosFiltrados?.length ?? 0}
         contador={
           presupuestosFiltrados && !error
-            ? `${presupuestosFiltrados.length}${presupuestosFiltrados.length === 1 ? " presupuesto" : " presupuestos"}${hayFiltros && presupuestos ? ` de ${presupuestos.length}` : ""}`
+            ? `${presupuestosFiltrados.length}${presupuestosFiltrados.length === 1 ? " presupuesto" : " presupuestos"}${hayFiltros && presupuestos ? ` de ${presupuestos.length - (mostrarAnulados ? 0 : cantidadAnulados)}` : ""}`
             : undefined
         }
         hayFiltros={hayFiltros}
@@ -280,7 +280,7 @@ function HistorialTabla() {
       {presupuestosFiltrados && presupuestosFiltrados.length > 0 && (
         <>
           {/* Desktop / tablet: tabla completa */}
-          <div className="hidden rounded-lg border border-gray-200 bg-[#FFFFFF] sm:block lg:rounded-none">
+          <div className="hidden rounded-lg border border-gray-200 bg-[#FFFFFF] xl:block xl:rounded-none">
             {/* Anchos pensados para que el nombre del cliente no se parta en dos líneas (si es larguísimo se
                 recorta con "…" y el nombre completo queda en el tooltip) y el detalle tenga lugar. */}
             <table className="w-full table-fixed text-left text-sm">
@@ -293,7 +293,7 @@ function HistorialTabla() {
                 <col className="w-[18rem]" />
               </colgroup>
               <thead>
-                <tr className="border-b border-gray-200 bg-[#F1F4F6] text-[13px] uppercase tracking-wide text-[#4A5861] sm:[&>th]:sticky sm:[&>th]:top-[var(--catalogo-barra,0px)] sm:[&>th]:z-10 sm:[&>th]:bg-[#F1F4F6]">
+                <tr className="border-b border-gray-200 bg-[#F1F4F6] text-[13px] uppercase tracking-wide text-[#4A5861] xl:[&>th]:sticky xl:[&>th]:top-[var(--catalogo-barra,0px)] xl:[&>th]:z-10 xl:[&>th]:bg-[#F1F4F6]">
                   <th className="px-4 py-3 font-semibold">Tipo</th>
                   <th className="px-4 py-3 font-semibold">Cliente</th>
                   <th className="px-4 py-3 font-semibold">Detalle</th>
@@ -380,7 +380,7 @@ function HistorialTabla() {
           </div>
 
           {/* Celular: una fila compacta por presupuesto (la tabla obligaba a scroll horizontal para llegar a las acciones). */}
-          <ul className="divide-y divide-[#EEF1F3] rounded-lg border border-[#D9DFE3] bg-[#FFFFFF] sm:hidden">
+          <ul className="divide-y divide-[#EEF1F3] rounded-lg border border-[#D9DFE3] bg-[#FFFFFF] xl:hidden">
             {presupuestosFiltrados.map((p) => {
               const detalle = resumenPresupuesto(p.tipo, p.datos);
               const anulado = estaAnulado(p);

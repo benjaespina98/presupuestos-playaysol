@@ -201,7 +201,8 @@ export async function medirLayout(page: Page): Promise<ProblemasDeLayout> {
       if (!visible(el)) return;
       const r = el.getBoundingClientRect();
       if (r.width <= ancho * 0.5) return;
-      if (r.top <= 1 && r.bottom > 0 && r.bottom < alto * 0.5) tope = Math.max(tope, r.bottom);
+      // Las barras y encabezados pegados arriba (la barra de herramientas, el encabezado de la tabla, el del grupo).
+      if (r.top < alto * 0.3 && r.bottom > 0 && r.bottom < alto * 0.5) tope = Math.max(tope, r.bottom);
       if (r.bottom >= alto - 1 && r.top > alto * 0.5) piso = Math.min(piso, r.top);
     });
     /** Un fondo que cubre toda la pantalla (detrás de un menú abierto, para cerrarlo al tocar afuera). */
@@ -218,24 +219,33 @@ export async function medirLayout(page: Page): Promise<ProblemasDeLayout> {
       const dentroDeScrollH = !!scrollerH(el) || !!el.closest("[data-scroll-h]");
       if (!dentroDeScrollH && (r.right > ancho + 1 || r.left < -1)) fuera.add(`${etiqueta(el)} x=${Math.round(r.left)}..${Math.round(r.right)} de ${ancho}`);
 
-      // ¿Lo que hay en el centro del control es el control (o algo suyo)? Si no, está tapado.
+      // ¿Lo que hay encima del control es el control (o algo suyo)? Se prueban nueve puntos de su caja: si dos o más
+      // están tapados por otra cosa (una flecha flotante que le muerde una esquina, una barra), está tapado.
       const vista = vistaDe(el);
       if (!vista) continue; // recortado por un contenedor con scroll
-      const cx = Math.min(Math.max((vista.left + vista.right) / 2, 1), ancho - 1);
-      const cy = (vista.top + vista.bottom) / 2;
-      if (cy > alto - 1 || cy < 0) continue; // fuera de lo que se ve ahora
-      if (!alPrincipio && cy < tope + 2) continue; // deslizado por debajo de la barra de arriba
-      if (!alFinal && cy > piso - 2) continue; // todavía falta scrollear hasta él: la barra de abajo pasa por encima
-      const arriba = document.elementFromPoint(cx, cy);
-      if (!arriba) continue;
-      if (el.contains(arriba) || arriba.contains(el)) continue;
-      // Un <label> que envuelve al control (interruptores) o un control dentro de su etiqueta no cuenta.
-      if (arriba.closest("label") && arriba.closest("label")!.contains(el)) continue;
-      if ((arriba as HTMLElement).closest?.("nextjs-portal")) continue;
-      if (esFondo(arriba)) continue;
-      // Un menú o panel flotante abierto pasa por encima de lo de abajo a propósito.
-      if (enSuperpuesto(arriba) && !enSuperpuesto(el)) continue;
-      tapados.add(`${etiqueta(el)} lo tapa ${etiqueta(arriba)}`);
+      let tapadoEn = 0;
+      let culpable: Element | null = null;
+      for (const fx of [0.12, 0.5, 0.88]) {
+        for (const fy of [0.2, 0.5, 0.8]) {
+          const px = Math.min(Math.max(vista.left + (vista.right - vista.left) * fx, 1), ancho - 1);
+          const py = vista.top + (vista.bottom - vista.top) * fy;
+          if (py > alto - 1 || py < 0) continue; // fuera de lo que se ve ahora
+          if (!alPrincipio && py < tope + 2) continue; // deslizado por debajo de la barra de arriba
+          if (!alFinal && py > piso - 2) continue; // todavía falta scrollear hasta él: la barra de abajo pasa por encima
+          const arriba = document.elementFromPoint(px, py);
+          if (!arriba) continue;
+          if (el.contains(arriba) || arriba.contains(el)) continue;
+          // Un <label> que envuelve al control (interruptores) o un control dentro de su etiqueta no cuenta.
+          if (arriba.closest("label") && arriba.closest("label")!.contains(el)) continue;
+          if ((arriba as HTMLElement).closest?.("nextjs-portal")) continue;
+          if (esFondo(arriba)) continue;
+          // Un menú o panel flotante abierto pasa por encima de lo de abajo a propósito.
+          if (enSuperpuesto(arriba) && !enSuperpuesto(el)) continue;
+          tapadoEn++;
+          culpable = arriba;
+        }
+      }
+      if (tapadoEn >= 2 && culpable) tapados.add(`${etiqueta(el)} lo tapa ${etiqueta(culpable)} (${tapadoEn} de 9 puntos)`);
     }
     problemas.fueraDePantalla.push(...fuera);
     problemas.tapados.push(...tapados);
@@ -279,6 +289,9 @@ export async function medirLayout(page: Page): Promise<ProblemasDeLayout> {
         const fa = flotante(a.el);
         const fb = flotante(b.el);
         if (fa !== fb && (fa === null || fb === null)) continue;
+        // Dos cosas pegadas a la vez: un encabezado de grupo que se va deslizando por debajo de la barra de herramientas (o de
+        // otro encabezado) es lo normal. Sólo se comparan dos elementos FIJOS entre sí (un aviso contra la flecha).
+        if (fa && fb && (getComputedStyle(fa).position === "sticky" || getComputedStyle(fb).position === "sticky")) continue;
         // Un panel flotante (menú, selector) pasa por encima de lo que tiene debajo.
         if (enSuperpuesto(a.el) !== enSuperpuesto(b.el)) continue;
         // Los íconos y botones "absolutos" que viven dentro de un campo (limpiar búsqueda, lupa) se apoyan a propósito.

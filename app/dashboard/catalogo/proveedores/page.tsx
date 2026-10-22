@@ -111,7 +111,7 @@ export default function ProveedoresPage() {
       <EncabezadoPagina titulo="Proveedores" descripcion="A quién se le compra, cómo contactarlo y qué se le pide." />
 
       <BarraHerramientas
-        buscador={{ valor: busqueda, onCambio: (v) => cambiar({ busqueda: v }), placeholder: "Buscar proveedor", etiqueta: "Buscar proveedores" }}
+        buscador={{ valor: busqueda, onCambio: (v) => cambiar({ busqueda: v }), placeholder: "Buscar", etiqueta: "Buscar proveedores" }}
         secciones={[
           {
             id: "rubro",
@@ -143,7 +143,7 @@ export default function ProveedoresPage() {
         }}
         resultados={visibles?.length ?? 0}
         contador={
-          visibles && !error ? `${visibles.length} ${hayFiltros && proveedores ? `de ${proveedores.length} proveedores` : visibles.length === 1 ? "proveedor" : "proveedores"}` : undefined
+          visibles && !error ? `${visibles.length} ${hayFiltros && proveedores ? `de ${totalActivos} proveedores` : visibles.length === 1 ? "proveedor" : "proveedores"}` : undefined
         }
         hayFiltros={hayFiltros}
         onLimpiar={() => setFiltros(SIN_FILTROS)}

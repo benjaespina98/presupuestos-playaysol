@@ -104,6 +104,8 @@ const IconChevron = () => (
 
 const etiquetaDe = (s: SeccionFiltro) => s.opciones.find((o) => o.id === s.valor)?.etiqueta ?? s.valor;
 const sinFiltro = (s: SeccionFiltro) => s.valor === (s.valorTodos ?? "");
+/** "Rubro: PVC"; si la opción ya nombra el filtro ("Stock negativo"), sólo la opción. */
+const textoDeFiltro = (s: SeccionFiltro) => (etiquetaDe(s).toLowerCase().includes(s.titulo.toLowerCase()) ? etiquetaDe(s) : `${s.titulo}: ${etiquetaDe(s)}`);
 
 interface FiltroActivo {
   id: string;
@@ -113,7 +115,7 @@ interface FiltroActivo {
 
 function filtrosActivos({ secciones = [], interruptores = [], orden }: Pick<PropsBarraHerramientas, "secciones" | "interruptores" | "orden">): FiltroActivo[] {
   return [
-    ...secciones.filter((s) => !sinFiltro(s)).map((s) => ({ id: s.id, texto: `${s.titulo}: ${etiquetaDe(s)}`, quitar: () => s.onCambio(s.valorTodos ?? "") })),
+    ...secciones.filter((s) => !sinFiltro(s)).map((s) => ({ id: s.id, texto: textoDeFiltro(s), quitar: () => s.onCambio(s.valorTodos ?? "") })),
     ...interruptores.filter((i) => i.valor).map((i) => ({ id: i.id, texto: i.etiqueta, quitar: () => i.onCambio(false) })),
     ...(orden && orden.valor !== "defecto"
       ? [{ id: "orden", texto: `Orden: ${(orden.etiquetaCorta ?? etiquetaCortaDeOrden)(orden.valor)}`, quitar: () => orden.onCambio("defecto") }]
@@ -439,7 +441,7 @@ function FilaEscritorio({ buscador, secciones = [], interruptores = [], orden, a
   const masActivos = activosInterruptores;
   return (
     <>
-      <div className="w-52 shrink-0 lg:w-72">
+      <div className="w-40 shrink-0 lg:w-72">
         <Buscador valor={buscador.valor} onCambio={buscador.onCambio} placeholder={buscador.placeholder} etiqueta={buscador.etiqueta} />
       </div>
       <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -453,7 +455,7 @@ function FilaEscritorio({ buscador, secciones = [], interruptores = [], orden, a
             porDefecto={s.valorTodos ?? ""}
             onCambio={s.onCambio}
             buscable={s.buscable ?? s.opciones.length > 8}
-            textoBoton={sinFiltro(s) ? s.titulo : `${s.titulo}: ${etiquetaDe(s)}`}
+            textoBoton={sinFiltro(s) ? s.titulo : textoDeFiltro(s)}
           />
         ))}
         {orden && (
@@ -526,7 +528,7 @@ function FilaEscritorio({ buscador, secciones = [], interruptores = [], orden, a
             {a.texto ?? a.etiqueta}
           </a>
         ))}
-      {agregar && <BotonAgregar agregar={agregar} compacto={false} />}
+      {agregar && <BotonAgregar agregar={agregar} compacto={!ancho} />}
     </>
   );
 }

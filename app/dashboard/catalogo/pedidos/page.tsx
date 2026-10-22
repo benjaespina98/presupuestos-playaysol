@@ -121,7 +121,7 @@ export default function PedidosPage() {
         interruptores={cantidadAnulados > 0 ? [{ id: "anulados", etiqueta: `Mostrar anulados (${cantidadAnulados})`, valor: mostrarAnulados, onCambio: (v) => cambiar({ mostrarAnulados: v }) }] : []}
         agregar={{ etiqueta: "Armar pedido nuevo", texto: "Armar pedido", href: "/dashboard/catalogo/pedido" }}
         resultados={visibles?.length ?? 0}
-        contador={visibles && !error ? `${visibles.length} ${hayFiltros && pedidos ? `de ${pedidos.length} pedidos` : visibles.length === 1 ? "pedido" : "pedidos"}` : undefined}
+        contador={visibles && !error ? `${visibles.length} ${hayFiltros && pedidos ? `de ${pedidos.length - (mostrarAnulados ? 0 : cantidadAnulados)} pedidos` : visibles.length === 1 ? "pedido" : "pedidos"}` : undefined}
         hayFiltros={hayFiltros}
         onLimpiar={() => setFiltros(SIN_FILTROS)}
       />

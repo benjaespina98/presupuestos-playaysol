@@ -214,7 +214,7 @@ export default function CatalogoPage() {
         onAgregar={() => setCreando(true)}
         contador={
           visibles && !error
-            ? `${visibles.length} ${hayFiltros && items ? `de ${items.length} ítems` : visibles.length === 1 ? "ítem" : "ítems"}`
+            ? `${visibles.length} ${hayFiltros && items ? `de ${items.filter((i) => incluirInactivos || i.activo).length} ítems` : visibles.length === 1 ? "ítem" : "ítems"}`
             : undefined
         }
         contadorDerecha={

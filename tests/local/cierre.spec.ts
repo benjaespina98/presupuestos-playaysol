@@ -75,9 +75,14 @@ async function accion(page: Page, f: Locator, piscina: string, etiqueta: string)
   await page.getByRole("menuitem", { name: etiqueta, exact: true }).click();
 }
 
-/** "Mostrar desactivados", "Mostrar anulados" y "Modo consulta" están dentro del panel "Filtros": se abre para tocarlos. */
+/**
+ * "Mostrar desactivados", "Mostrar anulados" y "Modo consulta" están dentro de "Filtros" (la hoja, en el celular) o de
+ * "Más filtros" (el panel, en escritorio): se abre para tocarlos.
+ */
 async function abrirFiltros(page: Page) {
-  if (!(await page.getByRole("dialog", { name: "Filtros" }).isVisible())) await page.getByRole("button", { name: /^Filtros/ }).click();
+  const movil = (page.viewportSize()?.width ?? 1280) < 768;
+  const nombre = movil ? "Filtros" : "Más filtros";
+  if (!(await page.getByRole("dialog", { name: nombre }).isVisible())) await page.getByRole("button", { name: new RegExp(`^${nombre}`) }).click();
 }
 
 const abrirCatalogo = async (page: Page, nombre: string) => {

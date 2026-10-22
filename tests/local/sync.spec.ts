@@ -148,7 +148,8 @@ test("el portal muestra lo mismo que entrega el endpoint (catálogo)", async ({ 
 
   // Los desactivados NO se ven hasta que se pide, y entonces llevan su etiqueta (en la planilla: Estado "Desactivado").
   await expect(page.locator("li").filter({ hasText: "SYNC Ítem desactivado" })).toHaveCount(0);
-  const abrir = page.getByRole("button", { name: /^Filtros/ });
+  // Celular: "Filtros" (la hoja). Escritorio: "Más filtros" (el panel con los interruptores).
+  const abrir = page.getByRole("button", { name: /^(Más filtros|Filtros)/ });
   if (await abrir.isVisible()) await abrir.click();
   await page.getByLabel("Mostrar desactivados").check({ force: true });
   await expect(page.locator("li").filter({ hasText: "SYNC Ítem desactivado" }).getByText("Desactivado", { exact: true })).toBeVisible();

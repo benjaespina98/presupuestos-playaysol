@@ -15,6 +15,7 @@ describe("EncabezadoPagina", () => {
 describe("VolverArriba", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
     Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
   });
 
@@ -24,22 +25,39 @@ describe("VolverArriba", () => {
       fireEvent.scroll(window);
     });
 
-  it("no aparece al principio de la página, y sí después de bajar un buen trecho", () => {
+  it("no aparece al bajar; aparece al SUBIR pasado el umbral (así no queda quieta encima de un botón)", () => {
     render(<VolverArriba umbral={500} />);
     expect(screen.queryByRole("button", { name: "Volver arriba" })).not.toBeInTheDocument();
 
-    scrollear(300);
+    scrollear(900); // bajando
     expect(screen.queryByRole("button", { name: "Volver arriba" })).not.toBeInTheDocument();
 
-    scrollear(900);
+    scrollear(800); // subiendo
     expect(screen.getByRole("button", { name: "Volver arriba" })).toBeInTheDocument();
   });
 
-  it("al tocarlo vuelve al principio con scroll suave, y desaparece al llegar", () => {
+  it("no aparece al subir cerca del principio, y se va sola a los 2,5 segundos", () => {
+    vi.useFakeTimers();
+    render(<VolverArriba umbral={500} />);
+    scrollear(450);
+    scrollear(300);
+    expect(screen.queryByRole("button", { name: "Volver arriba" })).not.toBeInTheDocument();
+
+    scrollear(1200);
+    scrollear(1100);
+    expect(screen.getByRole("button", { name: "Volver arriba" })).toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(2600);
+    });
+    expect(screen.queryByRole("button", { name: "Volver arriba" })).not.toBeInTheDocument();
+  });
+
+  it("al tocarlo vuelve al principio con scroll suave", () => {
     const scrollTo = vi.fn();
     vi.spyOn(window, "scrollTo").mockImplementation(scrollTo);
     render(<VolverArriba umbral={500} />);
-    scrollear(900);
+    scrollear(1200);
+    scrollear(1100);
 
     fireEvent.click(screen.getByRole("button", { name: "Volver arriba" }));
     expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
