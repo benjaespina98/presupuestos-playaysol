@@ -12,7 +12,8 @@
 //      presupuestos, un proveedor desactivado con un material).
 //   4. Levanta `next dev` en el puerto 3100 con las variables de la base LOCAL (las
 //      variables del entorno pisan a .env.local, que no se lee).
-//   5. Corre Playwright (tests/local) en celular (390x844) y escritorio (1280x800).
+//   5. Corre Playwright (tests/local) en celular (390x844) y escritorio (1280x800); con `pantallas` corre además las
+//      pruebas de pantallas en 360x740, 390x844, 430x932, 768x1024, 1280x800, 1366x768 y el iPhone 13 emulado.
 //      La prueba aborta cualquier pedido del navegador que no sea a localhost.
 //   6. Apaga el servidor que levantó.
 //
@@ -223,7 +224,13 @@ async function main() {
   try {
     await esperarServidor();
     const spec = process.argv[2];
-    const prueba = spawn("npx playwright test -c playwright.local.config.ts", { env: { ...entorno, ...(spec ? { E2E_SPEC: spec } : {}) }, shell: true, stdio: "inherit" });
+    // "pantallas" (o recorrido, edicion, compartir, documentos): las pruebas de pantallas en todos los tamaños
+    // (playwright.responsive.config.ts). Cualquier otra cosa: las pruebas de siempre (playwright.local.config.ts).
+    const PANTALLAS = ["pantallas", "recorrido", "edicion", "compartir", "documentos"];
+    const pantallas = spec && PANTALLAS.includes(spec);
+    const config = pantallas ? "playwright.responsive.config.ts" : "playwright.local.config.ts";
+    const especifica = pantallas ? (spec === "pantallas" ? {} : { E2E_SPEC: spec }) : spec ? { E2E_SPEC: spec } : {};
+    const prueba = spawn(`npx playwright test -c ${config}`, { env: { ...entorno, ...especifica }, shell: true, stdio: "inherit" });
     codigo = await new Promise((resolve) => prueba.on("exit", (c) => resolve(c ?? 1)));
   } finally {
     matarArbol(servidor);

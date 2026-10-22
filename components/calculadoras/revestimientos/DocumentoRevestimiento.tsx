@@ -113,7 +113,7 @@ export function DocumentoRevestimiento({
   return (
     <div
       id="documento-revestimiento"
-      className="mx-auto max-w-2xl bg-white text-[#1C2B33] print:max-w-none"
+      className="mx-auto max-w-2xl bg-[#FFFFFF] text-[#1C2B33] [overflow-wrap:anywhere] print:max-w-none"
       style={{ fontFamily: 'Calibri, "Carlito", Arial, sans-serif' }} // manual de marca: Calibri para todo el texto de comunicación/lectura
     >
       {/* El asset YA es el banner de marca completo, a todo lo ancho (ver
@@ -163,9 +163,9 @@ export function DocumentoRevestimiento({
             <div className="space-y-2 text-sm">
               {materialesIncluidos.map((m, i) => (
                 <div key={i} className="break-inside-avoid border-b border-dotted border-gray-300 py-1 print:break-inside-avoid">
-                  <div className="flex justify-between">
-                    <span>{m.descripcion}</span>
-                    <span>{m.total === null ? "No incluye" : formatARS(m.total)}</span>
+                  <div className="flex justify-between gap-4">
+                    <span className="min-w-0">{m.descripcion}</span>
+                    <span className="shrink-0 whitespace-nowrap">{m.total === null ? "No incluye" : formatARS(m.total)}</span>
                   </div>
                   {m.precioUnitario !== null && m.total !== null && (
                     <p className="text-xs text-gray-500">
@@ -186,9 +186,9 @@ export function DocumentoRevestimiento({
             </h2>
             <div className="space-y-1 text-sm">
               {adicionales.map((a, i) => (
-                <div key={i} className="flex justify-between border-b border-dotted border-gray-300 py-1">
-                  <span>{a.descripcion}</span>
-                  <span>{formatARS(a.total ?? 0)}</span>
+                <div key={i} className="flex justify-between gap-4 border-b border-dotted border-gray-300 py-1">
+                  <span className="min-w-0">{a.descripcion}</span>
+                  <span className="shrink-0 whitespace-nowrap">{formatARS(a.total ?? 0)}</span>
                 </div>
               ))}
             </div>
@@ -198,15 +198,15 @@ export function DocumentoRevestimiento({
         <div data-testid="totales" className="space-y-1 border-t-2 border-[#244B5A] pt-3">
           {materialesConTotal.length >= 2 ? (
             materialesConTotal.map((m, i) => (
-              <div key={i} className="flex justify-between text-base font-bold text-[#244B5A]">
+              <div key={i} className="flex justify-between gap-4 text-base font-bold text-[#244B5A]">
                 <span>TOTAL revestimiento con {nombreCorto(m.descripcion)}</span>
-                <span>{formatARS(snapshot.totales[i])}</span>
+                <span className="shrink-0 whitespace-nowrap">{formatARS(snapshot.totales[i])}</span>
               </div>
             ))
           ) : (
-            <div className="flex justify-between text-base font-bold text-[#244B5A]">
+            <div className="flex justify-between gap-4 text-base font-bold text-[#244B5A]">
               <span>TOTAL REVESTIMIENTO</span>
-              <span>{formatARS(snapshot.totales[0] ?? 0)}</span>
+              <span className="shrink-0 whitespace-nowrap">{formatARS(snapshot.totales[0] ?? 0)}</span>
             </div>
           )}
         </div>
@@ -238,10 +238,11 @@ export function DocumentoRevestimiento({
   );
 }
 
+/** Un dato del cliente. Los largos (teléfono con detalles, domicilio) ocupan los dos casilleros y hacen salto de línea: nunca se pisan con el de al lado. */
 function Meta({ label, value }: { label: string; value: string }) {
   if (!value) return null;
   return (
-    <div>
+    <div className={`min-w-0 [overflow-wrap:anywhere] ${value.length > 34 ? "sm:col-span-2" : ""}`}>
       <span className="font-bold">{label}</span> {value}
     </div>
   );

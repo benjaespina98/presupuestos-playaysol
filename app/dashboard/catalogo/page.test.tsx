@@ -49,6 +49,11 @@ function item(overrides: Partial<ItemCatalogo>): ItemCatalogo {
 // layout real) — por eso todas las búsquedas de texto acá usan las variantes
 // `All*` en vez de asumir una sola coincidencia.
 
+/** Abre el panel "Filtros" (con "Mostrar desactivados", "Modo consulta rápida" y "Limpiar filtros") si no está abierto. */
+async function abrirFiltros(user: ReturnType<typeof userEvent.setup>) {
+  if (!screen.queryByRole("dialog", { name: "Filtros" })) await user.click(screen.getByRole("button", { name: /^Filtros/ }));
+}
+
 /** Abre el menú "⋯" de un ítem y elige una acción (Ingreso, Ajustar conteo o Historial). */
 async function accion(user: ReturnType<typeof userEvent.setup>, nombre: string, etiqueta: string) {
   await user.click(screen.getAllByRole("button", { name: `Más acciones de ${nombre}` })[0]);
@@ -149,6 +154,7 @@ describe("CatalogoPage · lectura", () => {
     await screen.findAllByText("Activo");
     expect(screen.queryByText("Descontinuado")).not.toBeInTheDocument();
 
+    await abrirFiltros(user);
     await user.click(screen.getByLabelText("Mostrar desactivados"));
 
     expect((await screen.findAllByText("Descontinuado"))[0]).toBeInTheDocument();
@@ -217,6 +223,7 @@ describe("CatalogoPage · modo consulta rápida", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Luces LED");
 
+    await abrirFiltros(user);
     await user.click(screen.getByLabelText("Modo consulta rápida"));
 
     expect(screen.queryByRole("button", { name: /Editar/ })).not.toBeInTheDocument();
@@ -234,6 +241,7 @@ describe("CatalogoPage · modo consulta rápida", () => {
     });
     render(<CatalogoPage />);
     await screen.findAllByText("Cerco perimetral con instalación");
+    await abrirFiltros(user);
     await user.click(screen.getByLabelText("Modo consulta rápida"));
 
     await user.click((await screen.findAllByRole("button", { name: /^Copiar$/ }))[0]);
@@ -251,6 +259,7 @@ describe("CatalogoPage · modo consulta rápida", () => {
     });
     render(<CatalogoPage />);
     await screen.findAllByText("Luces LED");
+    await abrirFiltros(user);
     await user.click(screen.getByLabelText("Modo consulta rápida"));
 
     await user.click((await screen.findAllByRole("button", { name: /^Copiar$/ }))[0]);
@@ -363,6 +372,7 @@ describe("CatalogoPage · alta de un ítem nuevo", () => {
     listarItemsCatalogo.mockResolvedValue({ items: [], error: null });
     const user = userEvent.setup();
     render(<CatalogoPage />);
+    await abrirFiltros(user);
     await user.click(screen.getByLabelText("Modo consulta rápida"));
 
     expect(screen.queryByRole("button", { name: "Agregar ítem" })).not.toBeInTheDocument();
@@ -433,6 +443,7 @@ describe("CatalogoPage · dar de baja/reactivar rápido", () => {
     await waitFor(() => expect(listarItemsCatalogo).toHaveBeenCalled());
     expect(screen.queryByText("Luces LED")).not.toBeInTheDocument();
 
+    await abrirFiltros(user);
     await user.click(screen.getByLabelText("Mostrar desactivados"));
     expect((await screen.findAllByText("Luces LED")).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Desactivado").length).toBeGreaterThan(0);
@@ -514,6 +525,7 @@ describe("CatalogoPage · secciones", () => {
     await user.click(screen.getByRole("button", { name: /^Cercos/ }));
     await waitFor(() => expect(screen.queryByText("De luces")).not.toBeInTheDocument());
 
+    await abrirFiltros(user);
     await user.click(screen.getByRole("button", { name: "Limpiar filtros" }));
     expect(screen.getAllByText("De luces")[0]).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Limpiar filtros" })).not.toBeInTheDocument();
@@ -784,19 +796,67 @@ describe("CatalogoPage · stock", () => {
     expect(screen.getAllByText("Stock negativo").length).toBeGreaterThan(0);
   });
 
-  it("filtra por stock: con unidades / agotado / a pedido", async () => {
+  it("filtra por stock con contadores: todos, con stock, sin stock, negativo y sin control", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: [
+        item({ id: "a", clave: "indusplast_caribe_550", descripcion: "Caribe 550", stock: 2 }),
+        item({ id: "b", clave: "indusplast_caribe_650", descripcion: "Caribe 650", stock: 0 }),
+        item({ id: "c", clave: "indusplast_spa_240", descripcion: "Spa 240", stock: -2 }),
+        item({ id: "d", clave: "hierro", descripcion: "Hierro del 6", stock: null }),
+      ],
+      error: null,
+    });
     const user = userEvent.setup();
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
-    const filtro = screen.getByLabelText("Filtrar por stock");
 
-    await user.selectOptions(filtro, "agotado");
+    const elegir = async (nombre: RegExp) => {
+      await user.click(screen.getByRole("button", { name: "Filtrar por stock" }));
+      await user.click(await screen.findByRole("radio", { name: nombre }));
+    };
+
+    // El menú muestra cada opción con su contador.
+    await user.click(screen.getByRole("button", { name: "Filtrar por stock" }));
+    const menu = await screen.findByRole("radiogroup", { name: "Filtrar por stock" });
+    expect(within(menu).getByRole("radio", { name: /Todos.*4/ })).toBeInTheDocument();
+    expect(within(menu).getByRole("radio", { name: /Con stock.*1/ })).toBeInTheDocument();
+    expect(within(menu).getByRole("radio", { name: /Sin stock.*1/ })).toBeInTheDocument();
+    expect(within(menu).getByRole("radio", { name: /Stock negativo.*1/ })).toBeInTheDocument();
+    expect(within(menu).getByRole("radio", { name: /Sin control de stock.*1/ })).toBeInTheDocument();
+    await user.click(within(menu).getByRole("radio", { name: /Sin stock/ }));
     expect(screen.getAllByText("Caribe 650").length).toBeGreaterThan(0);
     expect(screen.queryByText("Caribe 550")).not.toBeInTheDocument();
+    expect(screen.queryByText("Spa 240")).not.toBeInTheDocument(); // el negativo NO es "sin stock"
 
-    await user.selectOptions(filtro, "sin-control");
-    expect(screen.getAllByText("Hierro del 6").length).toBeGreaterThan(0);
+    await elegir(/Stock negativo/);
+    expect(screen.getAllByText("Spa 240").length).toBeGreaterThan(0);
     expect(screen.queryByText("Caribe 650")).not.toBeInTheDocument();
+
+    await elegir(/Con stock/);
+    expect(screen.getAllByText("Caribe 550").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Spa 240")).not.toBeInTheDocument();
+
+    await elegir(/Sin control de stock/);
+    expect(screen.getAllByText("Hierro del 6").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Caribe 550")).not.toBeInTheDocument();
+  });
+
+  it("si no hay ítems con stock negativo lo dice claro, y el filtro se conserva al volver", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: [item({ id: "a", clave: "indusplast_caribe_550", descripcion: "Caribe 550", stock: 2 })],
+      error: null,
+    });
+    const user = userEvent.setup();
+    const { unmount } = render(<CatalogoPage />);
+    await screen.findAllByText("Caribe 550");
+    await user.click(screen.getByRole("button", { name: "Filtrar por stock" }));
+    await user.click(await screen.findByRole("radio", { name: /Stock negativo/ }));
+    expect(await screen.findByText("No hay ítems con stock negativo.")).toBeInTheDocument();
+
+    // Se abre otra pantalla y se vuelve: el filtro sigue puesto.
+    unmount();
+    render(<CatalogoPage />);
+    expect(await screen.findByText("No hay ítems con stock negativo.")).toBeInTheDocument();
   });
 
   it("en modo consulta el stock es de sólo lectura", async () => {
@@ -804,6 +864,7 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
+    await abrirFiltros(user);
     await user.click(screen.getByLabelText("Modo consulta rápida"));
 
     expect(screen.queryByRole("button", { name: /Más acciones de|Venta de/ })).not.toBeInTheDocument();

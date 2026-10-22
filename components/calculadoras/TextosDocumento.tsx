@@ -35,7 +35,7 @@ export function TextoLegal({ texto }: { texto: string }) {
 export function PieDocumento({ textos }: { textos: TextosCompartidos }) {
   const f = textos.footer;
   return (
-    <footer className="break-inside-avoid rounded-lg border border-[#E1E7EC] bg-[#EEF2F6] p-4 print:break-inside-avoid print:bg-white">
+    <footer className="break-inside-avoid rounded-lg border border-[#E1E7EC] bg-[#EEF2F6] p-4 print:break-inside-avoid print:bg-[#FFFFFF]">
       <p className="text-base font-bold tracking-wide text-[#244B5A]">{f.empresa}</p>
       <div className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 text-sm text-[#244B5A] sm:grid-cols-2">
         {f.direccion && (

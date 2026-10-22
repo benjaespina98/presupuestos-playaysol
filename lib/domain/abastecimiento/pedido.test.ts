@@ -249,7 +249,7 @@ describe("mensajeWhatsApp", () => {
         "Borde: Losetas",
         "Pide: Benja",
         "",
-        "*Corralón Uno* · +54 9 111 111",
+        "*Corralón Uno*",
         "- Hierro del 6: 90",
         "- Cemento 25 kg: 180 bolsa",
       ].join("\n")
@@ -277,45 +277,28 @@ describe("mensajeWhatsApp", () => {
     expect(mensajeDeGrupo(g)).toContain("- Material: 2,5 m³");
   });
 
-  it("sin teléfono no pone el ' · '", () => {
+  it("el nombre del proveedor va solo: el teléfono no sale en el mensaje", () => {
     const p = params();
-    const g = armarPedido([material({ proveedor_id: null })], proveedores, p).grupos[0];
-    expect(mensajeDeGrupo(g).split("\n")[0]).toBe("*Sin proveedor*");
+    const g = armarPedido([material({ proveedor_id: "p1" })], [proveedor({ id: "p1", nombre: "Corralón", telefono: "+54 9 353 4111111" })], p).grupos[0];
+    expect(mensajeDeGrupo(g).split("\n")[0]).toBe("*Corralón*");
+    expect(mensajeDeGrupo(g)).not.toMatch(/\d{7}/);
   });
 });
 
 describe("csvPedido", () => {
   const proveedores = [proveedor({ id: "p1", nombre: "Corralón; Uno", telefono: "+54 9 111 111" })];
 
-  it("empieza con BOM, separa con ';', usa coma decimal y cierra con el costo estimado", () => {
+  it("empieza con BOM, separa con ';', usa coma decimal y NO lleva precios, costo ni teléfonos", () => {
     const csv = csvPedido(
       armarPedido([material({ id: "a", nombre: 'Cemento "25 kg"', unidad: "bolsa", precio: 6461.17, cantidades: { "8x4": 2 } })], proveedores, params())
     );
     const filas = csv.slice(1).split("\r\n");
 
     expect(csv.charCodeAt(0)).toBe(0xfeff);
-    expect(filas[0]).toBe("Proveedor;Teléfono;Artículo;Cantidad;Unidad;Precio unitario;Subtotal");
-    expect(filas[1]).toBe('"Corralón; Uno";+54 9 111 111;"Cemento ""25 kg""";2;bolsa;6461,17;12922,34');
-    expect(filas[2]).toBe(";;;;;COSTO ESTIMADO;12922,34");
-  });
-
-  it("un precio a confirmar sale como 'A confirmar' y sin subtotal", () => {
-    const csv = csvPedido(armarPedido([material({ precio: null })], proveedores, params()));
-    expect(csv.split("\r\n")[1]).toContain(";A confirmar;");
-  });
-});
-
-describe("csvPedido · sin precios", () => {
-  it("deja sólo proveedor, teléfono, artículo, cantidad y unidad (sin precio, subtotal ni costo)", () => {
-    const pedido = armarPedido(
-      [material({ id: "a", nombre: "Hierro", precio: 100, cantidades: { "8x4": 10 } })],
-      [proveedor({ id: "p1", nombre: "Corralón", telefono: "123" })],
-      params()
-    );
-    const csv = csvPedido(pedido, false);
-    expect(csv).not.toMatch(/Precio|Subtotal|COSTO/);
-    expect(csv).toMatch(/Proveedor;Teléfono;Artículo;Cantidad;Unidad/);
-    expect(csvPedido(pedido)).toMatch(/Precio unitario/);
+    expect(filas[0]).toBe("Proveedor;Artículo;Cantidad;Unidad");
+    expect(filas[1]).toBe('"Corralón; Uno";"Cemento ""25 kg""";2;bolsa');
+    expect(filas).toHaveLength(2);
+    expect(csv).not.toMatch(/6461|COSTO|111 111/);
   });
 });
 

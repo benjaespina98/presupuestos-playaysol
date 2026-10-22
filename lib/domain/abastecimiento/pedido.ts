@@ -1,4 +1,5 @@
 import { TAMANOS, type Material } from "./material";
+import { sinTelefonos } from "./pedidoDocumento";
 import { ordenarProveedores, sinTelefono, type Proveedor } from "./proveedor";
 
 /**
@@ -239,7 +240,7 @@ const coma = (n: number) => String(redondear(n)).replace(".", ",");
  *   - Cemento 25 kg: 180 bolsa
  */
 export function mensajeWhatsApp(pedido: Pedido, p: ParametrosPedido, e: DatosEncabezado): string {
-  const obra = e.obra.trim();
+  const obra = sinTelefonos(e.obra.trim());
   const obras = p.obras > 1 ? ` · ${coma(p.obras)} obras` : "";
   const extras = [
     p.luces > 0 ? `Luces: ${coma(p.luces)}` : "",
@@ -252,7 +253,7 @@ export function mensajeWhatsApp(pedido: Pedido, p: ParametrosPedido, e: DatosEnc
     `Obra: ${obra ? `${obra} · ` : ""}Pileta ${p.tamano}${obras}`,
     `Borde: ${p.borde}`,
     ...(extras.length ? [extras.join(" · ")] : []),
-    `Pide: ${e.pide.trim() || "________"}`,
+    `Pide: ${sinTelefonos(e.pide.trim()) || "________"}`,
   ];
 
   const bloques = pedido.grupos.map((g) => mensajeDeGrupo(g));
@@ -261,7 +262,7 @@ export function mensajeWhatsApp(pedido: Pedido, p: ParametrosPedido, e: DatosEnc
 
 /** Las líneas de UN proveedor, para mandárselas a él solo. */
 export function mensajeDeGrupo(g: GrupoPedido): string {
-  const titulo = `*${g.nombre}*${g.telefono ? ` · ${g.telefono}` : ""}`;
+  const titulo = `*${g.nombre}*`;
   const lineas = g.lineas.map((l) => {
     const unidad = l.material.unidad && l.material.unidad !== "unidad" ? ` ${l.material.unidad}` : "";
     return `- ${l.material.nombre}: ${coma(l.cantidad)}${unidad}`;
@@ -278,20 +279,11 @@ const celdaCsv = (v: string | number) => {
  * El pedido como CSV para abrir en Excel en español: separador `;`, decimales
  * con coma y BOM UTF-8 (sin el BOM, Excel rompe las tildes).
  */
-export function csvPedido(pedido: Pedido, conPrecios = true): string {
-  const filas: (string | number)[][] = [
-    conPrecios
-      ? ["Proveedor", "Teléfono", "Artículo", "Cantidad", "Unidad", "Precio unitario", "Subtotal"]
-      : ["Proveedor", "Teléfono", "Artículo", "Cantidad", "Unidad"],
-  ];
+export function csvPedido(pedido: Pedido): string {
+  // Sale de la app: sólo proveedor, artículo, cantidad y unidad (nunca precios ni teléfonos).
+  const filas: (string | number)[][] = [["Proveedor", "Artículo", "Cantidad", "Unidad"]];
   for (const g of pedido.grupos) {
-    for (const l of g.lineas) {
-      const base = [g.nombre, g.telefono ?? "", l.material.nombre, coma(l.cantidad), l.material.unidad ?? ""];
-      filas.push(
-        conPrecios ? [...base, l.precio === null ? "A confirmar" : coma(l.precio), l.precio === null ? "" : coma(l.subtotal)] : base
-      );
-    }
+    for (const l of g.lineas) filas.push([g.nombre, l.material.nombre, coma(l.cantidad), l.material.unidad ?? ""]);
   }
-  if (conPrecios) filas.push(["", "", "", "", "", "COSTO ESTIMADO", coma(pedido.costo)]);
   return "﻿" + filas.map((f) => f.map(celdaCsv).join(";")).join("\r\n");
 }

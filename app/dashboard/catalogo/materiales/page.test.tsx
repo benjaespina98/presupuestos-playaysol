@@ -47,6 +47,11 @@ function mat(o: Partial<Material> = {}): Material {
   };
 }
 
+/** Abre el panel "Filtros" (con "Mostrar desactivados" y "Limpiar filtros") si no está abierto. */
+async function abrirFiltros(user: ReturnType<typeof userEvent.setup>) {
+  if (!screen.queryByRole("dialog", { name: "Filtros" })) await user.click(screen.getByRole("button", { name: /^Filtros/ }));
+}
+
 describe("Materiales", () => {
   beforeEach(() => {
     // La búsqueda y los filtros se conservan en sessionStorage: cada test arranca limpio.
@@ -84,8 +89,10 @@ describe("Materiales", () => {
     expect(screen.queryByText("Cemento 25 kg")).not.toBeInTheDocument();
     expect(screen.getByText("Filtro VC30")).toBeInTheDocument();
 
+    await abrirFiltros(user);
     await user.click(screen.getByRole("button", { name: "Limpiar filtros" }));
-    await user.selectOptions(screen.getByLabelText("Filtrar por proveedor"), "p1");
+    await user.click(screen.getByRole("button", { name: "Filtrar por proveedor" }));
+    await user.click(await screen.findByRole("radio", { name: "Ranco" }));
     expect(screen.queryByText("Filtro VC30")).not.toBeInTheDocument();
     expect(screen.getByText("Cemento 25 kg")).toBeInTheDocument();
   });
@@ -193,6 +200,11 @@ describe("Materiales", () => {
       await user.click(campo);
       await user.tab();
     }
+    // Sin cambiar nada, Guardar queda deshabilitado (nada se convirtió en 0 por pasar por los campos).
+    expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeDisabled();
+    const precio = screen.getByLabelText("Precio");
+    await user.clear(precio);
+    await user.type(precio, "100");
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
     await waitFor(() => expect(mocks.guardarMaterial).toHaveBeenCalled());
@@ -209,6 +221,9 @@ describe("Materiales", () => {
     await screen.findByText("Cemento 25 kg");
 
     await user.click(screen.getByRole("button", { name: "Editar Cemento 25 kg" }));
+    const precio = await screen.findByLabelText("Precio");
+    await user.clear(precio);
+    await user.type(precio, "100");
     await user.click(await screen.findByRole("button", { name: "Guardar cambios" }));
 
     await waitFor(() => expect(mocks.guardarMaterial).toHaveBeenCalled());
@@ -238,6 +253,7 @@ describe("Materiales", () => {
     await screen.findByText("Cemento 25 kg");
     expect(screen.queryByText("Arena")).not.toBeInTheDocument();
 
+    await abrirFiltros(user);
     await user.click(screen.getByLabelText("Mostrar desactivados"));
 
     expect(await screen.findByText("Arena")).toBeInTheDocument();

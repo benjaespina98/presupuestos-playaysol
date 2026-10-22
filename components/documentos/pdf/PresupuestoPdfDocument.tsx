@@ -1,7 +1,11 @@
 import type { ReactNode } from "react";
-import { Document, Page, View, Text, Image, Link, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, View, Text, Image, Link, StyleSheet, Font } from "@react-pdf/renderer";
 import type { BloqueDocumento, FotoDocumentoModelo } from "@/lib/documentos/modelo";
 import { justificarFilas } from "@/lib/domain/documentos/imageLayout";
+
+// Una palabra larguísima sin espacios (un teléfono con detalles pegados, un correo, una dirección sin cortes) no
+// cabe en su casillero y se pisaba con el de al lado: se permite cortarla en tramos. Las palabras comunes no se tocan.
+Font.registerHyphenationCallback((palabra) => (palabra.length > 18 ? (palabra.match(/.{1,14}/g) ?? [palabra]) : [palabra]));
 
 /**
  * El "PDF Generator" de la arquitectura Budget Data → Document Renderer →
@@ -95,7 +99,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
   },
-  metaPar: { width: "50%", marginBottom: 3, fontSize: 9.5 },
+  metaPar: { width: "50%", marginBottom: 3, fontSize: 9.5, paddingRight: 6 },
+  // Un dato largo (teléfono con detalles, domicilio, email) ocupa los dos casilleros y hace salto de línea.
+  metaParAncho: { width: "100%", marginBottom: 3, fontSize: 9.5 },
+  // Descripción y monto de un renglón: la descripción se achica y salta de línea; el monto nunca se parte ni se pisa.
+  renglonTexto: { flexGrow: 1, flexShrink: 1, flexBasis: 0, marginRight: 10 },
+  renglonMonto: { flexShrink: 0 },
   metaLabel: { fontFamily: "Helvetica-Bold", color: NAVY },
   // "Insignia" de sección: antes era sólo una línea teal debajo del texto,
   // ahora un fondo tintado + acento a la izquierda — más fácil de detectar
@@ -153,9 +162,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   tarjetaFila: { flexDirection: "row", justifyContent: "space-between" },
-  tarjetaDescripcion: { fontSize: 9.5, fontFamily: "Helvetica-Bold", color: TEXTO, flex: 1, marginRight: 6 },
-  tarjetaMonto: { fontSize: 9.5, fontFamily: "Helvetica-Bold", color: NAVY },
-  tarjetaMontoVacio: { fontSize: 9.5, fontFamily: "Helvetica-Bold", color: "#8B98A3" },
+  tarjetaDescripcion: { fontSize: 9.5, fontFamily: "Helvetica-Bold", color: TEXTO, flexGrow: 1, flexShrink: 1, flexBasis: 0, marginRight: 8 },
+  tarjetaMonto: { fontSize: 9.5, fontFamily: "Helvetica-Bold", color: NAVY, flexShrink: 0 },
+  tarjetaMontoVacio: { fontSize: 9.5, fontFamily: "Helvetica-Bold", color: "#8B98A3", flexShrink: 0 },
   tarjetaSubcaption: { fontSize: 8, color: "#666", marginTop: 2 },
   validez: { fontSize: 9.5, fontFamily: "Helvetica-Bold", marginBottom: 10, color: NAVY },
   // 8pt (antes) es casi ilegible en una hoja A4 impresa — el mismo texto
@@ -280,7 +289,7 @@ function bloqueAJsx(bloque: BloqueDocumento, key: number): ReactNode {
       return (
         <View key={key} style={styles.meta}>
           {bloque.pares.map((p, i) => (
-            <Text key={i} style={styles.metaPar}>
+            <Text key={i} style={p.value.length > 34 ? styles.metaParAncho : styles.metaPar}>
               <Text style={styles.metaLabel}>{p.label} </Text>
               {p.value}
             </Text>
@@ -313,8 +322,8 @@ function bloqueAJsx(bloque: BloqueDocumento, key: number): ReactNode {
             {bloque.titulo && <Text style={styles.seccionTitulo}>{bloque.titulo}</Text>}
             {bloque.renglones.map((r, i) => (
               <View key={i} style={styles.renglonDetalle}>
-                <Text>{r.descripcion}</Text>
-                <Text style={styles.renglonDetalleMonto}>{r.monto}</Text>
+                <Text style={styles.renglonTexto}>{r.descripcion}</Text>
+                <Text style={[styles.renglonDetalleMonto, styles.renglonMonto]}>{r.monto}</Text>
               </View>
             ))}
           </View>
@@ -341,8 +350,8 @@ function bloqueAJsx(bloque: BloqueDocumento, key: number): ReactNode {
               // caer justo en el borde de una página — ver el comentario del
               // bug en el plan).
               <View key={i} wrap={false} style={filaStyle}>
-                <Text style={textoStyle}>{r.descripcion}</Text>
-                <Text style={textoStyle}>{r.monto}</Text>
+                <Text style={[textoStyle, styles.renglonTexto]}>{r.descripcion}</Text>
+                <Text style={[textoStyle, styles.renglonMonto]}>{r.monto}</Text>
               </View>
             );
           })}

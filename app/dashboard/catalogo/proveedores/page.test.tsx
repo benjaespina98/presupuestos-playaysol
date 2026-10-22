@@ -47,6 +47,11 @@ const mat = (o: Partial<Material>): Material => ({
   ...o,
 });
 
+/** Abre el panel "Filtros" (con "Mostrar desactivados" y "Limpiar filtros") si no está abierto. */
+async function abrirFiltros(user: ReturnType<typeof userEvent.setup>) {
+  if (!screen.queryByRole("dialog", { name: "Filtros" })) await user.click(screen.getByRole("button", { name: /^Filtros/ }));
+}
+
 describe("Proveedores", () => {
   beforeEach(() => {
     window.sessionStorage.clear();
@@ -81,6 +86,7 @@ describe("Proveedores", () => {
     expect(screen.queryByText("Ranco")).not.toBeInTheDocument();
     expect(screen.getByText("Vulcano")).toBeInTheDocument();
 
+    await abrirFiltros(user);
     await user.click(screen.getByRole("button", { name: "Limpiar filtros" }));
     expect(screen.getByText("Ranco")).toBeInTheDocument();
   });
@@ -165,6 +171,7 @@ describe("Proveedores", () => {
     await screen.findByText("Ranco");
     expect(screen.queryByText("Viejo SA")).not.toBeInTheDocument();
 
+    await abrirFiltros(user);
     await user.click(screen.getByLabelText("Mostrar desactivados"));
 
     expect(await screen.findByText("Viejo SA")).toBeInTheDocument();

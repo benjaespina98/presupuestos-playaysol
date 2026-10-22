@@ -27,7 +27,7 @@ export function EditorFotosSeed({
     <div className="space-y-2 rounded-md border border-gray-200 p-3">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-semibold text-gray-700">{etiqueta}</span>
-        <label className="min-h-8 cursor-pointer rounded px-2 py-1 text-xs font-medium text-[#244B5A] hover:bg-[#244B5A]/5">
+        <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg px-3 text-[13px] font-semibold text-[#1A3844] hover:bg-[#EAF0F2] active:bg-[#D5E0E4]">
           + Agregar
           <input
             type="file"
@@ -56,7 +56,7 @@ export function EditorFotosSeed({
                 aria-label={sacada ? "Volver a incluir esta foto" : "Sacar esta foto de la exportación"}
                 className="group absolute -right-3 -top-3 flex h-11 w-11 items-center justify-center"
               >
-                <span className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-bold text-[#244B5A] shadow-sm group-hover:bg-gray-100">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-300 bg-[#FFFFFF] text-sm font-bold text-[#244B5A] shadow-sm group-hover:bg-gray-100">
                   {sacada ? "↺" : "×"}
                 </span>
               </button>
@@ -74,7 +74,7 @@ export function EditorFotosSeed({
               aria-label="Quitar esta foto agregada"
               className="group absolute -right-3 -top-3 flex h-11 w-11 items-center justify-center"
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-bold text-red-600 shadow-sm group-hover:bg-red-50">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-300 bg-[#FFFFFF] text-sm font-bold text-red-600 shadow-sm group-hover:bg-red-50">
                 ×
               </span>
             </button>

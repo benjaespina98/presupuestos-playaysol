@@ -18,6 +18,8 @@ import { compartirOdescargarArchivo } from "@/lib/documentos/compartir";
 import { formatARSExacto } from "@/lib/format/ars";
 import { ModalShell } from "@/components/abastecimiento/modal-partes";
 import { MenuExportar } from "./MenuExportar";
+import { AccionesProveedor } from "./AccionesProveedor";
+import { SelectorSimple } from "@/components/ui/SelectorSimple";
 
 const cantidad = (n: number) => new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(n);
 
@@ -79,11 +81,11 @@ export function DetallePedidoModal({
     setMensaje({ tipo: "ok", texto: `Estado: ${ETIQUETA_ESTADO[estado]}.` });
   }
 
-  async function exportar(formato: FormatoPedido, modo: ModoPedido, conPrecios: boolean) {
+  async function exportar(formato: FormatoPedido, modo: ModoPedido) {
     setOcupado(true);
     setMensaje(null);
     try {
-      const archivo = await exportarPedido(doc, formato, modo, { conPrecios });
+      const archivo = await exportarPedido(doc, formato, modo);
       await compartirOdescargarArchivo(archivo.blob, archivo.nombre, archivo.mime);
       setMensaje({ tipo: "ok", texto: `${archivo.nombre} generado.` });
     } catch (err) {
@@ -116,22 +118,19 @@ export function DetallePedidoModal({
       )}
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <label htmlFor="estado-pedido" className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
+          <label htmlFor="estado-pedido" className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-gray-600">
             Estado
           </label>
-          <select
-            id="estado-pedido"
-            value={pedido.estado}
-            disabled={ocupado || anulado}
-            onChange={(e) => cambiarEstado(e.target.value as EstadoPedido)}
-            className={`min-h-11 rounded-lg border border-gray-200 px-3 text-sm font-medium focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 ${CLASE_ESTADO[pedido.estado]}`}
-          >
-            {ESTADOS_PEDIDO.map((e) => (
-              <option key={e} value={e}>
-                {ETIQUETA_ESTADO[e]}
-              </option>
-            ))}
-          </select>
+          <div className="min-w-44">
+            <SelectorSimple
+              id="estado-pedido"
+              titulo="Estado"
+              valor={pedido.estado}
+              opciones={ESTADOS_PEDIDO.map((e) => ({ value: e, label: ETIQUETA_ESTADO[e] }))}
+              disabled={ocupado || anulado}
+              onCambio={(v) => cambiarEstado(v as EstadoPedido)}
+            />
+          </div>
         </div>
         <MenuExportar onExportar={exportar} variosProveedores={doc.proveedores.length > 1} ocupado={ocupado} />
       </div>
@@ -177,6 +176,7 @@ export function DetallePedidoModal({
             <p className="border-t border-gray-100 bg-gray-50 px-3 py-1.5 text-right text-sm font-semibold tabular-nums text-gray-900">
               Subtotal {formatARSExacto(s.subtotal)}
             </p>
+            <AccionesProveedor doc={doc} seccion={s} onMensaje={(tipo, texto) => setMensaje({ tipo, texto })} />
           </section>
         ))}
       </div>

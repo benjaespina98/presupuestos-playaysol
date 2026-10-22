@@ -75,10 +75,9 @@ async function accion(page: Page, f: Locator, piscina: string, etiqueta: string)
   await page.getByRole("menuitem", { name: etiqueta, exact: true }).click();
 }
 
-/** En el celular los filtros están plegados detrás del botón "Filtros": se despliegan para tocarlos. */
+/** "Mostrar desactivados", "Mostrar anulados" y "Modo consulta" están dentro del panel "Filtros": se abre para tocarlos. */
 async function abrirFiltros(page: Page) {
-  const boton = page.getByRole("button", { name: /^Filtros/ });
-  if (await boton.isVisible()) await boton.click();
+  if (!(await page.getByRole("dialog", { name: "Filtros" }).isVisible())) await page.getByRole("button", { name: /^Filtros/ }).click();
 }
 
 const abrirCatalogo = async (page: Page, nombre: string) => {
@@ -123,7 +122,8 @@ test("login y navegación", async ({ page }, info) => {
 
   for (const [nombre, url] of [
     ["Historial", /\/dashboard\/historial/],
-    ["Catálogo", /\/dashboard\/catalogo/],
+    ["Precios", /\/dashboard\/catalogo$/],
+    ["Compras", /\/dashboard\/catalogo\/materiales/],
     ["Nuevo", /\/dashboard$/],
   ] as const) {
     await page.getByRole("link", { name: nombre, exact: true }).click();
@@ -165,7 +165,7 @@ test("stock: ingreso, venta con negativo, ajustes, anulación e historial", asyn
   await captura(page, info, "venta-confirmar-negativo");
   await page.getByRole("button", { name: "Vender igual" }).click();
   await expect(page.getByText(/quedó en stock negativo \(−2\)/)).toBeVisible();
-  await expect(f.getByText("Stock negativo")).toBeVisible();
+  await expect(f.getByText("Stock negativo")).toBeAttached(); // el texto va dentro de la marca (lectores de pantalla)
   await expect(f.getByTitle("stock negativo: -2")).toBeVisible();
   await captura(page, info, "venta-negativo-banner");
 
@@ -288,6 +288,7 @@ test("presupuesto anulado: etiqueta, toggle y campos deshabilitados", async ({ p
   await expect(page.getByText("Ningún presupuesto coincide con el filtro.")).toBeVisible();
   await abrirFiltros(page);
   await page.getByText(/Mostrar anulados/).click();
+  await page.keyboard.press("Escape"); // cierra el panel de filtros
   await expect(page.getByText("Anulado", { exact: true }).locator("visible=true").first()).toBeVisible();
   await expect(page.getByText("Motivo: Prueba E2E de anulación").locator("visible=true").first()).toBeVisible();
   await captura(page, info, "historial-anulados");
@@ -322,6 +323,7 @@ test("catálogo: desactivar y reactivar un ítem", async ({ page }, info) => {
 
   await abrirFiltros(page);
   await page.getByText("Mostrar desactivados").click();
+  await page.keyboard.press("Escape"); // cierra el panel de filtros
   const desactivada = fila(page, ITEM_SIN_STOCK.texto);
   await expect(desactivada.getByText("Desactivado")).toBeVisible();
   await captura(page, info, "catalogo-desactivados");

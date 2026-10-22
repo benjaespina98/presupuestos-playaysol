@@ -42,7 +42,7 @@ export async function compartirOdescargarArchivo(blob: Blob, nombreArchivo: stri
  * está disponible; Safari/iOS no la expone, así que se cae a mirar el user
  * agent como hacía el legacy.
  */
-function esDispositivoMovil(): boolean {
+export function esDispositivoMovil(): boolean {
   if (typeof navigator === "undefined") return false;
   const uaData = (navigator as Navigator & { userAgentData?: { mobile?: boolean } }).userAgentData;
   if (uaData && typeof uaData.mobile === "boolean") return uaData.mobile;
@@ -65,4 +65,38 @@ function extensionDe(mimeType: string): string {
   if (mimeType.includes("wordprocessingml")) return ".docx";
   if (mimeType === "image/png") return ".png";
   return "";
+}
+
+export type ResultadoCompartir = "compartido" | "texto" | "descargado" | "cancelado";
+
+/**
+ * Compartir el archivo de UN proveedor desde el celular (en iOS Safari abre la hoja de compartir).
+ * - Si el navegador puede compartir archivos (`canShare({ files })`): comparte el archivo con su texto.
+ * - Si sólo puede compartir texto: comparte el texto (no hay forma de adjuntar el archivo).
+ * - Si no puede compartir nada: descarga el archivo.
+ * Hay que llamarla directo desde el toque del usuario (iOS exige el gesto): por eso el archivo llega ya generado.
+ */
+export async function compartirArchivoYTexto(blob: Blob, nombreArchivo: string, mimeType: string, texto: string): Promise<ResultadoCompartir> {
+  const nombre = nombreArchivo.endsWith(extensionDe(mimeType)) ? nombreArchivo : `${nombreArchivo}${extensionDe(mimeType)}`;
+  try {
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      const archivo = new File([blob], nombre, { type: mimeType });
+      if (typeof navigator.canShare === "function" && navigator.canShare({ files: [archivo] })) {
+        await navigator.share({ files: [archivo], text: texto });
+        return "compartido";
+      }
+      await navigator.share({ text: texto });
+      return "texto";
+    }
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") return "cancelado";
+    // Cualquier otra falla (permiso, gesto vencido): se cae a descargar.
+  }
+  descargarBlob(blob, nombre);
+  return "descargado";
+}
+
+/** Descarga directa (sin hoja de compartir). */
+export function descargarArchivo(blob: Blob, nombreArchivo: string): void {
+  descargarBlob(blob, nombreArchivo);
 }

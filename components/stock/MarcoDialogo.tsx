@@ -36,11 +36,10 @@ export function MarcoDialogo({
 }
 
 export const CLASE_INPUT =
-  "min-h-11 w-full rounded-lg border border-gray-300 px-3 py-2 text-base text-gray-900 placeholder:text-gray-400 hover:border-gray-400 focus:border-marca focus:outline-none focus:ring-2 focus:ring-celeste/40 disabled:opacity-50";
+  "min-h-12 w-full rounded-lg border border-[#7D8892] px-3 py-2 text-base text-gray-900 placeholder:text-gray-500 hover:border-[#244B5A] focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-celeste/40 disabled:bg-gray-100 disabled:text-gray-600";
 
 export const CLASE_BOTON_PRIMARIO = `${boton.base} ${boton.primario} w-full`;
 
-export const CLASE_BOTON_PELIGRO =
-  "inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700 active:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50";
+export const CLASE_BOTON_PELIGRO = `${boton.base} ${boton.peligroLleno} w-full`;
 
 export const CLASE_BOTON_SECUNDARIO = `${boton.base} ${boton.secundario} w-full font-medium`;

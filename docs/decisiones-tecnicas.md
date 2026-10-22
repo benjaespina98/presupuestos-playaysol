@@ -338,3 +338,26 @@ documento con líneas de precio — en vez de forzarla dentro del molde de
   arnés `tests/oracle/harness.ts` (+ `oraculo-losetas.test.ts`) se borraron:
   losetas era su último consumidor. `tests/unit/dependencias.test.ts` y
   `tests/assets.spec.ts` se actualizaron para dejar de exigir ese contrato.
+
+## 13 · Correcciones tras la prueba en el celular (iPhone)
+
+- **Pedidos sin datos internos.** Lo que sale de un pedido hacia un proveedor lleva sólo: proveedor, obra o referencia (sin
+  teléfono), tamaño de pileta, borde, fecha, quién pide (sin teléfono) y los artículos con cantidad y unidad. `paraSalida`
+  es el único punto por el que pasan todas las salidas; las notas internas (campo "Notas internas", ya no "Observaciones")
+  se guardan con el pedido pero no salen. El encabezado de la empresa en el pedido ya no lleva teléfono ni WhatsApp.
+  *Decisión tomada:* las condiciones de la obra (luces, luz en la cama de agua, baño químico) se mantienen: el proveedor las necesita.
+- **Compartir por proveedor.** `AccionesProveedor`: Compartir (sólo en celular; el PDF se prepara antes porque iOS exige que la
+  hoja de compartir se abra directo del toque), Descargar y Copiar mensaje. Si el navegador no comparte archivos
+  (`canShare`), comparte sólo el texto; si no hay hoja de compartir, descarga.
+- **Botones invisibles.** No se pudo reproducir en Chromium ni en WebKit emulado. Causas probables, ya eliminadas: (1) el estado
+  deshabilitado era `opacity-50` sobre el azul petróleo, que sobre blanco deja texto blanco a unos 2,5:1; (2) los fondos de
+  hover y de botones suaves usaban `bg-marca/8` (`color-mix`, no soportado por Safari < 16.2 → fondo transparente). Ahora son
+  colores fijos y hay una prueba de contraste que recorre todas las pantallas.
+- **Nombre de archivo de los presupuestos**: `<Cliente> - <Tipo> - DD-MM-AAAA` (antes `Presupuesto_<Tipo>_<Cliente>_<Fecha>`).
+  *Decisión tomada:* el cliente se usa tal como se cargó (texto libre, sin reordenar ni adivinar apellido y nombre), con tildes y
+  coma; sólo se sacan los caracteres que Windows no acepta, los de control y los puntos o espacios del final. El máximo de 80
+  caracteres se mantiene para la parte del cliente.
+- **Filtro de stock del catálogo**: Todos, Con stock (> 0), Sin stock (= 0), Stock negativo (< 0) y Sin control de stock.
+  *Decisión tomada:* "agotado" pasó de "≤ 0" a "= 0" y los negativos tienen su propia opción (antes caían en "agotado").
+- **Menú**: "Catálogo" se partió en "Precios" y "Compras" porque mezclaba lo que se le cobra al cliente con lo que se le compra a
+  los proveedores. Las rutas no cambian.

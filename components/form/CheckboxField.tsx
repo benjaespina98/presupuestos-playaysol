@@ -48,21 +48,21 @@ export function CheckboxField<TFieldValues extends FieldValues>({
         />
         <span
           aria-hidden="true"
-          className="relative h-6 w-11 shrink-0 rounded-full bg-gray-300 transition-colors
+          className="relative h-6 w-11 shrink-0 rounded-full bg-[#7D8892] transition-colors
             peer-checked:bg-[#244B5A] peer-focus-visible:outline peer-focus-visible:outline-2
             peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#244B5A]
             before:absolute before:top-0.5 before:left-0.5 before:h-5 before:w-5 before:rounded-full
-            before:bg-white before:transition-transform before:content-[''] peer-checked:before:translate-x-5"
+            before:bg-[#FFFFFF] before:transition-transform before:content-[''] peer-checked:before:translate-x-5"
         />
-        <span className="text-sm font-medium text-gray-700">{label}</span>
+        <span className="text-base font-medium text-[#1F2A30]">{label}</span>
       </label>
       {hint && !error && (
-        <p id={hintId} className="pl-14 text-xs text-gray-500">
+        <p id={hintId} className="pl-14 text-[13px] leading-snug text-[#4A5861]">
           {hint}
         </p>
       )}
       {error && (
-        <p id={errorId} role="alert" className="pl-14 text-xs font-medium text-red-600">
+        <p id={errorId} role="alert" className="pl-14 text-[13px] font-medium text-[#B42318]">
           {error}
         </p>
       )}
