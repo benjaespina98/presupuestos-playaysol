@@ -85,6 +85,37 @@ test("relevamiento de pantallas", async ({ page }, info) => {
     if (medidas.scrollHorizontal) hallazgos.push(`${nombre}: SCROLL HORIZONTAL`);
     for (const c of medidas.chicos) hallazgos.push(`${nombre}: zona chica ${c}`);
   }
+  // Formularios de edición: ¿entran sin scroll y con Guardar a la vista?
+  for (const [nombre, ruta, fila] of [
+    ["form-material", "/dashboard/catalogo/materiales", /Editar Material de prueba 1-1/],
+    ["form-proveedor", "/dashboard/catalogo/proveedores", /Editar Distribuidora Norte E2E/],
+  ] as const) {
+    await page.goto(ruta);
+    await page.waitForLoadState("networkidle");
+    const boton = page.getByRole("button", { name: fila }).first();
+    if (!(await boton.count())) {
+      hallazgos.push(`METRICA ${nombre}: no se encontró la fila`);
+      continue;
+    }
+    await boton.click();
+    const dialogo = page.getByRole("dialog");
+    await dialogo.waitFor();
+    await captura(page, nombre, info.project.name);
+    const m = await page.evaluate(() => {
+      const d = document.querySelector<HTMLElement>('[role="dialog"]');
+      const cuerpo = d?.matches(".overflow-y-auto") ? d : d?.querySelector<HTMLElement>(".overflow-y-auto");
+      const guardar = [...(d?.querySelectorAll<HTMLElement>("button") ?? [])].find((b) => /Guardar cambios/.test(b.textContent ?? ""));
+      const r = guardar?.getBoundingClientRect();
+      return {
+        sinScroll: cuerpo ? cuerpo.scrollHeight <= cuerpo.clientHeight + 1 : null,
+        guardarVisible: r ? r.top >= 0 && r.bottom <= window.innerHeight : null,
+        altoCampos: [...(d?.querySelectorAll<HTMLElement>("input:not([type=checkbox]), select") ?? [])].map((e) => Math.round(e.getBoundingClientRect().height)).filter((h) => h > 0),
+      };
+    });
+    hallazgos.push(`METRICA ${nombre}: se ve completo sin scroll=${m.sinScroll}; Guardar a la vista=${m.guardarVisible}; alto de campos=${[...new Set(m.altoCampos)].join("/")}`);
+    await page.keyboard.press("Escape");
+  }
+
   fs.writeFileSync(path.join("capturas-locales", FASE, info.project.name, "_medidas.txt"), hallazgos.join("\n") || "sin hallazgos");
 
   // Un diálogo de stock y el historial, que es donde más se nota el cambio.
