@@ -64,6 +64,30 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Combos con el mismo aspecto en todo el portal: flecha propia y uniforme (los nativos cambian
+   de un navegador a otro). Siguen siendo <select> nativos, que en el celular abren el selector
+   del sistema: es lo más cómodo con el pulgar. */
+select:not([multiple]) {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23244b5a'%3E%3Cpath d='M5.3 7.3a1 1 0 0 1 1.4 0L10 10.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 0-1.4z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1.1rem;
+  padding-right: 2.5rem;
+}
+select:not([multiple]):disabled {
+  opacity: 0.6;
+}
+
+/* En el celular, los campos de texto a 16 px: con menos, iOS hace zoom al tocarlos. */
+@media (max-width: 639px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

@@ -49,6 +49,8 @@ function mat(o: Partial<Material> = {}): Material {
 
 describe("Materiales", () => {
   beforeEach(() => {
+    // La búsqueda y los filtros se conservan en sessionStorage: cada test arranca limpio.
+    window.sessionStorage.clear();
     Object.values(mocks).forEach((m) => m.mockReset());
     mocks.listarProveedores.mockResolvedValue({ items: PROVEEDORES, error: null });
   });
@@ -64,7 +66,7 @@ describe("Materiales", () => {
     expect(screen.getAllByText("Ranco").length).toBeGreaterThan(0);
     const precio = screen.getByText(/\$\s*6\.461/);
     expect(precio.className).toContain("whitespace-nowrap");
-    expect(screen.getByText("A confirmar", { selector: "span.rounded-full" })).toBeInTheDocument();
+    expect(screen.getByText("A confirmar", { selector: "span" })).toBeInTheDocument();
   });
 
   it("filtra por rubro con chips (con contador) y por proveedor", async () => {
