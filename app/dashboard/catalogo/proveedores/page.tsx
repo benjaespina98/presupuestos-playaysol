@@ -1,26 +1,32 @@
 "use client";
 
 import { botonDe } from "@/components/ui/botones";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { listarMateriales, listarProveedores } from "@/lib/abastecimiento";
-import {
-  filtrarProveedores,
-  ordenarProveedores,
-  sinTelefono,
-  type Proveedor,
-} from "@/lib/domain/abastecimiento/proveedor";
+import { filtrarProveedores, ordenarProveedores, sinTelefono, type Proveedor } from "@/lib/domain/abastecimiento/proveedor";
 import { materialesPorProveedor, type Material } from "@/lib/domain/abastecimiento/material";
+import { etiquetaCortaDeOrden, opcionesDeOrden, ordenarPor, type ClaveOrden } from "@/lib/ordenar";
 import { PanelPortal } from "@/components/PanelPortal";
 import { IconPlus } from "@/components/icons";
-import { Buscador, FiltrosPlegables } from "@/components/ui/FiltrosPlegables";
+import { Buscador } from "@/components/ui/FiltrosPlegables";
+import { BarraListado, BotonFiltros, Chip, ChipsFila, Interruptor, MenuSeleccion, Toast } from "@/components/ui/BarraListado";
+import { BotonLapiz, alTocarFila } from "@/components/ui/BotonLapiz";
 import { useEstadoPersistente } from "@/lib/useEstadoPersistente";
-import { BarraFiltros } from "@/components/catalogo/BarraFiltros";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
-import { Chip, Interruptor } from "@/components/catalogo/FiltrosCatalogo";
 import { ProveedorModal } from "@/components/abastecimiento/ProveedorModal";
 
-/** Las columnas de la lista en pantallas medianas y grandes: Proveedor · Contacto · Teléfono · Materiales · acción. */
-const COLUMNAS = "md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_13rem_7rem]";
+/** Las columnas de la lista desde `lg`: Proveedor · Contacto · Teléfono · Materiales · Editar. */
+const COLUMNAS = "lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_13rem_7rem_3.5rem]";
+
+interface Filtros {
+  busqueda: string;
+  rubro: string;
+  telefono: "" | "con" | "sin";
+  incluirInactivos: boolean;
+  orden: ClaveOrden;
+}
+const SIN_FILTROS: Filtros = { busqueda: "", rubro: "", telefono: "", incluirInactivos: false, orden: "defecto" };
+const ORDENES = opcionesDeOrden(["nombre", "actualizado"]);
 
 /** "Rodrigo +54 9 3534 23-2878 / Luciano +54 9 3534 08-3660" → un teléfono por línea. */
 function telefonosDe(texto: string): string[] {
@@ -34,14 +40,11 @@ export default function ProveedoresPage() {
   const [proveedores, setProveedores] = useState<Proveedor[] | null>(null);
   const [materiales, setMateriales] = useState<Material[]>([]);
   const [error, setError] = useState<string | null>(null);
-  // La búsqueda y los filtros se conservan al abrir otra pantalla y volver.
-  const [filtros, setFiltros] = useEstadoPersistente<{ busqueda: string; incluirInactivos: boolean; soloSinTelefono: boolean }>("proveedores:filtros", {
-    busqueda: "",
-    incluirInactivos: false,
-    soloSinTelefono: false,
-  });
-  const { busqueda, incluirInactivos, soloSinTelefono } = filtros;
-  const cambiar = (parcial: Partial<typeof filtros>) => setFiltros({ ...filtros, ...parcial });
+  // La búsqueda, los filtros y el orden se conservan al abrir otra pantalla y volver.
+  const [filtros, setFiltros] = useEstadoPersistente<Filtros>("proveedores:filtros2", SIN_FILTROS);
+  const { busqueda, rubro, telefono, incluirInactivos } = filtros;
+  const orden = filtros.orden ?? "defecto";
+  const cambiar = (parcial: Partial<Filtros>) => setFiltros({ ...filtros, ...parcial });
   const [editando, setEditando] = useState<Proveedor | null>(null);
   const [creando, setCreando] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
@@ -63,22 +66,48 @@ export default function ProveedoresPage() {
 
   const conteo = useMemo(() => materialesPorProveedor(materiales), [materiales]);
 
+  // Todo lo que filtra menos el rubro: de ahí salen los contadores de los chips de rubro.
+  const sinRubro = useMemo(
+    () =>
+      proveedores
+        ? filtrarProveedores(proveedores, { busqueda, incluirInactivos, soloSinTelefono: telefono === "sin" }).filter(
+            (p) => telefono !== "con" || !sinTelefono(p)
+          )
+        : [],
+    [proveedores, busqueda, incluirInactivos, telefono]
+  );
+  const rubros = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const p of sinRubro) m.set(p.rubro?.trim() || "Sin rubro", (m.get(p.rubro?.trim() || "Sin rubro") ?? 0) + 1);
+    if (rubro && !m.has(rubro)) m.set(rubro, 0);
+    return [...m.entries()].sort(([a], [b]) => (a === "Sin rubro" ? 1 : b === "Sin rubro" ? -1 : a.localeCompare(b, "es")));
+  }, [sinRubro, rubro]);
+
   const visibles = useMemo(
     () =>
       proveedores
-        ? ordenarProveedores(filtrarProveedores(proveedores, { busqueda, incluirInactivos, soloSinTelefono }))
+        ? ordenarPor(
+            ordenarProveedores(sinRubro.filter((p) => !rubro || (p.rubro?.trim() || "Sin rubro") === rubro)),
+            orden,
+            { nombre: (p) => p.nombre, actualizado: (p) => p.updated_at }
+          )
         : null,
-    [proveedores, busqueda, incluirInactivos, soloSinTelefono]
+    [proveedores, sinRubro, rubro, orden]
   );
 
+  const conTel = useMemo(
+    () => (proveedores ? proveedores.filter((p) => (incluirInactivos || p.activo) && !sinTelefono(p)).length : 0),
+    [proveedores, incluirInactivos]
+  );
   const faltanTelefono = useMemo(
     () => (proveedores ? proveedores.filter((p) => (incluirInactivos || p.activo) && sinTelefono(p)).length : 0),
     [proveedores, incluirInactivos]
   );
+  const totalActivos = useMemo(() => (proveedores ? proveedores.filter((p) => incluirInactivos || p.activo).length : 0), [proveedores, incluirInactivos]);
 
-  const hayFiltros = !!(busqueda || incluirInactivos || soloSinTelefono);
-
-  const filtrosActivos = [incluirInactivos, soloSinTelefono].filter(Boolean).length;
+  const hayFiltros = !!(busqueda || rubro || telefono || incluirInactivos || orden !== "defecto");
+  const filtrosActivos = [incluirInactivos].filter(Boolean).length;
+  const cerrarToast = useCallback(() => setMensaje(null), []);
 
   return (
     <PanelPortal compacto amplio>
@@ -97,66 +126,76 @@ export default function ProveedoresPage() {
         </button>
       </EncabezadoPagina>
 
-      <BarraFiltros>
-        <FiltrosPlegables
-          filtrosActivos={filtrosActivos}
-          buscador={<Buscador valor={busqueda} onCambio={(v) => cambiar({ busqueda: v })} placeholder="Buscar proveedor..." etiqueta="Buscar proveedores" />}
-        >
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-0.5">
-            <Chip activo={soloSinTelefono} onClick={() => cambiar({ soloSinTelefono: !soloSinTelefono })} cantidad={faltanTelefono}>
+      <BarraListado
+        buscador={<Buscador valor={busqueda} onCambio={(v) => cambiar({ busqueda: v })} placeholder="Buscar proveedor..." etiqueta="Buscar proveedores" />}
+        menus={
+          <MenuSeleccion
+            etiqueta="Ordenar"
+            titulo="Orden"
+            opciones={ORDENES.map((o) => ({ id: o.id, etiqueta: o.etiqueta }))}
+            valor={orden}
+            porDefecto="defecto"
+            onCambio={(v) => cambiar({ orden: v })}
+            textoBoton={etiquetaCortaDeOrden(orden)}
+          />
+        }
+        chips={
+          <ChipsFila etiqueta="Filtrar por rubro y teléfono">
+            <Chip activo={rubro === "" && telefono === ""} onClick={() => cambiar({ rubro: "", telefono: "" })} cantidad={totalActivos}>
+              Todos
+            </Chip>
+            {rubros.map(([r, n]) => (
+              <Chip key={r} activo={rubro === r} onClick={() => cambiar({ rubro: rubro === r ? "" : r })} cantidad={n}>
+                {r}
+              </Chip>
+            ))}
+            <Chip activo={telefono === "con"} onClick={() => cambiar({ telefono: telefono === "con" ? "" : "con" })} cantidad={conTel}>
+              Con teléfono
+            </Chip>
+            <Chip activo={telefono === "sin"} onClick={() => cambiar({ telefono: telefono === "sin" ? "" : "sin" })} cantidad={faltanTelefono}>
               Sin teléfono
             </Chip>
+          </ChipsFila>
+        }
+        filtros={
+          <BotonFiltros contador={filtrosActivos} hayFiltros={hayFiltros} onLimpiar={() => setFiltros(SIN_FILTROS)}>
             <Interruptor checked={incluirInactivos} onChange={(v) => cambiar({ incluirInactivos: v })}>
               Mostrar desactivados
             </Interruptor>
-            {hayFiltros && (
-              <button
-                type="button"
-                onClick={() => setFiltros({ busqueda: "", incluirInactivos: false, soloSinTelefono: false })}
-                className="min-h-11 rounded-lg px-3 text-sm font-medium text-marca hover:bg-marca/8 sm:ml-auto"
-              >
-                Limpiar filtros
-              </button>
-            )}
-          </div>
-        </FiltrosPlegables>
-      </BarraFiltros>
+          </BotonFiltros>
+        }
+      />
 
-      {mensaje && (
-        <p role="status" className="mb-4 rounded-md bg-green-50 px-4 py-3 text-sm text-green-700">
-          {mensaje}
-        </p>
-      )}
       {error && (
-        <p role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-[#B42318]">
           {error}
         </p>
       )}
-      {!error && proveedores === null && <p className="py-6 text-center text-sm text-gray-500">Cargando proveedores…</p>}
+      {!error && proveedores === null && <p className="py-6 text-center text-sm text-[#4A5861]">Cargando proveedores…</p>}
 
       {!error && visibles && visibles.length === 0 && (
-        <div className="rounded-lg border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500">
+        <div className="rounded-lg border border-dashed border-[#7D8892] px-4 py-10 text-center text-sm text-[#3E4A52]">
           {hayFiltros ? "Ningún proveedor coincide con el filtro." : "Todavía no hay proveedores cargados."}
         </div>
       )}
 
       {!error && visibles && visibles.length > 0 && (
         <>
-          <p className="mb-2 text-xs text-gray-500">
-            {visibles.length} {visibles.length === 1 ? "proveedor" : "proveedores"}
-            {hayFiltros && proveedores ? ` de ${proveedores.length}` : ""}
+          <p className="py-1 text-[13px] text-[#4A5861]" aria-live="polite">
+            {visibles.length} {hayFiltros && proveedores ? `de ${proveedores.length} proveedores` : visibles.length === 1 ? "proveedor" : "proveedores"}
           </p>
-          <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+          <div className="rounded-lg border border-[#D9DFE3] bg-[#FFFFFF] lg:rounded-none">
             <div
               aria-hidden="true"
-              className={`hidden rounded-t-lg border-b border-gray-200 bg-gray-50 px-4 py-2 text-xs font-medium uppercase tracking-wide text-gray-500 md:sticky md:top-[var(--catalogo-barra,0px)] md:z-10 md:grid md:items-center md:gap-x-4 ${COLUMNAS}`}
+              className={`hidden h-9 border-b border-[#D9DFE3] bg-[#F1F4F6] px-4 text-[13px] font-semibold uppercase tracking-wide text-[#4A5861] lg:sticky lg:top-[var(--catalogo-barra,0px)] lg:z-10 lg:grid lg:items-center lg:gap-x-4 ${COLUMNAS}`}
             >
               <span>Proveedor</span>
               <span>Contacto</span>
               <span>Teléfono</span>
-              <span className="text-right">Materiales</span>
+              <span className="text-center">Materiales</span>
+              <span className="text-center">Editar</span>
             </div>
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-y divide-[#EEF1F3]">
               {visibles.map((p) => (
                 <FilaProveedor
                   key={p.id}
@@ -198,64 +237,58 @@ export default function ProveedoresPage() {
           }}
         />
       )}
+
+      <Toast mensaje={mensaje} onCerrar={cerrarToast} />
     </PanelPortal>
   );
 }
 
 /**
- * Una fila de proveedor. Toda la fila abre la edición (el botón del nombre se estira sobre la fila);
- * los teléfonos siguen siendo links para llamar, por encima de esa capa. En el celular: nombre y
- * contacto a la izquierda, teléfono y cantidad de materiales a la derecha.
+ * Una fila de proveedor. Tocar la fila entera abre la edición (y el lápiz de la derecha lo muestra); los
+ * teléfonos siguen siendo links para llamar y NO abren la edición. En el celular: nombre y contacto a la
+ * izquierda, teléfono y cantidad de materiales a la derecha.
  */
-function FilaProveedor({
-  proveedor: p,
-  materiales,
-  onEditar,
-}: {
-  proveedor: Proveedor;
-  materiales: number;
-  onEditar: () => void;
-}) {
+function FilaProveedor({ proveedor: p, materiales, onEditar }: { proveedor: Proveedor; materiales: number; onEditar: () => void }) {
   const falta = sinTelefono(p);
   return (
     <li
-      className={`relative grid min-h-[3.35rem] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-1 transition-colors hover:bg-marca/5 has-[button:active]:bg-marca/10 md:min-h-12 md:gap-x-4 ${COLUMNAS} ${p.activo ? "" : "opacity-60"}`}
+      onClick={alTocarFila(onEditar)}
+      className={`flex min-h-[3.25rem] cursor-pointer items-center gap-3 px-4 py-1 text-[15px] leading-5 transition-colors hover:bg-[#F4F8F9] active:bg-[#EAF0F2] lg:grid lg:min-h-[2.75rem] lg:gap-x-4 lg:py-0 ${COLUMNAS} ${p.activo ? "" : "opacity-70"}`}
     >
-      <div className="min-w-0 md:contents">
-        <button
-          type="button"
-          onClick={onEditar}
-          aria-label={`Editar ${p.nombre}`}
-          className="flex min-w-0 items-center gap-2 text-left after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:rounded focus-visible:after:ring-2 focus-visible:after:ring-celeste"
-        >
-          <span className="truncate text-sm font-medium text-gray-900">{p.nombre}</span>
-          {p.rubro && <span className="hidden shrink-0 rounded-md bg-[#EEF2F6] px-2 py-0.5 text-xs font-medium text-marca md:inline">{p.rubro}</span>}
-          {!p.activo && <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500">Desactivado</span>}
-        </button>
-        <p className="min-w-0 truncate text-xs text-gray-500 md:text-sm md:text-gray-700" title={p.contacto ?? undefined}>
-          {p.contacto ?? <span className="text-gray-400">{p.rubro ?? ""}</span>}
+      <div className="min-w-0 flex-1 lg:contents">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="line-clamp-2 break-words lg:truncate text-sm font-medium text-gray-900">{p.nombre}</span>
+          {p.rubro && <span className="hidden shrink-0 rounded-md bg-[#EEF2F6] px-2 py-0.5 text-[13px] font-medium text-[#244B5A] lg:inline">{p.rubro}</span>}
+          {!p.activo && <span className="shrink-0 rounded-full bg-[#E3ECEF] px-2 py-0.5 text-[13px] font-medium text-[#3E4A52]">Desactivado</span>}
+        </div>
+        <p className="hidden min-w-0 truncate text-[13px] text-[#4A5861] lg:block lg:text-sm lg:text-gray-700" title={p.contacto ?? undefined}>
+          {p.contacto ?? <span>{p.rubro ?? ""}</span>}
         </p>
-      </div>
-
-      <div className="flex min-w-0 flex-col items-end gap-0.5 text-right md:contents">
-        <div className="relative z-10 min-w-0 space-y-0.5 text-sm md:text-left">
+        <div className="min-w-0 text-sm lg:space-y-0.5">
           {falta ? (
-            <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-medium text-amber-700">
-              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+            <span className="inline-flex items-center gap-1 whitespace-nowrap text-[13px] font-medium text-amber-800">
+              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-amber-600" />
               Falta teléfono
             </span>
           ) : (
-            telefonosDe(p.telefono!).map((t) => (
-              <a key={t} href={`tel:${t.replace(/[^\d+]/g, "")}`} className="block truncate text-marca hover:underline">
-                {t}
+            <span className="flex min-w-0 items-center gap-2">
+              <a
+                href={`tel:${telefonosDe(p.telefono!)[0].replace(/[^\d+]/g, "")}`}
+                className="inline-flex min-h-11 min-w-0 items-center truncate text-[#1A3844] underline underline-offset-2 hover:no-underline"
+              >
+                {telefonosDe(p.telefono!)[0]}
               </a>
-            ))
+              {telefonosDe(p.telefono!).length > 1 && <span className="shrink-0 text-[13px] text-[#4A5861]">+{telefonosDe(p.telefono!).length - 1} más</span>}
+            </span>
           )}
         </div>
-        <p className="text-xs text-gray-500 md:text-right md:text-sm">
-          {materiales === 0 ? "Sin materiales" : `${materiales} ${materiales === 1 ? "material" : "materiales"}`}
-        </p>
       </div>
+      <p className="hidden whitespace-nowrap text-right text-[13px] text-[#4A5861] sm:block lg:text-center lg:text-sm">
+        {materiales === 0 ? "Sin materiales" : `${materiales} ${materiales === 1 ? "material" : "materiales"}`}
+      </p>
+      <span className="flex shrink-0 justify-end lg:justify-center">
+        <BotonLapiz nombre={p.nombre} onClick={onEditar} />
+      </span>
     </li>
   );
 }

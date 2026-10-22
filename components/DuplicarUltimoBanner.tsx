@@ -50,7 +50,7 @@ export function DuplicarUltimoBanner({ tipo, tipoLabel }: { tipo: TipoCalculador
       <div className="flex shrink-0 items-center gap-2">
         <a
           href={`?duplicar=${ultimo.id}`}
-          className="inline-flex min-h-11 items-center rounded-md bg-[#244B5A] px-3 text-sm font-medium text-white hover:bg-marca-oscuro"
+          className="inline-flex min-h-11 items-center rounded-md bg-[#244B5A] px-3 text-sm font-medium text-[#FFFFFF] hover:bg-marca-oscuro"
         >
           Duplicar el último
         </a>
@@ -58,7 +58,7 @@ export function DuplicarUltimoBanner({ tipo, tipoLabel }: { tipo: TipoCalculador
           type="button"
           onClick={() => setDescartado(true)}
           aria-label="Descartar sugerencia"
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-[#3E4A52] hover:bg-[#EAF0F2] active:bg-[#D5E0E4]"
         >
           ✕
         </button>

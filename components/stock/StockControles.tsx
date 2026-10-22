@@ -9,17 +9,107 @@ import { DialogoAjuste } from "./DialogoAjuste";
 import { DialogoMovimiento } from "./DialogoMovimiento";
 import { HistorialStock } from "./HistorialStock";
 
-type Dialogo = "ingreso" | "venta" | "ajuste" | "historial" | null;
+export type DialogoStock = "ingreso" | "venta" | "ajuste" | "historial" | null;
 
 /**
- * El stock de un ítem en la lista del catálogo.
+ * El stock de un ítem en la lista del catálogo, en tres piezas que la fila acomoda en su grilla sin hacerse
+ * más alta:
  *
- * Los que no llevan stock (hierros, luces, cercos, hormigón…) dicen "A pedido" y
- * NO tienen controles ni historial. Los que sí, muestran las unidades y, si se
- * puede editar, tres acciones —Ingreso, Venta y Ajustar conteo— más el
- * historial. Cada una abre un diálogo; el número nunca se edita directo.
- * Un stock negativo se ve en rojo con una marca de aviso.
+ *  - `StockNumero`: el número de unidades (rojo si está en 0, con marca de aviso si es negativo). Los que no
+ *    llevan stock (hierros, luces, cercos, hormigón…) dicen "A pedido".
+ *  - `AccionesStock`: "Venta" (la acción del día a día) y el menú "…" con Ingreso, Ajustar conteo e Historial.
+ *  - `DialogosStock`: el diálogo que esté abierto. El número nunca se edita directo.
  */
+export function StockNumero({ item }: { item: ItemCatalogo }) {
+  if (!llevaStock(item)) return <span className="whitespace-nowrap text-[13px] text-[#4A5861]">A pedido</span>;
+  const negativo = stockNegativo(item);
+  const sinUnidades = item.stock <= 0;
+  return (
+    <span
+      title={negativo ? `stock negativo: ${item.stock}` : textoStock(item.stock)}
+      className={`inline-flex min-w-[2.25rem] items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-sm font-bold tabular-nums ring-1 ring-inset ${
+        sinUnidades ? "bg-[#FEF3F2] text-[#B42318] ring-[#FDA29B]" : "bg-[#ECFDF3] text-[#05603A] ring-[#75E0A7]"
+      }`}
+    >
+      {negativo && (
+        <>
+          <span aria-hidden="true">⚠</span>
+          <span className="sr-only">Stock negativo</span>
+        </>
+      )}
+      {negativo ? `−${Math.abs(item.stock)}` : item.stock}
+      {!negativo && <span className="sr-only"> en stock</span>}
+    </span>
+  );
+}
+
+export function AccionesStock({ item, onAbrir }: { item: ItemCatalogo; onAbrir: (d: Exclude<DialogoStock, null>) => void }) {
+  if (!llevaStock(item)) return null;
+  const nombre = item.descripcion || item.clave;
+  return (
+    <>
+      <button type="button" aria-label={`Venta de ${nombre}`} onClick={() => onAbrir("venta")} className={botonDe("primario", "min-w-[4.5rem] px-3")}>
+        Venta
+      </button>
+      <MenuAcciones
+        etiqueta={`Más acciones de ${nombre}`}
+        acciones={[
+          { etiqueta: "Ingreso", onClick: () => onAbrir("ingreso") },
+          { etiqueta: "Ajustar conteo", onClick: () => onAbrir("ajuste") },
+          { etiqueta: "Historial", onClick: () => onAbrir("historial") },
+        ]}
+      />
+    </>
+  );
+}
+
+export function DialogosStock({
+  item,
+  dialogo,
+  onCerrar,
+  onResultado,
+}: {
+  item: ItemCatalogo;
+  dialogo: DialogoStock;
+  onCerrar: () => void;
+  /** Una operación terminó bien: el padre actualiza el stock de la lista y avisa. */
+  onResultado: (item: ItemCatalogo, resultado: ResultadoStock) => void;
+}) {
+  if (!llevaStock(item) || !dialogo) return null;
+  const nombre = item.descripcion || item.clave;
+  if (dialogo === "ingreso" || dialogo === "venta") {
+    return (
+      <DialogoMovimiento
+        tipo={dialogo}
+        itemId={item.id}
+        nombre={nombre}
+        stockActual={item.stock}
+        onCerrar={onCerrar}
+        onHecho={(r) => {
+          onCerrar();
+          onResultado(item, r);
+        }}
+      />
+    );
+  }
+  if (dialogo === "ajuste") {
+    return (
+      <DialogoAjuste
+        itemId={item.id}
+        nombre={nombre}
+        stockActual={item.stock}
+        onCerrar={onCerrar}
+        onHecho={(r) => {
+          onCerrar();
+          onResultado(item, r);
+        }}
+      />
+    );
+  }
+  return <HistorialStock itemId={item.id} nombre={nombre} onCerrar={onCerrar} onStockCambiado={(r) => onResultado(item, r)} />;
+}
+
+/** Número + acciones + diálogos juntos, para quien no necesita acomodarlos por separado. */
 export function StockControles({
   item,
   editable,
@@ -27,95 +117,14 @@ export function StockControles({
 }: {
   item: ItemCatalogo;
   editable: boolean;
-  /** Una operación terminó bien: el padre actualiza el stock de la lista y avisa. */
   onResultado: (item: ItemCatalogo, resultado: ResultadoStock) => void;
 }) {
-  const [dialogo, setDialogo] = useState<Dialogo>(null);
-
-  if (!llevaStock(item)) return <span className="text-xs text-gray-400">A pedido</span>;
-
-  const nombre = item.descripcion || item.clave;
-  const negativo = stockNegativo(item);
-  const sinUnidades = item.stock <= 0;
-
-  const numero = (
-    <span className="inline-flex items-center gap-2 md:flex-col md:gap-0.5">
-      <span
-        title={negativo ? `stock negativo: ${item.stock}` : textoStock(item.stock)}
-        className={`inline-flex min-w-[3rem] justify-center rounded-full px-3 py-1 text-base font-bold tabular-nums ring-1 ring-inset ${
-          sinUnidades ? "bg-red-50 text-red-700 ring-red-200" : "bg-green-50 text-green-700 ring-green-200"
-        }`}
-      >
-        {negativo ? `−${Math.abs(item.stock)}` : item.stock}
-      </span>
-      {!negativo && <span className="text-xs text-gray-500 md:sr-only">en stock</span>}
-      {negativo && (
-        <span role="status" className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700">
-          <span aria-hidden="true">⚠</span> Stock negativo
-        </span>
-      )}
-    </span>
-  );
-
-  if (!editable) return numero;
-
-  // Una acción principal a la vista (Venta, la del día a día) y las demás en el menú "⋯": la fila
-  // no crece. El menú reúne Ingreso, Ajustar conteo e Historial.
+  const [dialogo, setDialogo] = useState<DialogoStock>(null);
   return (
-    <div className="flex items-center justify-between gap-2 md:justify-center">
-      {numero}
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          aria-label={`Venta de ${nombre}`}
-          onClick={() => setDialogo("venta")}
-          className={botonDe("primario", "min-w-24 px-4")}
-        >
-          Venta
-        </button>
-        <MenuAcciones
-          etiqueta={`Más acciones de ${nombre}`}
-          acciones={[
-            { etiqueta: "Ingreso", onClick: () => setDialogo("ingreso") },
-            { etiqueta: "Ajustar conteo", onClick: () => setDialogo("ajuste") },
-            { etiqueta: "Historial", onClick: () => setDialogo("historial") },
-          ]}
-        />
-      </div>
-
-      {(dialogo === "ingreso" || dialogo === "venta") && (
-        <DialogoMovimiento
-          tipo={dialogo}
-          itemId={item.id}
-          nombre={nombre}
-          stockActual={item.stock}
-          onCerrar={() => setDialogo(null)}
-          onHecho={(r) => {
-            setDialogo(null);
-            onResultado(item, r);
-          }}
-        />
-      )}
-      {dialogo === "ajuste" && (
-        <DialogoAjuste
-          itemId={item.id}
-          nombre={nombre}
-          stockActual={item.stock}
-          onCerrar={() => setDialogo(null)}
-          onHecho={(r) => {
-            setDialogo(null);
-            onResultado(item, r);
-          }}
-        />
-      )}
-      {dialogo === "historial" && (
-        <HistorialStock
-          itemId={item.id}
-          nombre={nombre}
-          onCerrar={() => setDialogo(null)}
-          onStockCambiado={(r) => onResultado(item, r)}
-        />
-      )}
+    <div className="flex items-center gap-2">
+      <StockNumero item={item} />
+      {editable && <AccionesStock item={item} onAbrir={setDialogo} />}
+      <DialogosStock item={item} dialogo={dialogo} onCerrar={() => setDialogo(null)} onResultado={onResultado} />
     </div>
   );
 }

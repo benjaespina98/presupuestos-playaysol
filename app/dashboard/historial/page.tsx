@@ -15,8 +15,9 @@ import {
 import { AnularDialog } from "@/components/AnularDialog";
 import { EtiquetaAnulado } from "@/components/Anulado";
 import { botonDe } from "@/components/ui/botones";
-import { Buscador, FiltrosPlegables } from "@/components/ui/FiltrosPlegables";
-import { Interruptor } from "@/components/catalogo/FiltrosCatalogo";
+import { Buscador } from "@/components/ui/FiltrosPlegables";
+import { BarraListado, BotonFiltros, Chip, ChipsFila, Interruptor, MenuSeleccion } from "@/components/ui/BarraListado";
+import { etiquetaCortaDeOrden, opcionesDeOrden, ordenarPor, type ClaveOrden } from "@/lib/ordenar";
 import { useEstadoPersistente } from "@/lib/useEstadoPersistente";
 import { contarAnulados, estaAnulado } from "@/lib/anulacion";
 import { PanelPortal } from "@/components/PanelPortal";
@@ -37,6 +38,8 @@ const TITULOS: Record<TipoCalculadora, string> = {
   losetas: "Plano de Piscina",
   revestimientos: "Revestimientos",
 };
+
+const ORDENES = opcionesDeOrden(["nombre", "actualizado"]);
 
 function esTipoValido(tipo: string): tipo is TipoCalculadora {
   return (TIPOS_VALIDOS as string[]).includes(tipo);
@@ -70,6 +73,7 @@ function HistorialTabla() {
   const [busqueda, setBusqueda] = useEstadoPersistente("historial:busqueda", "");
   const [porAnular, setPorAnular] = useState<Presupuesto | null>(null);
   const [mostrarAnulados, setMostrarAnulados] = useEstadoPersistente("historial:anulados", false);
+  const [orden, setOrden] = useEstadoPersistente<ClaveOrden>("historial:orden", "defecto");
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const usuarioParam = searchParams.get("usuario");
@@ -118,14 +122,26 @@ function HistorialTabla() {
   const presupuestosFiltrados = useMemo(() => {
     if (!presupuestos) return null;
     const q = busqueda.trim().toLowerCase();
-    return presupuestos.filter((p) => {
+    const filtrados = presupuestos.filter((p) => {
       if (!mostrarAnulados && estaAnulado(p)) return false;
       if (tipoFiltro && p.tipo !== tipoFiltro) return false;
       if (usuarioParam && p.created_by !== usuarioParam) return false;
       if (q && !p.cliente_nombre.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [presupuestos, busqueda, tipoFiltro, usuarioParam, mostrarAnulados]);
+    return ordenarPor(filtrados, orden, { nombre: (p) => p.cliente_nombre, actualizado: (p) => p.created_at });
+  }, [presupuestos, busqueda, tipoFiltro, usuarioParam, mostrarAnulados, orden]);
+
+  // Cuántos hay por tipo con el resto de los filtros aplicados (los contadores de los chips).
+  const conteoPorTipo = useMemo(() => {
+    const q = busqueda.trim().toLowerCase();
+    const base = (presupuestos ?? []).filter(
+      (p) => (mostrarAnulados || !estaAnulado(p)) && (!usuarioParam || p.created_by === usuarioParam) && (!q || p.cliente_nombre.toLowerCase().includes(q))
+    );
+    const porTipo: Record<string, number> = {};
+    for (const p of base) porTipo[p.tipo] = (porTipo[p.tipo] ?? 0) + 1;
+    return { total: base.length, porTipo };
+  }, [presupuestos, busqueda, usuarioParam, mostrarAnulados]);
 
   const cantidadAnulados = useMemo(() => contarAnulados(presupuestos ?? []), [presupuestos]);
 
@@ -150,68 +166,76 @@ function HistorialTabla() {
     return null;
   }
 
-  const hayFiltros = !!(busqueda || tipoFiltro || usuarioParam);
+  const hayFiltros = !!(busqueda || tipoFiltro || usuarioParam || orden !== "defecto");
+  const opcionesUsuario = [{ id: "", etiqueta: "Todos los usuarios" }, ...usuarios.map(([id, nombre]) => ({ id, etiqueta: nombre }))];
 
   return (
     <PanelPortal amplio>
-      <h1 className="text-2xl font-semibold text-gray-900">Historial</h1>
-      <p className="mb-6 mt-1 text-sm text-gray-500">
+      <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl">Historial</h1>
+      <p className="mb-3 mt-1 hidden text-sm text-gray-500 sm:block">
         Todos los presupuestos guardados en la nube por el equipo.
       </p>
 
-      <div className="mb-3">
-        <FiltrosPlegables
-          filtrosActivos={[tipoFiltro, usuarioParam, mostrarAnulados].filter(Boolean).length}
-          buscador={<Buscador valor={busqueda} onCambio={setBusqueda} placeholder="Buscar cliente..." etiqueta="Buscar por nombre de cliente" />}
-        >
-          <select
-            value={tipoFiltro ?? ""}
-            onChange={(e) => cambiarTipo(e.target.value)}
-            aria-label="Filtrar por tipo"
-            className="min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm hover:border-gray-300 focus:border-marca focus:outline-none focus:ring-2 focus:ring-celeste/30 sm:w-auto"
-          >
-            <option value="">Todos los tipos</option>
+      <BarraListado
+        buscador={<Buscador valor={busqueda} onCambio={setBusqueda} placeholder="Buscar cliente..." etiqueta="Buscar por nombre de cliente" />}
+        menus={
+          <>
+            {usuarios.length > 1 && (
+              <MenuSeleccion
+                etiqueta="Filtrar por usuario"
+                titulo="Usuario"
+                opciones={opcionesUsuario}
+                valor={usuarioParam ?? ""}
+                porDefecto=""
+                onCambio={cambiarUsuario}
+                buscable={opcionesUsuario.length > 8}
+                textoBoton={usuarioParam ? (usuarios.find(([id]) => id === usuarioParam)?.[1] ?? "Usuario") : "Usuario"}
+              />
+            )}
+            <MenuSeleccion
+              etiqueta="Ordenar"
+              titulo="Orden"
+              opciones={ORDENES.map((o) => ({ id: o.id, etiqueta: o.etiqueta.replace("Nombre", "Cliente").replace("Actualizado (más viejo primero)", "Fecha (más vieja primero)").replace("Actualizado (más reciente primero)", "Fecha (más reciente primero)") }))}
+              valor={orden}
+              porDefecto="defecto"
+              onCambio={setOrden}
+              textoBoton={etiquetaCortaDeOrden(orden).replace("Nombre", "Cliente").replace("Actualizado", "Fecha")}
+            />
+          </>
+        }
+        chips={
+          <ChipsFila etiqueta="Filtrar por tipo">
+            <Chip activo={!tipoFiltro} onClick={() => cambiarTipo("")} cantidad={conteoPorTipo.total}>
+              Todos
+            </Chip>
             {TIPOS_VALIDOS.map((t) => (
-              <option key={t} value={t}>
+              <Chip key={t} activo={tipoFiltro === t} onClick={() => cambiarTipo(tipoFiltro === t ? "" : t)} cantidad={conteoPorTipo.porTipo[t] ?? 0}>
                 {TITULOS[t]}
-              </option>
+              </Chip>
             ))}
-          </select>
-
-          <select
-            value={usuarioParam ?? ""}
-            onChange={(e) => cambiarUsuario(e.target.value)}
-            aria-label="Filtrar por usuario"
-            className="min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm hover:border-gray-300 focus:border-marca focus:outline-none focus:ring-2 focus:ring-celeste/30 sm:w-auto"
+          </ChipsFila>
+        }
+        filtros={
+          <BotonFiltros
+            contador={[mostrarAnulados].filter(Boolean).length}
+            hayFiltros={hayFiltros || mostrarAnulados}
+            onLimpiar={() => {
+              setBusqueda("");
+              setMostrarAnulados(false);
+              setOrden("defecto");
+              router.push("/dashboard/historial");
+            }}
           >
-            <option value="">Todos los usuarios</option>
-            {usuarios.map(([id, nombre]) => (
-              <option key={id} value={id}>
-                {nombre}
-              </option>
-            ))}
-          </select>
-
-          {cantidadAnulados > 0 && (
-            <Interruptor checked={mostrarAnulados} onChange={setMostrarAnulados}>
-              Mostrar anulados ({cantidadAnulados})
-            </Interruptor>
-          )}
-          {hayFiltros && (
-            <button
-              type="button"
-              onClick={() => {
-                setBusqueda("");
-                setMostrarAnulados(false);
-                router.push("/dashboard/historial");
-              }}
-              className="min-h-11 rounded-lg px-3 text-sm font-medium text-marca hover:bg-marca/8"
-            >
-              Limpiar filtros
-            </button>
-          )}
-        </FiltrosPlegables>
-      </div>
+            {cantidadAnulados > 0 ? (
+              <Interruptor checked={mostrarAnulados} onChange={setMostrarAnulados}>
+                Mostrar anulados ({cantidadAnulados})
+              </Interruptor>
+            ) : (
+              <p className="px-1 py-2 text-[13px] text-[#4A5861]">No hay presupuestos anulados.</p>
+            )}
+          </BotonFiltros>
+        }
+      />
 
       {error && (
         <p className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -251,7 +275,7 @@ function HistorialTabla() {
       {/* Cuántos resultados quedaron: con los tres filtros combinados, sin esto
           no queda claro si la lista está corta por el filtro o porque no hay más. */}
       {presupuestosFiltrados && presupuestosFiltrados.length > 0 && (
-        <p className="mb-3 text-xs text-gray-500">
+        <p className="py-1.5 text-[13px] text-[#4A5861]" aria-live="polite">
           {presupuestosFiltrados.length}
           {presupuestosFiltrados.length === 1 ? " presupuesto" : " presupuestos"}
           {hayFiltros && presupuestos
@@ -263,7 +287,7 @@ function HistorialTabla() {
       {presupuestosFiltrados && presupuestosFiltrados.length > 0 && (
         <>
           {/* Desktop / tablet: tabla completa */}
-          <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm sm:block">
+          <div className="hidden rounded-lg border border-gray-200 bg-[#FFFFFF] sm:block lg:rounded-none">
             {/* Anchos pensados para que el nombre del cliente no se parta en dos líneas (si es larguísimo se
                 recorta con "…" y el nombre completo queda en el tooltip) y el detalle tenga lugar. */}
             <table className="w-full table-fixed text-left text-sm">
@@ -276,7 +300,7 @@ function HistorialTabla() {
                 <col className="w-[18rem]" />
               </colgroup>
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                <tr className="border-b border-gray-200 bg-[#F1F4F6] text-[13px] uppercase tracking-wide text-[#4A5861] lg:[&>th]:sticky lg:[&>th]:top-[var(--catalogo-barra,0px)] lg:[&>th]:z-10 lg:[&>th]:bg-[#F1F4F6]">
                   <th className="px-4 py-3 font-semibold">Tipo</th>
                   <th className="px-4 py-3 font-semibold">Cliente</th>
                   <th className="px-4 py-3 font-semibold">Detalle</th>
@@ -372,7 +396,7 @@ function HistorialTabla() {
               return (
                 <div
                   key={p.id}
-                  className={`rounded-lg border border-gray-200 p-4 shadow-sm ${anulado ? "bg-gray-50" : "bg-white"}`}
+                  className={`rounded-lg border border-gray-200 p-4 shadow-sm ${anulado ? "bg-gray-50" : "bg-[#FFFFFF]"}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -459,7 +483,7 @@ function HistorialTabla() {
 function HistorialSkeleton() {
   return (
     <div>
-      <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm sm:block">
+      <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-[#FFFFFF] shadow-sm sm:block">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50 text-gray-700">
@@ -488,7 +512,7 @@ function HistorialSkeleton() {
 
       <div className="flex flex-col gap-3 sm:hidden">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="animate-pulse rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div key={i} className="animate-pulse rounded-lg border border-gray-200 bg-[#FFFFFF] p-4 shadow-sm">
             <div className="flex items-start justify-between gap-2">
               <div className="space-y-2">
                 <div className="h-4 w-32 rounded bg-gray-200" />

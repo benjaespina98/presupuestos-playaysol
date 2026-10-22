@@ -128,13 +128,22 @@ export function textoStock(stock: number): string {
   return stock <= 0 ? "sin stock" : `${stock} en stock`;
 }
 
-/** Filtro por disponibilidad: con unidades, agotado (lleva stock y hay 0) o
- *  "no lleva stock" (se pide a pedido). */
-export type FiltroStock = "disponible" | "agotado" | "sin-control";
+/** Filtro por disponibilidad: con stock (mayor a 0), sin stock (igual a 0), stock negativo (menor a 0)
+ *  o "no lleva stock" (se pide a pedido). */
+export type FiltroStock = "disponible" | "agotado" | "negativo" | "sin-control";
 
 export function coincideStock(item: { stock?: number | null }, filtro: FiltroStock): boolean {
   if (!llevaStock(item)) return filtro === "sin-control";
-  return filtro === "disponible" ? item.stock > 0 : filtro === "agotado" ? item.stock <= 0 : false;
+  switch (filtro) {
+    case "disponible":
+      return item.stock > 0;
+    case "agotado":
+      return item.stock === 0;
+    case "negativo":
+      return item.stock < 0;
+    default:
+      return false;
+  }
 }
 
 /** Resumen del stock de un conjunto de ítems: cuántos modelos lo llevan, cuántos
@@ -289,7 +298,7 @@ export function agruparParaListado(items: ItemCatalogo[]): GrupoListado[] {
 /** Cuántos ítems hay por disponibilidad, con el resto de los filtros aplicados
  *  (ignora el de stock, como `contarPorSeccion` ignora el de sección). */
 export function contarPorStock(items: ItemCatalogo[], filtro: Omit<FiltroCatalogo, "stock">): Record<FiltroStock, number> {
-  const conteo: Record<FiltroStock, number> = { disponible: 0, agotado: 0, "sin-control": 0 };
+  const conteo: Record<FiltroStock, number> = { disponible: 0, agotado: 0, negativo: 0, "sin-control": 0 };
   for (const item of filtrarCatalogo(items, { ...filtro, stock: null })) {
     for (const f of Object.keys(conteo) as FiltroStock[]) if (coincideStock(item, f)) conteo[f]++;
   }

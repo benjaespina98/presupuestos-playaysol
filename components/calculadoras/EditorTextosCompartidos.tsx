@@ -1,5 +1,6 @@
 "use client";
 
+import { botonDe } from "@/components/ui/botones";
 import { useState } from "react";
 import type { TipoCalculadora } from "@/lib/presupuestos";
 import { guardarTextosCompartidos } from "@/lib/catalogo";
@@ -69,8 +70,8 @@ export function EditorTextosCompartidos({
   }
 
   return (
-    <details className="rounded-lg border border-gray-200 bg-white shadow-sm">
-      <summary className="cursor-pointer px-5 py-3 text-sm font-semibold text-gray-900">
+    <details className="rounded-lg border border-gray-200 bg-[#FFFFFF] shadow-sm">
+      <summary className="flex min-h-12 cursor-pointer items-center px-5 py-3 text-base font-semibold text-gray-900">
         Texto legal y pie del presupuesto <span className="font-normal text-gray-500">— vale para los próximos, no cambia los ya generados</span>
       </summary>
       <div className="space-y-4 border-t border-gray-100 p-5">
@@ -95,7 +96,7 @@ export function EditorTextosCompartidos({
               setGuardadoOk(false);
             }}
             rows={5}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            className="min-h-12 w-full rounded-lg border border-gray-300 px-3 py-2 text-base"
           />
         </div>
 
@@ -118,7 +119,7 @@ export function EditorTextosCompartidos({
           type="button"
           onClick={onGuardar}
           disabled={guardando}
-          className="min-h-11 w-full rounded-md bg-[#244B5A] px-4 text-sm font-semibold text-white transition-colors hover:bg-marca-oscuro disabled:cursor-not-allowed disabled:opacity-50"
+          className={botonDe("primario", "min-h-12 w-full px-4")}
         >
           {guardando ? "Guardando..." : "Guardar como predeterminado para todos"}
         </button>
@@ -148,7 +149,7 @@ function CampoFooter({
         type="text"
         value={valor}
         onChange={(e) => onChange(id, e.target.value)}
-        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+        className="min-h-12 w-full rounded-lg border border-gray-300 px-3 py-2 text-base"
       />
     </div>
   );

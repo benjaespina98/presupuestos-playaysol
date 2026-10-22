@@ -67,7 +67,7 @@ export function DocumentoPiscina({
   return (
     <div
       id="documento-piscina"
-      className="mx-auto max-w-2xl bg-white text-[#1C2B33] print:max-w-none"
+      className="mx-auto max-w-2xl bg-[#FFFFFF] text-[#1C2B33] [overflow-wrap:anywhere] print:max-w-none"
       style={{ fontFamily: 'Calibri, "Carlito", Arial, sans-serif' }} // manual de marca: Calibri para todo el texto de comunicación/lectura
     >
       {/* El asset YA es el banner de marca completo, a todo lo ancho (2745×778,
@@ -105,21 +105,21 @@ export function DocumentoPiscina({
         </section>
 
         <div data-testid="totales" className="space-y-1 border-t-2 border-[#244B5A] pt-3">
-          <div className="flex justify-between text-base font-bold text-[#244B5A]">
+          <div className="flex justify-between gap-4 text-base font-bold text-[#244B5A]">
             <span>SUBTOTAL</span>
-            <span>{formatARS(subtotal)}</span>
+            <span className="shrink-0 whitespace-nowrap">{formatARS(subtotal)}</span>
           </div>
           {hayAdicionales &&
             adicionales.map((a, i) => (
-              <div key={i} className="flex justify-between text-sm text-gray-700">
-                <span>{a.descripcion}</span>
-                <span>{formatARS(a.total ?? 0)}</span>
+              <div key={i} className="flex justify-between gap-4 text-sm text-gray-700">
+                <span className="min-w-0">{a.descripcion}</span>
+                <span className="shrink-0 whitespace-nowrap">{formatARS(a.total ?? 0)}</span>
               </div>
             ))}
           {hayAdicionales && total !== undefined && (
-            <div className="flex justify-between text-base font-bold text-[#244B5A]">
+            <div className="flex justify-between gap-4 text-base font-bold text-[#244B5A]">
               <span>TOTAL</span>
-              <span>{formatARS(total)}</span>
+              <span className="shrink-0 whitespace-nowrap">{formatARS(total)}</span>
             </div>
           )}
         </div>
@@ -135,9 +135,9 @@ export function DocumentoPiscina({
                 const fotos = resolverFotosSeed(op.clave ?? GRUPO_SEED_GENERAL, fotosSeedDeOpcional(op.clave));
                 return (
                   <div key={i} className="break-inside-avoid rounded-md border border-[#E1E7EC] bg-[#FAFBFC] p-3 print:break-inside-avoid">
-                    <div className="flex justify-between font-semibold">
-                      <span>{op.descripcion}</span>
-                      <span className={precio === null ? "text-gray-400" : "text-[#244B5A]"}>
+                    <div className="flex justify-between gap-4 font-semibold">
+                      <span className="min-w-0">{op.descripcion}</span>
+                      <span className={`shrink-0 whitespace-nowrap ${precio === null ? "text-gray-400" : "text-[#244B5A]"}`}>
                         {precio === null ? "No incluye" : formatARS(precio)}
                       </span>
                     </div>
@@ -183,10 +183,11 @@ export function DocumentoPiscina({
   );
 }
 
+/** Un dato del cliente. Los largos (teléfono con detalles, domicilio) ocupan los dos casilleros y hacen salto de línea: nunca se pisan con el de al lado. */
 function Meta({ label, value }: { label: string; value: string }) {
   if (!value) return null;
   return (
-    <div>
+    <div className={`min-w-0 [overflow-wrap:anywhere] ${value.length > 34 ? "sm:col-span-2" : ""}`}>
       <span className="font-bold">{label}</span> {value}
     </div>
   );

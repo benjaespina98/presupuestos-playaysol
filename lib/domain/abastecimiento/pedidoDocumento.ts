@@ -200,6 +200,59 @@ export function armarDocumento(lineas: readonly LineaGuardada[], datos: DatosDoc
   };
 }
 
+/** Saca de un texto libre (obra, quién pide) todo lo que parezca un teléfono: 7 o más dígitos seguidos. */
+export function sinTelefonos(texto: string): string {
+  return texto
+    .replace(/\+?\d[\d\s().-]{5,}\d/g, (m) => (m.replace(/\D/g, "").length >= 7 ? "" : m))
+    .replace(/\s{2,}/g, " ")
+    .replace(/[\s·,;:-]+$/, "")
+    .trim();
+}
+
+/**
+ * Lo único que sale de la app hacia un proveedor: proveedor, obra, pileta, borde, fecha, quién pide y
+ * artículos con cantidad y unidad. Sin precios, subtotales, totales, teléfonos, contactos ni notas internas.
+ * TODA salida de un pedido (PDF, Excel, ZIP, CSV, mensaje, compartir) pasa por acá.
+ */
+export function paraSalida(doc: DocumentoPedido): DocumentoPedido {
+  return {
+    ...doc,
+    obra: sinTelefonos(doc.obra),
+    solicitante: sinTelefonos(doc.solicitante),
+    proveedores: doc.proveedores.map((s) => ({
+      nombre: s.nombre,
+      contacto: "",
+      telefono: "",
+      lineas: s.lineas.map((l) => ({ descripcion: l.descripcion, cantidad: l.cantidad, unidad: l.unidad, precio: null, subtotal: null })),
+      subtotal: 0,
+      sinPrecio: 0,
+    })),
+    total: 0,
+    sinPrecio: 0,
+    observaciones: "",
+  };
+}
+
+/** El texto para copiar o compartir de UN proveedor: el mismo contenido que su archivo. */
+export function mensajeProveedor(doc: DocumentoPedido, s: SeccionProveedor): string {
+  const limpio = paraSalida({ ...doc, proveedores: [s] });
+  const [sec] = limpio.proveedores;
+  const lineas = sec.lineas.map((l) => {
+    const unidad = l.unidad && l.unidad !== "unidad" ? ` ${l.unidad}` : "";
+    return `- ${l.descripcion}: ${coma(l.cantidad)}${unidad}`;
+  });
+  return [
+    `*PEDIDO DE MATERIALES ${limpio.numero} — Playa & Sol*`,
+    `Para: ${sec.nombre}`,
+    `Obra: ${limpio.obra || "—"}`,
+    ...limpio.condiciones,
+    `Fecha: ${limpio.fecha}`,
+    `Pide: ${limpio.solicitante || "________"}`,
+    "",
+    ...lineas,
+  ].join("\n");
+}
+
 /** Un documento por proveedor: lo que se le manda a cada uno por separado. */
 export function separarPorProveedor(doc: DocumentoPedido): DocumentoPedido[] {
   return doc.proveedores.map((s) => ({

@@ -21,7 +21,9 @@ import {
 } from "@/lib/domain/abastecimiento/pedido";
 import {
   armarDocumento,
+  fechaDocumento,
   lineasDePedido,
+  sinTelefonos,
   numeroFormateado,
   type PedidoGuardado,
 } from "@/lib/domain/abastecimiento/pedidoDocumento";
@@ -34,9 +36,14 @@ import { PanelPortal } from "@/components/PanelPortal";
 import { Interruptor } from "@/components/catalogo/FiltrosCatalogo";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
 import { MenuExportar } from "@/components/pedidos/MenuExportar";
+import { AgregarMaterial } from "@/components/pedidos/AgregarMaterial";
+import { MaterialModal } from "@/components/abastecimiento/MaterialModal";
+import { BotonLapiz } from "@/components/ui/BotonLapiz";
+import { botonDe } from "@/components/ui/botones";
+import { SelectorSimple } from "@/components/ui/SelectorSimple";
 
 const CLASE_CAMPO =
-  "min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20";
+  "min-h-12 w-full rounded-lg border bg-[#FFFFFF] px-3 py-2.5 text-base text-gray-900 shadow-sm placeholder:text-[#6B7680] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20";
 
 const BORDES: BordePedido[] = ["Losetas", "Deck"];
 
@@ -89,6 +96,8 @@ function PedidoContenido() {
   const [ocupado, setOcupado] = useState(false);
   const [confirmadoPara, setConfirmadoPara] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<Mensaje | null>(null);
+  const [agregando, setAgregando] = useState(false);
+  const [editandoMaterial, setEditandoMaterial] = useState<Material | null>(null);
 
   // Volver a armar a partir de un pedido guardado.
   useEffect(() => {
@@ -141,6 +150,16 @@ function PedidoContenido() {
     [materiales, ajustes, params]
   );
 
+  // Los materiales activos que todavía no están en el pedido (ni quitados a mano): se pueden agregar.
+  const disponibles = useMemo(() => {
+    const enPedido = new Set(pedido.grupos.flatMap((g) => g.lineas.map((l) => l.material.id)));
+    return (materiales ?? []).filter((m) => m.activo && !enPedido.has(m.id) && !ajustes[m.id]?.excluido);
+  }, [materiales, pedido, ajustes]);
+  const nombreDeProveedor = useMemo(() => {
+    const porId = new Map(proveedores.map((p) => [p.id, p.nombre]));
+    return (m: Material) => (m.proveedor_id ? (porId.get(m.proveedor_id) ?? "Sin proveedor") : "Sin proveedor");
+  }, [proveedores]);
+
   const cambiar = (cambios: Partial<ParametrosPedido>) => {
     setParams((p) => ({ ...p, ...cambios }));
     // Otro tamaño u opciones = otra cuenta: los ajustes a mano ya no corresponden.
@@ -187,7 +206,7 @@ function PedidoContenido() {
   }
 
   /** Genera el archivo formal. Todo documento formal sale con su número: antes de generarlo se guarda el pedido. */
-  async function onExportar(formato: FormatoPedido, modo: ModoPedido, conPrecios: boolean) {
+  async function onExportar(formato: FormatoPedido, modo: ModoPedido) {
     setOcupado(true);
     setMensaje(null);
     try {
@@ -200,7 +219,7 @@ function PedidoContenido() {
         parametros: params,
         observaciones: notas,
       });
-      const archivo = await exportarPedido(doc, formato, modo, { conPrecios });
+      const archivo = await exportarPedido(doc, formato, modo);
       await compartirOdescargarArchivo(archivo.blob, archivo.nombre, archivo.mime);
       setMensaje(
         r.pedido
@@ -225,8 +244,8 @@ function PedidoContenido() {
     setTimeout(() => setCopiado((actual) => (actual === clave ? null : actual)), 2000);
   }
 
-  function descargarCsv(conPrecios: boolean) {
-    const blob = new Blob([csvPedido(pedido, conPrecios)], { type: "text/csv;charset=utf-8" });
+  function descargarCsv() {
+    const blob = new Blob([csvPedido(pedido)], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -268,7 +287,7 @@ function PedidoContenido() {
           <section
             data-print-hide=""
             aria-label="Datos de la obra"
-            className="mb-5 space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm"
+            className="mb-5 space-y-4 rounded-lg border border-gray-200 bg-[#FFFFFF] p-5 shadow-sm"
           >
             <div className="grid gap-4 sm:grid-cols-2">
               <Campo etiqueta="Cliente / obra" id="obra">
@@ -279,7 +298,7 @@ function PedidoContenido() {
               </Campo>
             </div>
 
-            <Campo etiqueta="Observaciones (salen en el pedido)" id="notas">
+            <Campo etiqueta="Notas internas (no salen en el pedido)" id="notas">
               <textarea
                 id="notas"
                 rows={2}
@@ -292,13 +311,7 @@ function PedidoContenido() {
 
             <div className="grid gap-4 sm:grid-cols-4">
               <Campo etiqueta="Tamaño de pileta" id="tamano">
-                <select id="tamano" value={params.tamano} onChange={(e) => cambiar({ tamano: e.target.value })} className={CLASE_CAMPO}>
-                  {TAMANOS.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
+                <SelectorSimple id="tamano" titulo="Tamaño de pileta" valor={params.tamano} opciones={TAMANOS.map((t) => ({ value: t, label: t }))} onCambio={(v) => cambiar({ tamano: v })} />
               </Campo>
               <Campo etiqueta="Cantidad de obras" id="obras">
                 <input
@@ -334,8 +347,8 @@ function PedidoContenido() {
                       onClick={() => cambiar({ borde: b })}
                       className={`min-h-11 flex-1 rounded-lg border px-3 text-sm font-medium transition-colors ${
                         params.borde === b
-                          ? "border-[#244B5A] bg-[#244B5A] text-white shadow-sm"
-                          : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                          ? "border-[#244B5A] bg-[#244B5A] text-[#FFFFFF] shadow-sm"
+                          : "border-gray-200 bg-[#FFFFFF] text-gray-700 hover:bg-gray-50"
                       }`}
                     >
                       {b}
@@ -355,10 +368,18 @@ function PedidoContenido() {
             </div>
           </section>
 
+          {/* Al imprimir: sólo lo que necesita el proveedor (sin costos, precios ni teléfonos). */}
+          <section aria-label="Datos para imprimir" className="mb-4 hidden print:block">
+            <h1 className="text-lg font-bold">PEDIDO DE MATERIALES — Playa y Sol</h1>
+            <p>Obra: {sinTelefonos(obra) || "—"} · Fecha: {fechaDocumento(new Date())}</p>
+            <p>Pide: {sinTelefonos(pide) || "—"} · Pileta {params.tamano} · Borde: {params.borde}</p>
+          </section>
+
           <section aria-label="Resumen del pedido" className="mb-5 grid gap-3 sm:grid-cols-3">
             <Resumen etiqueta="Artículos a pedir" valor={String(pedido.articulos)} />
             <Resumen etiqueta="Proveedores a contactar" valor={String(pedido.proveedores)} />
             <Resumen
+              interno
               etiqueta="Costo estimado"
               valor={formatARSExacto(pedido.costo)}
               nota={pedido.sinPrecio > 0 ? `Sin contar ${pedido.sinPrecio} ${pedido.sinPrecio === 1 ? "artículo" : "artículos"} con precio a confirmar` : undefined}
@@ -387,6 +408,7 @@ function PedidoContenido() {
                 <Accion principal onClick={onGuardar} deshabilitado={ocupado || !!vigente || bloqueadoPorDesactivados}>
                   {vigente ? `Guardado · ${numeroFormateado(vigente.numero)}` : "Guardar pedido"}
                 </Accion>
+                <Accion onClick={() => setAgregando(true)}>Agregar material</Accion>
                 <Accion onClick={() => copiar("todo", mensajeWhatsApp(pedido, params, encabezado))}>
                   {copiado === "todo" ? "¡Copiado!" : "Copiar mensaje para WhatsApp"}
                 </Accion>
@@ -474,12 +496,19 @@ function PedidoContenido() {
                     onCopiar={() => copiar(g.proveedor?.id ?? "sin-proveedor", mensajeDeGrupo(g))}
                     ajustes={ajustes}
                     onAjustar={ajustar}
+                    onEditarMaterial={setEditandoMaterial}
                   />
                 ))}
               </div>
 
+              <div data-print-hide="" className="mt-4">
+                <button type="button" onClick={() => setAgregando(true)} className={botonDe("secundario", "px-4")}>
+                  + Agregar otro material al pedido
+                </button>
+              </div>
+
               {quitados.length > 0 && (
-                <section data-print-hide="" aria-label="Materiales quitados" className="mt-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <section data-print-hide="" aria-label="Materiales quitados" className="mt-4 rounded-lg border border-gray-200 bg-[#FFFFFF] p-4 shadow-sm">
                   <h2 className="mb-2 text-sm font-semibold text-gray-900">Quitados del pedido</h2>
                   <ul className="space-y-1">
                     {quitados.map((m) => (
@@ -502,6 +531,32 @@ function PedidoContenido() {
           )}
         </>
       )}
+      {agregando && (
+        <AgregarMaterial
+          disponibles={disponibles}
+          nombreProveedor={nombreDeProveedor}
+          onClose={() => setAgregando(false)}
+          onAgregar={(m, cantidad) => {
+            ajustar(m.id, { cantidad });
+            setAgregando(false);
+            setMensaje({ tipo: "ok", texto: `Se agregó "${m.nombre}" al pedido (${coma(cantidad)}${m.unidad ? " " + m.unidad : ""}).` });
+          }}
+        />
+      )}
+
+      {editandoMaterial && (
+        <MaterialModal
+          key={editandoMaterial.id}
+          material={editandoMaterial}
+          proveedores={proveedores}
+          onClose={() => setEditandoMaterial(null)}
+          onGuardado={(m) => {
+            setMateriales((prev) => (prev ? prev.map((x) => (x.id === m.id ? m : x)) : prev));
+            setEditandoMaterial(null);
+            setMensaje({ tipo: "ok", texto: `Se guardó "${m.nombre}". El pedido ya usa los datos nuevos.` });
+          }}
+        />
+      )}
     </PanelPortal>
   );
 }
@@ -517,9 +572,9 @@ function Campo({ etiqueta, id, children }: { etiqueta: string; id: string; child
   );
 }
 
-function Resumen({ etiqueta, valor, nota }: { etiqueta: string; valor: string; nota?: string }) {
+function Resumen({ etiqueta, valor, nota, interno = false }: { etiqueta: string; valor: string; nota?: string; interno?: boolean }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+    <div data-print-hide={interno ? "" : undefined} className="rounded-lg border border-gray-200 bg-[#FFFFFF] p-4 shadow-sm">
       <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{etiqueta}</p>
       <p className="mt-1 text-2xl font-semibold tabular-nums text-[#244B5A]">{valor}</p>
       {nota && <p className="mt-1 text-xs text-amber-700">{nota}</p>}
@@ -543,11 +598,7 @@ function Accion({
       type="button"
       onClick={onClick}
       disabled={deshabilitado}
-      className={`min-h-11 rounded-lg px-4 text-sm font-semibold shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-        principal
-          ? "bg-[#244B5A] text-white hover:bg-marca-oscuro"
-          : "border border-gray-200 bg-white text-[#244B5A] hover:border-gray-300 hover:bg-gray-50"
-      }`}
+      className={botonDe(principal ? "primario" : "secundario", "px-4")}
     >
       {children}
     </button>
@@ -555,7 +606,7 @@ function Accion({
 }
 
 /** Columnas desde md: artículo · cantidad · precio unit. · subtotal · quitar. */
-const COLUMNAS = "md:grid-cols-[minmax(0,1fr)_15rem_8rem_8rem_5.5rem]";
+const COLUMNAS = "md:grid-cols-[minmax(0,1fr)_15rem_8rem_8rem_9.5rem]";
 
 function GrupoTabla({
   grupo,
@@ -563,23 +614,25 @@ function GrupoTabla({
   onCopiar,
   ajustes,
   onAjustar,
+  onEditarMaterial,
 }: {
   grupo: GrupoPedido;
   copiado: boolean;
   onCopiar: () => void;
   ajustes: Record<string, AjusteLinea>;
   onAjustar: (id: string, ajuste: AjusteLinea | null) => void;
+  onEditarMaterial: (m: Material) => void;
 }) {
   return (
-    <section aria-label={`Pedido a ${grupo.nombre}`} className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+    <section aria-label={`Pedido a ${grupo.nombre}`} className="overflow-hidden rounded-lg border border-gray-200 bg-[#FFFFFF] shadow-sm">
       <header className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-gray-200 bg-[#F4F8F9] px-4 py-2.5">
         <div className="mr-auto min-w-0">
           <h2 className="text-sm font-bold text-[#244B5A]">{grupo.nombre}</h2>
-          {grupo.telefono && <p className="text-xs text-gray-500">{grupo.telefono}</p>}
+          {grupo.telefono && <p data-print-hide="" className="text-xs text-gray-500">{grupo.telefono}</p>}
         </div>
         <p className="text-sm tabular-nums text-gray-700">
-          {grupo.lineas.length} {grupo.lineas.length === 1 ? "artículo" : "artículos"} ·{" "}
-          <span className="font-semibold text-gray-900">{formatARSExacto(grupo.subtotal)}</span>
+          {grupo.lineas.length} {grupo.lineas.length === 1 ? "artículo" : "artículos"}{" "}
+          <span className="font-semibold text-gray-900 print:hidden">· {formatARSExacto(grupo.subtotal)}</span>
         </p>
         <button
           type="button"
@@ -600,8 +653,8 @@ function GrupoTabla({
       >
         <span>Artículo</span>
         <span>Cantidad</span>
-        <span className="text-right">Precio unit.</span>
-        <span className="text-right">Subtotal</span>
+        <span className="text-right print:invisible">Precio unit.</span>
+        <span className="text-right print:invisible">Subtotal</span>
         <span data-print-hide="" />
       </div>
       <ul className="divide-y divide-gray-100">
@@ -636,19 +689,19 @@ function GrupoTabla({
                     }
                     onAjustar(l.material.id, n === l.calculada ? null : { cantidad: n });
                   }}
-                  className={`min-h-11 w-24 rounded-md border px-2 py-1.5 text-sm tabular-nums focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 ${
-                    ajustada ? "border-amber-300 bg-amber-50" : "border-gray-200 bg-white"
+                  className={`min-h-12 w-28 rounded-lg border px-2 py-1.5 text-base tabular-nums focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 ${
+                    ajustada ? "bg-amber-50" : "bg-[#FFFFFF]"
                   }`}
                 />
-                <span className="text-gray-500">{l.material.unidad ?? ""}</span>
+                <span className="text-[#4A5861]">{l.material.unidad ?? ""}</span>
                 {ajustada && (
                   <span data-print-hide="" className="text-xs text-amber-700">
-                    calculado: {coma(l.calculada)}
+                    {l.calculada > 0 ? `calculado: ${coma(l.calculada)}` : "agregado a mano"}
                   </span>
                 )}
               </div>
 
-              <p className="col-span-2 row-start-3 whitespace-nowrap text-xs tabular-nums text-gray-500 md:col-auto md:row-auto md:text-right md:text-sm md:text-gray-700">
+              <p className="col-span-2 row-start-3 whitespace-nowrap print:invisible text-xs tabular-nums text-gray-500 md:col-auto md:row-auto md:text-right md:text-sm md:text-gray-700">
                 <span className="md:hidden">Precio unit. </span>
                 {l.precio === null ? (
                   <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">A confirmar</span>
@@ -657,16 +710,17 @@ function GrupoTabla({
                 )}
               </p>
 
-              <p className="col-start-2 row-start-2 whitespace-nowrap text-right font-medium tabular-nums text-gray-900 md:col-auto md:row-auto">
+              <p className="col-start-2 row-start-2 whitespace-nowrap print:invisible text-right font-medium tabular-nums text-gray-900 md:col-auto md:row-auto">
                 {l.precio === null ? "—" : formatARSExacto(l.subtotal)}
               </p>
 
-              <div data-print-hide="" className="col-start-2 row-start-1 text-right md:col-auto md:row-auto">
+              <div data-print-hide="" className="col-start-2 row-start-1 flex items-center justify-end gap-1 md:col-auto md:row-auto">
+                <BotonLapiz nombre={l.material.nombre} onClick={() => onEditarMaterial(l.material)} />
                 <button
                   type="button"
                   onClick={() => onAjustar(l.material.id, { excluido: true })}
                   aria-label={`Quitar ${l.material.nombre} del pedido`}
-                  className="min-h-11 rounded-md px-3 text-sm text-gray-500 hover:bg-gray-100 hover:text-red-600"
+                  className="min-h-11 rounded-lg px-3 text-sm font-medium text-[#B42318] hover:bg-[#FEF3F2] active:bg-[#FEE4E2]"
                 >
                   Quitar
                 </button>

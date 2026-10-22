@@ -79,7 +79,7 @@ describe("generarExcelPedido · todo junto", () => {
     expect(libro.worksheets.map((h) => h.name)).toEqual(["Resumen", "Corralón Uno", "Filtros SA"]);
   });
 
-  it("el Resumen lleva el encabezado del pedido, todos los proveedores y el total general", async () => {
+  it("el Resumen lleva el encabezado del pedido y todos los proveedores (sin total ni notas)", async () => {
     const hoja = (await leer(await generarExcelPedido(doc()))).getWorksheet("Resumen")!;
     const t = textos(hoja);
 
@@ -90,30 +90,24 @@ describe("generarExcelPedido · todo junto", () => {
     expect(t).toContain("Familia Pérez");
     expect(t).toContain("Benja");
     expect(t).toContain("Pileta 8x4 · Borde: Losetas");
-    expect(t.some((x) => x.startsWith("Corralón Uno"))).toBe(true);
-    expect(t.some((x) => x.startsWith("Filtros SA"))).toBe(true);
+    expect(t.some((x) => x === "Corralón Uno")).toBe(true);
+    expect(t.some((x) => x === "Filtros SA")).toBe(true);
 
-    expect(filaDe(hoja, "TOTAL ESTIMADO").getCell(5).value).toBe(2300);
-    expect(t.some((x) => /no incluye 1 artículo con precio a confirmar/.test(x))).toBe(true);
-    expect(t.some((x) => x.startsWith("Observaciones: Entregar temprano"))).toBe(true);
+    // Lo que sale hacia el proveedor no lleva total, avisos de precio ni notas internas.
+    expect(t.join("|")).not.toMatch(/TOTAL ESTIMADO|no incluye|Observaciones|Entregar temprano/);
   });
 
-  it("las líneas llevan cantidad, unidad, precio y subtotal con formato; lo sin precio dice 'A confirmar'", async () => {
+  it("las líneas llevan sólo artículo, cantidad y unidad (nunca precio ni subtotal)", async () => {
     const hoja = (await leer(await generarExcelPedido(doc()))).getWorksheet("Resumen")!;
 
     const cemento = filaDe(hoja, "Cemento 25 kg");
     expect(cemento.getCell(2).value).toBe(20);
     expect(cemento.getCell(3).value).toBe("bolsa");
-    expect(cemento.getCell(4).value).toBe(50);
-    expect(cemento.getCell(5).value).toBe(1000);
-    expect(cemento.getCell(5).numFmt).toBe('"$" #,##0.00');
-
-    const filtro = filaDe(hoja, "Filtro", true);
-    expect(filtro.getCell(4).value).toBe("A confirmar");
-    expect(filtro.getCell(5).value).toBe("—");
+    expect(cemento.getCell(4).value ?? null).toBeNull();
+    expect(cemento.getCell(5).value ?? null).toBeNull();
   });
 
-  it("cada hoja de proveedor lleva sólo lo suyo y su propio total", async () => {
+  it("cada hoja de proveedor lleva sólo lo suyo", async () => {
     const libro = await leer(await generarExcelPedido(doc()));
     const filtros = libro.getWorksheet("Filtros SA")!;
     const t = textos(filtros);
@@ -121,8 +115,6 @@ describe("generarExcelPedido · todo junto", () => {
     expect(t).toContain("ORDEN DE PEDIDO DE MATERIALES — Filtros SA");
     expect(t).toContain("Bomba");
     expect(t).not.toContain("Hierro");
-    expect(filaDe(filtros, "TOTAL ESTIMADO").getCell(5).value).toBe(300);
-    expect(filaDe(libro.getWorksheet("Corralón Uno")!, "TOTAL ESTIMADO").getCell(5).value).toBe(2000);
   });
 });
 
@@ -131,7 +123,6 @@ describe("generarExcelPedido · un proveedor", () => {
     const [soloFiltros] = separarPorProveedor(doc()).slice(1);
     const libro = await leer(await generarExcelPedido(soloFiltros));
     expect(libro.worksheets.map((h) => h.name)).toEqual(["Filtros SA"]);
-    expect(filaDe(libro.worksheets[0], "TOTAL ESTIMADO").getCell(5).value).toBe(300);
   });
 
   it("dos proveedores con el mismo nombre no pisan la hoja", async () => {
@@ -170,38 +161,25 @@ describe("generarExcelPedido · formato", () => {
     expect(hoja.pageSetup).toMatchObject({ paperSize: 9, fitToPage: true, fitToWidth: 1 });
   });
 
-  it("un pedido sin precios no rompe y el total es 0", async () => {
+  it("un pedido sin precios no rompe", async () => {
     const d = armarDocumento([linea({ precio: null, subtotal: 0 })], {
       numero: null, fecha: new Date(2026, 0, 1), obra: "", solicitante: "", parametros: PARAMETROS_POR_DEFECTO,
     });
     const hoja = (await leer(await generarExcelPedido(d))).worksheets[0];
-    expect(filaDe(hoja, "TOTAL ESTIMADO").getCell(5).value).toBe(0);
     expect(textos(hoja)).toContain("BORRADOR");
   });
 });
 
-describe("generarExcelPedido · sin precios (para pedirle al proveedor)", () => {
+describe("generarExcelPedido · lo que sale es para el proveedor", () => {
   it("no lleva precios, subtotales ni total, y los artículos y cantidades siguen", async () => {
-    const libro = await leer(await generarExcelPedido(doc(), { conPrecios: false }));
+    const libro = await leer(await generarExcelPedido(doc()));
     for (const hoja of libro.worksheets) {
       const t = textos(hoja).join("|");
-      expect(t).not.toMatch(/Precio unit|Subtotal|TOTAL ESTIMADO|A confirmar|Precios tentativos/);
-      expect(hoja.getRow(1).values).toBeTruthy();
+      expect(t).not.toMatch(/Precio unit|Subtotal|TOTAL ESTIMADO|A confirmar|tentativos/);
     }
     const resumen = libro.getWorksheet("Resumen")!;
     expect(textos(resumen)).toEqual(expect.arrayContaining(["Hierro", "Cemento 25 kg", "Filtro", "Bomba", "Cantidad", "Unidad"]));
     // Sólo 3 columnas con datos: artículo, cantidad, unidad.
     resumen.eachRow((fila) => expect(fila.getCell(4).value ?? null).toBeNull());
-  });
-
-  it("las observaciones se conservan", async () => {
-    const libro = await leer(await generarExcelPedido(doc(), { conPrecios: false }));
-    expect(textos(libro.getWorksheet("Resumen")!).some((t) => t.includes("Entregar temprano"))).toBe(true);
-  });
-
-  it("con precios (por defecto) avisa que son tentativos y de uso interno", async () => {
-    const libro = await leer(await generarExcelPedido(doc()));
-    expect(textos(libro.getWorksheet("Resumen")!).some((t) => /tentativos.*uso interno/.test(t))).toBe(true);
-    expect(textos(libro.getWorksheet("Resumen")!)).toContain("TOTAL ESTIMADO");
   });
 });

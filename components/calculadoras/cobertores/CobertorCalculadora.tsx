@@ -471,7 +471,7 @@ export function CobertorCalculadora({
         )}
 
         <CamposSoloLectura>
-        <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <section className="space-y-4 rounded-lg border border-gray-200 bg-[#FFFFFF] p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Datos del cliente</h2>
           <TextField register={register} errors={errors} name="cliente.nombre" label="Señor/Sra" placeholder="Apellido, Nombre" autoComplete="name" />
           <TextField register={register} errors={errors} name="cliente.domicilio" label="Domicilio" autoComplete="street-address" />
@@ -496,7 +496,7 @@ export function CobertorCalculadora({
 
         <EditorTextosCompartidos tipo="cobertores" textos={textos} onGuardado={setTextosOverride} />
 
-        <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <section className="space-y-4 rounded-lg border border-gray-200 bg-[#FFFFFF] p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Cálculo</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <NumberField control={control} name="largo" label="Largo pileta (m)" required />
@@ -559,7 +559,7 @@ export function CobertorCalculadora({
         </section>
 
         {opcionales.fields.length > 0 && (
-          <section className="space-y-3 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+          <section className="space-y-3 rounded-lg border border-gray-200 bg-[#FFFFFF] p-5 shadow-sm">
             <h2 className="text-sm font-semibold text-gray-900">Opcionales</h2>
             <p className="text-xs text-gray-500">
               Tildá los que van en este presupuesto. No suman al total: salen como anexo informativo.
@@ -576,7 +576,7 @@ export function CobertorCalculadora({
           </section>
         )}
 
-        <section className="space-y-3 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <section className="space-y-3 rounded-lg border border-gray-200 bg-[#FFFFFF] p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Fotos precargadas</h2>
           <p className="text-xs text-gray-500">
             Las de catálogo de “Fotos de referencia”. Sacar o agregar acá vale sólo para el PDF que generes ahora — no
@@ -590,7 +590,7 @@ export function CobertorCalculadora({
           />
         </section>
 
-        <section className="space-y-3 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <section className="space-y-3 rounded-lg border border-gray-200 bg-[#FFFFFF] p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Fotos</h2>
           <p className="text-xs text-gray-500">Van al final del documento.</p>
           <input
@@ -602,7 +602,7 @@ export function CobertorCalculadora({
               onAgregarFotos(e.target.files);
               e.target.value = "";
             }}
-            className="block w-full text-sm text-gray-700 file:mr-3 file:min-h-11 file:rounded-md file:border-0 file:bg-[#244B5A] file:px-4 file:text-sm file:font-medium file:text-white"
+            className="block w-full text-sm text-gray-700 file:mr-3 file:min-h-11 file:rounded-md file:border-0 file:bg-[#244B5A] file:px-4 file:text-sm file:font-medium file:text-[#FFFFFF]"
           />
           {fotos.length > 0 && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

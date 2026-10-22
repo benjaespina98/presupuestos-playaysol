@@ -45,7 +45,7 @@ export function CalculadoraLosetasInterna({ largoPlano, anchoPlano }: { largoPla
   return (
     <details
       data-print-hide=""
-      className="group rounded-lg border border-gray-200 bg-white shadow-sm"
+      className="group rounded-lg border border-gray-200 bg-[#FFFFFF] shadow-sm"
       // Enter en un campo de acá NO guarda el presupuesto: esta calculadora no es parte del formulario.
       onKeyDown={(e) => {
         if (e.key === "Enter") e.preventDefault();
@@ -75,7 +75,7 @@ export function CalculadoraLosetasInterna({ largoPlano, anchoPlano }: { largoPla
               aria-pressed={entrada.tipo === valor}
               onClick={() => elegirTipo(valor)}
               className={`min-h-11 rounded-lg border px-3 text-sm font-semibold transition-colors ${
-                entrada.tipo === valor ? "border-marca bg-marca text-white shadow-sm" : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                entrada.tipo === valor ? "border-marca bg-marca text-[#FFFFFF] shadow-sm" : "border-gray-200 bg-[#FFFFFF] text-gray-700 hover:border-gray-300 hover:bg-gray-50"
               }`}
             >
               {texto}
@@ -94,7 +94,7 @@ export function CalculadoraLosetasInterna({ largoPlano, anchoPlano }: { largoPla
             type="button"
             onClick={() => cambiar({ largo: largoPlano, ancho: anchoPlano })}
             disabled={!largoPlano || !anchoPlano}
-            className="min-h-11 rounded-lg px-3 text-sm font-semibold text-marca hover:bg-marca/8 disabled:opacity-40"
+            className="min-h-11 rounded-lg px-3 text-sm font-semibold text-[#1A3844] hover:bg-[#EAF0F2] active:bg-[#D5E0E4]"
           >
             Usar las medidas del plano
           </button>

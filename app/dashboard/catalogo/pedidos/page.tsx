@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { listarPedidos } from "@/lib/pedidos";
 import {
@@ -13,24 +13,38 @@ import {
 } from "@/lib/domain/abastecimiento/pedidoDocumento";
 import { contarPorEstado, filtrarPedidos, proveedoresDePedido } from "@/lib/domain/abastecimiento/pedidosLista";
 import { formatARSExacto } from "@/lib/format/ars";
+import { etiquetaCortaDeOrden, opcionesDeOrden, ordenarPor, type ClaveOrden } from "@/lib/ordenar";
+import { useEstadoPersistente } from "@/lib/useEstadoPersistente";
 import { PanelPortal } from "@/components/PanelPortal";
 import { EtiquetaAnulado } from "@/components/Anulado";
 import { contarAnulados, estaAnulado } from "@/lib/anulacion";
-import { IconSearch } from "@/components/icons";
-import { BarraFiltros } from "@/components/catalogo/BarraFiltros";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
-import { Chip, Interruptor } from "@/components/catalogo/FiltrosCatalogo";
+import { Buscador } from "@/components/ui/FiltrosPlegables";
+import { BarraListado, BotonFiltros, Chip, ChipsFila, Interruptor, MenuSeleccion, Toast } from "@/components/ui/BarraListado";
+import { BotonLapiz, alTocarFila } from "@/components/ui/BotonLapiz";
+import { botonDe } from "@/components/ui/botones";
 import { CLASE_ESTADO, DetallePedidoModal } from "@/components/pedidos/DetallePedidoModal";
 
-/** Columnas en pantallas medianas y grandes: N° · Fecha · Obra · Pileta · Proveedores · Costo · Estado · acción. */
-const COLUMNAS = "md:grid-cols-[5.5rem_6.5rem_minmax(0,1fr)_5rem_6rem_9rem_6.5rem_5rem]";
+/** Columnas desde `lg`: N° · Fecha · Obra · Pileta · Proveedores · Costo · Estado · Editar. */
+const COLUMNAS = "lg:grid-cols-[5.5rem_6.5rem_minmax(0,1fr)_5rem_6.5rem_9rem_7rem_3.5rem]";
+
+interface Filtros {
+  busqueda: string;
+  estado: EstadoPedido | "";
+  mostrarAnulados: boolean;
+  orden: ClaveOrden;
+}
+const SIN_FILTROS: Filtros = { busqueda: "", estado: "", mostrarAnulados: false, orden: "defecto" };
+const ORDENES = opcionesDeOrden(["nombre", "precio", "actualizado"]);
 
 export default function PedidosPage() {
   const [pedidos, setPedidos] = useState<PedidoGuardado[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busqueda, setBusqueda] = useState("");
-  const [estado, setEstado] = useState<EstadoPedido | "">("");
-  const [mostrarAnulados, setMostrarAnulados] = useState(false);
+  // La búsqueda, los filtros y el orden se conservan al abrir un pedido y volver.
+  const [filtros, setFiltros] = useEstadoPersistente<Filtros>("pedidos:filtros", SIN_FILTROS);
+  const { busqueda, estado, mostrarAnulados } = filtros;
+  const orden = filtros.orden ?? "defecto";
+  const cambiar = (parcial: Partial<Filtros>) => setFiltros({ ...filtros, ...parcial });
   const [abierto, setAbierto] = useState<PedidoGuardado | null>(null);
   const [mensaje, setMensaje] = useState<string | null>(null);
 
@@ -47,80 +61,82 @@ export default function PedidosPage() {
   }, []);
 
   const visibles = useMemo(
-    () => (pedidos ? filtrarPedidos(pedidos, { busqueda, estado: estado || null, incluirAnulados: mostrarAnulados }) : null),
-    [pedidos, busqueda, estado, mostrarAnulados]
+    () =>
+      pedidos
+        ? ordenarPor(filtrarPedidos(pedidos, { busqueda, estado: estado || null, incluirAnulados: mostrarAnulados }), orden, {
+            nombre: (p) => p.obra,
+            precio: (p) => p.costo,
+            actualizado: (p) => p.updated_at,
+          })
+        : null,
+    [pedidos, busqueda, estado, mostrarAnulados, orden]
   );
   const conteos = useMemo(() => contarPorEstado(pedidos ?? [], busqueda, mostrarAnulados), [pedidos, busqueda, mostrarAnulados]);
   const cantidadAnulados = useMemo(() => contarAnulados(pedidos ?? []), [pedidos]);
-  const hayFiltros = !!(busqueda || estado);
+  const hayFiltros = !!(busqueda || estado || mostrarAnulados || orden !== "defecto");
+  const cerrarToast = useCallback(() => setMensaje(null), []);
 
   return (
     <PanelPortal compacto amplio>
       <EncabezadoPagina titulo="Pedidos" descripcion="Historial de pedidos de materiales, con su número y su estado.">
-        <Link
-          href="/dashboard/catalogo/pedido"
-          className="flex min-h-11 items-center rounded-lg bg-[#244B5A] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-marca-oscuro"
-        >
-          Armar pedido nuevo
+        <Link href="/dashboard/catalogo/pedido" aria-label="Armar pedido nuevo" className={botonDe("primario", "px-4")}>
+          Armar pedido<span className="hidden sm:inline">&nbsp;nuevo</span>
         </Link>
       </EncabezadoPagina>
 
-      <BarraFiltros>
-        <div className="relative">
-          <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar por número, obra, quién pidió o proveedor..."
-            aria-label="Buscar pedidos"
-            className="min-h-11 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20"
+      <BarraListado
+        buscador={<Buscador valor={busqueda} onCambio={(v) => cambiar({ busqueda: v })} placeholder="Buscar por número, obra, proveedor..." etiqueta="Buscar pedidos" />}
+        menus={
+          <MenuSeleccion
+            etiqueta="Ordenar"
+            titulo="Orden"
+            opciones={ORDENES.map((o) => ({ id: o.id, etiqueta: o.etiqueta.replace("Nombre", "Obra").replace("Precio", "Costo") }))}
+            valor={orden}
+            porDefecto="defecto"
+            onCambio={(v) => cambiar({ orden: v })}
+            textoBoton={etiquetaCortaDeOrden(orden).replace("Nombre", "Obra").replace("Precio", "Costo")}
           />
-        </div>
-        <div
-          role="group"
-          aria-label="Filtrar por estado"
-          className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0"
-        >
-          <Chip activo={estado === ""} onClick={() => setEstado("")} cantidad={conteos.total}>
-            Todos
-          </Chip>
-          {ESTADOS_PEDIDO.map((e) => (
-            <Chip key={e} activo={estado === e} onClick={() => setEstado(estado === e ? "" : e)} cantidad={conteos.porEstado[e]}>
-              {ETIQUETA_ESTADO[e]}
+        }
+        chips={
+          <ChipsFila etiqueta="Filtrar por estado">
+            <Chip activo={estado === ""} onClick={() => cambiar({ estado: "" })} cantidad={conteos.total}>
+              Todos
             </Chip>
-          ))}
-        </div>
-      </BarraFiltros>
+            {ESTADOS_PEDIDO.map((e) => (
+              <Chip key={e} activo={estado === e} onClick={() => cambiar({ estado: estado === e ? "" : e })} cantidad={conteos.porEstado[e]}>
+                {ETIQUETA_ESTADO[e]}
+              </Chip>
+            ))}
+          </ChipsFila>
+        }
+        filtros={
+          <BotonFiltros contador={mostrarAnulados ? 1 : 0} hayFiltros={hayFiltros} onLimpiar={() => setFiltros(SIN_FILTROS)}>
+            {cantidadAnulados > 0 ? (
+              <Interruptor checked={mostrarAnulados} onChange={(v) => cambiar({ mostrarAnulados: v })}>
+                Mostrar anulados ({cantidadAnulados})
+              </Interruptor>
+            ) : (
+              <p className="px-1 py-2 text-[13px] text-[#4A5861]">No hay pedidos anulados.</p>
+            )}
+          </BotonFiltros>
+        }
+      />
 
-      {cantidadAnulados > 0 && (
-        <div className="mb-3">
-          <Interruptor checked={mostrarAnulados} onChange={setMostrarAnulados}>
-            Mostrar anulados ({cantidadAnulados})
-          </Interruptor>
-        </div>
-      )}
-
-      {mensaje && (
-        <p role="status" className="mb-4 rounded-md bg-green-50 px-4 py-3 text-sm text-green-700">
-          {mensaje}
-        </p>
-      )}
       {error && (
-        <p role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-[#B42318]">
           {error}
         </p>
       )}
-      {!error && pedidos === null && <p className="text-sm text-gray-500">Cargando…</p>}
+      {!error && pedidos === null && <p className="py-6 text-center text-sm text-[#4A5861]">Cargando…</p>}
 
       {!error && visibles && visibles.length === 0 && (
-        <div className="rounded-lg border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500">
+        <div className="rounded-lg border border-dashed border-[#7D8892] px-4 py-10 text-center text-sm text-[#3E4A52]">
           {hayFiltros ? (
             "Ningún pedido coincide con el filtro."
           ) : (
             <>
               Todavía no hay pedidos guardados.{" "}
-              <Link href="/dashboard/catalogo/pedido" className="inline-flex min-h-11 items-center font-medium text-marca underline-offset-2 hover:underline">
+              <Link href="/dashboard/catalogo/pedido" className="inline-flex min-h-11 items-center font-medium text-[#244B5A] underline underline-offset-2 hover:no-underline">
                 Armá el primero
               </Link>
               .
@@ -131,25 +147,24 @@ export default function PedidosPage() {
 
       {!error && visibles && visibles.length > 0 && (
         <>
-          <p className="mb-2 text-xs text-gray-500">
-            {visibles.length} {visibles.length === 1 ? "pedido" : "pedidos"}
-            {hayFiltros && pedidos ? ` de ${pedidos.length}` : ""}
+          <p className="py-1 text-[13px] text-[#4A5861]" aria-live="polite">
+            {visibles.length} {hayFiltros && pedidos ? `de ${pedidos.length} pedidos` : visibles.length === 1 ? "pedido" : "pedidos"}
           </p>
-          <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+          <div className="rounded-lg border border-[#D9DFE3] bg-[#FFFFFF] lg:rounded-none">
             <div
               aria-hidden="true"
-              className={`hidden rounded-t-lg border-b border-gray-200 bg-gray-50 px-4 py-2 text-xs font-medium uppercase tracking-wide text-gray-500 md:sticky md:top-[var(--catalogo-barra,0px)] md:z-10 md:grid md:items-center md:gap-x-4 ${COLUMNAS}`}
+              className={`hidden h-9 border-b border-[#D9DFE3] bg-[#F1F4F6] px-4 text-[13px] font-semibold uppercase tracking-wide text-[#4A5861] lg:sticky lg:top-[var(--catalogo-barra,0px)] lg:z-10 lg:grid lg:items-center lg:gap-x-4 ${COLUMNAS}`}
             >
               <span>N°</span>
               <span>Fecha</span>
               <span>Obra</span>
-              <span>Pileta</span>
-              <span className="text-right">Proveedores</span>
-              <span className="text-right">Costo</span>
-              <span>Estado</span>
-              <span />
+              <span className="text-center">Pileta</span>
+              <span className="text-center">Proveedores</span>
+              <span className="text-center">Costo</span>
+              <span className="text-center">Estado</span>
+              <span className="text-center">Editar</span>
             </div>
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-y divide-[#EEF1F3]">
               {visibles.map((p) => (
                 <FilaPedido
                   key={p.id}
@@ -181,44 +196,53 @@ export default function PedidosPage() {
           }}
         />
       )}
+
+      <Toast mensaje={mensaje} onCerrar={cerrarToast} />
     </PanelPortal>
   );
 }
 
+/** Una fila de pedido: tocarla entera (o el lápiz) la abre. En el celular, dos renglones; desde `lg`, la grilla. */
 function FilaPedido({ pedido: p, onAbrir }: { pedido: PedidoGuardado; onAbrir: () => void }) {
   const proveedores = proveedoresDePedido(p);
+  const num = numeroFormateado(p.numero);
   return (
     <li
-      className={`flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 transition-colors hover:bg-gray-50/70 md:grid md:gap-x-4 md:gap-y-0 md:py-2.5 ${COLUMNAS} ${p.estado === "cancelado" || estaAnulado(p) ? "opacity-60" : ""}`}
+      onClick={alTocarFila(onAbrir)}
+      className={`flex min-h-[3.25rem] cursor-pointer items-center gap-3 px-4 py-1 text-[15px] leading-5 transition-colors hover:bg-[#F4F8F9] active:bg-[#EAF0F2] lg:grid lg:min-h-[2.75rem] lg:gap-x-4 lg:py-0 ${COLUMNAS} ${p.estado === "cancelado" || estaAnulado(p) ? "opacity-70" : ""}`}
     >
-      <p className="font-semibold tabular-nums text-[#244B5A]">{numeroFormateado(p.numero)}</p>
-      <p className="text-sm tabular-nums text-gray-600">{fechaDocumento(new Date(p.created_at))}</p>
-      <div className="min-w-0 basis-full md:basis-auto">
-        <p className="truncate font-medium text-gray-900" title={p.obra || undefined}>
-          {p.obra || <span className="font-normal text-gray-400">Sin obra</span>}
+      <div className="min-w-0 flex-1 lg:contents">
+        <p className="flex items-baseline gap-2 lg:contents">
+          <span className="font-semibold tabular-nums text-[#244B5A]">{num}</span>
+          <span className="whitespace-nowrap text-[13px] tabular-nums text-[#4A5861] lg:text-sm lg:text-gray-600">{fechaDocumento(new Date(p.created_at))}</span>
         </p>
-        {p.solicitante && <p className="truncate text-xs text-gray-500">Pide: {p.solicitante}</p>}
+        <div className="min-w-0 lg:order-none">
+          <p className="line-clamp-2 break-words lg:truncate text-sm font-medium text-gray-900" title={p.obra || undefined}>
+            {p.obra || <span className="font-normal text-[#4A5861]">Sin obra</span>}
+          </p>
+          {p.solicitante && <p className="hidden truncate text-[13px] text-[#4A5861] lg:block">Pide: {p.solicitante}</p>}
+        </div>
+        <p className="hidden text-center text-sm text-gray-700 lg:block">{p.parametros.tamano}</p>
+        <p className="hidden text-center text-sm text-gray-700 lg:block" title={proveedores.join(", ")}>
+          {proveedores.length} {proveedores.length === 1 ? "proveedor" : "proveedores"}
+        </p>
+        <p className="whitespace-nowrap text-[13px] tabular-nums text-[#3E4A52] lg:text-center lg:text-sm lg:font-medium lg:text-gray-900">
+          <span className="lg:hidden">{p.parametros.tamano} · </span>
+          {formatARSExacto(p.costo)}
+        </p>
       </div>
-      <p className="text-sm text-gray-700">{p.parametros.tamano}</p>
-      <p className="text-sm text-gray-700 md:text-right" title={proveedores.join(", ")}>
-        {proveedores.length} {proveedores.length === 1 ? "proveedor" : "proveedores"}
-      </p>
-      <p className="ml-auto whitespace-nowrap font-medium tabular-nums text-gray-900 md:ml-0 md:text-right">{formatARSExacto(p.costo)}</p>
-      {estaAnulado(p) ? (
-        <EtiquetaAnulado />
-      ) : (
-        <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-medium ${CLASE_ESTADO[p.estado]}`}>
-          {ETIQUETA_ESTADO[p.estado]}
-        </span>
-      )}
-      <button
-        type="button"
-        onClick={onAbrir}
-        aria-label={`Abrir ${numeroFormateado(p.numero)}`}
-        className="ml-auto inline-flex min-h-11 items-center justify-end rounded-md px-2 text-sm font-medium text-[#244B5A] hover:bg-[#244B5A]/8 md:ml-0 md:justify-center"
-      >
-        Abrir
-      </button>
+      <div className="shrink-0 lg:flex lg:justify-center">
+        {estaAnulado(p) ? (
+          <EtiquetaAnulado />
+        ) : (
+          <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-0.5 text-[13px] font-medium ${CLASE_ESTADO[p.estado]}`}>
+            {ETIQUETA_ESTADO[p.estado]}
+          </span>
+        )}
+      </div>
+      <span className="flex shrink-0 justify-end lg:justify-center">
+        <BotonLapiz nombre={num} etiqueta={`Abrir ${num}`} onClick={onAbrir} />
+      </span>
     </li>
   );
 }

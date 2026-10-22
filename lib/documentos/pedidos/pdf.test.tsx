@@ -66,14 +66,11 @@ describe("generarPdfPedido", () => {
 });
 
 describe("generarPdfPedido · sin precios", () => {
-  it("sale igual (más corto: sin columnas de precio, subtotales, total ni firmas)", async () => {
+  it("sale igual aunque el documento traiga precios", async () => {
     const doc = armarDocumento(
       [linea({ material_id: "a", nombre: "Hierro del 6" }), linea({ material_id: "b", nombre: "Filtro", precio: null, subtotal: 0 })],
       datos()
     );
-    const con = await generarPdfPedido(doc, { logoUrl: null, conPrecios: true });
-    const sin = await generarPdfPedido(doc, { logoUrl: null, conPrecios: false });
-    expect(await firma(sin)).toBe("%PDF-");
-    expect(sin.size).toBeLessThan(con.size);
+    expect(await firma(await generarPdfPedido(doc, { logoUrl: null }))).toBe("%PDF-");
   });
 });

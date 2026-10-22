@@ -33,23 +33,23 @@ export function FieldShell({
             (aria-hidden no lo saca del textContent), y "Largo (m)" dejaría de
             matchear con "Largo (m) *" — rompería cualquier test o software de
             accesibilidad que busque el campo por su label real. */}
-        <label htmlFor={htmlFor} className="block text-sm font-medium text-gray-700">
+        <label htmlFor={htmlFor} className="block text-[15px] font-medium text-[#1F2A30]">
           {label}
         </label>
         {required && (
-          <span className="text-red-600" aria-hidden="true">
+          <span className="text-[#B42318]" aria-hidden="true">
             *
           </span>
         )}
       </div>
       {children}
       {hint && !error && (
-        <p id={hintId} className="text-xs text-gray-500">
+        <p id={hintId} className="text-[13px] leading-snug text-[#4A5861]">
           {hint}
         </p>
       )}
       {error && (
-        <p id={errorId} role="alert" className="text-xs font-medium text-red-600">
+        <p id={errorId} role="alert" className="text-[13px] font-medium text-[#B42318]">
           {error}
         </p>
       )}

@@ -14,13 +14,13 @@ import fs from "fs";
  *      se aplicó bien en las 5 — solo se había llegado a implementar en piscinas).
  *   4. No aparece el tab "Guardados" en ninguna (punto 2).
  *   5. El botón de descarga real de cada una descarga un archivo cuyo nombre sigue
- *      el formato Presupuesto_<Tipo>_<Cliente>_<Fecha>.docx en las 4 tradicionales
- *      (botón "Word"), o Presupuesto_<Tipo>_<Cliente>_<Fecha>_cliente.png en losetas
+ *      el formato "<Cliente> - <Tipo> - DD-MM-AAAA".docx en las 4 tradicionales
+ *      (botón "Word"), o "<Cliente> - Plano de piscina - DD-MM-AAAA".png en losetas
  *      (botón "Imagen" — losetas no genera Word, su salida es un plano PNG/PDF)
  *      (punto 4).
- *   6. El botón "PDF" también descarga un archivo real: Presupuesto_<Tipo>_
- *      <Cliente>_<Fecha>.pdf en las 4 tradicionales, o
- *      Presupuesto_<Tipo>_<Cliente>_<Fecha>_cliente.pdf en losetas (mismo
+ *   6. El botón "PDF" también descarga un archivo real: "<Cliente> - <Tipo> -
+ *      DD-MM-AAAA".pdf en las 4 tradicionales, o
+ *      "<Cliente> - Plano de piscina - DD-MM-AAAA".pdf en losetas (mismo
  *      plano que "Imagen", envuelto en una página PDF — ver
  *      lib/documentos/losetas/imagenCliente.tsx).
  *
@@ -149,9 +149,9 @@ for (const { tipo, nombreEsperado, encabezado } of CALCULADORAS) {
       botonDescarga.click(),
     ]);
     const nombreArchivo = download.suggestedFilename();
-    const sufijo = tipo !== "losetas" ? "\\.docx" : "_cliente\\.png";
+    const sufijo = tipo !== "losetas" ? "\\.docx" : "\\.png";
     expect(nombreArchivo).toMatch(
-      new RegExp(`^Presupuesto_${nombreEsperado}_Perez_Maria_Jose_\\d{4}-\\d{2}-\\d{2}${sufijo}$`)
+      new RegExp(`^Pérez, María José - ${tipo === "losetas" ? "Plano de piscina" : nombreEsperado} - \\d{2}-\\d{2}-\\d{4}${sufijo}$`)
     );
     const destino = path.join(test.info().outputDir, nombreArchivo);
     await download.saveAs(destino);
@@ -168,9 +168,8 @@ for (const { tipo, nombreEsperado, encabezado } of CALCULADORAS) {
       botonPdf.click(),
     ]);
     const nombrePdf = downloadPdf.suggestedFilename();
-    const sufijoPdf = tipo !== "losetas" ? "\\.pdf" : "_cliente\\.pdf";
     expect(nombrePdf).toMatch(
-      new RegExp(`^Presupuesto_${nombreEsperado}_Perez_Maria_Jose_\\d{4}-\\d{2}-\\d{2}${sufijoPdf}$`)
+      new RegExp(`^Pérez, María José - ${tipo === "losetas" ? "Plano de piscina" : nombreEsperado} - \\d{2}-\\d{2}-\\d{4}\\.pdf$`)
     );
     const destinoPdf = path.join(test.info().outputDir, nombrePdf);
     await downloadPdf.saveAs(destinoPdf);

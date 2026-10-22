@@ -51,7 +51,7 @@ export default function DashboardPage() {
           <Link
             key={c.tipo}
             href={`/dashboard/${c.tipo}`}
-            className="group flex min-h-24 items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-marca hover:shadow-md active:translate-y-0 sm:p-6"
+            className="group flex min-h-24 items-center gap-4 rounded-xl border border-gray-200 bg-[#FFFFFF] p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-marca hover:shadow-md active:translate-y-0 sm:p-6"
           >
             <svg
               viewBox="0 0 24 24"
