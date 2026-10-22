@@ -216,7 +216,7 @@ describe("LosetasCalculadora · exportar para el cliente", () => {
     });
     expect(compartirOdescargarArchivo).toHaveBeenCalledWith(
       expect.any(Blob),
-      expect.stringContaining("_cliente"),
+      expect.stringMatching(/^Gómez, Martín - Plano de piscina - [0-9]{2}-[0-9]{2}-[0-9]{4}$/),
       "image/png"
     );
   });
@@ -231,7 +231,7 @@ describe("LosetasCalculadora · exportar para el cliente", () => {
     await waitFor(() => expect(generarPdfClientePlano).toHaveBeenCalledTimes(1));
     expect(compartirOdescargarArchivo).toHaveBeenCalledWith(
       expect.any(Blob),
-      expect.stringContaining("_cliente"),
+      expect.stringMatching(/ - Plano de piscina - [0-9]{2}-[0-9]{2}-[0-9]{4}$/),
       "application/pdf"
     );
   });

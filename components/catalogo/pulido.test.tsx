@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BarraFiltros } from "./BarraFiltros";
+import { BarraListado } from "@/components/ui/BarraListado";
 import { EncabezadoPagina } from "./EncabezadoPagina";
 import { VolverArriba } from "./VolverArriba";
 
@@ -23,16 +23,14 @@ describe("EncabezadoPagina", () => {
   });
 });
 
-describe("BarraFiltros", () => {
+describe("BarraListado", () => {
   afterEach(() => document.documentElement.style.removeProperty("--catalogo-barra"));
 
   it("publica su alto en --catalogo-barra (el encabezado de columnas se pega debajo) y lo limpia al irse", () => {
     const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetHeight");
     Object.defineProperty(HTMLElement.prototype, "offsetHeight", { configurable: true, value: 118 });
     const { unmount } = render(
-      <BarraFiltros>
-        <input aria-label="buscar" />
-      </BarraFiltros>
+      <BarraListado buscador={<input aria-label="buscar" />} />
     );
     expect(document.documentElement.style.getPropertyValue("--catalogo-barra")).toBe("118px");
 
@@ -43,9 +41,7 @@ describe("BarraFiltros", () => {
 
   it("deja pasar su contenido", () => {
     render(
-      <BarraFiltros>
-        <input aria-label="buscar" />
-      </BarraFiltros>
+      <BarraListado buscador={<input aria-label="buscar" />} />
     );
     expect(screen.getByLabelText("buscar")).toBeInTheDocument();
   });

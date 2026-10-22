@@ -192,6 +192,57 @@ test("cambiar una cantidad: se resalta, se guarda, se ve en la lista y entra en 
   await expect(page.getByLabel(`Cantidad de ${MATERIAL}`)).toHaveValue("7");
 });
 
+test("botones: en reposo, con el mouse encima, apretados y con foco siguen teniendo contraste (y el cursor es la manito)", async ({ page }, info) => {
+  await entrar(page);
+  await page.goto("/dashboard/catalogo/materiales");
+  const toque = (info.project.use.hasTouch ?? false) && (info.project.use.viewport?.width ?? 1280) < 768;
+
+  const controles: [string, Locator][] = [
+    ["Agregar material", page.getByRole("button", { name: "Agregar material" })],
+    ["lápiz", page.getByRole("button", { name: `Editar ${MATERIAL}` })],
+    ["chip Todos", page.getByRole("group", { name: "Filtrar por rubro" }).getByRole("button", { name: /^Todos/ })],
+    ["Filtros", page.getByRole("button", { name: /^Filtros/ })],
+  ];
+  for (const [nombre, c] of controles) {
+    await c.scrollIntoViewIfNeeded();
+    expect(await contrasteDe(c), `${nombre} en reposo`).toBeGreaterThanOrEqual(4.5);
+    expect(await c.evaluate((el) => getComputedStyle(el).cursor), `${nombre}: cursor`).toBe("pointer");
+    if (!toque) {
+      await c.hover();
+      expect(await contrasteDe(c), `${nombre} con el mouse encima`).toBeGreaterThanOrEqual(4.5);
+      await page.mouse.down();
+      expect(await contrasteDe(c), `${nombre} apretado`).toBeGreaterThanOrEqual(4.5);
+      await page.mouse.up();
+      await page.mouse.move(0, 0);
+    }
+    await c.focus();
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Tab");
+    expect(await contrasteDe(c), `${nombre} con foco`).toBeGreaterThanOrEqual(4.5);
+    // Con foco de teclado se ve un anillo (outline) de al menos 2 px.
+    if ((await c.evaluate((el) => el.matches(":focus-visible"))) === true) {
+      expect(await c.evaluate((el) => parseFloat(getComputedStyle(el).outlineWidth)), `${nombre}: anillo de foco`).toBeGreaterThanOrEqual(2);
+    }
+  }
+
+  // Dentro de la hoja: Cancelar, Guardar con cambios.
+  await page.getByRole("button", { name: `Editar ${MATERIAL}` }).click();
+  const hoja = page.getByRole("dialog", { name: "Editar material" });
+  const valorInicial = await hoja.getByLabel("8x4").inputValue();
+  await hoja.getByLabel("8x4").fill(valorInicial === "9" ? "8" : "9");
+  const guardar = hoja.getByRole("button", { name: "Guardar cambios" });
+  for (const [nombre, c] of [["Guardar", guardar], ["Cancelar", hoja.getByRole("button", { name: "Cancelar" })]] as [string, Locator][]) {
+    if (!toque) {
+      await c.hover();
+      expect(await contrasteDe(c), `${nombre} con el mouse encima`).toBeGreaterThanOrEqual(4.5);
+      expect(await c.evaluate((el) => getComputedStyle(el).cursor), `${nombre}: cursor`).toBe("pointer");
+    }
+  }
+  await page.mouse.move(0, 0);
+  await hoja.getByLabel("8x4").fill(valorInicial); // vuelve al valor guardado
+  await hoja.getByRole("button", { name: "Cancelar" }).click();
+});
+
 test("avisa de los cambios sin guardar y deja seguir editando o descartar", async ({ page }) => {
   await entrar(page);
   await page.goto("/dashboard/catalogo/materiales");
