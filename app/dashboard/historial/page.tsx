@@ -190,7 +190,7 @@ function HistorialTabla() {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar por nombre de cliente..."
-            className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#244B5A] focus:outline-none"
+            className="min-h-11 w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-base sm:text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#244B5A] focus:outline-none"
           />
         </div>
       </div>

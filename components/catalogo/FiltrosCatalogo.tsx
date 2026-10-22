@@ -84,7 +84,7 @@ export function FiltrosCatalogo({
                 type="button"
                 onClick={() => onBusqueda("")}
                 aria-label="Limpiar búsqueda"
-                className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-lg leading-none text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-xl leading-none text-gray-400 hover:bg-gray-100 hover:text-gray-600"
               >
                 ×
               </button>
@@ -154,7 +154,7 @@ export function Chip({
       type="button"
       onClick={onClick}
       aria-pressed={activo}
-      className={`inline-flex min-h-10 items-center gap-2 rounded-full border px-3.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#244B5A]/30 ${
+      className={`inline-flex min-h-11 items-center gap-2 rounded-full border px-3.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#244B5A]/30 ${
         activo
           ? "border-[#244B5A] bg-[#244B5A] text-white shadow-sm"
           : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"

@@ -636,7 +636,7 @@ function GrupoTabla({
                     }
                     onAjustar(l.material.id, n === l.calculada ? null : { cantidad: n });
                   }}
-                  className={`min-h-10 w-24 rounded-md border px-2 py-1.5 text-sm tabular-nums focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 ${
+                  className={`min-h-11 w-24 rounded-md border px-2 py-1.5 text-sm tabular-nums focus:border-[#244B5A] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 ${
                     ajustada ? "border-amber-300 bg-amber-50" : "border-gray-200 bg-white"
                   }`}
                 />

@@ -55,11 +55,32 @@ test("relevamiento de pantallas", async ({ page }, info) => {
   await page.getByRole("button", { name: "Ingresar" }).click();
   await page.waitForURL(/\/dashboard/);
 
+  const hallazgos: string[] = [];
   for (const [nombre, ruta] of PANTALLAS) {
     await page.goto(ruta);
     await page.waitForLoadState("networkidle");
     await captura(page, nombre, info.project.name, true);
+
+    // Controles medibles: scroll horizontal de la página y zonas táctiles chicas (en celular, menos de 44 px).
+    const medidas = await page.evaluate(() => {
+      const chicos: string[] = [];
+      document
+        .querySelectorAll<HTMLElement>("a[href], button, input:not([type=hidden]):not(.sr-only), select, textarea, [role=button], [role=switch]")
+        .forEach((el) => {
+          const r = el.getBoundingClientRect();
+          const visible = r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== "hidden";
+          if (!visible || el.closest("[aria-hidden=true]")) return;
+          if (r.height < 43.5 || r.width < 43.5) {
+            const nombre = (el.getAttribute("aria-label") || el.textContent || el.getAttribute("placeholder") || el.tagName).trim().slice(0, 40);
+            chicos.push(`${el.tagName.toLowerCase()} "${nombre}" ${Math.round(r.width)}x${Math.round(r.height)}`);
+          }
+        });
+      return { scrollHorizontal: document.documentElement.scrollWidth > window.innerWidth + 1, chicos: [...new Set(chicos)].slice(0, 12) };
+    });
+    if (medidas.scrollHorizontal) hallazgos.push(`${nombre}: SCROLL HORIZONTAL`);
+    for (const c of medidas.chicos) hallazgos.push(`${nombre}: zona chica ${c}`);
   }
+  fs.writeFileSync(path.join("capturas-locales", FASE, info.project.name, "_medidas.txt"), hallazgos.join("\n") || "sin hallazgos");
 
   // Un diálogo de stock y el historial, que es donde más se nota el cambio.
   await page.goto("/dashboard/catalogo");
