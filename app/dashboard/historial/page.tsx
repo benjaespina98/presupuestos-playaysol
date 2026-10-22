@@ -15,8 +15,8 @@ import {
 import { AnularDialog } from "@/components/AnularDialog";
 import { EtiquetaAnulado } from "@/components/Anulado";
 import { botonDe } from "@/components/ui/botones";
-import { Buscador } from "@/components/ui/FiltrosPlegables";
-import { BarraListado, BotonFiltros, Chip, ChipsFila, Interruptor, MenuSeleccion } from "@/components/ui/BarraListado";
+import { BarraHerramientas } from "@/components/ui/BarraHerramientas";
+import { contarPorFecha, dentroDeFecha, OPCIONES_FECHA, type FiltroFecha } from "@/lib/filtroFecha";
 import { etiquetaCortaDeOrden, opcionesDeOrden, ordenarPor, type ClaveOrden } from "@/lib/ordenar";
 import { useEstadoPersistente } from "@/lib/useEstadoPersistente";
 import { contarAnulados, estaAnulado } from "@/lib/anulacion";
@@ -74,6 +74,7 @@ function HistorialTabla() {
   const [porAnular, setPorAnular] = useState<Presupuesto | null>(null);
   const [mostrarAnulados, setMostrarAnulados] = useEstadoPersistente("historial:anulados", false);
   const [orden, setOrden] = useEstadoPersistente<ClaveOrden>("historial:orden", "defecto");
+  const [fecha, setFecha] = useEstadoPersistente<FiltroFecha>("historial:fecha", "");
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const usuarioParam = searchParams.get("usuario");
@@ -127,21 +128,37 @@ function HistorialTabla() {
       if (tipoFiltro && p.tipo !== tipoFiltro) return false;
       if (usuarioParam && p.created_by !== usuarioParam) return false;
       if (q && !p.cliente_nombre.toLowerCase().includes(q)) return false;
+      if (!dentroDeFecha(p.created_at, fecha)) return false;
       return true;
     });
     return ordenarPor(filtrados, orden, { nombre: (p) => p.cliente_nombre, actualizado: (p) => p.created_at });
-  }, [presupuestos, busqueda, tipoFiltro, usuarioParam, mostrarAnulados, orden]);
+  }, [presupuestos, busqueda, tipoFiltro, usuarioParam, mostrarAnulados, fecha, orden]);
 
   // Cuántos hay por tipo con el resto de los filtros aplicados (los contadores de los chips).
   const conteoPorTipo = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
     const base = (presupuestos ?? []).filter(
-      (p) => (mostrarAnulados || !estaAnulado(p)) && (!usuarioParam || p.created_by === usuarioParam) && (!q || p.cliente_nombre.toLowerCase().includes(q))
+      (p) => (mostrarAnulados || !estaAnulado(p)) && (!usuarioParam || p.created_by === usuarioParam) && (!q || p.cliente_nombre.toLowerCase().includes(q)) && dentroDeFecha(p.created_at, fecha)
     );
     const porTipo: Record<string, number> = {};
     for (const p of base) porTipo[p.tipo] = (porTipo[p.tipo] ?? 0) + 1;
     return { total: base.length, porTipo };
-  }, [presupuestos, busqueda, usuarioParam, mostrarAnulados]);
+  }, [presupuestos, busqueda, usuarioParam, mostrarAnulados, fecha]);
+
+  // Cuántos hay por período con el resto de los filtros aplicados.
+  const conteoPorFecha = useMemo(() => {
+    const q = busqueda.trim().toLowerCase();
+    return contarPorFecha(
+      (presupuestos ?? []).filter(
+        (p) =>
+          (mostrarAnulados || !estaAnulado(p)) &&
+          (!tipoFiltro || p.tipo === tipoFiltro) &&
+          (!usuarioParam || p.created_by === usuarioParam) &&
+          (!q || p.cliente_nombre.toLowerCase().includes(q))
+      ),
+      (p) => p.created_at
+    );
+  }, [presupuestos, busqueda, tipoFiltro, usuarioParam, mostrarAnulados]);
 
   const cantidadAnulados = useMemo(() => contarAnulados(presupuestos ?? []), [presupuestos]);
 
@@ -166,75 +183,63 @@ function HistorialTabla() {
     return null;
   }
 
-  const hayFiltros = !!(busqueda || tipoFiltro || usuarioParam || orden !== "defecto");
+  const hayFiltros = !!(busqueda || tipoFiltro || usuarioParam || fecha || mostrarAnulados || orden !== "defecto");
   const opcionesUsuario = [{ id: "", etiqueta: "Todos los usuarios" }, ...usuarios.map(([id, nombre]) => ({ id, etiqueta: nombre }))];
 
   return (
-    <PanelPortal amplio>
-      <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl">Historial</h1>
-      <p className="mb-3 mt-1 hidden text-sm text-gray-500 sm:block">
-        Todos los presupuestos guardados en la nube por el equipo.
-      </p>
+    <PanelPortal compacto amplio>
+      <h1 className="sr-only">Historial</h1>
+      <p className="sr-only">Todos los presupuestos guardados en la nube por el equipo.</p>
 
-      <BarraListado
-        buscador={<Buscador valor={busqueda} onCambio={setBusqueda} placeholder="Buscar cliente..." etiqueta="Buscar por nombre de cliente" />}
-        menus={
-          <>
-            {usuarios.length > 1 && (
-              <MenuSeleccion
-                etiqueta="Filtrar por usuario"
-                titulo="Usuario"
-                opciones={opcionesUsuario}
-                valor={usuarioParam ?? ""}
-                porDefecto=""
-                onCambio={cambiarUsuario}
-                buscable={opcionesUsuario.length > 8}
-                textoBoton={usuarioParam ? (usuarios.find(([id]) => id === usuarioParam)?.[1] ?? "Usuario") : "Usuario"}
-              />
-            )}
-            <MenuSeleccion
-              etiqueta="Ordenar"
-              titulo="Orden"
-              opciones={ORDENES.map((o) => ({ id: o.id, etiqueta: o.etiqueta.replace("Nombre", "Cliente").replace("Actualizado (más viejo primero)", "Fecha (más vieja primero)").replace("Actualizado (más reciente primero)", "Fecha (más reciente primero)") }))}
-              valor={orden}
-              porDefecto="defecto"
-              onCambio={setOrden}
-              textoBoton={etiquetaCortaDeOrden(orden).replace("Nombre", "Cliente").replace("Actualizado", "Fecha")}
-            />
-          </>
+      <BarraHerramientas
+        buscador={{ valor: busqueda, onCambio: setBusqueda, placeholder: "Buscar cliente", etiqueta: "Buscar por nombre de cliente" }}
+        secciones={[
+          {
+            id: "tipo",
+            titulo: "Tipo",
+            opciones: [
+              { id: "", etiqueta: "Todos", cantidad: conteoPorTipo.total },
+              ...TIPOS_VALIDOS.map((t) => ({ id: t as string, etiqueta: TITULOS[t], cantidad: conteoPorTipo.porTipo[t] ?? 0 })),
+            ],
+            valor: tipoFiltro ?? "",
+            onCambio: cambiarTipo,
+          },
+          ...(usuarios.length > 1
+            ? [{ id: "usuario", titulo: "Usuario", opciones: opcionesUsuario, valor: usuarioParam ?? "", onCambio: cambiarUsuario }]
+            : []),
+          {
+            id: "fecha",
+            titulo: "Fecha",
+            opciones: OPCIONES_FECHA.map((o) => ({ id: o.id, etiqueta: o.etiqueta, cantidad: conteoPorFecha[o.id] })),
+            valor: fecha,
+            onCambio: (v) => setFecha(v as FiltroFecha),
+          },
+        ]}
+        orden={{
+          opciones: ORDENES.map((o) => ({
+            id: o.id,
+            etiqueta: o.etiqueta.replace("Nombre", "Cliente").replace("Actualizado (más viejo primero)", "Fecha (más vieja primero)").replace("Actualizado (más reciente primero)", "Fecha (más reciente primero)"),
+          })),
+          valor: orden,
+          onCambio: setOrden,
+          etiquetaCorta: (v) => etiquetaCortaDeOrden(v).replace("Nombre", "Cliente").replace("Actualizado", "Fecha"),
+        }}
+        interruptores={cantidadAnulados > 0 ? [{ id: "anulados", etiqueta: `Mostrar anulados (${cantidadAnulados})`, valor: mostrarAnulados, onCambio: setMostrarAnulados }] : []}
+        agregar={{ etiqueta: "Nuevo presupuesto", texto: "Nuevo", href: "/dashboard" }}
+        resultados={presupuestosFiltrados?.length ?? 0}
+        contador={
+          presupuestosFiltrados && !error
+            ? `${presupuestosFiltrados.length}${presupuestosFiltrados.length === 1 ? " presupuesto" : " presupuestos"}${hayFiltros && presupuestos ? ` de ${presupuestos.length - (mostrarAnulados ? 0 : cantidadAnulados)}` : ""}`
+            : undefined
         }
-        chips={
-          <ChipsFila etiqueta="Filtrar por tipo">
-            <Chip activo={!tipoFiltro} onClick={() => cambiarTipo("")} cantidad={conteoPorTipo.total}>
-              Todos
-            </Chip>
-            {TIPOS_VALIDOS.map((t) => (
-              <Chip key={t} activo={tipoFiltro === t} onClick={() => cambiarTipo(tipoFiltro === t ? "" : t)} cantidad={conteoPorTipo.porTipo[t] ?? 0}>
-                {TITULOS[t]}
-              </Chip>
-            ))}
-          </ChipsFila>
-        }
-        filtros={
-          <BotonFiltros
-            contador={[mostrarAnulados].filter(Boolean).length}
-            hayFiltros={hayFiltros || mostrarAnulados}
-            onLimpiar={() => {
-              setBusqueda("");
-              setMostrarAnulados(false);
-              setOrden("defecto");
-              router.push("/dashboard/historial");
-            }}
-          >
-            {cantidadAnulados > 0 ? (
-              <Interruptor checked={mostrarAnulados} onChange={setMostrarAnulados}>
-                Mostrar anulados ({cantidadAnulados})
-              </Interruptor>
-            ) : (
-              <p className="px-1 py-2 text-[13px] text-[#4A5861]">No hay presupuestos anulados.</p>
-            )}
-          </BotonFiltros>
-        }
+        hayFiltros={hayFiltros}
+        onLimpiar={() => {
+          setBusqueda("");
+          setMostrarAnulados(false);
+          setOrden("defecto");
+          setFecha("");
+          router.push("/dashboard/historial");
+        }}
       />
 
       {error && (
@@ -272,22 +277,10 @@ function HistorialTabla() {
         </div>
       )}
 
-      {/* Cuántos resultados quedaron: con los tres filtros combinados, sin esto
-          no queda claro si la lista está corta por el filtro o porque no hay más. */}
-      {presupuestosFiltrados && presupuestosFiltrados.length > 0 && (
-        <p className="py-1.5 text-[13px] text-[#4A5861]" aria-live="polite">
-          {presupuestosFiltrados.length}
-          {presupuestosFiltrados.length === 1 ? " presupuesto" : " presupuestos"}
-          {hayFiltros && presupuestos
-            ? ` de ${presupuestos.length}`
-            : ""}
-        </p>
-      )}
-
       {presupuestosFiltrados && presupuestosFiltrados.length > 0 && (
         <>
           {/* Desktop / tablet: tabla completa */}
-          <div className="hidden rounded-lg border border-gray-200 bg-[#FFFFFF] sm:block lg:rounded-none">
+          <div className="hidden rounded-lg border border-gray-200 bg-[#FFFFFF] xl:block xl:rounded-none">
             {/* Anchos pensados para que el nombre del cliente no se parta en dos líneas (si es larguísimo se
                 recorta con "…" y el nombre completo queda en el tooltip) y el detalle tenga lugar. */}
             <table className="w-full table-fixed text-left text-sm">
@@ -300,7 +293,7 @@ function HistorialTabla() {
                 <col className="w-[18rem]" />
               </colgroup>
               <thead>
-                <tr className="border-b border-gray-200 bg-[#F1F4F6] text-[13px] uppercase tracking-wide text-[#4A5861] lg:[&>th]:sticky lg:[&>th]:top-[var(--catalogo-barra,0px)] lg:[&>th]:z-10 lg:[&>th]:bg-[#F1F4F6]">
+                <tr className="border-b border-gray-200 bg-[#F1F4F6] text-[13px] uppercase tracking-wide text-[#4A5861] xl:[&>th]:sticky xl:[&>th]:top-[var(--catalogo-barra,0px)] xl:[&>th]:z-10 xl:[&>th]:bg-[#F1F4F6]">
                   <th className="px-4 py-3 font-semibold">Tipo</th>
                   <th className="px-4 py-3 font-semibold">Cliente</th>
                   <th className="px-4 py-3 font-semibold">Detalle</th>
@@ -316,9 +309,9 @@ function HistorialTabla() {
                   const anulado = estaAnulado(p);
                   const esDueño = !!userId && p.created_by === userId && !anulado;
                   return (
-                    <tr key={p.id} className={`border-b border-gray-100 last:border-0 ${anulado ? "bg-gray-50/70 text-gray-500" : ""}`}>
+                    <tr key={p.id} className={`border-b border-gray-100 last:border-0 ${anulado ? "bg-gray-50 text-gray-500" : ""}`}>
                       <td className="px-4 py-3">
-                        <span className="inline-flex whitespace-nowrap rounded-full bg-marca/8 px-2.5 py-0.5 text-xs font-semibold text-marca">
+                        <span className="inline-flex whitespace-nowrap rounded-full bg-[#E3ECEF] px-2.5 py-0.5 text-xs font-semibold text-[#244B5A]">
                           {TITULOS[p.tipo]}
                         </span>
                       </td>
@@ -386,78 +379,55 @@ function HistorialTabla() {
             </table>
           </div>
 
-          {/* Mobile: tarjetas — la tabla obligaba a scroll horizontal para llegar a
-              las acciones, que quedaban fuera de pantalla en un celular en vertical. */}
-          <div className="flex flex-col gap-3 sm:hidden">
+          {/* Celular: una fila compacta por presupuesto (la tabla obligaba a scroll horizontal para llegar a las acciones). */}
+          <ul className="divide-y divide-[#EEF1F3] rounded-lg border border-[#D9DFE3] bg-[#FFFFFF] xl:hidden">
             {presupuestosFiltrados.map((p) => {
               const detalle = resumenPresupuesto(p.tipo, p.datos);
               const anulado = estaAnulado(p);
               const esDueño = !!userId && p.created_by === userId && !anulado;
               return (
-                <div
-                  key={p.id}
-                  className={`rounded-lg border border-gray-200 p-4 shadow-sm ${anulado ? "bg-gray-50" : "bg-[#FFFFFF]"}`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        <span className={anulado ? "line-through" : ""}>{p.cliente_nombre}</span>
-                        {anulado && <EtiquetaAnulado className="ml-2" />}
-                      </p>
-                      {anulado && p.anulado_motivo && (
-                        <p className="text-xs text-gray-500">Motivo: {p.anulado_motivo}</p>
-                      )}
-                      <p className="text-sm text-gray-500">
-                        {TITULOS[p.tipo]}
-                        {detalle ? ` · ${detalle}` : ""}
-                      </p>
-                      <p className="text-xs text-gray-400">{nombreCreador(p.creador)}</p>
-                    </div>
-                    <span className="shrink-0 text-xs text-gray-400">
+                <li key={p.id} className={`flex items-center gap-2 px-4 py-2 ${anulado ? "bg-gray-50" : ""}`}>
+                  <div className="min-w-0 flex-1 text-[15px] leading-5">
+                    <p className="line-clamp-2 break-words font-medium text-gray-900">
+                      <span className={anulado ? "line-through" : ""}>{p.cliente_nombre}</span>
+                      {anulado && <EtiquetaAnulado className="ml-2" />}
+                    </p>
+                    <p className="truncate text-[13px] text-[#4A5861]">
+                      {TITULOS[p.tipo]}
+                      {detalle ? ` · ${detalle}` : ""}
+                    </p>
+                    <p className="truncate text-[13px] text-[#4A5861]">
                       {formatFecha(p.created_at)}
-                    </span>
+                      {anulado && p.anulado_motivo ? ` · Motivo: ${p.anulado_motivo}` : nombreCreador(p.creador) !== "—" ? ` · ${nombreCreador(p.creador)}` : ""}
+                    </p>
                   </div>
-                  <div className="mt-3 flex gap-2 border-t border-gray-100 pt-3">
+                  <div className="flex shrink-0 items-center gap-1.5">
                     {anulado && (
-                      <Link href={`/dashboard/${p.tipo}?id=${p.id}`} className={botonDe("primario", "flex-1")}>
+                      <Link href={`/dashboard/${p.tipo}?id=${p.id}`} className={botonDe("secundario", "px-3")}>
                         Ver
-                      </Link>
-                    )}
-                    {esDueño && (
-                      <Link
-                        href={`/dashboard/${p.tipo}?id=${p.id}`}
-                        title="Editar"
-                        aria-label="Editar"
-                        className={botonDe("primario", "w-12 shrink-0 px-0")}
-                      >
-                        <IconEdit className="h-[18px] w-[18px]" />
                       </Link>
                     )}
                     {/* Un presupuesto anulado se ve y se exporta, pero no se duplica. */}
                     {!anulado && (
-                      <Link
-                        href={`/dashboard/${p.tipo}?duplicar=${p.id}`}
-                        className={botonDe(esDueño ? "secundario" : "primario", "flex-1")}
-                      >
-                        <IconCopy className="h-4 w-4" />
-                        Duplicar
+                      <Link href={`/dashboard/${p.tipo}?duplicar=${p.id}`} title="Duplicar" aria-label="Duplicar" className={botonDe("suave", "w-11 px-0")}>
+                        <IconCopy className="h-[18px] w-[18px]" />
                       </Link>
                     )}
                     {esDueño && (
-                      <button
-                        onClick={() => setPorAnular(p)}
-                        title="Anular"
-                        aria-label="Anular"
-                        className={botonDe("peligro", "w-12 shrink-0 px-0")}
-                      >
+                      <Link href={`/dashboard/${p.tipo}?id=${p.id}`} title="Editar" aria-label="Editar" className={botonDe("secundario", "w-11 px-0")}>
+                        <IconEdit className="h-[18px] w-[18px]" />
+                      </Link>
+                    )}
+                    {esDueño && (
+                      <button onClick={() => setPorAnular(p)} title="Anular" aria-label="Anular" className={botonDe("peligro", "w-11 px-0")}>
                         <IconTrash className="h-4 w-4" />
                       </button>
                     )}
                   </div>
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         </>
       )}
 

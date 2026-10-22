@@ -13,16 +13,16 @@ import {
 } from "@/lib/domain/abastecimiento/pedidoDocumento";
 import { contarPorEstado, filtrarPedidos, proveedoresDePedido } from "@/lib/domain/abastecimiento/pedidosLista";
 import { formatARSExacto } from "@/lib/format/ars";
+import { contarPorFecha, dentroDeFecha, OPCIONES_FECHA, type FiltroFecha } from "@/lib/filtroFecha";
 import { etiquetaCortaDeOrden, opcionesDeOrden, ordenarPor, type ClaveOrden } from "@/lib/ordenar";
 import { useEstadoPersistente } from "@/lib/useEstadoPersistente";
 import { PanelPortal } from "@/components/PanelPortal";
 import { EtiquetaAnulado } from "@/components/Anulado";
 import { contarAnulados, estaAnulado } from "@/lib/anulacion";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
-import { Buscador } from "@/components/ui/FiltrosPlegables";
-import { BarraListado, BotonFiltros, Chip, ChipsFila, Interruptor, MenuSeleccion, Toast } from "@/components/ui/BarraListado";
+import { BarraHerramientas } from "@/components/ui/BarraHerramientas";
+import { Toast } from "@/components/ui/BarraListado";
 import { BotonLapiz, alTocarFila } from "@/components/ui/BotonLapiz";
-import { botonDe } from "@/components/ui/botones";
 import { CLASE_ESTADO, DetallePedidoModal } from "@/components/pedidos/DetallePedidoModal";
 
 /** Columnas desde `lg`: N° · Fecha · Obra · Pileta · Proveedores · Costo · Estado · Editar. */
@@ -32,9 +32,10 @@ interface Filtros {
   busqueda: string;
   estado: EstadoPedido | "";
   mostrarAnulados: boolean;
+  fecha: FiltroFecha;
   orden: ClaveOrden;
 }
-const SIN_FILTROS: Filtros = { busqueda: "", estado: "", mostrarAnulados: false, orden: "defecto" };
+const SIN_FILTROS: Filtros = { busqueda: "", estado: "", mostrarAnulados: false, fecha: "", orden: "defecto" };
 const ORDENES = opcionesDeOrden(["nombre", "precio", "actualizado"]);
 
 export default function PedidosPage() {
@@ -43,6 +44,7 @@ export default function PedidosPage() {
   // La búsqueda, los filtros y el orden se conservan al abrir un pedido y volver.
   const [filtros, setFiltros] = useEstadoPersistente<Filtros>("pedidos:filtros", SIN_FILTROS);
   const { busqueda, estado, mostrarAnulados } = filtros;
+  const fecha = filtros.fecha ?? "";
   const orden = filtros.orden ?? "defecto";
   const cambiar = (parcial: Partial<Filtros>) => setFiltros({ ...filtros, ...parcial });
   const [abierto, setAbierto] = useState<PedidoGuardado | null>(null);
@@ -60,66 +62,68 @@ export default function PedidosPage() {
     };
   }, []);
 
+  // Los contadores de cada filtro cuentan con los OTROS filtros aplicados (el de estado, sin el estado; el de fecha, sin la fecha).
+  const sinEstado = useMemo(
+    () => (pedidos ?? []).filter((p) => dentroDeFecha(p.created_at, fecha)),
+    [pedidos, fecha]
+  );
   const visibles = useMemo(
     () =>
       pedidos
-        ? ordenarPor(filtrarPedidos(pedidos, { busqueda, estado: estado || null, incluirAnulados: mostrarAnulados }), orden, {
-            nombre: (p) => p.obra,
-            precio: (p) => p.costo,
-            actualizado: (p) => p.updated_at,
-          })
+        ? ordenarPor(
+            filtrarPedidos(pedidos, { busqueda, estado: estado || null, incluirAnulados: mostrarAnulados }).filter((p) => dentroDeFecha(p.created_at, fecha)),
+            orden,
+            { nombre: (p) => p.obra, precio: (p) => p.costo, actualizado: (p) => p.updated_at }
+          )
         : null,
-    [pedidos, busqueda, estado, mostrarAnulados, orden]
+    [pedidos, busqueda, estado, mostrarAnulados, fecha, orden]
   );
-  const conteos = useMemo(() => contarPorEstado(pedidos ?? [], busqueda, mostrarAnulados), [pedidos, busqueda, mostrarAnulados]);
+  const conteos = useMemo(() => contarPorEstado(sinEstado, busqueda, mostrarAnulados), [sinEstado, busqueda, mostrarAnulados]);
+  const pedidosPorFecha = useMemo(
+    () => contarPorFecha(filtrarPedidos(pedidos ?? [], { busqueda, estado: estado || null, incluirAnulados: mostrarAnulados }), (p) => p.created_at),
+    [pedidos, busqueda, estado, mostrarAnulados]
+  );
   const cantidadAnulados = useMemo(() => contarAnulados(pedidos ?? []), [pedidos]);
-  const hayFiltros = !!(busqueda || estado || mostrarAnulados || orden !== "defecto");
+  const hayFiltros = !!(busqueda || estado || mostrarAnulados || fecha || orden !== "defecto");
   const cerrarToast = useCallback(() => setMensaje(null), []);
 
   return (
     <PanelPortal compacto amplio>
-      <EncabezadoPagina titulo="Pedidos" descripcion="Historial de pedidos de materiales, con su número y su estado.">
-        <Link href="/dashboard/catalogo/pedido" aria-label="Armar pedido nuevo" className={botonDe("primario", "px-4")}>
-          Armar pedido<span className="hidden sm:inline">&nbsp;nuevo</span>
-        </Link>
-      </EncabezadoPagina>
+      <EncabezadoPagina titulo="Pedidos" descripcion="Historial de pedidos de materiales, con su número y su estado." />
 
-      <BarraListado
-        buscador={<Buscador valor={busqueda} onCambio={(v) => cambiar({ busqueda: v })} placeholder="Buscar por número, obra, proveedor..." etiqueta="Buscar pedidos" />}
-        menus={
-          <MenuSeleccion
-            etiqueta="Ordenar"
-            titulo="Orden"
-            opciones={ORDENES.map((o) => ({ id: o.id, etiqueta: o.etiqueta.replace("Nombre", "Obra").replace("Precio", "Costo") }))}
-            valor={orden}
-            porDefecto="defecto"
-            onCambio={(v) => cambiar({ orden: v })}
-            textoBoton={etiquetaCortaDeOrden(orden).replace("Nombre", "Obra").replace("Precio", "Costo")}
-          />
-        }
-        chips={
-          <ChipsFila etiqueta="Filtrar por estado">
-            <Chip activo={estado === ""} onClick={() => cambiar({ estado: "" })} cantidad={conteos.total}>
-              Todos
-            </Chip>
-            {ESTADOS_PEDIDO.map((e) => (
-              <Chip key={e} activo={estado === e} onClick={() => cambiar({ estado: estado === e ? "" : e })} cantidad={conteos.porEstado[e]}>
-                {ETIQUETA_ESTADO[e]}
-              </Chip>
-            ))}
-          </ChipsFila>
-        }
-        filtros={
-          <BotonFiltros contador={mostrarAnulados ? 1 : 0} hayFiltros={hayFiltros} onLimpiar={() => setFiltros(SIN_FILTROS)}>
-            {cantidadAnulados > 0 ? (
-              <Interruptor checked={mostrarAnulados} onChange={(v) => cambiar({ mostrarAnulados: v })}>
-                Mostrar anulados ({cantidadAnulados})
-              </Interruptor>
-            ) : (
-              <p className="px-1 py-2 text-[13px] text-[#4A5861]">No hay pedidos anulados.</p>
-            )}
-          </BotonFiltros>
-        }
+      <BarraHerramientas
+        buscador={{ valor: busqueda, onCambio: (v) => cambiar({ busqueda: v }), placeholder: "Buscar pedido", etiqueta: "Buscar pedidos" }}
+        secciones={[
+          {
+            id: "estado",
+            titulo: "Estado",
+            opciones: [
+              { id: "", etiqueta: "Todos", cantidad: conteos.total },
+              ...ESTADOS_PEDIDO.map((e) => ({ id: e as string, etiqueta: ETIQUETA_ESTADO[e], cantidad: conteos.porEstado[e] })),
+            ],
+            valor: estado,
+            onCambio: (v) => cambiar({ estado: v as EstadoPedido | "" }),
+          },
+          {
+            id: "fecha",
+            titulo: "Fecha",
+            opciones: OPCIONES_FECHA.map((o) => ({ id: o.id, etiqueta: o.etiqueta, cantidad: pedidosPorFecha[o.id] })),
+            valor: fecha,
+            onCambio: (v) => cambiar({ fecha: v as FiltroFecha }),
+          },
+        ]}
+        orden={{
+          opciones: ORDENES.map((o) => ({ id: o.id, etiqueta: o.etiqueta.replace("Nombre", "Obra").replace("Precio", "Costo") })),
+          valor: orden,
+          onCambio: (v) => cambiar({ orden: v }),
+          etiquetaCorta: (v) => etiquetaCortaDeOrden(v).replace("Nombre", "Obra").replace("Precio", "Costo"),
+        }}
+        interruptores={cantidadAnulados > 0 ? [{ id: "anulados", etiqueta: `Mostrar anulados (${cantidadAnulados})`, valor: mostrarAnulados, onCambio: (v) => cambiar({ mostrarAnulados: v }) }] : []}
+        agregar={{ etiqueta: "Armar pedido nuevo", texto: "Armar pedido", href: "/dashboard/catalogo/pedido" }}
+        resultados={visibles?.length ?? 0}
+        contador={visibles && !error ? `${visibles.length} ${hayFiltros && pedidos ? `de ${pedidos.length - (mostrarAnulados ? 0 : cantidadAnulados)} pedidos` : visibles.length === 1 ? "pedido" : "pedidos"}` : undefined}
+        hayFiltros={hayFiltros}
+        onLimpiar={() => setFiltros(SIN_FILTROS)}
       />
 
       {error && (
@@ -147,9 +151,6 @@ export default function PedidosPage() {
 
       {!error && visibles && visibles.length > 0 && (
         <>
-          <p className="py-1 text-[13px] text-[#4A5861]" aria-live="polite">
-            {visibles.length} {hayFiltros && pedidos ? `de ${pedidos.length} pedidos` : visibles.length === 1 ? "pedido" : "pedidos"}
-          </p>
           <div className="rounded-lg border border-[#D9DFE3] bg-[#FFFFFF] lg:rounded-none">
             <div
               aria-hidden="true"
@@ -209,11 +210,11 @@ function FilaPedido({ pedido: p, onAbrir }: { pedido: PedidoGuardado; onAbrir: (
   return (
     <li
       onClick={alTocarFila(onAbrir)}
-      className={`flex min-h-[3.25rem] cursor-pointer items-center gap-3 px-4 py-1 text-[15px] leading-5 transition-colors hover:bg-[#F4F8F9] active:bg-[#EAF0F2] lg:grid lg:min-h-[2.75rem] lg:gap-x-4 lg:py-0 ${COLUMNAS} ${p.estado === "cancelado" || estaAnulado(p) ? "opacity-70" : ""}`}
+      className={`flex min-h-[3.25rem] cursor-pointer items-center gap-3 px-4 py-1 text-[15px] leading-5 transition-colors hover:bg-[#F4F8F9] active:bg-[#EAF0F2] lg:grid lg:min-h-[3rem] lg:gap-x-4 lg:py-0 ${COLUMNAS} ${p.estado === "cancelado" || estaAnulado(p) ? "opacity-70" : ""}`}
     >
       <div className="min-w-0 flex-1 lg:contents">
         <p className="flex items-baseline gap-2 lg:contents">
-          <span className="font-semibold tabular-nums text-[#244B5A]">{num}</span>
+          <span className="whitespace-nowrap font-semibold tabular-nums text-[#244B5A]">{num}</span>
           <span className="whitespace-nowrap text-[13px] tabular-nums text-[#4A5861] lg:text-sm lg:text-gray-600">{fechaDocumento(new Date(p.created_at))}</span>
         </p>
         <div className="min-w-0 lg:order-none">

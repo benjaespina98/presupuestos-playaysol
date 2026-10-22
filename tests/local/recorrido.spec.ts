@@ -3,22 +3,27 @@ import fs from "node:fs";
 import { iniciarSesion } from "./helpers/sesion";
 import path from "node:path";
 import { medirPagina, type Medidas } from "./helpers/medir";
+import { medirLayout, type ProblemasDeLayout } from "./helpers/layout";
 import { asegurarDatosDePantallas } from "./helpers/datos";
 
 /**
- * Recorre TODAS las pantallas del portal LOCAL (login, Nuevo con sus 5 calculadoras, Historial, las 5 pestañas
- * del Catálogo) y las ventanas que se abren desde ellas (edición de material, proveedor e ítem, selectores, menús,
- * detalle de pedido, diálogos de stock), en cada tamaño de pantalla del proyecto de Playwright, y mide con los
- * estilos reales:
+ * Recorre TODAS las pantallas del portal LOCAL (login con y sin error, Nuevo con sus 5 calculadoras, Historial,
+ * Precios y las 4 secciones de Compras) con sus estados (filtros abiertos, filtros activos, lista bajada, vacíos) y
+ * las ventanas que se abren desde ellas (edición de material, proveedor e ítem, selectores, menús, detalle de pedido,
+ * diálogos de stock), en cada tamaño de pantalla del proyecto de Playwright, y mide con los estilos y las cajas reales:
  *
  *   - contraste de cada control visible: texto 4,5:1 (3:1 si es grande), íconos y bordes 3:1, contra el fondo real;
  *   - textos visibles menores a 13 px;
  *   - zonas táctiles menores a 44 px;
- *   - scroll horizontal de la página.
+ *   - scroll horizontal de la página;
+ *   - textos cortados sin elipsis intencional o fuera de la pantalla;
+ *   - elementos que se solapan (cajas de texto y de controles que se cruzan);
+ *   - controles tapados por un elemento fijo o flotante;
+ *   - controles fuera del viewport.
  *
- * Se corre con `node scripts/e2e-local.mjs recorrido` (o `npx playwright test -c playwright.responsive.config.ts`
- * con la base y el portal locales ya levantados). Con E2E_FASE=antes|despues guarda el informe y las capturas en
- * capturas-locales/<fase>/<proyecto>/ (ignorada por git). Sólo mira: no guarda ni cambia datos.
+ * Se corre con `node scripts/e2e-local.mjs recorrido` (o `node scripts/e2e-contra-servidor.mjs recorrido` con el portal
+ * local ya levantado por `node scripts/e2e-local.mjs servir`). Con E2E_FASE=antes|despues guarda el informe y las
+ * capturas en capturas-locales/<fase>/<proyecto>/ (ignorada por git). Sólo mira: no guarda ni cambia datos.
  */
 
 const EMAIL = process.env.E2E_LOCAL_EMAIL ?? "";
@@ -33,10 +38,29 @@ interface Paso {
   preparar?: (page: Page) => Promise<void>;
 }
 
+const esMovil = (page: Page) => (page.viewportSize()?.width ?? 1000) < 768;
 const tocar = (page: Page, nombre: string | RegExp) => page.getByRole("button", { name: nombre }).first().click({ timeout: 8_000 });
 const cerrar = async (page: Page) => {
   await page.keyboard.press("Escape");
   await page.waitForTimeout(150);
+};
+/** Celular: el botón "Filtros" abre la hoja con todo. Escritorio: "Más filtros" abre el panel con los interruptores. */
+const abrirFiltros = (page: Page) => tocar(page, esMovil(page) ? /^Filtros/ : /^Más filtros/);
+/** Abre un filtro: en el celular, dentro de la hoja (un acordeón); en escritorio, su menú. */
+async function abrirFiltro(page: Page, hoja: RegExp, menu: RegExp) {
+  if (esMovil(page)) {
+    await tocar(page, /^Filtros/);
+    await tocar(page, hoja);
+  } else await tocar(page, menu);
+}
+/** Elige una opción de un filtro ya abierto; en el celular cierra la hoja con "Ver N resultados". */
+async function elegirOpcion(page: Page, opcion: RegExp) {
+  await page.getByRole("radio", { name: opcion }).first().click({ timeout: 8_000 });
+  if (esMovil(page)) await tocar(page, /^Ver \d+/);
+}
+const bajar = (page: Page, y: number) => page.evaluate((v) => window.scrollTo(0, v), y);
+const buscar = async (page: Page, etiqueta: RegExp, texto: string) => {
+  await page.getByRole("textbox", { name: etiqueta }).first().fill(texto);
 };
 
 const PASOS: Paso[] = [
@@ -47,12 +71,51 @@ const PASOS: Paso[] = [
   { nombre: "calc-revestimientos", ruta: "/dashboard/revestimientos" },
   { nombre: "calc-losetas", ruta: "/dashboard/losetas" },
   { nombre: "historial", ruta: "/dashboard/historial" },
-  { nombre: "historial-filtros", ruta: "/dashboard/historial", preparar: (p) => tocar(p, /^Filtros/) },
+  { nombre: "historial-filtros", ruta: "/dashboard/historial", preparar: (p) => abrirFiltros(p) },
+  {
+    nombre: "historial-con-filtro",
+    ruta: "/dashboard/historial",
+    preparar: async (p) => {
+      await abrirFiltro(p, /^Tipo/, /^Filtrar por tipo/);
+      await elegirOpcion(p, /^Cercos/);
+    },
+  },
+  { nombre: "historial-vacio", ruta: "/dashboard/historial", preparar: (p) => buscar(p, /Buscar por nombre/, "zzzzzz") },
   { nombre: "historial-anular", ruta: "/dashboard/historial", preparar: (p) => tocar(p, /^Anular/) },
   { nombre: "catalogo-precios", ruta: "/dashboard/catalogo" },
-  { nombre: "catalogo-filtros", ruta: "/dashboard/catalogo", preparar: (p) => tocar(p, /^Filtros/) },
-  { nombre: "catalogo-menu-stock", ruta: "/dashboard/catalogo", preparar: (p) => tocar(p, /^Filtrar por stock/) },
-  { nombre: "catalogo-menu-orden", ruta: "/dashboard/catalogo", preparar: (p) => tocar(p, /^Ordenar/) },
+  { nombre: "catalogo-filtros", ruta: "/dashboard/catalogo", preparar: (p) => abrirFiltros(p) },
+  { nombre: "catalogo-menu-stock", ruta: "/dashboard/catalogo", preparar: (p) => abrirFiltro(p, /^Stock/, /^Filtrar por stock/) },
+  { nombre: "catalogo-menu-categoria", ruta: "/dashboard/catalogo", preparar: (p) => abrirFiltro(p, /^Categoría/, /^Filtrar por categoría/) },
+  { nombre: "catalogo-menu-orden", ruta: "/dashboard/catalogo", preparar: (p) => abrirFiltro(p, /^Orden/, /^Ordenar/) },
+  {
+    nombre: "catalogo-con-filtros",
+    ruta: "/dashboard/catalogo",
+    preparar: async (p) => {
+      await abrirFiltro(p, /^Stock/, /^Filtrar por stock/);
+      await elegirOpcion(p, /^Con stock/);
+    },
+  },
+  {
+    nombre: "catalogo-stock-negativo",
+    ruta: "/dashboard/catalogo",
+    preparar: async (p) => {
+      await abrirFiltro(p, /^Stock/, /^Filtrar por stock/);
+      await elegirOpcion(p, /^Stock negativo/);
+    },
+  },
+  { nombre: "catalogo-vacio", ruta: "/dashboard/catalogo", preparar: (p) => buscar(p, /Buscar en el cat/, "zzzzzz") },
+  { nombre: "catalogo-bajado", ruta: "/dashboard/catalogo", preparar: (p) => bajar(p, 1400) },
+  {
+    nombre: "catalogo-flecha",
+    ruta: "/dashboard/catalogo",
+    preparar: async (p) => {
+      // La flecha de "volver arriba" aparece al SUBIR la página, pasado un buen trecho.
+      await bajar(p, 1500);
+      await p.waitForTimeout(200);
+      await p.evaluate(() => window.scrollTo(0, 1380));
+      await p.getByRole("button", { name: "Volver arriba" }).waitFor({ timeout: 4_000 });
+    },
+  },
   { nombre: "catalogo-agregar-item", ruta: "/dashboard/catalogo", preparar: (p) => tocar(p, /^Agregar/) },
   { nombre: "catalogo-editar-item", ruta: "/dashboard/catalogo", preparar: (p) => tocar(p, /^Editar$/) },
   { nombre: "catalogo-menu-fila", ruta: "/dashboard/catalogo", preparar: (p) => tocar(p, /^Más acciones de/) },
@@ -82,8 +145,18 @@ const PASOS: Paso[] = [
     },
   },
   { nombre: "catalogo-materiales", ruta: "/dashboard/catalogo/materiales" },
-  { nombre: "materiales-filtros", ruta: "/dashboard/catalogo/materiales", preparar: (p) => tocar(p, /^Filtros/) },
-  { nombre: "materiales-menu-proveedor", ruta: "/dashboard/catalogo/materiales", preparar: (p) => tocar(p, /^Filtrar por proveedor/) },
+  { nombre: "materiales-filtros", ruta: "/dashboard/catalogo/materiales", preparar: (p) => abrirFiltros(p) },
+  { nombre: "materiales-menu-proveedor", ruta: "/dashboard/catalogo/materiales", preparar: (p) => abrirFiltro(p, /^Proveedor/, /^Filtrar por proveedor/) },
+  {
+    nombre: "materiales-con-filtros",
+    ruta: "/dashboard/catalogo/materiales",
+    preparar: async (p) => {
+      await abrirFiltro(p, /^Rubro/, /^Filtrar por rubro/);
+      await elegirOpcion(p, /^Hidráulica/);
+    },
+  },
+  { nombre: "materiales-bajado", ruta: "/dashboard/catalogo/materiales", preparar: (p) => bajar(p, 1000) },
+  { nombre: "materiales-vacio", ruta: "/dashboard/catalogo/materiales", preparar: (p) => buscar(p, /Buscar materiales/, "zzzzzz") },
   { nombre: "material-nuevo", ruta: "/dashboard/catalogo/materiales", preparar: (p) => tocar(p, /^Agregar material/) },
   { nombre: "material-editar", ruta: "/dashboard/catalogo/materiales", preparar: (p) => tocar(p, /^Editar Material de prueba 1-1/) },
   {
@@ -103,10 +176,31 @@ const PASOS: Paso[] = [
     },
   },
   { nombre: "catalogo-proveedores", ruta: "/dashboard/catalogo/proveedores" },
+  { nombre: "proveedores-filtros", ruta: "/dashboard/catalogo/proveedores", preparar: (p) => abrirFiltros(p) },
+  {
+    nombre: "proveedores-con-filtros",
+    ruta: "/dashboard/catalogo/proveedores",
+    preparar: async (p) => {
+      await abrirFiltro(p, /^Teléfono/, /^Filtrar por teléfono/);
+      await elegirOpcion(p, /^Sin teléfono/);
+    },
+  },
   { nombre: "proveedor-nuevo", ruta: "/dashboard/catalogo/proveedores", preparar: (p) => tocar(p, /^Agregar proveedor/) },
   { nombre: "proveedor-editar", ruta: "/dashboard/catalogo/proveedores", preparar: (p) => tocar(p, /^Editar Distribuidora Norte E2E/) },
   { nombre: "catalogo-armar-pedido", ruta: "/dashboard/catalogo/pedido" },
-  { nombre: "pedido-menu-exportar", ruta: "/dashboard/catalogo/pedido", preparar: async (p) => {
+  { nombre: "armar-pedido-bajado", ruta: "/dashboard/catalogo/pedido", preparar: (p) => bajar(p, 1100) },
+  {
+    nombre: "armar-pedido-agregar",
+    ruta: "/dashboard/catalogo/pedido",
+    preparar: async (p) => {
+      await bajar(p, 1100);
+      await tocar(p, /^Agregar material/);
+    },
+  },
+  {
+    nombre: "pedido-menu-exportar",
+    ruta: "/dashboard/catalogo/pedido",
+    preparar: async (p) => {
       // Con un proveedor desactivado en el pedido, exportar pide confirmar antes.
       const confirmar = p.getByLabel("Pedir igual a proveedores desactivados");
       if (await confirmar.count()) await confirmar.check();
@@ -114,6 +208,16 @@ const PASOS: Paso[] = [
     },
   },
   { nombre: "catalogo-pedidos", ruta: "/dashboard/catalogo/pedidos" },
+  { nombre: "pedidos-filtros", ruta: "/dashboard/catalogo/pedidos", preparar: (p) => abrirFiltros(p) },
+  {
+    nombre: "pedidos-con-filtros",
+    ruta: "/dashboard/catalogo/pedidos",
+    preparar: async (p) => {
+      await abrirFiltro(p, /^Estado/, /^Filtrar por estado/);
+      await elegirOpcion(p, /^Enviado/);
+    },
+  },
+  { nombre: "pedidos-vacio", ruta: "/dashboard/catalogo/pedidos", preparar: (p) => buscar(p, /Buscar pedidos/, "zzzzzz") },
   { nombre: "pedido-detalle", ruta: "/dashboard/catalogo/pedidos", preparar: (p) => tocar(p, /^Abrir PED/) },
   {
     nombre: "pedido-anular",
@@ -125,8 +229,9 @@ const PASOS: Paso[] = [
   },
 ];
 
+type Resultado = Medidas & ProblemasDeLayout & { omitido?: string };
 /** Los resultados de cada paso, para las pruebas que vienen después (corren en orden, en el mismo proceso). */
-const resultados = new Map<string, Medidas & { omitido?: string }>();
+const resultados = new Map<string, Resultado>();
 let conSesion = false;
 
 async function soloLocal(page: Page, bloqueados: string[]) {
@@ -138,7 +243,6 @@ async function soloLocal(page: Page, bloqueados: string[]) {
   });
 }
 
-test.describe.configure({ mode: "serial" });
 
 test.beforeAll(async () => {
   // Un pedido guardado y presupuestos en el historial, para llegar a sus ventanas.
@@ -146,7 +250,7 @@ test.beforeAll(async () => {
 });
 
 test("recorrido: mide todas las pantallas y ventanas", async ({ page }, info) => {
-  test.setTimeout(900_000);
+  test.setTimeout(1_200_000);
   expect(EMAIL && PASSWORD, "faltan las credenciales de la prueba").toBeTruthy();
   const bloqueados: string[] = [];
   const errores: string[] = [];
@@ -157,23 +261,39 @@ test("recorrido: mide todas las pantallas y ventanas", async ({ page }, info) =>
   const dir = path.join("capturas-locales", FASE, proyecto);
   fs.mkdirSync(dir, { recursive: true });
 
+  // La flecha de "volver arriba" se va sola a los 2,5 s: en ese paso se la vuelve a mostrar (un toque de scroll hacia arriba)
+  // justo antes de medir y de sacar la captura, para que esté a la vista.
+  const reavivar = (nombre: string) => (nombre === "catalogo-flecha" ? page.evaluate(() => window.scrollBy(0, -3)).then(() => page.waitForTimeout(120)) : Promise.resolve());
   const medir = async (nombre: string, extra?: string) => {
-    await page.waitForTimeout(400); // que terminen las transiciones de color antes de medir
+    await page.waitForTimeout(450); // que terminen las transiciones de color antes de medir
+    await reavivar(nombre);
     const m = await medirPagina(page);
-    resultados.set(`${proyecto}|${nombre}`, { ...m, omitido: extra });
+    await reavivar(nombre);
+    const l = await medirLayout(page);
+    resultados.set(`${proyecto}|${nombre}`, { ...m, ...l, omitido: extra });
+    // El indicador de desarrollo de Next no es del portal: no sale en la captura.
+    await page.addStyleTag({ content: "nextjs-portal{display:none!important}" });
+    await reavivar(nombre);
     await page.screenshot({ path: path.join(dir, `${nombre}.png`), fullPage: false });
   };
 
-  // Login (sin sesión).
+  // Login (sin sesión), con y sin error.
   await page.goto("/login");
   await page.waitForLoadState("networkidle");
   await medir("login");
+  await page.getByPlaceholder("tu@email.com").fill("nadie@example.com");
+  await page.getByPlaceholder("••••••••").fill("clave-incorrecta");
+  await page.getByRole("button", { name: "Ingresar" }).click();
+  await page.getByRole("alert").first().waitFor({ timeout: 15_000 }).catch(() => {});
+  await medir("login-error");
   await iniciarSesion(page, EMAIL, PASSWORD);
   conSesion = true;
 
   for (const paso of PASOS) {
     await page.goto(paso.ruta);
     await page.waitForLoadState("networkidle");
+    // Que la lista termine de cargar antes de tocar nada (las pantallas con lista cargan de la base).
+    await page.waitForFunction(() => !document.body.innerText.includes("Cargando"), undefined, { timeout: 15_000 }).catch(() => {});
     let omitido: string | undefined;
     if (paso.preparar) {
       try {
@@ -184,10 +304,17 @@ test("recorrido: mide todas las pantallas y ventanas", async ({ page }, info) =>
       }
     }
     await medir(paso.nombre, omitido);
+    // Las pantallas base se miden también con la página bajada hasta el final: ahí nada puede quedar bajo una barra fija.
+    if (!paso.preparar && !paso.nombre.endsWith("-bajado")) {
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await medir(`${paso.nombre}@final`);
+    }
     if (paso.preparar) {
       await cerrar(page);
       await cerrar(page);
     }
+    // Las listas guardan la búsqueda y los filtros en la sesión: cada paso parte de cero.
+    await page.evaluate(() => sessionStorage.clear());
   }
 
   const lineas: string[] = [];
@@ -195,12 +322,17 @@ test("recorrido: mide todas las pantallas y ventanas", async ({ page }, info) =>
     if (!clave.startsWith(`${proyecto}|`)) continue;
     const n = clave.split("|")[1];
     lineas.push(
-      `${n}: controles=${m.controles} contraste=${m.contraste.length} textos<13px=${m.textosChicos.length} plano=${m.textosDePlano} zonas<44px=${m.zonasChicas.length} cursor=${m.cursores.length} scrollH=${m.scrollHorizontal}${m.omitido ? ` OMITIDO(${m.omitido})` : ""}`
+      `${n}: controles=${m.controles} contraste=${m.contraste.length} textos<13px=${m.textosChicos.length} plano=${m.textosDePlano} zonas<44px=${m.zonasChicas.length} cursor=${m.cursores.length} scrollH=${m.scrollHorizontal || m.scrollDePagina.length > 0} cortados=${m.textosCortados.length} solapes=${m.solapes.length} tapados=${m.tapados.length} fuera=${m.fueraDePantalla.length}${m.omitido ? ` OMITIDO(${m.omitido})` : ""}`
     );
     for (const c of m.contraste) lineas.push(`   contraste: ${c}`);
     for (const c of m.textosChicos) lineas.push(`   texto chico: ${c}`);
     for (const c of m.zonasChicas) lineas.push(`   zona chica: ${c}`);
     for (const c of m.cursores) lineas.push(`   cursor: ${c}`);
+    for (const c of m.textosCortados) lineas.push(`   cortado: ${c}`);
+    for (const c of m.solapes) lineas.push(`   solape: ${c}`);
+    for (const c of m.tapados) lineas.push(`   tapado: ${c}`);
+    for (const c of m.fueraDePantalla) lineas.push(`   fuera: ${c}`);
+    for (const c of m.scrollDePagina) lineas.push(`   scroll horizontal: ${c}`);
   }
   lineas.push(`errores de página: ${errores.join(" | ") || "ninguno"}`, `pedidos bloqueados (no locales): ${[...new Set(bloqueados)].join(",") || "ninguno"}`);
   fs.writeFileSync(path.join(dir, "_medidas.txt"), lineas.join("\n"));
@@ -208,7 +340,8 @@ test("recorrido: mide todas las pantallas y ventanas", async ({ page }, info) =>
   expect(bloqueados, "la prueba no debe hablar con nada que no sea local").toEqual([]);
 });
 
-function falloPorPaso(proyecto: string, campo: "contraste" | "textosChicos" | "zonasChicas" | "cursores") {
+type Campo = "contraste" | "textosChicos" | "zonasChicas" | "cursores" | "textosCortados" | "solapes" | "tapados" | "fueraDePantalla" | "scrollDePagina";
+function falloPorPaso(proyecto: string, campo: Campo) {
   const filas: string[] = [];
   for (const [clave, m] of resultados) {
     if (!clave.startsWith(`${proyecto}|`)) continue;
@@ -240,6 +373,21 @@ test("cursor: todo lo que se toca muestra la manito (y lo deshabilitado, el de n
 });
 
 test("sin scroll horizontal de la página en ninguna pantalla", ({}, info) => {
-  const mal = [...resultados].filter(([k, m]) => k.startsWith(`${info.project.name}|`) && m.scrollHorizontal).map(([k]) => k.split("|")[1]);
-  expect(mal).toEqual([]);
+  expect(falloPorPaso(info.project.name, "scrollDePagina")).toEqual([]);
+});
+
+test("textos: ninguno cortado sin elipsis intencional ni fuera de la pantalla", ({}, info) => {
+  expect(falloPorPaso(info.project.name, "textosCortados")).toEqual([]);
+});
+
+test("solapes: ningún texto ni control se pisa con otro", ({}, info) => {
+  expect(falloPorPaso(info.project.name, "solapes")).toEqual([]);
+});
+
+test("controles tapados: ningún control queda debajo de un elemento fijo o flotante", ({}, info) => {
+  expect(falloPorPaso(info.project.name, "tapados")).toEqual([]);
+});
+
+test("controles dentro del viewport: ninguno se sale de la pantalla", ({}, info) => {
+  expect(falloPorPaso(info.project.name, "fueraDePantalla")).toEqual([]);
 });

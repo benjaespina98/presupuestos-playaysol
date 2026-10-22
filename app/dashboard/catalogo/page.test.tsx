@@ -49,9 +49,20 @@ function item(overrides: Partial<ItemCatalogo>): ItemCatalogo {
 // layout real) — por eso todas las búsquedas de texto acá usan las variantes
 // `All*` en vez de asumir una sola coincidencia.
 
-/** Abre el panel "Filtros" (con "Mostrar desactivados", "Modo consulta rápida" y "Limpiar filtros") si no está abierto. */
+/** Abre el panel "Más filtros" (con "Mostrar desactivados", "Modo consulta rápida" y "Limpiar filtros") si no está abierto. */
 async function abrirFiltros(user: ReturnType<typeof userEvent.setup>) {
-  if (!screen.queryByRole("dialog", { name: "Filtros" })) await user.click(screen.getByRole("button", { name: /^Filtros/ }));
+  if (!screen.queryByRole("dialog", { name: "Más filtros" })) await user.click(screen.getByRole("button", { name: /^Más filtros/ }));
+}
+
+/** Abre el menú de Categoría y devuelve la lista de opciones (con sus contadores). */
+async function menuCategoria(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "Filtrar por categoría" }));
+  return screen.findByRole("radiogroup", { name: "Filtrar por categoría" });
+}
+
+async function elegirCategoria(user: ReturnType<typeof userEvent.setup>, nombre: RegExp) {
+  const lista = await menuCategoria(user);
+  await user.click(within(lista).getByRole("radio", { name: nombre }));
 }
 
 /** Abre el menú "⋯" de un ítem y elige una acción (Ingreso, Ajustar conteo o Historial). */
@@ -190,7 +201,7 @@ describe("CatalogoPage · lectura", () => {
     render(<CatalogoPage />);
 
     await screen.findAllByText("Luces LED");
-    await user.click(screen.getByRole("button", { name: /^Cercos/ }));
+    await elegirCategoria(user, /^Cercos/);
 
     await waitFor(() => expect(screen.queryByText("Luces LED")).not.toBeInTheDocument());
     expect(screen.getAllByText("Cerco perimetral")[0]).toBeInTheDocument();
@@ -474,12 +485,16 @@ describe("CatalogoPage · secciones", () => {
       ],
       error: null,
     });
+    const user = userEvent.setup();
     render(<CatalogoPage />);
-    const grupo = await screen.findByRole("group", { name: "Filtrar por sección" });
+    await screen.findAllByText("Hormigón 8x4");
+    const lista = await menuCategoria(user);
 
-    const chips = within(grupo).getAllByRole("button").map((b) => b.textContent?.replace(/\d+$/, ""));
-    expect(chips).toEqual([
-      "Todo",
+    const opciones = within(lista)
+      .getAllByRole("radio")
+      .map((r) => r.textContent?.replace(/\d+✓$/, ""));
+    expect(opciones).toEqual([
+      "Todas",
       "Piscinas de hormigón",
       "Piscinas de fibra Indusplast",
       "Cobertores",
@@ -501,14 +516,15 @@ describe("CatalogoPage · secciones", () => {
     });
     const user = userEvent.setup();
     render(<CatalogoPage />);
-    const grupo = await screen.findByRole("group", { name: "Filtrar por sección" });
+    await screen.findAllByText("Uno");
+    const lista = await menuCategoria(user);
 
-    expect(within(grupo).getByRole("button", { name: /^Todo\s*3$/ })).toBeInTheDocument();
-    expect(within(grupo).getByRole("button", { name: /^Cercos\s*2$/ })).toBeInTheDocument();
-    expect(within(grupo).getByRole("button", { name: /^Cobertores\s*1$/ })).toBeInTheDocument();
-    expect(within(grupo).queryByRole("button", { name: /Climatización/ })).not.toBeInTheDocument();
+    expect(within(lista).getByRole("radio", { name: /^Todas.*3/ })).toBeInTheDocument();
+    expect(within(lista).getByRole("radio", { name: /^Cercos.*2/ })).toBeInTheDocument();
+    expect(within(lista).getByRole("radio", { name: /^Cobertores.*1/ })).toBeInTheDocument();
+    expect(within(lista).queryByRole("radio", { name: /Climatización/ })).not.toBeInTheDocument();
 
-    await user.click(within(grupo).getByRole("button", { name: /^Cobertores/ }));
+    await user.click(within(lista).getByRole("radio", { name: /^Cobertores/ }));
     expect(screen.getAllByText("Tres").length).toBeGreaterThan(0);
     expect(screen.queryByText("Uno")).not.toBeInTheDocument();
   });
@@ -522,7 +538,7 @@ describe("CatalogoPage · secciones", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("De luces");
 
-    await user.click(screen.getByRole("button", { name: /^Cercos/ }));
+    await elegirCategoria(user, /^Cercos/);
     await waitFor(() => expect(screen.queryByText("De luces")).not.toBeInTheDocument());
 
     await abrirFiltros(user);
@@ -896,22 +912,23 @@ describe("CatalogoPage · piscinas de lista", () => {
     listarItemsCatalogo.mockResolvedValue({ items: LISTA, error: null });
     render(<CatalogoPage />);
     await screen.findAllByText("Racionalista 400");
-    const secciones = screen.getByRole("group", { name: "Filtrar por sección" });
-    expect(within(secciones).getByRole("button", { name: /^Piscinas de fibra Indusplast\s*3$/ })).toBeInTheDocument();
-    expect(within(secciones).getByRole("button", { name: /^Otros\s*1$/ })).toBeInTheDocument();
+    const secciones = await menuCategoria(user);
+    expect(within(secciones).getByRole("radio", { name: /^Piscinas de fibra Indusplast.*3/ })).toBeInTheDocument();
+    expect(within(secciones).getByRole("radio", { name: /^Otros.*1/ })).toBeInTheDocument();
 
-    await user.click(within(secciones).getByRole("button", { name: /Piscinas de fibra Indusplast/ }));
+    await user.click(within(secciones).getByRole("radio", { name: /Piscinas de fibra Indusplast/ }));
 
     expect(screen.queryByText("Kit de limpieza")).not.toBeInTheDocument();
     expect(screen.getAllByText("Caribe 650").length).toBeGreaterThan(0);
   });
 
   it("sin piscinas de lista no hay acceso directo a Indusplast ni a hormigón", async () => {
+    const user = userEvent.setup();
     listarItemsCatalogo.mockResolvedValue({ items: [LISTA[3]], error: null });
     render(<CatalogoPage />);
     await screen.findAllByText("Kit de limpieza");
-    const secciones = screen.getByRole("group", { name: "Filtrar por sección" });
-    expect(within(secciones).queryByRole("button", { name: /Indusplast|hormigón/ })).not.toBeInTheDocument();
+    const secciones = await menuCategoria(user);
+    expect(within(secciones).queryByRole("radio", { name: /Indusplast|hormigón/ })).not.toBeInTheDocument();
   });
 });
 

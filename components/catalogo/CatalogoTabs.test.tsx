@@ -32,11 +32,10 @@ describe("CatalogoTabs", () => {
     expect(screen.getByRole("link", { name: "Armar pedido" })).toHaveAttribute("href", "/dashboard/catalogo/pedido");
   });
 
-  it("'Precios de venta' es su propia sección: ahí no se ven las de Compras, y viceversa", () => {
+  it("'Precios de venta' es una sola pantalla: no lleva pestañas; en Compras sí", () => {
     usePathname.mockReturnValue("/dashboard/catalogo");
-    const { unmount } = render(<CatalogoTabs />);
-    expect(screen.getByRole("link", { name: "Precios de venta" })).toHaveAttribute("aria-current", "page");
-    expect(screen.queryByRole("link", { name: "Materiales" })).not.toBeInTheDocument();
+    const { container, unmount } = render(<CatalogoTabs />);
+    expect(container).toBeEmptyDOMElement();
     unmount();
 
     usePathname.mockReturnValue("/dashboard/catalogo/proveedores");

@@ -13,5 +13,5 @@ export function PanelPortal({
   /** Para las pantallas con tablas anchas (historial, catálogo): usa más ancho en monitores grandes. */
   amplio?: boolean;
 }) {
-  return <div className={`mx-auto ${amplio ? "max-w-7xl" : "max-w-5xl"} px-4 ${compacto ? "pb-8 pt-3 sm:pt-5" : "py-8"}`}>{children}</div>;
+  return <div className={`mx-auto ${amplio ? "max-w-7xl" : "max-w-5xl"} px-4 ${compacto ? "pb-8 pt-0" : "py-6 sm:py-8"}`}>{children}</div>;
 }

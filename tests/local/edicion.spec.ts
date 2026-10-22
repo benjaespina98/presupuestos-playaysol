@@ -205,8 +205,7 @@ test("botones: en reposo, con el mouse encima, apretados y con foco siguen tenie
   const controles: [string, Locator][] = [
     ["Agregar material", page.getByRole("button", { name: "Agregar material" }).first()],
     ["lápiz", page.getByRole("button", { name: `Editar ${MATERIAL}` })],
-    ["chip Todos", page.getByRole("group", { name: "Filtrar por rubro" }).getByRole("button", { name: /^Todos/ })],
-    ["Filtros", page.getByRole("button", { name: /^Filtros/ })],
+    ["Filtros", page.getByRole("button", { name: /^(Filtros|Filtrar por rubro)/ })],
   ];
   for (const [nombre, c] of controles) {
     await c.scrollIntoViewIfNeeded();

@@ -24,6 +24,8 @@ export const viewport: Viewport = {
   // Que el contenido use toda la pantalla del celular (muescas) cuando se instala como app.
   viewportFit: "cover",
   themeColor: "#244B5A",
+  // El portal es sólo claro: avisa al navegador (y al modo oscuro del teléfono) que no se oscurezca.
+  colorScheme: "light",
 };
 
 export default function RootLayout({

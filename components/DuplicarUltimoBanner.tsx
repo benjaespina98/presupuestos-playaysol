@@ -39,7 +39,7 @@ export function DuplicarUltimoBanner({ tipo, tipoLabel }: { tipo: TipoCalculador
     <div
       role="status"
       data-print-hide=""
-      className="mb-6 flex flex-col items-start justify-between gap-3 rounded-lg border border-[#244B5A]/20 bg-[#EEF2F6] px-4 py-3 text-sm sm:flex-row sm:items-center"
+      className="mb-6 flex flex-col items-start justify-between gap-3 rounded-lg border border-[#D3DBDE] bg-[#EEF2F6] px-4 py-3 text-sm sm:flex-row sm:items-center"
     >
       <p className="text-gray-700">
         ¿Es un {tipoLabel.toLowerCase()} parecido al último que armaste?{" "}

@@ -55,9 +55,9 @@ async function cargar() {
   await screen.findByText(/3 pedidos/);
 }
 
-/** Abre el panel "Filtros" (con "Mostrar anulados") si no está abierto. */
+/** Abre el panel "Más filtros" (con "Mostrar anulados") si no está abierto. */
 async function abrirFiltros(user: ReturnType<typeof userEvent.setup>) {
-  if (!screen.queryByRole("dialog", { name: "Filtros" })) await user.click(screen.getByRole("button", { name: /^Filtros/ }));
+  if (!screen.queryByRole("dialog", { name: "Más filtros" })) await user.click(screen.getByRole("button", { name: /^Más filtros/ }));
 }
 
 describe("Pedidos", () => {
@@ -81,14 +81,15 @@ describe("Pedidos", () => {
     expect(screen.getAllByText("Recibido").length).toBeGreaterThan(0);
   });
 
-  it("los chips de estado muestran su contador y filtran", async () => {
+  it("el filtro de estado muestra su contador y filtra", async () => {
     const user = userEvent.setup();
     await cargar();
-    const grupo = screen.getByRole("group", { name: "Filtrar por estado" });
-    expect(within(grupo).getByRole("button", { name: /^Todos\s*3$/ })).toBeInTheDocument();
-    expect(within(grupo).getByRole("button", { name: /^Enviado\s*1$/ })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Filtrar por estado" }));
+    const grupo = await screen.findByRole("radiogroup", { name: "Filtrar por estado" });
+    expect(within(grupo).getByRole("radio", { name: /^Todos.*3/ })).toBeInTheDocument();
+    expect(within(grupo).getByRole("radio", { name: /^Enviado.*1/ })).toBeInTheDocument();
 
-    await user.click(within(grupo).getByRole("button", { name: /^Enviado/ }));
+    await user.click(within(grupo).getByRole("radio", { name: /^Enviado/ }));
 
     expect(screen.getByText("Familia Gómez")).toBeInTheDocument();
     expect(screen.queryByText("Familia Pérez")).not.toBeInTheDocument();
@@ -152,8 +153,9 @@ describe("Pedidos", () => {
 
       await waitFor(() => expect(mocks.cambiarEstadoPedido).toHaveBeenCalledWith("b", "recibido"));
       expect(await within(dialogo).findByText("Estado: Recibido.")).toBeInTheDocument();
-      const grupo = screen.getByRole("group", { name: "Filtrar por estado" });
-      expect(within(grupo).getByRole("button", { name: /^Recibido/ }).textContent).toContain("2");
+      await user.click(screen.getByRole("button", { name: "Filtrar por estado" }));
+      const grupo = await screen.findByRole("radiogroup", { name: "Filtrar por estado" });
+      expect(within(grupo).getByRole("radio", { name: /^Recibido/ }).textContent).toContain("2");
     });
 
     it("si no se puede cambiar el estado lo dice y no lo cambia", async () => {
