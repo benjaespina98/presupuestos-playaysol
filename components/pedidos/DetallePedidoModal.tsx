@@ -18,6 +18,7 @@ import { compartirOdescargarArchivo } from "@/lib/documentos/compartir";
 import { formatARSExacto } from "@/lib/format/ars";
 import { ModalShell } from "@/components/abastecimiento/modal-partes";
 import { MenuExportar } from "./MenuExportar";
+import { AccionesProveedor } from "./AccionesProveedor";
 
 const cantidad = (n: number) => new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(n);
 
@@ -79,11 +80,11 @@ export function DetallePedidoModal({
     setMensaje({ tipo: "ok", texto: `Estado: ${ETIQUETA_ESTADO[estado]}.` });
   }
 
-  async function exportar(formato: FormatoPedido, modo: ModoPedido, conPrecios: boolean) {
+  async function exportar(formato: FormatoPedido, modo: ModoPedido) {
     setOcupado(true);
     setMensaje(null);
     try {
-      const archivo = await exportarPedido(doc, formato, modo, { conPrecios });
+      const archivo = await exportarPedido(doc, formato, modo);
       await compartirOdescargarArchivo(archivo.blob, archivo.nombre, archivo.mime);
       setMensaje({ tipo: "ok", texto: `${archivo.nombre} generado.` });
     } catch (err) {
@@ -116,7 +117,7 @@ export function DetallePedidoModal({
       )}
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <label htmlFor="estado-pedido" className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
+          <label htmlFor="estado-pedido" className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-gray-600">
             Estado
           </label>
           <select
@@ -177,6 +178,7 @@ export function DetallePedidoModal({
             <p className="border-t border-gray-100 bg-gray-50 px-3 py-1.5 text-right text-sm font-semibold tabular-nums text-gray-900">
               Subtotal {formatARSExacto(s.subtotal)}
             </p>
+            <AccionesProveedor doc={doc} seccion={s} onMensaje={(tipo, texto) => setMensaje({ tipo, texto })} />
           </section>
         ))}
       </div>

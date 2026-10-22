@@ -20,7 +20,12 @@ vi.mock("@/lib/abastecimiento", () => ({ listarMateriales: mocks.listarMateriale
 vi.mock("@/lib/clipboard", () => ({ copiarAlPortapapeles: mocks.copiarAlPortapapeles }));
 vi.mock("@/lib/pedidos", () => ({ guardarPedido: mocks.guardarPedido, listarPedidos: mocks.listarPedidos }));
 vi.mock("@/lib/documentos/pedidos/exportar", () => ({ exportarPedido: mocks.exportarPedido }));
-vi.mock("@/lib/documentos/compartir", () => ({ compartirOdescargarArchivo: mocks.compartirOdescargarArchivo }));
+vi.mock("@/lib/documentos/compartir", () => ({
+  compartirOdescargarArchivo: mocks.compartirOdescargarArchivo,
+  compartirArchivoYTexto: vi.fn(),
+  descargarArchivo: vi.fn(),
+  esDispositivoMovil: () => false,
+}));
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(mocks.desde.valor ? { desde: mocks.desde.valor } : {}),
 }));
@@ -214,7 +219,8 @@ describe("Armar pedido", () => {
     expect(texto).toContain("*PEDIDO DE MATERIALES — Playa & Sol*");
     expect(texto).toContain("Obra: Familia Pérez · Pileta 8x4");
     expect(texto).toContain("Pide: Benja");
-    expect(texto).toContain("*Corralón Uno* · +54 9 111 111\n- Hierro: 10\n- Cemento: 20 bolsa");
+    expect(texto).toContain("*Corralón Uno*\n- Hierro: 10\n- Cemento: 20 bolsa");
+    expect(texto).not.toContain("111 111");
     expect(await screen.findByText("¡Copiado!")).toBeInTheDocument();
   });
 
@@ -331,7 +337,7 @@ describe("Armar pedido", () => {
       await cargar();
       await user.type(screen.getByLabelText("Cliente / obra"), "Familia Pérez");
       await user.type(screen.getByLabelText("Pide (quién hace el pedido)"), "Benja");
-      await user.type(screen.getByLabelText(/Observaciones/), "Entregar temprano");
+      await user.type(screen.getByLabelText(/Notas internas/), "Entregar temprano");
 
       await user.click(screen.getByRole("button", { name: "Guardar pedido" }));
 
@@ -363,17 +369,6 @@ describe("Armar pedido", () => {
       expect(screen.getByRole("button", { name: "Guardar pedido" })).toBeEnabled();
     });
 
-    it("elegir 'Con precios' en el menú exporta con precios (uso interno)", async () => {
-      const user = userEvent.setup();
-      await cargar();
-      await abrirExportar(user);
-      await user.click(screen.getByRole("button", { name: /Con precios/ }));
-      await user.click(screen.getByRole("menuitem", { name: /PDF — todo junto/ }));
-
-      await waitFor(() => expect(mocks.exportarPedido).toHaveBeenCalledTimes(1));
-      expect(mocks.exportarPedido.mock.calls[0][3]).toEqual({ conPrecios: true });
-    });
-
     it("exportar un PDF guarda el pedido primero y el documento lleva su número", async () => {
       const user = userEvent.setup();
       await cargar();
@@ -387,7 +382,7 @@ describe("Armar pedido", () => {
       const [doc, formato, modo, opciones] = mocks.exportarPedido.mock.calls[0];
       expect(formato).toBe("pdf");
       expect(modo).toBe("junto");
-      expect(opciones).toEqual({ conPrecios: false }); // por defecto, sin precios: es para pedirle al proveedor
+      expect(opciones).toBeUndefined(); // nunca con precios: lo que sale es para el proveedor
       expect(doc).toMatchObject({ numero: "PED-0007", obra: "Familia Pérez", fecha: "05/10/2026" });
       expect(doc.proveedores.map((p: { nombre: string }) => p.nombre)).toEqual(["Corralón Uno", "Filtros SA"]);
       expect(mocks.compartirOdescargarArchivo).toHaveBeenCalledWith(expect.any(Blob), "Pedido_PED-0007.pdf", "application/pdf");
@@ -468,10 +463,10 @@ describe("Armar pedido", () => {
       expect(screen.queryByRole("menuitem", { name: /uno por proveedor/ })).not.toBeInTheDocument();
     });
 
-    it("las observaciones salen en el documento", async () => {
+    it("las notas internas viajan al armado del documento (exportarPedido las descarta: no salen)", async () => {
       const user = userEvent.setup();
       await cargar();
-      await user.type(screen.getByLabelText(/Observaciones/), "Entregar temprano");
+      await user.type(screen.getByLabelText(/Notas internas/), "Entregar temprano");
 
       await abrirExportar(user);
       await user.click(screen.getByRole("menuitem", { name: /PDF — todo junto/ }));
@@ -499,7 +494,7 @@ describe("Armar pedido", () => {
       await waitFor(() => expect(screen.getByLabelText("Cliente / obra")).toHaveValue("Familia Gómez"));
       expect(screen.getByLabelText("Pide (quién hace el pedido)")).toHaveValue("Fer");
       expect(screen.getByLabelText("Tamaño de pileta")).toHaveValue("5x3");
-      expect(screen.getByLabelText(/Observaciones/)).toHaveValue("Con deck");
+      expect(screen.getByLabelText(/Notas internas/)).toHaveValue("Con deck");
       expect(screen.getByRole("button", { name: "Deck" })).toHaveAttribute("aria-pressed", "true");
       expect(screen.getByText(/Se cargaron los datos de PED-0009/)).toBeInTheDocument();
     });

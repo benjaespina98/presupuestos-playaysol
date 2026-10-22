@@ -19,7 +19,12 @@ vi.mock("@/lib/pedidos", () => ({
   anularPedido: mocks.anularPedido,
 }));
 vi.mock("@/lib/documentos/pedidos/exportar", () => ({ exportarPedido: mocks.exportarPedido }));
-vi.mock("@/lib/documentos/compartir", () => ({ compartirOdescargarArchivo: mocks.compartirOdescargarArchivo }));
+vi.mock("@/lib/documentos/compartir", () => ({
+  compartirOdescargarArchivo: mocks.compartirOdescargarArchivo,
+  compartirArchivoYTexto: vi.fn(),
+  descargarArchivo: vi.fn(),
+  esDispositivoMovil: () => false,
+}));
 
 // Datos inventados (el repo es público).
 const linea = (o: Partial<LineaGuardada>): LineaGuardada => ({

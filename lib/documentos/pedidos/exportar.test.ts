@@ -111,7 +111,7 @@ describe("exportarPedido · por proveedor", () => {
   });
 });
 
-describe("exportarPedido · con y sin precios", () => {
+describe("exportarPedido · nunca con precios", () => {
   const celdas = async (blob: Blob) => {
     const libro = new ExcelJS.Workbook();
     await libro.xlsx.load(await blob.arrayBuffer());
@@ -120,15 +120,13 @@ describe("exportarPedido · con y sin precios", () => {
     return out.join("|");
   };
 
-  it("sin precios el Excel no los lleva; con precios, sí", async () => {
-    const sin = await exportarPedido(UNO, "xlsx", "junto", { ...sinLogo, conPrecios: false });
-    const con = await exportarPedido(UNO, "xlsx", "junto", { ...sinLogo, conPrecios: true });
-    expect(await celdas(sin.blob)).not.toMatch(/Precio unit|TOTAL/);
-    expect(await celdas(con.blob)).toMatch(/Precio unit/);
+  it("el Excel no lleva precios ni totales aunque el documento los tenga", async () => {
+    const r = await exportarPedido(UNO, "xlsx", "junto", sinLogo);
+    expect(await celdas(r.blob)).not.toMatch(/Precio unit|TOTAL|Subtotal/);
   });
 
-  it("el ZIP por proveedor también respeta 'sin precios'", async () => {
-    const r = await exportarPedido(VARIOS, "xlsx", "por-proveedor", { ...sinLogo, conPrecios: false });
+  it("el ZIP por proveedor tampoco", async () => {
+    const r = await exportarPedido(VARIOS, "xlsx", "por-proveedor", sinLogo);
     const zip = await JSZip.loadAsync(await r.blob.arrayBuffer());
     for (const nombre of Object.keys(zip.files)) {
       expect(await celdas(new Blob([await zip.files[nombre].async("arraybuffer")]))).not.toMatch(/Precio unit|Subtotal/);

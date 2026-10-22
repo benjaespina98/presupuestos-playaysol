@@ -13,19 +13,10 @@ import type { DocumentoPedido, SeccionProveedor } from "@/lib/domain/abastecimie
 const NAVY = "FF244B5A";
 const TEAL = "FF00829C";
 const GRIS = "FFEEF2F6";
-const FORMATO_PESOS = '"$" #,##0.00';
 const FORMATO_CANTIDAD = "#,##0.##";
 
-const COLUMNAS_CON_PRECIOS = [
-  { header: "Artículo", width: 46 },
-  { header: "Cantidad", width: 12 },
-  { header: "Unidad", width: 12 },
-  { header: "Precio unit.", width: 16 },
-  { header: "Subtotal", width: 18 },
-] as const;
-
-/** Para pedirle al proveedor: sin precios (son tentativos, de uso interno). */
-const COLUMNAS_SIN_PRECIOS = [
+/** Lo que sale hacia el proveedor: artículo, cantidad y unidad. Nunca precios (son internos). */
+const COLUMNAS = [
   { header: "Artículo", width: 60 },
   { header: "Cantidad", width: 14 },
   { header: "Unidad", width: 16 },
@@ -43,19 +34,17 @@ export function nombreDeHoja(nombre: string, usados: ReadonlySet<string>): strin
 }
 
 interface Contexto {
-  /** Con precios es la versión de uso interno; sin precios, la que se le manda al proveedor. */
-  conPrecios: boolean;
   doc: DocumentoPedido;
   libro: import("exceljs").Workbook;
   logoId: number | null;
 }
 
 /** El encabezado de cada hoja: logo, datos de la empresa, título y datos del pedido. Devuelve la fila siguiente. */
-const columnas = (ctx: Pick<Contexto, "conPrecios">) => (ctx.conPrecios ? COLUMNAS_CON_PRECIOS : COLUMNAS_SIN_PRECIOS);
+const columnas = () => COLUMNAS;
 
 function encabezado(hoja: Worksheet, ctx: Contexto, titulo: string): number {
   const { doc } = ctx;
-  const n = columnas(ctx).length;
+  const n = columnas().length;
   hoja.views = [{ showGridLines: false }];
 
   if (ctx.logoId !== null) {
@@ -69,7 +58,7 @@ function encabezado(hoja: Worksheet, ctx: Contexto, titulo: string): number {
 
   const datos = [
     EMPRESA.nombre,
-    `${EMPRESA.direccion} · Tel. ${EMPRESA.telefono}`,
+    EMPRESA.direccion,
     `${EMPRESA.email} · ${EMPRESA.web}`,
   ];
   datos.forEach((texto, i) => {
@@ -85,12 +74,6 @@ function encabezado(hoja: Worksheet, ctx: Contexto, titulo: string): number {
   t.fill = { type: "pattern", pattern: "solid", fgColor: { argb: NAVY } };
   t.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
   hoja.getRow(6).height = 24;
-  if (ctx.conPrecios) {
-    hoja.mergeCells(7, 1, 7, n);
-    const aviso = hoja.getCell(7, 1);
-    aviso.value = "Precios tentativos — uso interno, no enviar al proveedor.";
-    aviso.font = { italic: true, size: 9, color: { argb: "FFB45309" } };
-  }
 
   const filas: [string, string][] = [
     ["Pedido N°", doc.numero],
@@ -113,8 +96,8 @@ function encabezado(hoja: Worksheet, ctx: Contexto, titulo: string): number {
   return fila + 1;
 }
 
-function encabezadoTabla(hoja: Worksheet, fila: number, ctx: Contexto) {
-  columnas(ctx).forEach((col, i) => {
+function encabezadoTabla(hoja: Worksheet, fila: number) {
+  columnas().forEach((col, i) => {
     const c = hoja.getCell(fila, i + 1);
     c.value = col.header;
     c.font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -125,12 +108,12 @@ function encabezadoTabla(hoja: Worksheet, fila: number, ctx: Contexto) {
 }
 
 /** Las líneas de un proveedor. Devuelve la fila siguiente a su subtotal. */
-function bloqueProveedor(hoja: Worksheet, s: SeccionProveedor, fila: number, conTitulo: boolean, conPrecios: boolean): number {
-  const n = conPrecios ? 5 : 3;
+function bloqueProveedor(hoja: Worksheet, s: SeccionProveedor, fila: number, conTitulo: boolean): number {
+  const n = 3;
   if (conTitulo) {
     hoja.mergeCells(fila, 1, fila, n);
     const c = hoja.getCell(fila, 1);
-    c.value = [s.nombre, s.contacto, s.telefono].filter(Boolean).join("  ·  ");
+    c.value = s.nombre;
     c.font = { bold: true, color: { argb: NAVY } };
     c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GRIS } };
     fila++;
@@ -143,84 +126,15 @@ function bloqueProveedor(hoja: Worksheet, s: SeccionProveedor, fila: number, con
     cant.numFmt = FORMATO_CANTIDAD;
     hoja.getCell(fila, 3).value = l.unidad;
     hoja.getCell(fila, 3).alignment = { horizontal: "center" };
-    if (conPrecios) {
-      const precio = hoja.getCell(fila, 4);
-      const sub = hoja.getCell(fila, 5);
-      if (l.precio === null) {
-        precio.value = "A confirmar";
-        precio.alignment = { horizontal: "right" };
-        precio.font = { italic: true, color: { argb: "FFB45309" } };
-        sub.value = "—";
-        sub.alignment = { horizontal: "right" };
-      } else {
-        precio.value = l.precio;
-        precio.numFmt = FORMATO_PESOS;
-        sub.value = l.subtotal;
-        sub.numFmt = FORMATO_PESOS;
-      }
-    }
     for (let c = 1; c <= n; c++) hoja.getCell(fila, c).border = { bottom: { style: "hair", color: { argb: "FFBBBBBB" } } };
     fila++;
   }
 
-  if (!conPrecios) return fila + 1;
-
-  hoja.mergeCells(fila, 1, fila, 4);
-  const et = hoja.getCell(fila, 1);
-  et.value = conTitulo ? `Subtotal ${s.nombre}` : "Subtotal";
-  et.font = { bold: true };
-  et.alignment = { horizontal: "right" };
-  const st = hoja.getCell(fila, 5);
-  st.value = s.subtotal;
-  st.numFmt = FORMATO_PESOS;
-  st.font = { bold: true };
-  return fila + 2;
+  return fila + 1;
 }
 
-function pie(hoja: Worksheet, doc: DocumentoPedido, fila: number, conPrecios: boolean) {
-  const n = conPrecios ? 5 : 3;
-  if (!conPrecios) {
-    if (doc.observaciones) {
-      hoja.mergeCells(fila, 1, fila, n);
-      const o = hoja.getCell(fila, 1);
-      o.value = `Observaciones: ${doc.observaciones}`;
-      o.alignment = { wrapText: true, vertical: "top" };
-      hoja.getRow(fila).height = 32;
-    }
-    return;
-  }
-  hoja.mergeCells(fila, 1, fila, 4);
-  const et = hoja.getCell(fila, 1);
-  et.value = "TOTAL ESTIMADO";
-  et.font = { bold: true, size: 12, color: { argb: NAVY } };
-  et.alignment = { horizontal: "right" };
-  const tot = hoja.getCell(fila, 5);
-  tot.value = doc.total;
-  tot.numFmt = FORMATO_PESOS;
-  tot.font = { bold: true, size: 12, color: { argb: NAVY } };
-  tot.border = { top: { style: "medium", color: { argb: NAVY } } };
-  fila++;
-
-  if (doc.sinPrecio > 0) {
-    hoja.mergeCells(fila, 1, fila, 5);
-    const n = hoja.getCell(fila, 1);
-    n.value = `El total no incluye ${doc.sinPrecio} ${doc.sinPrecio === 1 ? "artículo" : "artículos"} con precio a confirmar con el proveedor.`;
-    n.font = { italic: true, size: 9, color: { argb: "FFB45309" } };
-    fila++;
-  }
-
-  if (doc.observaciones) {
-    fila++;
-    hoja.mergeCells(fila, 1, fila, 5);
-    const o = hoja.getCell(fila, 1);
-    o.value = `Observaciones: ${doc.observaciones}`;
-    o.alignment = { wrapText: true, vertical: "top" };
-    hoja.getRow(fila).height = 32;
-  }
-}
-
-function configurarHoja(hoja: Worksheet, ctx: Contexto) {
-  hoja.columns = columnas(ctx).map((c) => ({ width: c.width }));
+function configurarHoja(hoja: Worksheet) {
+  hoja.columns = columnas().map((c) => ({ width: c.width }));
   hoja.pageSetup = { paperSize: 9, orientation: "portrait", fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.5, right: 0.5, top: 0.6, bottom: 0.6, header: 0.3, footer: 0.3 } };
   hoja.headerFooter = { oddFooter: `&L${EMPRESA.nombre}&CPágina &P de &N&R&D` };
 }
@@ -234,7 +148,7 @@ function configurarHoja(hoja: Worksheet, ctx: Contexto) {
  */
 export async function generarExcelPedido(
   doc: DocumentoPedido,
-  opciones: { logo?: ArrayBuffer; /** Con precios (uso interno) o sin ellos (para pedir). Por defecto, con. */ conPrecios?: boolean } = {}
+  opciones: { logo?: ArrayBuffer } = {}
 ): Promise<Blob> {
   const ExcelJS = (await import("exceljs")).default;
   const libro = new ExcelJS.Workbook();
@@ -242,34 +156,31 @@ export async function generarExcelPedido(
   libro.created = new Date();
 
   const logoId = opciones.logo ? libro.addImage({ buffer: opciones.logo, extension: "png" }) : null;
-  const ctx: Contexto = { doc, libro, logoId, conPrecios: opciones.conPrecios ?? true };
+  const ctx: Contexto = { doc, libro, logoId };
   const usados = new Set<string>();
   const titulo = (s: string) => `ORDEN DE PEDIDO DE MATERIALES${s ? ` — ${s}` : ""}`;
 
   if (doc.proveedores.length > 1) {
     const resumen = libro.addWorksheet(nombreDeHoja("Resumen", usados));
     usados.add("resumen");
-    configurarHoja(resumen, ctx);
+    configurarHoja(resumen);
     let fila = encabezado(resumen, ctx, titulo("RESUMEN"));
-    encabezadoTabla(resumen, fila, ctx);
+    encabezadoTabla(resumen, fila);
     resumen.views = [{ showGridLines: false, state: "frozen", ySplit: fila }];
     fila++;
-    for (const s of doc.proveedores) fila = bloqueProveedor(resumen, s, fila, true, ctx.conPrecios);
-    pie(resumen, doc, fila, ctx.conPrecios);
+    for (const s of doc.proveedores) fila = bloqueProveedor(resumen, s, fila, true);
   }
 
   for (const s of doc.proveedores) {
     const nombre = nombreDeHoja(s.nombre, usados);
     usados.add(nombre.toLowerCase());
     const hoja = libro.addWorksheet(nombre);
-    configurarHoja(hoja, ctx);
+    configurarHoja(hoja);
     let fila = encabezado(hoja, ctx, titulo(s.nombre));
-    encabezadoTabla(hoja, fila, ctx);
+    encabezadoTabla(hoja, fila);
     hoja.views = [{ showGridLines: false, state: "frozen", ySplit: fila }];
     fila++;
-    fila = bloqueProveedor(hoja, s, fila, false, ctx.conPrecios);
-    // Una hoja de un solo proveedor lleva su total; en el libro "todo junto" el total general va en el Resumen.
-    pie(hoja, { ...doc, total: s.subtotal, sinPrecio: s.sinPrecio }, fila, ctx.conPrecios);
+    bloqueProveedor(hoja, s, fila, false);
   }
 
   const buffer = await libro.xlsx.writeBuffer();

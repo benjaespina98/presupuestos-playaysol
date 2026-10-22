@@ -21,7 +21,9 @@ import {
 } from "@/lib/domain/abastecimiento/pedido";
 import {
   armarDocumento,
+  fechaDocumento,
   lineasDePedido,
+  sinTelefonos,
   numeroFormateado,
   type PedidoGuardado,
 } from "@/lib/domain/abastecimiento/pedidoDocumento";
@@ -187,7 +189,7 @@ function PedidoContenido() {
   }
 
   /** Genera el archivo formal. Todo documento formal sale con su número: antes de generarlo se guarda el pedido. */
-  async function onExportar(formato: FormatoPedido, modo: ModoPedido, conPrecios: boolean) {
+  async function onExportar(formato: FormatoPedido, modo: ModoPedido) {
     setOcupado(true);
     setMensaje(null);
     try {
@@ -200,7 +202,7 @@ function PedidoContenido() {
         parametros: params,
         observaciones: notas,
       });
-      const archivo = await exportarPedido(doc, formato, modo, { conPrecios });
+      const archivo = await exportarPedido(doc, formato, modo);
       await compartirOdescargarArchivo(archivo.blob, archivo.nombre, archivo.mime);
       setMensaje(
         r.pedido
@@ -225,8 +227,8 @@ function PedidoContenido() {
     setTimeout(() => setCopiado((actual) => (actual === clave ? null : actual)), 2000);
   }
 
-  function descargarCsv(conPrecios: boolean) {
-    const blob = new Blob([csvPedido(pedido, conPrecios)], { type: "text/csv;charset=utf-8" });
+  function descargarCsv() {
+    const blob = new Blob([csvPedido(pedido)], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -279,7 +281,7 @@ function PedidoContenido() {
               </Campo>
             </div>
 
-            <Campo etiqueta="Observaciones (salen en el pedido)" id="notas">
+            <Campo etiqueta="Notas internas (no salen en el pedido)" id="notas">
               <textarea
                 id="notas"
                 rows={2}
@@ -355,10 +357,18 @@ function PedidoContenido() {
             </div>
           </section>
 
+          {/* Al imprimir: sólo lo que necesita el proveedor (sin costos, precios ni teléfonos). */}
+          <section aria-label="Datos para imprimir" className="mb-4 hidden print:block">
+            <h1 className="text-lg font-bold">PEDIDO DE MATERIALES — Playa y Sol</h1>
+            <p>Obra: {sinTelefonos(obra) || "—"} · Fecha: {fechaDocumento(new Date())}</p>
+            <p>Pide: {sinTelefonos(pide) || "—"} · Pileta {params.tamano} · Borde: {params.borde}</p>
+          </section>
+
           <section aria-label="Resumen del pedido" className="mb-5 grid gap-3 sm:grid-cols-3">
             <Resumen etiqueta="Artículos a pedir" valor={String(pedido.articulos)} />
             <Resumen etiqueta="Proveedores a contactar" valor={String(pedido.proveedores)} />
             <Resumen
+              interno
               etiqueta="Costo estimado"
               valor={formatARSExacto(pedido.costo)}
               nota={pedido.sinPrecio > 0 ? `Sin contar ${pedido.sinPrecio} ${pedido.sinPrecio === 1 ? "artículo" : "artículos"} con precio a confirmar` : undefined}
@@ -517,9 +527,9 @@ function Campo({ etiqueta, id, children }: { etiqueta: string; id: string; child
   );
 }
 
-function Resumen({ etiqueta, valor, nota }: { etiqueta: string; valor: string; nota?: string }) {
+function Resumen({ etiqueta, valor, nota, interno = false }: { etiqueta: string; valor: string; nota?: string; interno?: boolean }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+    <div data-print-hide={interno ? "" : undefined} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
       <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{etiqueta}</p>
       <p className="mt-1 text-2xl font-semibold tabular-nums text-[#244B5A]">{valor}</p>
       {nota && <p className="mt-1 text-xs text-amber-700">{nota}</p>}
@@ -575,11 +585,11 @@ function GrupoTabla({
       <header className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-gray-200 bg-[#F4F8F9] px-4 py-2.5">
         <div className="mr-auto min-w-0">
           <h2 className="text-sm font-bold text-[#244B5A]">{grupo.nombre}</h2>
-          {grupo.telefono && <p className="text-xs text-gray-500">{grupo.telefono}</p>}
+          {grupo.telefono && <p data-print-hide="" className="text-xs text-gray-500">{grupo.telefono}</p>}
         </div>
         <p className="text-sm tabular-nums text-gray-700">
-          {grupo.lineas.length} {grupo.lineas.length === 1 ? "artículo" : "artículos"} ·{" "}
-          <span className="font-semibold text-gray-900">{formatARSExacto(grupo.subtotal)}</span>
+          {grupo.lineas.length} {grupo.lineas.length === 1 ? "artículo" : "artículos"}{" "}
+          <span className="font-semibold text-gray-900 print:hidden">· {formatARSExacto(grupo.subtotal)}</span>
         </p>
         <button
           type="button"
@@ -600,8 +610,8 @@ function GrupoTabla({
       >
         <span>Artículo</span>
         <span>Cantidad</span>
-        <span className="text-right">Precio unit.</span>
-        <span className="text-right">Subtotal</span>
+        <span className="text-right print:invisible">Precio unit.</span>
+        <span className="text-right print:invisible">Subtotal</span>
         <span data-print-hide="" />
       </div>
       <ul className="divide-y divide-gray-100">
@@ -648,7 +658,7 @@ function GrupoTabla({
                 )}
               </div>
 
-              <p className="col-span-2 row-start-3 whitespace-nowrap text-xs tabular-nums text-gray-500 md:col-auto md:row-auto md:text-right md:text-sm md:text-gray-700">
+              <p className="col-span-2 row-start-3 whitespace-nowrap print:invisible text-xs tabular-nums text-gray-500 md:col-auto md:row-auto md:text-right md:text-sm md:text-gray-700">
                 <span className="md:hidden">Precio unit. </span>
                 {l.precio === null ? (
                   <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">A confirmar</span>
@@ -657,7 +667,7 @@ function GrupoTabla({
                 )}
               </p>
 
-              <p className="col-start-2 row-start-2 whitespace-nowrap text-right font-medium tabular-nums text-gray-900 md:col-auto md:row-auto">
+              <p className="col-start-2 row-start-2 whitespace-nowrap print:invisible text-right font-medium tabular-nums text-gray-900 md:col-auto md:row-auto">
                 {l.precio === null ? "—" : formatARSExacto(l.subtotal)}
               </p>
 
