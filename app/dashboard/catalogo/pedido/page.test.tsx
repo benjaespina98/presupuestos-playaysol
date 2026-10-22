@@ -99,6 +99,47 @@ describe("Armar pedido", () => {
     expect(within(screen.getByRole("region", { name: "Pedido a Filtros SA" })).getByText("A confirmar")).toBeInTheDocument();
   });
 
+  it("se puede agregar un material que la cuenta no pide, con su cantidad: suma al pedido y al costo", async () => {
+    const user = userEvent.setup();
+    await cargar();
+    expect(resumen("Artículos a pedir")).toHaveTextContent("4");
+
+    await user.click(screen.getAllByRole("button", { name: "Agregar material" })[0]);
+    const hoja = await screen.findByRole("dialog", { name: "Agregar material al pedido" });
+    // Sólo se ofrecen los que todavía no están: Deck (borde de deck) y Luminaria (por luz), no Hierro.
+    expect(within(hoja).queryByRole("button", { name: /Hierro/ })).not.toBeInTheDocument();
+    await user.click(within(hoja).getByRole("button", { name: /Deck/ }));
+    await user.type(within(hoja).getByLabelText(/Cantidad/), "3");
+    await user.click(within(hoja).getByRole("button", { name: "Agregar al pedido" }));
+
+    expect(screen.queryByRole("dialog", { name: "Agregar material al pedido" })).not.toBeInTheDocument();
+    expect(resumen("Artículos a pedir")).toHaveTextContent("5");
+    expect(resumen("Costo estimado")).toHaveTextContent("$ 2.110"); // 2.050 + 3×20
+    const uno = screen.getByRole("region", { name: "Pedido a Corralón Uno" });
+    expect(within(uno).getByText("Deck")).toBeInTheDocument();
+    expect(within(uno).getByText("agregado a mano")).toBeInTheDocument();
+    expect(screen.getByText(/Se agregó "Deck" al pedido/)).toBeInTheDocument();
+  });
+
+  it("no deja agregar sin elegir un material ni con cantidad 0", async () => {
+    const user = userEvent.setup();
+    await cargar();
+    await user.click(screen.getAllByRole("button", { name: "Agregar material" })[0]);
+    const hoja = await screen.findByRole("dialog", { name: "Agregar material al pedido" });
+    expect(within(hoja).getByRole("button", { name: "Agregar al pedido" })).toBeDisabled();
+    await user.click(within(hoja).getByRole("button", { name: /Deck/ }));
+    await user.click(within(hoja).getByRole("button", { name: "Agregar al pedido" }));
+    expect(await within(hoja).findByText("Poné una cantidad mayor a 0.")).toBeInTheDocument();
+    expect(resumen("Artículos a pedir")).toHaveTextContent("4");
+  });
+
+  it("cada línea tiene su lápiz para editar el material", async () => {
+    const user = userEvent.setup();
+    await cargar();
+    await user.click(screen.getByRole("button", { name: "Editar Hierro" }));
+    expect(await screen.findByRole("dialog", { name: "Editar material" })).toBeInTheDocument();
+  });
+
   it("cambiar el borde cambia qué se pide", async () => {
     const user = userEvent.setup();
     await cargar();

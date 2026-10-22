@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 import { medirPagina, type Medidas } from "./helpers/medir";
+import { asegurarDatosDePantallas } from "./helpers/datos";
 
 /**
  * Recorre TODAS las pantallas del portal LOCAL (login, Nuevo con sus 5 calculadoras, Historial, las 5 pestañas
@@ -115,6 +116,11 @@ async function soloLocal(page: Page, bloqueados: string[]) {
 }
 
 test.describe.configure({ mode: "serial" });
+
+test.beforeAll(async () => {
+  // Un pedido guardado y presupuestos en el historial, para llegar a sus ventanas.
+  await asegurarDatosDePantallas();
+});
 
 test("recorrido: mide todas las pantallas y ventanas", async ({ page }, info) => {
   test.setTimeout(900_000);

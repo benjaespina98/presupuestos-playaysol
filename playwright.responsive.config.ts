@@ -8,7 +8,8 @@ import { defineConfig, devices } from "@playwright/test";
  * Proyectos: 360x740, 390x844, 430x932, 768x1024, 1280x800 y 1366x768 en Chromium, más el iPhone 13 emulado
  * (Chromium y, si está instalado, WebKit). WebKit se instala con `npx playwright install webkit`.
  */
-const spec = process.env.E2E_SPEC ?? "recorrido";
+/** Uno o varios (separados por coma): recorrido, edicion, compartir, documentos. */
+const specs = (process.env.E2E_SPEC ?? "recorrido,edicion,compartir,documentos").split(",").map((s) => s.trim());
 const solo = process.env.E2E_PROYECTOS?.split(",").map((s) => s.trim());
 
 const chrome = process.env.E2E_CHROMIUM_PATH ? { launchOptions: { executablePath: process.env.E2E_CHROMIUM_PATH } } : {};
@@ -28,7 +29,7 @@ const proyectos = [
 
 export default defineConfig({
   testDir: "./tests/local",
-  testMatch: `**/${spec}.spec.ts`,
+  testMatch: specs.map((s) => `**/${s}.spec.ts`),
   timeout: 180_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
