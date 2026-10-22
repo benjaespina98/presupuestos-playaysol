@@ -1,8 +1,11 @@
 "use client";
 
-// Modal de confirmación propio, con la identidad de marca (navy, mismo lenguaje visual
-// que public/catalogo-modal.js) en vez del confirm() nativo del navegador — inconsistente
-// visualmente y no personalizable (título/aclaración/jerarquía de botones).
+import { boton, botonDe } from "@/components/ui/botones";
+import { Hoja } from "@/components/ui/Hoja";
+
+// Diálogo de confirmación propio, con la identidad de marca, en vez del confirm() nativo del
+// navegador (inconsistente y no personalizable). Es la hoja compartida del portal: en el celular
+// sube desde abajo con las acciones siempre a la vista.
 export function ConfirmDialog({
   open,
   title,
@@ -27,42 +30,34 @@ export function ConfirmDialog({
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#244B5A]/45 p-4"
-      onClick={onCancel}
-    >
-      <div
-        role="alertdialog"
-        aria-modal="true"
-        className="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="mb-2 text-base font-bold text-[#244B5A]">{title}</h2>
-        <p className="mb-6 text-sm leading-relaxed text-gray-600">{message}</p>
-        <div className="flex flex-col gap-2">
+    <Hoja
+      titulo={title}
+      rol="alertdialog"
+      ancho="sm"
+      ocupado={loading}
+      onCerrar={onCancel}
+      pie={
+        <div className="flex gap-2">
+          <button type="button" disabled={loading} onClick={onCancel} className={botonDe("secundario", "flex-1")}>
+            {cancelLabel}
+          </button>
           <button
             type="button"
             autoFocus
             disabled={loading}
             onClick={onConfirm}
-            className={`w-full rounded-md px-4 py-2.5 text-sm font-semibold text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 ${
+            className={
               danger
-                ? "bg-red-600 hover:bg-red-700 focus-visible:outline-red-600"
-                : "bg-[#244B5A] hover:bg-marca-oscuro focus-visible:outline-[#244B5A]"
-            }`}
+                ? `${boton.base} flex-1 bg-red-600 text-white shadow-sm hover:bg-red-700 active:bg-red-800`
+                : botonDe("primario", "flex-1")
+            }
           >
             {loading ? "Un momento..." : confirmLabel}
           </button>
-          <button
-            type="button"
-            disabled={loading}
-            onClick={onCancel}
-            className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 disabled:opacity-50"
-          >
-            {cancelLabel}
-          </button>
         </div>
-      </div>
-    </div>
+      }
+    >
+      <p className="text-sm leading-relaxed text-gray-600">{message}</p>
+    </Hoja>
   );
 }

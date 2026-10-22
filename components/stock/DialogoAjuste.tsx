@@ -74,6 +74,16 @@ export function DialogoAjuste({
       subtitulo={`${nombre} · el sistema dice ${stockActual}`}
       ocupado={enviando}
       onCerrar={onCerrar}
+      pie={
+        <div className="flex gap-2">
+          <button type="button" disabled={enviando} onClick={onCerrar} className={`${CLASE_BOTON_SECUNDARIO} flex-1`}>
+            Cancelar
+          </button>
+          <button type="button" disabled={enviando} onClick={confirmar} className={`${CLASE_BOTON_PRIMARIO} flex-[2]`}>
+            {enviando ? "Un momento..." : "Guardar conteo"}
+          </button>
+        </div>
+      }
     >
       <label htmlFor={idConteo} className="mb-1 block text-sm font-medium text-gray-700">
         Unidades que contaste
@@ -106,7 +116,7 @@ export function DialogoAjuste({
         maxLength={MOTIVO_MAX}
         onChange={(e) => cambiar(setMotivo, e.target.value)}
         placeholder="Por ejemplo: conteo físico del depósito, rotura…"
-        className="w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#244B5A] focus:outline-none focus:ring-1 focus:ring-[#244B5A] disabled:opacity-50"
+        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-base text-gray-900 placeholder:text-gray-400 hover:border-gray-400 focus:border-marca focus:outline-none focus:ring-2 focus:ring-celeste/40 disabled:opacity-50"
       />
 
       {error && (
@@ -115,14 +125,6 @@ export function DialogoAjuste({
         </p>
       )}
 
-      <div className="mt-5 flex flex-col gap-2">
-        <button type="button" disabled={enviando} onClick={confirmar} className={CLASE_BOTON_PRIMARIO}>
-          {enviando ? "Un momento..." : "Guardar conteo"}
-        </button>
-        <button type="button" disabled={enviando} onClick={onCerrar} className={CLASE_BOTON_SECUNDARIO}>
-          Cancelar
-        </button>
-      </div>
     </MarcoDialogo>
   );
 }

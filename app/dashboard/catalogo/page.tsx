@@ -21,6 +21,7 @@ import { formatARS } from "@/lib/format/ars";
 import { formatFechaRelativa, formatFechaCompleta } from "@/lib/format/fecha";
 import { copiarAlPortapapeles } from "@/lib/clipboard";
 import { PanelPortal } from "@/components/PanelPortal";
+import { useEstadoPersistente } from "@/lib/useEstadoPersistente";
 import { IconEdit, IconCopy, IconPlus, IconTable } from "@/components/icons";
 import { LOCAL_STOCK, PLANILLA_COSTOS_URL } from "@/lib/brand";
 import { FiltrosCatalogo } from "@/components/catalogo/FiltrosCatalogo";
@@ -35,19 +36,28 @@ import { CrearItemModal } from "@/components/catalogo/CrearItemModal";
  * Stock · Actualizado · acción. Sin la columna de stock cuando ningún ítem lo
  * lleva. Son anchos fijos (rem) y el producto toma el resto.
  */
-const COLUMNAS_CON_STOCK = "md:grid-cols-[minmax(0,1fr)_8.5rem_4rem_26rem_6rem_3rem]";
+const COLUMNAS_CON_STOCK = "md:grid-cols-[minmax(0,1fr)_8.5rem_4rem_14rem_6rem_3rem]";
 const COLUMNAS_SIN_STOCK = "md:grid-cols-[minmax(0,1fr)_9.5rem_4.5rem_6.5rem_3.5rem]";
 
 export default function CatalogoPage() {
   const [items, setItems] = useState<ItemCatalogo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busqueda, setBusqueda] = useState("");
-  const [seccion, setSeccion] = useState<SeccionId | "">("");
-  const [stock, setStock] = useState<FiltroStock | "">("");
-  const [incluirInactivos, setIncluirInactivos] = useState(false);
+  // La búsqueda, los filtros y el modo consulta se conservan al abrir otra pantalla y volver.
+  const [prefs, setPrefs] = useEstadoPersistente<{
+    busqueda: string;
+    seccion: SeccionId | "";
+    stock: FiltroStock | "";
+    incluirInactivos: boolean;
+    modoConsulta: boolean;
+  }>("catalogo:filtros", { busqueda: "", seccion: "", stock: "", incluirInactivos: false, modoConsulta: false });
+  const { busqueda, seccion, stock, incluirInactivos, modoConsulta } = prefs;
+  const setBusqueda = (busqueda: string) => setPrefs({ ...prefs, busqueda });
+  const setSeccion = (seccion: SeccionId | "") => setPrefs({ ...prefs, seccion });
+  const setStock = (stock: FiltroStock | "") => setPrefs({ ...prefs, stock });
+  const setIncluirInactivos = (incluirInactivos: boolean) => setPrefs({ ...prefs, incluirInactivos });
+  const setModoConsulta = (modoConsulta: boolean) => setPrefs({ ...prefs, modoConsulta });
   const [errorStock, setErrorStock] = useState<string | null>(null);
   const [avisoStock, setAvisoStock] = useState<string | null>(null);
-  const [modoConsulta, setModoConsulta] = useState(false);
   const [editando, setEditando] = useState<ItemCatalogo | null>(null);
   const [creando, setCreando] = useState(false);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
@@ -89,10 +99,7 @@ export default function CatalogoPage() {
   const hayFiltros = !!(busqueda || seccion || stock || incluirInactivos);
 
   function limpiarFiltros() {
-    setBusqueda("");
-    setSeccion("");
-    setStock("");
-    setIncluirInactivos(false);
+    setPrefs({ ...prefs, busqueda: "", seccion: "", stock: "", incluirInactivos: false });
   }
 
   function abrirEdicion(item: ItemCatalogo) {
@@ -350,13 +357,13 @@ function FilaItem({
       </p>
 
       {conStock && (
-        <div className="col-start-1 row-start-3 md:col-auto md:row-auto md:text-center">
+        <div className="col-span-2 col-start-1 row-start-3 md:col-auto md:col-span-1 md:row-auto md:text-center">
           <StockControles item={item} editable={!modoConsulta} onResultado={onStockCambio} />
         </div>
       )}
 
-      <p className="col-start-1 row-start-4 text-xs text-gray-400 md:col-auto md:row-auto md:text-sm md:text-gray-500">
-        <span className="md:hidden">Actualizado </span>
+      <p className="col-start-2 row-start-2 justify-self-end text-xs text-gray-400 md:col-auto md:row-auto md:justify-self-auto md:text-sm md:text-gray-500">
+        <span className="sr-only md:hidden">Actualizado </span>
         <FechaActualizacion updatedAt={item.updated_at} />
       </p>
 

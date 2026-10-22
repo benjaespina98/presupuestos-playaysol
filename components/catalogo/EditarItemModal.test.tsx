@@ -125,8 +125,26 @@ describe("EditarItemModal", () => {
     await user.type(screen.getByLabelText("Descripción"), "Otra cosa");
     await user.click(screen.getByRole("button", { name: "Cancelar" }));
 
+    // Con cambios cargados, primero avisa; "Seguir editando" no pierde nada y "Descartar" cierra.
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText(/cambios sin guardar/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Seguir editando" }));
+    expect(screen.getByLabelText("Descripción")).toHaveValue("Otra cosa");
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    await user.click(screen.getByRole("button", { name: "Descartar" }));
+
     expect(onClose).toHaveBeenCalled();
     expect(actualizarItemCatalogo).not.toHaveBeenCalled();
+  });
+
+  it("cancelar sin haber cambiado nada cierra directo", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    render(<EditarItemModal item={item()} onClose={onClose} onGuardado={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    expect(onClose).toHaveBeenCalled();
   });
 
   it("cambiar categoría a 'Sin clasificar' guarda null", async () => {

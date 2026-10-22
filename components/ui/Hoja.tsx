@@ -30,6 +30,7 @@ export function Hoja({
   ocupado = false,
   hayCambios = false,
   ancho = "md",
+  rol = "dialog",
   aviso,
   pie,
   onCerrar,
@@ -40,6 +41,8 @@ export function Hoja({
   ocupado?: boolean;
   hayCambios?: boolean;
   ancho?: keyof typeof ANCHOS;
+  /** "alertdialog" para confirmaciones (anular, descartar...). */
+  rol?: "dialog" | "alertdialog";
   /** Un mensaje (por ejemplo un error de guardado) que queda fijo, encima de las acciones. */
   aviso?: ReactNode;
   /** Las acciones; quedan fijas abajo. */
@@ -77,7 +80,7 @@ export function Hoja({
     <Contexto.Provider value={{ cerrar }}>
       <div className="fixed inset-0 z-50 flex items-end justify-center bg-marca/45 sm:items-center sm:p-4" onClick={cerrar}>
         <div
-          role="dialog"
+          role={rol}
           aria-modal="true"
           aria-labelledby={`${id}-titulo`}
           className={`flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-h-[90dvh] sm:rounded-2xl ${ANCHOS[ancho]}`}

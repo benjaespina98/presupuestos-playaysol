@@ -81,7 +81,17 @@ export function HistorialStock({
   }
 
   return (
-    <MarcoDialogo titulo="Historial de stock" subtitulo={nombre} ancho="sm:max-w-2xl" onCerrar={onCerrar}>
+    <MarcoDialogo
+      titulo="Historial de stock"
+      subtitulo={nombre}
+      ancho="sm:max-w-2xl"
+      onCerrar={onCerrar}
+      pie={
+        <button type="button" onClick={onCerrar} className={CLASE_BOTON_SECUNDARIO}>
+          Cerrar
+        </button>
+      }
+    >
       {error && (
         <p role="alert" className="mb-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
@@ -144,12 +154,6 @@ export function HistorialStock({
           })}
         </ul>
       )}
-
-      <div className="mt-4">
-        <button type="button" onClick={onCerrar} className={CLASE_BOTON_SECUNDARIO}>
-          Cerrar
-        </button>
-      </div>
 
       <AnularDialog
         open={porAnular !== null}

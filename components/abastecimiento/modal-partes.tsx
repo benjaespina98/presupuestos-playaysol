@@ -1,13 +1,12 @@
 "use client";
 
+import { Hoja } from "@/components/ui/Hoja";
 
 /**
- * Piezas compartidas por los modales de Proveedores y Materiales (y con el
- * mismo aspecto que los del catálogo de precios): el marco y los botones de
- * guardar/cancelar. Cada modal sólo
- * aporta sus campos.
+ * Marco de los modales de abastecimiento que todavía no tienen acciones fijas (el detalle de un
+ * pedido): es la hoja compartida del portal (components/ui/Hoja), con el encabezado fijo y el
+ * cuerpo con scroll. Los formularios de Material y Proveedor usan la hoja directamente.
  */
-
 export function ModalShell({
   titulo,
   subtitulo,
@@ -18,62 +17,15 @@ export function ModalShell({
 }: {
   titulo: string;
   subtitulo?: string;
-  /** Mientras guarda o elimina no se puede cerrar tocando afuera. */
+  /** Mientras guarda no se puede cerrar tocando afuera. */
   ocupado?: boolean;
   ancho?: "max-w-md" | "max-w-2xl";
   onClose: () => void;
   children: React.ReactNode;
 }) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#244B5A]/45 p-4"
-      onClick={ocupado ? undefined : onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-titulo"
-        className={`max-h-[90vh] w-full ${ancho} overflow-y-auto rounded-xl bg-white p-6 shadow-2xl`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 id="modal-titulo" className="mb-1 text-base font-bold text-[#244B5A]">
-          {titulo}
-        </h2>
-        {subtitulo && <p className="mb-4 text-xs text-gray-500">{subtitulo}</p>}
-        {children}
-      </div>
-    </div>
-  );
-}
-
-export function BotonesGuardar({
-  guardando,
-  etiqueta,
-  etiquetaGuardando = "Guardando...",
-  onCancelar,
-}: {
-  guardando: boolean;
-  etiqueta: string;
-  etiquetaGuardando?: string;
-  onCancelar: () => void;
-}) {
-  return (
-    <div className="flex flex-col gap-2 pt-2 sm:flex-row-reverse">
-      <button
-        type="submit"
-        disabled={guardando}
-        className="min-h-11 w-full rounded-md bg-[#244B5A] px-4 text-sm font-semibold text-white transition-colors hover:bg-marca-oscuro focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244B5A] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
-      >
-        {guardando ? etiquetaGuardando : etiqueta}
-      </button>
-      <button
-        type="button"
-        onClick={onCancelar}
-        disabled={guardando}
-        className="min-h-11 w-full rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
-      >
-        Cancelar
-      </button>
-    </div>
+    <Hoja titulo={titulo} subtitulo={subtitulo} ocupado={ocupado} ancho={ancho === "max-w-2xl" ? "xl" : "md"} onCerrar={onClose}>
+      {children}
+    </Hoja>
   );
 }

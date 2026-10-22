@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useZodForm } from "@/lib/forms/useZodForm";
 import { MoneyField, TextField, SelectField, CheckboxField } from "@/components/form";
-import { MarcoDialogo, CLASE_BOTON_PRIMARIO, CLASE_BOTON_SECUNDARIO } from "@/components/stock/MarcoDialogo";
+import { Hoja, PieAcciones } from "@/components/ui/Hoja";
 import { HistorialStock } from "@/components/stock/HistorialStock";
 import { actualizarItemCatalogo } from "@/lib/catalogo";
 import { CATEGORIAS, UNIDADES } from "@/lib/domain/catalogo/categorias";
@@ -48,6 +48,7 @@ export function EditarItemModal({
   /** Se anuló un movimiento desde el historial: el padre actualiza el stock de la lista. */
   onStockCambio?: (item: ItemCatalogo, resultado: ResultadoStock) => void;
 }) {
+  const formId = useId();
   const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
   const [stockActual, setStockActual] = useState(item.stock);
   const [verHistorial, setVerHistorial] = useState(false);
@@ -56,7 +57,7 @@ export function EditarItemModal({
     watch,
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useZodForm(EditarItemSchema, { defaultValues: aFormulario(item) });
 
   const llevaStock = watch("llevaStock");
@@ -75,14 +76,23 @@ export function EditarItemModal({
   }
 
   return (
-    <MarcoDialogo
+    <Hoja
       titulo="Editar ítem"
       subtitulo={`${item.clave} · ${TITULOS_TIPO[item.tipo]}`}
       ocupado={isSubmitting}
-      ancho="sm:max-w-lg"
+      hayCambios={isDirty}
+      ancho="lg"
       onCerrar={onClose}
+      aviso={
+        errorGuardado ? (
+          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {errorGuardado}
+          </p>
+        ) : undefined
+      }
+      pie={<PieAcciones formId={formId} guardando={isSubmitting} etiqueta="Guardar cambios" />}
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+      <form id={formId} onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
         <fieldset className="space-y-4">
           <legend className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-500">Datos</legend>
           <TextField register={register} errors={errors} name="descripcion" label="Descripción" multiline rows={3} autoFocus />
@@ -130,27 +140,14 @@ export function EditarItemModal({
           )}
         </fieldset>
 
-        <CheckboxField
-          register={register}
-          errors={errors}
-          name="activo"
-          label="Activo"
-          hint="Desactivar lo oculta de los presupuestos y pedidos nuevos, sin perderlo ni tocar los ya hechos. Lo podés reactivar cuando quieras."
-        />
-
-        {errorGuardado && (
-          <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            {errorGuardado}
-          </p>
-        )}
-
-        <div className="sticky bottom-0 -mx-5 -mb-5 flex flex-col gap-2 border-t border-gray-100 bg-white px-5 py-4 sm:-mx-6 sm:-mb-6 sm:flex-row-reverse sm:px-6">
-          <button type="submit" disabled={isSubmitting} className={`${CLASE_BOTON_PRIMARIO} sm:flex-1`}>
-            {isSubmitting ? "Guardando..." : "Guardar cambios"}
-          </button>
-          <button type="button" onClick={onClose} disabled={isSubmitting} className={`${CLASE_BOTON_SECUNDARIO} sm:flex-1`}>
-            Cancelar
-          </button>
+        <div className="rounded-xl border border-gray-200 px-4 py-1">
+          <CheckboxField
+            register={register}
+            errors={errors}
+            name="activo"
+            label="Activo"
+            hint="Desactivado: sale de presupuestos y pedidos nuevos; no se pierde."
+          />
         </div>
       </form>
 
@@ -165,6 +162,6 @@ export function EditarItemModal({
           }}
         />
       )}
-    </MarcoDialogo>
+    </Hoja>
   );
 }

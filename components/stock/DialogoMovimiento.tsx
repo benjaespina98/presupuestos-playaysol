@@ -89,7 +89,22 @@ export function DialogoMovimiento({
   const quedaria = c.error === null ? stockActual + (esVenta ? -c.valor : c.valor) : null;
 
   return (
-    <MarcoDialogo titulo={titulo} subtitulo={`${nombre} · hoy hay ${stockActual}`} ocupado={enviando} onCerrar={onCerrar}>
+    <MarcoDialogo
+      titulo={titulo}
+      subtitulo={`${nombre} · hoy hay ${stockActual}`}
+      ocupado={enviando}
+      onCerrar={onCerrar}
+      pie={
+        <div className="flex gap-2">
+          <button type="button" disabled={enviando} onClick={onCerrar} className={`${CLASE_BOTON_SECUNDARIO} flex-1`}>
+            Cancelar
+          </button>
+          <button type="button" disabled={enviando} onClick={confirmar} className={`${confirmando ? CLASE_BOTON_PELIGRO : CLASE_BOTON_PRIMARIO} flex-[2]`}>
+            {enviando ? "Un momento..." : confirmando ? "Vender igual" : esVenta ? "Registrar venta" : "Registrar ingreso"}
+          </button>
+        </div>
+      }
+    >
       <label htmlFor={idCantidad} className="mb-1 block text-sm font-medium text-gray-700">
         Cantidad
       </label>
@@ -140,14 +155,6 @@ export function DialogoMovimiento({
         </p>
       )}
 
-      <div className="mt-5 flex flex-col gap-2">
-        <button type="button" disabled={enviando} onClick={confirmar} className={confirmando ? CLASE_BOTON_PELIGRO : CLASE_BOTON_PRIMARIO}>
-          {enviando ? "Un momento..." : confirmando ? "Vender igual" : esVenta ? "Registrar venta" : "Registrar ingreso"}
-        </button>
-        <button type="button" disabled={enviando} onClick={onCerrar} className={CLASE_BOTON_SECUNDARIO}>
-          Cancelar
-        </button>
-      </div>
     </MarcoDialogo>
   );
 }

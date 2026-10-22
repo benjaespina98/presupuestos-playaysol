@@ -94,7 +94,8 @@ test("relevamiento de pantallas", async ({ page }, info) => {
   if (await fila.count()) {
     await fila.scrollIntoViewIfNeeded();
     await captura(page, "catalogo-fila-stock", info.project.name);
-    await fila.getByRole("button", { name: /^Ingreso de/ }).click().catch(() => undefined);
+    await fila.getByRole("button", { name: /^Más acciones de/ }).click().catch(() => undefined);
+    await page.getByRole("menuitem", { name: "Ingreso", exact: true }).click().catch(() => undefined);
     await captura(page, "dialogo-ingreso", info.project.name);
     await page.keyboard.press("Escape");
   }

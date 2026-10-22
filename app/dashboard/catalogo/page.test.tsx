@@ -49,6 +49,12 @@ function item(overrides: Partial<ItemCatalogo>): ItemCatalogo {
 // layout real) — por eso todas las búsquedas de texto acá usan las variantes
 // `All*` en vez de asumir una sola coincidencia.
 
+/** Abre el menú "⋯" de un ítem y elige una acción (Ingreso, Ajustar conteo o Historial). */
+async function accion(user: ReturnType<typeof userEvent.setup>, nombre: string, etiqueta: string) {
+  await user.click(screen.getAllByRole("button", { name: `Más acciones de ${nombre}` })[0]);
+  await user.click(await screen.findByRole("menuitem", { name: etiqueta }));
+}
+
 describe("CatalogoPage · lectura", () => {
   it("muestra el skeleton mientras carga", () => {
     listarItemsCatalogo.mockReturnValue(new Promise(() => {})); // nunca resuelve
@@ -592,12 +598,15 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    expect(screen.getAllByRole("button", { name: "Ingreso de Caribe 550" }).length).toBeGreaterThan(0);
+    // La acción principal (Venta) está a la vista; Ingreso, Ajustar conteo e Historial, en el menú "⋯".
     expect(screen.getAllByRole("button", { name: "Venta de Caribe 550" }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("button", { name: "Ajustar conteo de Caribe 550" }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("button", { name: "Historial de stock de Caribe 550" }).length).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: /Ingreso de Hierro/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Historial de stock de Hierro/ })).not.toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(screen.getAllByRole("button", { name: "Más acciones de Caribe 550" })[0]);
+    expect(screen.getByRole("menuitem", { name: "Ingreso" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Ajustar conteo" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Historial" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Más acciones de Hierro/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Venta de Hierro/ })).not.toBeInTheDocument();
   });
 
   it("un ingreso llama a la función con una clave y el stock pasa a lo que devuelve la base", async () => {
@@ -606,7 +615,7 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await user.click(screen.getAllByRole("button", { name: "Ingreso de Caribe 550" })[0]);
+    await accion(user, "Caribe 550", "Ingreso");
     await user.type(screen.getByLabelText("Cantidad"), "3");
     await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
 
@@ -658,7 +667,7 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await user.click(screen.getAllByRole("button", { name: "Ingreso de Caribe 550" })[0]);
+    await accion(user, "Caribe 550", "Ingreso");
     await user.type(screen.getByLabelText("Cantidad"), "1");
     await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
     expect(await screen.findByText(/No se pudo conectar/)).toBeInTheDocument();
@@ -673,7 +682,7 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await user.click(screen.getAllByRole("button", { name: "Ingreso de Caribe 550" })[0]);
+    await accion(user, "Caribe 550", "Ingreso");
     await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/Escribí la cantidad/);
     await user.type(screen.getByLabelText("Cantidad"), "1.5");
@@ -688,7 +697,7 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await user.click(screen.getAllByRole("button", { name: "Ajustar conteo de Caribe 550" })[0]);
+    await accion(user, "Caribe 550", "Ajustar conteo");
     await user.clear(screen.getByLabelText("Unidades que contaste"));
     await user.type(screen.getByLabelText("Unidades que contaste"), "5");
     await user.click(screen.getByRole("button", { name: "Guardar conteo" }));
@@ -710,7 +719,7 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await user.click(screen.getAllByRole("button", { name: "Ajustar conteo de Caribe 550" })[0]);
+    await accion(user, "Caribe 550", "Ajustar conteo");
     await user.type(screen.getByLabelText("Motivo"), "Verificación");
     await user.click(screen.getByRole("button", { name: "Guardar conteo" }));
 
@@ -731,7 +740,7 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await user.click(screen.getAllByRole("button", { name: "Historial de stock de Caribe 550" })[0]);
+    await accion(user, "Caribe 550", "Historial");
     const dialogo = await screen.findByRole("dialog", { name: "Historial de stock" });
     expect(within(dialogo).getByText("Contra-asiento")).toBeInTheDocument();
     expect(within(dialogo).getAllByText("Anulado").length).toBeGreaterThan(0);
@@ -756,7 +765,7 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await user.click(screen.getAllByRole("button", { name: "Ingreso de Caribe 550" })[0]);
+    await accion(user, "Caribe 550", "Ingreso");
     await user.type(screen.getByLabelText("Cantidad"), "2");
     await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
 
@@ -797,7 +806,7 @@ describe("CatalogoPage · stock", () => {
 
     await user.click(screen.getByLabelText("Modo consulta rápida"));
 
-    expect(screen.queryByRole("button", { name: /Ingreso de|Venta de|Ajustar conteo de|Historial de stock/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Más acciones de|Venta de/ })).not.toBeInTheDocument();
     expect(screen.getAllByTitle("2 en stock").length).toBeGreaterThan(0);
   });
 });

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { llevaStock, stockNegativo, textoStock, type ItemCatalogo } from "@/lib/domain/catalogo/item";
 import type { ResultadoStock } from "@/lib/domain/stock/movimientos";
 import { botonDe } from "@/components/ui/botones";
+import { MenuAcciones } from "@/components/ui/MenuAcciones";
 import { DialogoAjuste } from "./DialogoAjuste";
 import { DialogoMovimiento } from "./DialogoMovimiento";
 import { HistorialStock } from "./HistorialStock";
@@ -58,28 +59,28 @@ export function StockControles({
 
   if (!editable) return numero;
 
-  // Ingreso y Venta son las acciones del día a día: botones con borde. Ajustar conteo e Historial
-  // son de apoyo (fondo suave). En el celular quedan en una grilla de 2x2, así nada se parte ni
-  // deja un botón solo; en pantallas anchas van todos en una sola fila.
-  const principal = botonDe("secundario", "w-full md:w-auto md:px-3");
-  const apoyo = botonDe("suave", "w-full font-medium md:w-auto md:px-2.5");
-
+  // Una acción principal a la vista (Venta, la del día a día) y las demás en el menú "⋯": la fila
+  // no crece. El menú reúne Ingreso, Ajustar conteo e Historial.
   return (
-    <div className="flex flex-col gap-2 md:flex-row md:flex-nowrap md:items-center md:justify-center md:gap-1.5">
+    <div className="flex items-center justify-between gap-2 md:justify-center">
       {numero}
-      <div className="grid grid-cols-2 gap-2 md:contents">
-        <button type="button" aria-label={`Ingreso de ${nombre}`} onClick={() => setDialogo("ingreso")} className={principal}>
-          Ingreso
-        </button>
-        <button type="button" aria-label={`Venta de ${nombre}`} onClick={() => setDialogo("venta")} className={principal}>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          aria-label={`Venta de ${nombre}`}
+          onClick={() => setDialogo("venta")}
+          className={botonDe("primario", "min-w-24 px-4")}
+        >
           Venta
         </button>
-        <button type="button" aria-label={`Ajustar conteo de ${nombre}`} onClick={() => setDialogo("ajuste")} className={apoyo}>
-          Ajustar conteo
-        </button>
-        <button type="button" aria-label={`Historial de stock de ${nombre}`} onClick={() => setDialogo("historial")} className={apoyo}>
-          Historial
-        </button>
+        <MenuAcciones
+          etiqueta={`Más acciones de ${nombre}`}
+          acciones={[
+            { etiqueta: "Ingreso", onClick: () => setDialogo("ingreso") },
+            { etiqueta: "Ajustar conteo", onClick: () => setDialogo("ajuste") },
+            { etiqueta: "Historial", onClick: () => setDialogo("historial") },
+          ]}
+        />
       </div>
 
       {(dialogo === "ingreso" || dialogo === "venta") && (
