@@ -101,4 +101,8 @@ describe("armarBloquesRevestimiento · la regla alternativa", () => {
     const tarjeta = bloques.find((b) => b.tipo === "tarjetaOpcional");
     expect(tarjeta).toMatchObject({ subcaption: "$ 112.000 por m² × 68 m²" });
   });
+
+  it("el pie de la empresa es siempre el último bloque", () => {
+    expect(armar().at(-1)?.tipo).toBe("pie");
+  });
 });

@@ -52,4 +52,26 @@ describe("armarNombreArchivo", () => {
       "Presupuesto_Cerco_Sin_nombre_2026-08-20"
     );
   });
+
+  it("un cliente larguísimo se recorta: el nombre total nunca pasa de un largo seguro", () => {
+    const nombre = armarNombreArchivo("Piscina", "Rodríguez de la Fuente ".repeat(40), "20/08/2026");
+    expect(nombre.length).toBeLessThanOrEqual(120);
+    expect(nombre).toMatch(/^Presupuesto_Piscina_Rodriguez_de_la_Fuente/);
+    expect(nombre).toMatch(/_2026-08-20$/);
+    expect(nombre).not.toMatch(/__/);
+  });
+
+  it("nunca produce caracteres que Windows no acepta, ni nombres reservados, ni termina en punto o espacio", () => {
+    for (const cliente of ['CON', 'NUL.txt', 'a:b*c?d"e<f>g|h\i/j', "punto.", "espacio ", "..", "COM1", "  "]) {
+      const nombre = armarNombreArchivo("Cerco", cliente, "01/02/2026");
+      expect(nombre).not.toMatch(/[\/:*?"<>|]/);
+      expect(nombre).not.toMatch(/[. ]$/);
+      // Siempre empieza con "Presupuesto_", así que ningún nombre coincide con CON, PRN, AUX, NUL, COM1...
+      expect(nombre.startsWith("Presupuesto_")).toBe(true);
+    }
+  });
+
+  it("sin acentos ni eñes sueltas: ñ pasa a n (el nombre queda en ASCII)", () => {
+    expect(armarNombreArchivo("Cerco", "Peña Ñandú", "20/08/2026")).toBe("Presupuesto_Cerco_Pena_Nandu_2026-08-20");
+  });
 });

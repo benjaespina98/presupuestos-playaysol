@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { z } from "zod";
 import { useZodForm } from "@/lib/forms/useZodForm";
 import { MoneyField, NumberField, TextField, SelectField, CheckboxField } from "@/components/form";
@@ -15,7 +15,8 @@ import {
   type Material,
 } from "@/lib/domain/abastecimiento/material";
 import type { Proveedor } from "@/lib/domain/abastecimiento/proveedor";
-import { BotonesGuardar, ModalShell } from "./modal-partes";
+import { Hoja, PieAcciones } from "@/components/ui/Hoja";
+import { formatFechaRelativa } from "@/lib/format/fecha";
 
 /** `cantidades` viaja como array en el orden de TAMANOS: un nombre de campo
  *  como "7x3.50" tiene un punto, y React Hook Form lo leería como una ruta. */
@@ -80,7 +81,8 @@ function opciones(base: readonly string[], actual: string | null | undefined, va
 
 /**
  * Alta y edición de un material (artículo de compra). `material` null = alta.
- * En la edición vive "desactivar" (apagar Activo). Los materiales no se borran.
+ * Lo esencial va a la vista (nombre, proveedor, rubro, precio, unidad); el resto, en "Más opciones".
+ * En la edición vive "desactivar" (apagar Activo), separado al final. Los materiales no se borran.
  */
 export function MaterialModal({
   material,
@@ -93,12 +95,13 @@ export function MaterialModal({
   onClose: () => void;
   onGuardado: (m: Material, alta: boolean) => void;
 }) {
+  const formId = useId();
   const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
   const {
     control,
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useZodForm(MaterialFormSchema, { defaultValues: aFormulario(material) });
 
   async function onSubmit(valores: MaterialForm) {
@@ -109,6 +112,7 @@ export function MaterialModal({
       material ? material.precio : undefined
     );
     if (error || !item) {
+      // Se conserva lo cargado: el formulario no se desmonta.
       setErrorGuardado(error ?? "No se pudo guardar el material.");
       return;
     }
@@ -122,87 +126,87 @@ export function MaterialModal({
       .map((p) => ({ value: p.id, label: p.activo ? p.nombre : `${p.nombre} (desactivado)` })),
   ];
 
+  // Si lo que está en "Más opciones" ya tiene datos, se abre solo para que no quede escondido.
+  const masOpcionesConDatos = !!(material && (material.usd_ref || material.notas || (material.aplica && material.aplica !== "Siempre")));
+  const actualizado = material?.updated_at ? formatFechaRelativa(material.updated_at) : "";
+
   return (
-    <ModalShell
+    <Hoja
       titulo={material ? "Editar material" : "Agregar material"}
-      subtitulo={material ? undefined : "Queda disponible para todo el equipo."}
-      ancho="max-w-2xl"
       ocupado={isSubmitting}
-      onClose={onClose}
-    >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-        <section className="space-y-4">
-          <TextField register={register} errors={errors} name="nombre" label="Nombre" required autoFocus />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <SelectField register={register} errors={errors} name="proveedor_id" label="Proveedor" options={opcionesProveedor} />
-            <SelectField
-              register={register}
-              errors={errors}
-              name="rubro"
-              label="Rubro"
-              options={opciones(RUBROS_MATERIAL, material?.rubro, "Sin rubro")}
-            />
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Precio</h3>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <MoneyField control={control} name="precio" label="Precio" hint="Vacío = a confirmar" />
-            <SelectField
-              register={register}
-              errors={errors}
-              name="unidad"
-              label="Unidad"
-              options={opciones(UNIDADES_MATERIAL, material?.unidad, "Sin unidad")}
-            />
-            <NumberField control={control} name="usd_ref" label="USD de referencia" hint="Sólo si cotiza en dólares" emptyValue="null" />
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Pedido</h3>
-          <SelectField
-            register={register}
-            errors={errors}
-            name="aplica"
-            label="Cuándo se pide"
-            hint="Siempre = va en todas las obras. Losetas / Deck = según el borde elegido. Luz = por cada luz."
-            options={opciones(APLICA, material?.aplica, "Sin definir")}
-          />
-          <div>
-            <p className="mb-2 text-sm font-medium text-gray-700">Cantidad a pedir por tamaño de pileta</p>
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-              {TAMANOS.map((t, i) => (
-                <NumberField key={t} control={control} name={`cantidades.${i}`} label={t} placeholder="—" emptyValue="null" />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <TextField register={register} errors={errors} name="notas" label="Notas" multiline rows={2} />
-        <CheckboxField
-          register={register}
-          errors={errors}
-          name="activo"
-          label="Activo"
-          hint="Desactivar el material lo saca de los pedidos nuevos, sin perderlo. Lo podés reactivar cuando quieras."
-        />
-
-        {errorGuardado && (
-          <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+      hayCambios={isDirty}
+      ancho="lg"
+      onCerrar={onClose}
+      aviso={
+        errorGuardado ? (
+          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
             {errorGuardado}
           </p>
-        )}
-
-        <BotonesGuardar
+        ) : undefined
+      }
+      pie={
+        <PieAcciones
+          formId={formId}
           guardando={isSubmitting}
           etiqueta={material ? "Guardar cambios" : "Agregar material"}
           etiquetaGuardando={material ? "Guardando..." : "Agregando..."}
-          onCancelar={onClose}
         />
-      </form>
+      }
+    >
+      <form id={formId} onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        <TextField register={register} errors={errors} name="nombre" label="Nombre" required autoFocus />
+        <div className="grid grid-cols-2 gap-3">
+          <SelectField register={register} errors={errors} name="proveedor_id" label="Proveedor" options={opcionesProveedor} />
+          <SelectField register={register} errors={errors} name="rubro" label="Rubro" options={opciones(RUBROS_MATERIAL, material?.rubro, "Sin rubro")} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <MoneyField control={control} name="precio" label="Precio" hint="Vacío = a confirmar" />
+          <SelectField register={register} errors={errors} name="unidad" label="Unidad" options={opciones(UNIDADES_MATERIAL, material?.unidad, "Sin unidad")} />
+        </div>
 
-    </ModalShell>
+        <details open={masOpcionesConDatos} className="group rounded-xl border border-gray-200 bg-gray-50/60">
+          <summary className="flex min-h-11 list-none items-center justify-between gap-2 rounded-xl px-4 text-sm font-semibold text-gray-700 hover:bg-gray-100/70 [&::-webkit-details-marker]:hidden">
+            Más opciones
+            <span aria-hidden="true" className="text-gray-400 transition-transform group-open:rotate-180">
+              ▾
+            </span>
+          </summary>
+          <div className="space-y-4 border-t border-gray-200 px-4 py-4">
+            <div className="grid grid-cols-2 gap-3">
+              <NumberField control={control} name="usd_ref" label="USD de referencia" hint="Si cotiza en dólares" emptyValue="null" />
+              <SelectField
+                register={register}
+                errors={errors}
+                name="aplica"
+                label="Cuándo se pide"
+                hint="Siempre, por borde o por luz"
+                options={opciones(APLICA, material?.aplica, "Sin definir")}
+              />
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-medium text-gray-700">Cantidad a pedir por tamaño de pileta</p>
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                {TAMANOS.map((t, i) => (
+                  <NumberField key={t} control={control} name={`cantidades.${i}`} label={t} placeholder="—" emptyValue="null" />
+                ))}
+              </div>
+            </div>
+            <TextField register={register} errors={errors} name="notas" label="Notas" multiline rows={2} />
+          </div>
+        </details>
+
+        <div className="rounded-xl border border-gray-200 px-4 py-1">
+          <CheckboxField
+            register={register}
+            errors={errors}
+            name="activo"
+            label="Activo"
+            hint="Desactivado: sale de los pedidos nuevos; no se pierde."
+          />
+        </div>
+
+        {actualizado && <p className="text-xs text-gray-400">Actualizado {actualizado}</p>}
+      </form>
+    </Hoja>
   );
 }

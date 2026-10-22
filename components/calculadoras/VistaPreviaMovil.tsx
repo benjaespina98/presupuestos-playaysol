@@ -56,7 +56,7 @@ function PestanaVista({ activa, onClick, children }: { activa: boolean; onClick:
       onClick={onClick}
       aria-pressed={activa}
       className={`min-h-11 flex-1 rounded-md text-sm font-semibold transition-colors ${
-        activa ? "bg-[#1B3A5C] text-white" : "text-gray-600 hover:bg-gray-100"
+        activa ? "bg-[#244B5A] text-white" : "text-gray-600 hover:bg-gray-100"
       }`}
     >
       {children}

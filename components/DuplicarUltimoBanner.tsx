@@ -39,7 +39,7 @@ export function DuplicarUltimoBanner({ tipo, tipoLabel }: { tipo: TipoCalculador
     <div
       role="status"
       data-print-hide=""
-      className="mb-6 flex flex-col items-start justify-between gap-3 rounded-lg border border-[#1B3A5C]/20 bg-[#EEF2F6] px-4 py-3 text-sm sm:flex-row sm:items-center"
+      className="mb-6 flex flex-col items-start justify-between gap-3 rounded-lg border border-[#244B5A]/20 bg-[#EEF2F6] px-4 py-3 text-sm sm:flex-row sm:items-center"
     >
       <p className="text-gray-700">
         ¿Es un {tipoLabel.toLowerCase()} parecido al último que armaste?{" "}
@@ -50,7 +50,7 @@ export function DuplicarUltimoBanner({ tipo, tipoLabel }: { tipo: TipoCalculador
       <div className="flex shrink-0 items-center gap-2">
         <a
           href={`?duplicar=${ultimo.id}`}
-          className="inline-flex min-h-11 items-center rounded-md bg-[#1B3A5C] px-3 text-sm font-medium text-white hover:bg-[#142c46]"
+          className="inline-flex min-h-11 items-center rounded-md bg-[#244B5A] px-3 text-sm font-medium text-white hover:bg-marca-oscuro"
         >
           Duplicar el último
         </a>

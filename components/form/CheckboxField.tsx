@@ -49,8 +49,8 @@ export function CheckboxField<TFieldValues extends FieldValues>({
         <span
           aria-hidden="true"
           className="relative h-6 w-11 shrink-0 rounded-full bg-gray-300 transition-colors
-            peer-checked:bg-[#1B3A5C] peer-focus-visible:outline peer-focus-visible:outline-2
-            peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#1B3A5C]
+            peer-checked:bg-[#244B5A] peer-focus-visible:outline peer-focus-visible:outline-2
+            peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#244B5A]
             before:absolute before:top-0.5 before:left-0.5 before:h-5 before:w-5 before:rounded-full
             before:bg-white before:transition-transform before:content-[''] peer-checked:before:translate-x-5"
         />

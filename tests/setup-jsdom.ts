@@ -10,6 +10,9 @@ import "@testing-library/jest-dom/vitest";
 // *.test.tsx que se acuerde de hacerlo.
 afterEach(() => {
   cleanup();
+  // Las pantallas guardan la búsqueda y los filtros en sessionStorage (para conservarlos al volver de
+  // un detalle): sin limpiarlo, un test heredaría los filtros del anterior.
+  if (typeof window !== "undefined") window.sessionStorage.clear();
 });
 
 /**

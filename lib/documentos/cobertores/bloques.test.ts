@@ -59,4 +59,8 @@ describe("armarBloquesCobertor", () => {
     expect(idx).toBeGreaterThan(0);
     expect(idx).toBeLessThanOrEqual(3);
   });
+
+  it("el pie de la empresa es siempre el último bloque", () => {
+    expect(armar().at(-1)?.tipo).toBe("pie");
+  });
 });

@@ -10,7 +10,7 @@ export default function DashboardLoading() {
       aria-label="Cargando"
       className="flex min-h-[40vh] items-center justify-center"
     >
-      <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-[#1B3A5C]/20 border-t-[#1B3A5C]" />
+      <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-[#244B5A]/20 border-t-[#244B5A]" />
     </div>
   );
 }

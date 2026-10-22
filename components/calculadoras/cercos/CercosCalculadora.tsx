@@ -617,7 +617,7 @@ export function CercosCalculadora({
               onAgregarFotos(e.target.files);
               e.target.value = "";
             }}
-            className="block w-full text-sm text-gray-700 file:mr-3 file:min-h-11 file:rounded-md file:border-0 file:bg-[#1B3A5C] file:px-4 file:text-sm file:font-medium file:text-white"
+            className="block w-full text-sm text-gray-700 file:mr-3 file:min-h-11 file:rounded-md file:border-0 file:bg-[#244B5A] file:px-4 file:text-sm file:font-medium file:text-white"
           />
           {fotos.length > 0 && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

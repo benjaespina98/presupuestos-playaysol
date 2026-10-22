@@ -36,12 +36,12 @@ export function VarianteEncabezadoField<TFieldValues extends FieldValues>({
         {OPCIONES.map((op) => (
           <label
             key={op.value}
-            className="flex min-h-11 cursor-pointer flex-col overflow-hidden rounded-md border border-gray-300 has-[:checked]:border-[#1B3A5C] has-[:checked]:ring-2 has-[:checked]:ring-[#1B3A5C]/30"
+            className="flex min-h-11 cursor-pointer flex-col overflow-hidden rounded-md border border-gray-300 has-[:checked]:border-[#244B5A] has-[:checked]:ring-2 has-[:checked]:ring-[#244B5A]/30"
           >
             <input type="radio" value={op.value} className="peer sr-only" {...register(name)} />
             {/* eslint-disable-next-line @next/next/no-img-element -- miniatura del banner real, no la app */}
             <img src={op.img} alt="" aria-hidden="true" className="h-8 w-full object-cover" />
-            <span className="px-2 py-1.5 text-center text-xs font-medium text-gray-700 peer-checked:text-[#1B3A5C]">
+            <span className="px-2 py-1.5 text-center text-xs font-medium text-gray-700 peer-checked:text-[#244B5A]">
               {op.label}
             </span>
           </label>

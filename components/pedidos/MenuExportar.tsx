@@ -51,7 +51,7 @@ export function MenuExportar({
     <details open={abierto} onToggle={(e) => setAbierto(e.currentTarget.open)} className="group relative" data-print-hide="">
       <summary
         aria-label="Exportar"
-        className={`flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-[#1B3A5C] shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 [&::-webkit-details-marker]:hidden ${ocupado ? "pointer-events-none opacity-60" : ""}`}
+        className={`flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-[#244B5A] shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 [&::-webkit-details-marker]:hidden ${ocupado ? "pointer-events-none opacity-60" : ""}`}
       >
         {ocupado ? "Generando…" : "Exportar"}
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -76,7 +76,7 @@ export function MenuExportar({
               aria-pressed={conPrecios === valor}
               onClick={() => setConPrecios(valor)}
               className={`flex min-h-11 flex-col items-center justify-center rounded-md px-2 text-center transition-colors ${
-                conPrecios === valor ? "bg-white text-[#1B3A5C] shadow-sm" : "text-gray-500 hover:text-gray-800"
+                conPrecios === valor ? "bg-white text-[#244B5A] shadow-sm" : "text-gray-500 hover:text-gray-800"
               }`}
             >
               <span className="text-sm font-semibold">{titulo}</span>

@@ -33,6 +33,7 @@ import { PlanoLosetasSvg } from "./PlanoLosetasSvg";
 import { LosetasFormSchema, formularioVacio, type LosetasForm } from "./schema";
 import { IconCloudUpload, IconImage, IconPrinter } from "@/components/icons";
 import { FloatingSaveBar } from "@/components/calculadoras/FloatingSaveBar";
+import { CalculadoraLosetasInterna } from "./CalculadoraLosetasInterna";
 
 /**
  * Losetas — "Plano de Piscina": editor SVG interactivo, no un documento con
@@ -522,6 +523,8 @@ export function LosetasCalculadora({
           />
         </section>
 
+        <CalculadoraLosetasInterna largoPlano={Number(valoresForm.largo) || 0} anchoPlano={Number(valoresForm.ancho) || 0} />
+
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Profundidad</h2>
           <NumberField
@@ -563,7 +566,7 @@ export function LosetasCalculadora({
           <button
             type="button"
             onClick={() => tramos.append({ desde: 0, hasta: 0, prof: 0 })}
-            className="min-h-11 rounded-md border border-gray-300 px-4 text-sm font-medium text-[#1B3A5C] transition-colors hover:bg-gray-50"
+            className="min-h-11 rounded-md border border-gray-300 px-4 text-sm font-medium text-[#244B5A] transition-colors hover:bg-gray-50"
           >
             + Agregar tramo con otra profundidad
           </button>
@@ -628,7 +631,7 @@ export function LosetasCalculadora({
               control={control}
               name="labios"
               label="Ancho de labios (m)"
-              hint="Ya está dentro del largo × ancho de arriba. No cambia los m² a cotizar: solo dibuja el espejo de agua real dentro de la medida exterior."
+              hint="Va dentro del largo × ancho. No cambia los m²: sólo dibuja el agua real."
             />
           )}
           {valoresForm.revestimiento === "otro" && (
@@ -649,7 +652,7 @@ export function LosetasCalculadora({
                     errors={errors}
                     name="escaleraMovible"
                     label="Ubicarla a mano"
-                    hint="En vez de una franja fija, queda como un objeto chico que arrastrás en el plano — igual que las luces."
+                    hint="Queda como un objeto chico que arrastrás en el plano, como las luces."
                   />
                   {valoresForm.escaleraMovible ? (
                     <NumberField
@@ -713,7 +716,7 @@ export function LosetasCalculadora({
                 errors={errors}
                 name="norte"
                 label="El norte está hacia…"
-                hint="En el plano, el solar queda a la izquierda y el lateral 1 arriba. Se dibuja una rosa de los vientos (N, E, S, O) arriba a la derecha."
+                hint="Solar a la izquierda y lateral 1 arriba; se dibuja la rosa de los vientos."
                 options={NORTE_OPCIONES}
               />
             )}
@@ -749,11 +752,11 @@ export function LosetasCalculadora({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="colorAgua" className="mb-1 block text-xs text-gray-500">Color del agua</label>
-                <input id="colorAgua" type="color" className="h-10 w-full cursor-pointer rounded-md border border-gray-300" {...register("colorAgua")} />
+                <input id="colorAgua" type="color" className="h-11 w-full cursor-pointer rounded-md border border-gray-300" {...register("colorAgua")} />
               </div>
               <div>
                 <label htmlFor="colorLoseta" className="mb-1 block text-xs text-gray-500">Color del borde ({nombreDeBorde(materialBorde, tonoBorde)})</label>
-                <input id="colorLoseta" type="color" className="h-10 w-full cursor-pointer rounded-md border border-gray-300" {...register("colorLoseta")} />
+                <input id="colorLoseta" type="color" className="h-11 w-full cursor-pointer rounded-md border border-gray-300" {...register("colorLoseta")} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -791,7 +794,7 @@ export function LosetasCalculadora({
                 type="button"
                 onClick={() => setAmpliado((v) => !v)}
                 aria-pressed={ampliado}
-                className="min-h-11 shrink-0 rounded-md border border-[#1B3A5C] px-4 text-sm font-medium text-[#1B3A5C] transition-colors hover:bg-[#1B3A5C]/5"
+                className="min-h-11 shrink-0 rounded-md border border-[#244B5A] px-4 text-sm font-medium text-[#244B5A] transition-colors hover:bg-[#244B5A]/5"
               >
                 {ampliado ? "Listo" : "Ampliar plano"}
               </button>
@@ -870,7 +873,7 @@ export function LosetasCalculadora({
             <button
                 type="submit"
                 disabled={guardando}
-                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#1B3A5C] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#142c46] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#244B5A] px-4 text-sm font-semibold text-white transition-colors hover:bg-marca-oscuro disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <IconCloudUpload className="h-4 w-4" />
                 {guardando ? "Guardando..." : "Guardar en la nube"}
@@ -882,7 +885,7 @@ export function LosetasCalculadora({
                 type="button"
                 onClick={onExportarImagen}
                 disabled={generandoImagen}
-                className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#1B3A5C] px-4 text-sm font-medium text-[#1B3A5C] transition-colors hover:bg-[#1B3A5C]/5 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#244B5A] px-4 text-sm font-medium text-[#244B5A] transition-colors hover:bg-[#244B5A]/5 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <IconImage className="h-4 w-4" />
                 {generandoImagen ? "Generando..." : "Imagen"}
@@ -891,7 +894,7 @@ export function LosetasCalculadora({
                 type="button"
                 onClick={onExportarPdf}
                 disabled={generandoPdf}
-                className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#1B3A5C] px-4 text-sm font-medium text-[#1B3A5C] transition-colors hover:bg-[#1B3A5C]/5 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#244B5A] px-4 text-sm font-medium text-[#244B5A] transition-colors hover:bg-[#244B5A]/5 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <IconPrinter className="h-4 w-4" />
                 {generandoPdf ? "Generando..." : "PDF"}
@@ -903,7 +906,7 @@ export function LosetasCalculadora({
             </p>
 
             <div className="grid grid-cols-2 gap-2 border-t border-gray-100 pt-3">
-              <a href="/dashboard/historial?tipo=losetas" className="min-h-11 rounded-md px-4 py-2.5 text-center text-sm font-medium text-[#1B3A5C] hover:bg-gray-100">
+              <a href="/dashboard/historial?tipo=losetas" className="min-h-11 rounded-md px-4 py-2.5 text-center text-sm font-medium text-[#244B5A] hover:bg-gray-100">
                 Historial
               </a>
               <button
