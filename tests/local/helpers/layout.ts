@@ -252,6 +252,22 @@ export async function medirLayout(page: Page): Promise<ProblemasDeLayout> {
       }
       if (tapadoEn >= 2 && culpable) tapados.add(`${etiqueta(el)} lo tapa ${etiqueta(culpable)} (${tapadoEn} de 9 puntos)`);
     }
+    // Una barra al pie (la de "Guardar") o una hoja inferior en el celular tienen que llegar al borde de abajo de la pantalla: si
+    // quedan a mitad de pantalla (el `fixed` de Safari con el alto viejo después del teclado), el scroll se ve roto.
+    if (ancho < 640) {
+      document.querySelectorAll<HTMLElement>("body *").forEach((el) => {
+        const cs = getComputedStyle(el);
+        const pegadaAbajo = (cs.position === "fixed" || cs.position === "sticky") && parseFloat(cs.bottom) === 0 && cs.top !== "0px";
+        const esHoja = el.getAttribute("aria-modal") === "true" && el.parentElement && getComputedStyle(el.parentElement).position === "fixed";
+        if (!pegadaAbajo && !esHoja) return;
+        // Al final de la página una barra `sticky` queda en su lugar natural (sobre el relleno de abajo): eso está bien.
+        if (alFinal && cs.position === "sticky") return;
+        if (!visible(el)) return;
+        const r = el.getBoundingClientRect();
+        if (r.width < ancho * 0.5 || r.height < 30) return;
+        if (Math.abs(r.bottom - alto) > 2) fuera.add(`${etiqueta(el)} debería llegar al borde de abajo de la pantalla y termina en y=${Math.round(r.bottom)} de ${alto}`);
+      });
+    }
     problemas.fueraDePantalla.push(...fuera);
     problemas.tapados.push(...tapados);
 
@@ -278,6 +294,8 @@ export async function medirLayout(page: Page): Promise<ProblemasDeLayout> {
       for (let e: Element | null = el; e && e !== document.body; e = e.parentElement) {
         const p = getComputedStyle(e).position;
         if (p === "fixed") return e;
+        // Una barra pegada al borde de abajo (la de "Guardar") pasa por encima del contenido que se desliza.
+        if (p === "sticky" && parseFloat(getComputedStyle(e).bottom) === 0 && getComputedStyle(e).top === "auto") return e;
         // Pegado sólo si está en la franja de arriba, donde viven las barras y encabezados pegados.
         if (p === "sticky" && !alPrincipio && e.getBoundingClientRect().top < alto * 0.25) return e;
       }

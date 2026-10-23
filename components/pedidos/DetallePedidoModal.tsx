@@ -13,8 +13,8 @@ import {
   type EstadoPedido,
   type PedidoGuardado,
 } from "@/lib/domain/abastecimiento/pedidoDocumento";
-import { exportarPedido, type FormatoPedido, type ModoPedido } from "@/lib/documentos/pedidos/exportar";
-import { compartirOdescargarArchivo } from "@/lib/documentos/compartir";
+import type { FormatoPedido, ModoPedido } from "@/lib/documentos/pedidos/exportar";
+import { entregarPedido } from "@/lib/documentos/pedidos/entregar";
 import { formatARSExacto } from "@/lib/format/ars";
 import { ModalShell } from "@/components/abastecimiento/modal-partes";
 import { MenuExportar } from "./MenuExportar";
@@ -85,9 +85,8 @@ export function DetallePedidoModal({
     setOcupado(true);
     setMensaje(null);
     try {
-      const archivo = await exportarPedido(doc, formato, modo);
-      await compartirOdescargarArchivo(archivo.blob, archivo.nombre, archivo.mime);
-      setMensaje({ tipo: "ok", texto: `${archivo.nombre} generado.` });
+      const nombre = await entregarPedido(doc, formato, modo);
+      setMensaje({ tipo: "ok", texto: `${nombre} generado.` });
     } catch (err) {
       console.error("No se pudo generar el archivo del pedido", err);
       setMensaje({ tipo: "error", texto: "No se pudo generar el archivo. Probá de nuevo." });

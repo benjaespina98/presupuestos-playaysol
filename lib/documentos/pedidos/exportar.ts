@@ -97,3 +97,21 @@ export async function exportarPedido(
   const bytes = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
   return { blob: new Blob([bytes as BlobPart], { type: MIME.zip }), nombre: nombreZip, mime: MIME.zip };
 }
+
+/**
+ * Un archivo SUELTO por cada proveedor (sin ZIP): para el celular, donde un ZIP no se puede abrir. Con un solo proveedor es ese
+ * archivo. Siempre sin precios, teléfonos ni notas internas.
+ */
+export async function exportarPedidoArchivos(
+  documento: DocumentoPedido,
+  formato: FormatoPedido,
+  opciones: OpcionesExportar = {}
+): Promise<ArchivoGenerado[]> {
+  const doc = paraSalida(documento);
+  const logo = formato === "xlsx" ? await (opciones.logo ?? cargarLogo)() : undefined;
+  const partes = separarPorProveedor(doc);
+  const nombres = nombresUnicos(partes.map((p) => nombreArchivoPedido(p, formato, p.proveedores[0].nombre)));
+  const archivos: ArchivoGenerado[] = [];
+  for (let i = 0; i < partes.length; i++) archivos.push({ blob: await generarUno(partes[i], formato, logo), nombre: nombres[i], mime: MIME[formato] });
+  return archivos;
+}

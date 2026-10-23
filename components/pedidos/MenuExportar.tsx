@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
+import { esDispositivoMovil } from "@/lib/documentos/compartir";
 import type { FormatoPedido, ModoPedido } from "@/lib/documentos/pedidos/exportar";
 
 /**
@@ -27,6 +28,8 @@ export function MenuExportar({
   ocupado?: boolean;
 }) {
   const [abierto, setAbierto] = useState(false);
+  // En el celular "uno por proveedor" no arma un ZIP (no se puede abrir): comparte un archivo suelto por proveedor.
+  const movil = useSyncExternalStore(() => () => {}, esDispositivoMovil, () => false);
   const cerrar = () => setAbierto(false);
 
   const opcion = (etiqueta: string, ayuda: string, formato: FormatoPedido, modo: ModoPedido) => (
@@ -66,10 +69,10 @@ export function MenuExportar({
         <p className="px-2 pb-1 pt-1 text-[13px] text-gray-600">Sin precios ni teléfonos: listo para mandarle al proveedor.</p>
         <p className="px-3 pb-1 pt-1.5 text-[13px] font-semibold uppercase tracking-wide text-gray-500">PDF</p>
         {opcion("PDF — todo junto", "Un documento con todos los proveedores", "pdf", "junto")}
-        {variosProveedores && opcion("PDF — uno por proveedor", "Un PDF para cada uno, en un ZIP", "pdf", "por-proveedor")}
+        {variosProveedores && opcion("PDF — uno por proveedor", movil ? "Un PDF para cada uno, se comparten juntos" : "Un PDF para cada uno, en un ZIP", "pdf", "por-proveedor")}
         <p className="px-3 pb-1 pt-2 text-[13px] font-semibold uppercase tracking-wide text-gray-500">Excel</p>
         {opcion("Excel — todo junto", "Un libro con una hoja por proveedor", "xlsx", "junto")}
-        {variosProveedores && opcion("Excel — uno por proveedor", "Un Excel para cada uno, en un ZIP", "xlsx", "por-proveedor")}
+        {variosProveedores && opcion("Excel — uno por proveedor", movil ? "Un Excel para cada uno, se comparten juntos" : "Un Excel para cada uno, en un ZIP", "xlsx", "por-proveedor")}
         {onCsv && (
           <>
             <p className="px-3 pb-1 pt-2 text-[13px] font-semibold uppercase tracking-wide text-gray-500">Otros</p>

@@ -470,7 +470,8 @@ export function CercosCalculadora({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 gap-6 pb-20 sm:pb-0 lg:grid-cols-[minmax(0,1fr)_420px] print:block print:pb-0">
+    <>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate id="form-presupuesto" className="grid grid-cols-1 gap-6 pb-20 sm:pb-0 lg:grid-cols-[minmax(0,1fr)_420px] print:block print:pb-0">
       <VistaPreviaMovil
         formulario={
           <>
@@ -670,7 +671,8 @@ export function CercosCalculadora({
         }
       />
 
-      <FloatingSaveBar guardando={guardando} />
     </form>
+      <FloatingSaveBar guardando={guardando} formId="form-presupuesto" />
+    </>
   );
 }

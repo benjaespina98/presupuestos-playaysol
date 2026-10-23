@@ -27,19 +27,37 @@ interface ContextoHoja {
 const Contexto = createContext<ContextoHoja | null>(null);
 export const useHoja = () => useContext(Contexto);
 
-/** La parte visible de la pantalla (descuenta el teclado en iOS, que no achica el viewport de la página). */
+/**
+ * La parte visible de la pantalla SÓLO mientras el teclado está abierto (iOS no achica el viewport de la página con el teclado).
+ * Sin teclado devuelve `undefined` y la hoja ocupa la pantalla entera (`fixed` con `inset`). Antes se usaba `visualViewport` siempre:
+ * en el iPhone, después de cerrar el teclado, ese alto quedaba viejo y la hoja (por ejemplo el detalle de un pedido) se veía cortada.
+ */
 function useAreaVisible(): CSSProperties | undefined {
   const [area, setArea] = useState<{ top: number; height: number } | null>(null);
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const medir = () => setArea({ top: vv.offsetTop, height: vv.height });
+    const medir = () => {
+      const activo = document.activeElement;
+      const editando = activo instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(activo.tagName);
+      const tecladoAbierto = editando && vv.height < window.innerHeight - 100;
+      setArea(tecladoAbierto ? { top: vv.offsetTop, height: vv.height } : null);
+    };
+    // Al soltar el foco el teclado tarda en irse: se vuelve a medir cuando ya se fue.
+    const alSoltar = () => {
+      setTimeout(medir, 120);
+      setTimeout(medir, 450);
+    };
     medir();
     vv.addEventListener("resize", medir);
     vv.addEventListener("scroll", medir);
+    document.addEventListener("focusin", medir);
+    document.addEventListener("focusout", alSoltar);
     return () => {
       vv.removeEventListener("resize", medir);
       vv.removeEventListener("scroll", medir);
+      document.removeEventListener("focusin", medir);
+      document.removeEventListener("focusout", alSoltar);
     };
   }, []);
   return area ? { top: area.top, height: area.height, bottom: "auto" } : undefined;
