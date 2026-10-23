@@ -70,6 +70,12 @@ const PASOS: Paso[] = [
   { nombre: "calc-cobertores", ruta: "/dashboard/cobertores" },
   { nombre: "calc-revestimientos", ruta: "/dashboard/revestimientos" },
   { nombre: "calc-losetas", ruta: "/dashboard/losetas" },
+  // A mitad de la página (con la barra de "Guardar" pegada al pie) y con un campo con el teclado abierto.
+  { nombre: "calc-piscinas-medio", ruta: "/dashboard/piscinas", preparar: (p) => bajar(p, 1500) },
+  { nombre: "calc-cercos-medio", ruta: "/dashboard/cercos", preparar: (p) => bajar(p, 1200) },
+  { nombre: "calc-cobertores-medio", ruta: "/dashboard/cobertores", preparar: (p) => bajar(p, 1200) },
+  { nombre: "calc-revestimientos-medio", ruta: "/dashboard/revestimientos", preparar: (p) => bajar(p, 1200) },
+  { nombre: "calc-losetas-medio", ruta: "/dashboard/losetas", preparar: (p) => bajar(p, 900) },
   { nombre: "historial", ruta: "/dashboard/historial" },
   { nombre: "historial-filtros", ruta: "/dashboard/historial", preparar: (p) => abrirFiltros(p) },
   {
@@ -272,7 +278,11 @@ test("recorrido: mide todas las pantallas y ventanas", async ({ page }, info) =>
     const l = await medirLayout(page);
     resultados.set(`${proyecto}|${nombre}`, { ...m, ...l, omitido: extra });
     // El indicador de desarrollo de Next no es del portal: no sale en la captura.
-    await page.addStyleTag({ content: "nextjs-portal{display:none!important}" });
+    await page.evaluate(() => {
+      const e = document.createElement("style");
+      e.textContent = "nextjs-portal{display:none!important}";
+      document.head.appendChild(e);
+    });
     await reavivar(nombre);
     await page.screenshot({ path: path.join(dir, `${nombre}.png`), fullPage: false });
   };

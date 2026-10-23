@@ -100,3 +100,25 @@ export async function compartirArchivoYTexto(blob: Blob, nombreArchivo: string, 
 export function descargarArchivo(blob: Blob, nombreArchivo: string): void {
   descargarBlob(blob, nombreArchivo);
 }
+
+/**
+ * Comparte VARIOS archivos de una vez (la hoja de compartir del celular los lleva todos: WhatsApp, Mail, Archivos...). Es lo que
+ * reemplaza al ZIP en el celular, donde un ZIP no se puede abrir. Si el navegador no puede compartir archivos, los descarga uno por
+ * uno (con una pausa, para que el navegador no bloquee las descargas seguidas).
+ */
+export async function compartirVarios(archivos: { blob: Blob; nombre: string; mime: string }[]): Promise<ResultadoCompartir> {
+  const files = archivos.map((a) => new File([a.blob], a.nombre.endsWith(extensionDe(a.mime)) ? a.nombre : `${a.nombre}${extensionDe(a.mime)}`, { type: a.mime }));
+  try {
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function" && typeof navigator.canShare === "function" && navigator.canShare({ files })) {
+      await navigator.share({ files });
+      return "compartido";
+    }
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") return "cancelado";
+  }
+  for (const [i, f] of files.entries()) {
+    descargarBlob(f, f.name);
+    if (i < files.length - 1) await new Promise((r) => setTimeout(r, 400));
+  }
+  return "descargado";
+}

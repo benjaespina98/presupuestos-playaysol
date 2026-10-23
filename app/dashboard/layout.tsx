@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase-server";
 import { LOGO_URL } from "@/lib/brand";
 import { Wordmark } from "@/components/Wordmark";
 import MenuUsuario from "./menu-usuario";
+import { ArreglosTeclado } from "./arreglos-teclado";
 import { NavLink } from "./nav-link";
 
 export default async function DashboardLayout({
@@ -58,6 +59,7 @@ export default async function DashboardLayout({
             Las pantallas que sí quieren una columna angosta —selección de
             calculadora, historial— la piden con <PanelPortal>. */}
         <main id="dashboard-main">{children}</main>
+        <ArreglosTeclado />
       </div>
     </div>
   );
