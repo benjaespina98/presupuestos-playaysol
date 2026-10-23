@@ -487,6 +487,12 @@ function PedidoContenido() {
                 </p>
               )}
 
+              {/* Las cantidades de arriba salen de Materiales (por tamaño de pileta). Acá se pueden retocar para ESTE pedido. */}
+              <p data-print-hide="" className="mb-3 rounded-lg bg-[#EEF2F4] px-4 py-2.5 text-[13px] leading-snug text-[#3E4A52]">
+                <b className="font-semibold text-[#1A3844]">Podés cambiar cualquier cantidad acá.</b> Es sólo para este pedido: las cantidades de Materiales no se tocan.
+                Lo que cambies queda marcado en ámbar y podés volver al valor de siempre con &ldquo;Restablecer cantidades&rdquo;.
+              </p>
+
               <div className="space-y-4">
                 {pedido.grupos.map((g) => (
                   <GrupoTabla
@@ -718,7 +724,7 @@ function GrupoTabla({
               </p>
 
               <div data-print-hide="" className="col-start-2 row-start-3 flex items-center justify-end gap-1 lg:col-auto lg:row-auto">
-                <BotonLapiz nombre={l.material.nombre} onClick={() => onEditarMaterial(l.material)} />
+                <BotonLapiz nombre={l.material.nombre} ayuda="Editar el material (cambia el material para todos los pedidos, no sólo este)" onClick={() => onEditarMaterial(l.material)} />
                 <button
                   type="button"
                   onClick={() => onAjustar(l.material.id, { excluido: true })}

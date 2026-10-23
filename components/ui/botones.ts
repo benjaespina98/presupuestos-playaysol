@@ -39,6 +39,6 @@ export const boton = {
 export const botonDe = (variante: Exclude<keyof typeof boton, "base">, extra = "") =>
   `${boton.base} ${boton[variante]}${extra ? ` ${extra}` : ""}`;
 
-/** El botón de lápiz de las filas de una lista: 44×44, borde sutil, hover, foco y estado activo. */
+/** El botón de lápiz de las filas de una lista: 44×44, tonal (fondo suave, sin borde: el ícono ya tiene 7:1), hover, foco y estado activo. */
 export const BOTON_LAPIZ =
-  "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#7D8892] bg-[#FFFFFF] text-[#244B5A] transition-colors hover:border-[#244B5A] hover:bg-[#EAF0F2] active:bg-[#D5E0E4]";
+  "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#EEF2F4] text-[#244B5A] transition-colors hover:bg-[#E0E8EB] active:bg-[#D5E0E4]";

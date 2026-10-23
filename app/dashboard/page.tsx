@@ -50,6 +50,7 @@ export default function DashboardPage() {
         {CATEGORIAS.map((c) => (
           <Link
             key={c.tipo}
+            data-borde-sutil=""
             href={`/dashboard/${c.tipo}`}
             className="group flex min-h-24 items-center gap-4 rounded-xl border border-gray-200 bg-[#FFFFFF] p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-marca hover:shadow-md active:translate-y-0 sm:p-6"
           >

@@ -78,7 +78,7 @@ export function MenuAcciones({ etiqueta, acciones }: { etiqueta: string; accione
         aria-expanded={posicion !== null}
         aria-controls={posicion ? `${id}-menu` : undefined}
         onClick={() => (posicion ? cerrar() : abrir())}
-        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#7D8892] bg-[#FFFFFF] text-lg font-bold leading-none text-[#244B5A] transition-colors hover:border-[#244B5A] hover:bg-[#EAF0F2] active:bg-[#D5E0E4]"
+        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#EEF2F4] text-lg font-bold leading-none text-[#244B5A] transition-colors hover:bg-[#E0E8EB] active:bg-[#D5E0E4]"
       >
         <span aria-hidden="true">⋯</span>
       </button>

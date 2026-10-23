@@ -69,9 +69,10 @@ export default function MenuUsuario({ email }: { email: string }) {
         aria-expanded={abierto}
         aria-controls={abierto ? `${id}-menu` : undefined}
         onClick={() => (abierto ? cerrar() : abrir())}
-        className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full border border-[#7D8892] bg-[#FFFFFF] pr-1 text-sm text-[#1F2A30] transition-colors hover:border-[#244B5A] hover:bg-[#EAF0F2] active:bg-[#D5E0E4] lg:pr-3"
+        className="group inline-flex h-11 shrink-0 items-center gap-2 rounded-full text-sm text-[#1F2A30] transition-colors lg:pr-3 lg:hover:bg-[#EAF0F2] lg:active:bg-[#D5E0E4]"
       >
-        <span aria-hidden="true" className="ml-px flex h-[2.625rem] w-[2.625rem] shrink-0 items-center justify-center rounded-full bg-[#244B5A] text-base font-bold text-[#FFFFFF] lg:h-9 lg:w-9">
+        {/* Un solo círculo (centrado): la inicial sobre el azul de la marca. Desde lg, además el correo. */}
+        <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#244B5A] text-base font-semibold leading-none text-[#FFFFFF] transition-colors group-hover:bg-[#1A3844] group-active:bg-[#12293A] lg:h-9 lg:w-9">
           {inicial}
         </span>
         <span className="hidden max-w-[16rem] truncate lg:inline">{email}</span>
