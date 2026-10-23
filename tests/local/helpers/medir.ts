@@ -155,7 +155,9 @@ export async function medirPagina(page: Page): Promise<Medidas> {
       const fondoPropio = parse(cs.backgroundColor);
       const relleno = fondoPropio && fondoPropio[3] > 0.5;
       const padre = el.parentElement ? fondoReal(el.parentElement) : ([255, 255, 255, 1] as RGBA);
-      if (borde && (!relleno || razon(mezclar(fondoPropio!, padre), padre) < 1.5)) {
+      // Las tarjetas grandes de navegación ("Nuevo": 96 px de alto y texto de 20 px) llevan un borde claro de adorno (`data-borde-sutil`): lo que las
+      // identifica es el texto, no el borde.
+      if (borde && !el.hasAttribute("data-borde-sutil") && (!relleno || razon(mezclar(fondoPropio!, padre), padre) < 1.5)) {
         const x = razon(mezclar(bc!, padre), padre);
         if (x < 3) contraste.add(`borde ${x.toFixed(2)}:1 (<3) ${el.tagName.toLowerCase()} "${nombre(el)}"`);
       }

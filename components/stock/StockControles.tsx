@@ -27,7 +27,7 @@ export function StockNumero({ item }: { item: ItemCatalogo }) {
   return (
     <span
       title={negativo ? `stock negativo: ${item.stock}` : textoStock(item.stock)}
-      className={`inline-flex min-w-[2.25rem] items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-sm font-bold tabular-nums ring-1 ring-inset ${
+      className={`inline-flex min-w-[2rem] items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[13px] font-semibold tabular-nums ring-1 ring-inset ${
         sinUnidades ? "bg-[#FEF3F2] text-[#B42318] ring-[#FDA29B]" : "bg-[#ECFDF3] text-[#05603A] ring-[#75E0A7]"
       }`}
     >
@@ -48,7 +48,7 @@ export function AccionesStock({ item, onAbrir }: { item: ItemCatalogo; onAbrir: 
   const nombre = item.descripcion || item.clave;
   return (
     <>
-      <button type="button" aria-label={`Venta de ${nombre}`} onClick={() => onAbrir("venta")} className={botonDe("primario", "min-w-[4.5rem] px-3")}>
+      <button type="button" aria-label={`Venta de ${nombre}`} onClick={() => onAbrir("venta")} className={botonDe("suave", "min-w-[4.5rem] px-3 font-semibold")}>
         Venta
       </button>
       <MenuAcciones
