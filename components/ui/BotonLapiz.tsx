@@ -8,9 +8,9 @@ import { BOTON_LAPIZ } from "./botones";
  * estado activo. Tocar toda la fila también abre la edición; el lápiz es el camino para el teclado y los
  * lectores de pantalla ("Editar <nombre>").
  */
-export function BotonLapiz({ nombre, onClick, etiqueta }: { nombre: string; onClick: () => void; etiqueta?: string }) {
+export function BotonLapiz({ nombre, onClick, etiqueta, ayuda }: { nombre: string; onClick: () => void; etiqueta?: string; /** El globo que sale al apoyar el mouse (por defecto, el nombre accesible). */ ayuda?: string }) {
   return (
-    <button type="button" onClick={onClick} aria-label={etiqueta ?? `Editar ${nombre}`} title={etiqueta ?? `Editar ${nombre}`} className={BOTON_LAPIZ}>
+    <button type="button" onClick={onClick} aria-label={etiqueta ?? `Editar ${nombre}`} title={ayuda ?? etiqueta ?? `Editar ${nombre}`} className={BOTON_LAPIZ}>
       <IconEdit className="h-[18px] w-[18px]" />
     </button>
   );

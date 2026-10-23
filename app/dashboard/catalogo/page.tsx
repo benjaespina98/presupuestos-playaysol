@@ -366,31 +366,39 @@ function FilaItem({
       onClick={editable ? alTocarFila(onEditar) : undefined}
       className={`grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-1.5 gap-y-0.5 px-4 py-1.5 text-[15px] leading-5 transition-colors hover:bg-[#F4F8F9] lg:min-h-[3rem] lg:gap-x-4 lg:py-0 ${columnas} ${editable ? "cursor-pointer" : ""} ${item.activo ? "" : "opacity-70"}`}
     >
-      {/* Celular, dos renglones. Con acciones de stock: arriba el nombre y el stock; abajo el precio, "Venta", "…" y el lápiz.
-          Sin acciones: el nombre y el precio a la izquierda y el lápiz a la derecha. Desde lg, la grilla de columnas. */}
-      <div className={`col-span-2 col-start-1 row-start-1 min-w-0 ${alta}`}>
-        <ItemDescripcion item={item} />
+      {/* Celular, dos renglones. Con acciones de stock: arriba el nombre y, pegado a su costado, el stock (una pastilla chica);
+          abajo el precio, "Venta", "…" y el lápiz. Sin acciones: el nombre y el precio a la izquierda y el lápiz a la derecha.
+          Desde lg, la grilla de columnas (el `order` devuelve cada celda a su columna). */}
+      <div className={`col-start-1 row-start-1 flex min-w-0 items-center gap-2 ${tieneAcciones ? "col-span-3" : "col-span-2"} ${alta} lg:order-1 lg:contents`}>
+        <div className="min-w-0 lg:order-1">
+          <ItemDescripcion item={item} />
+        </div>
+        {conStock && tieneAcciones && (
+          <span className="shrink-0 lg:order-4 lg:text-center">
+            <StockNumero item={item} />
+          </span>
+        )}
       </div>
-      <span className={`col-start-1 row-start-2 justify-self-start tabular-nums lg:text-center ${alta}`}>
+      <span className={`col-start-1 row-start-2 justify-self-start tabular-nums lg:order-2 lg:text-center ${alta}`}>
         <PrecioItem item={item} />
       </span>
-      <span className={`hidden whitespace-nowrap text-[13px] text-[#4A5861] lg:block lg:text-center`}>{item.precio !== null && item.unidad ? `${item.unidad}` : ""}</span>
-      {conStock && (
-        <span className={`row-start-1 justify-self-end ${tieneAcciones ? "col-span-2 col-start-2" : "col-start-2 row-start-2"} ${alta} lg:text-center`}>
+      <span className={`hidden whitespace-nowrap text-[13px] text-[#4A5861] lg:order-3 lg:block lg:text-center`}>{item.precio !== null && item.unidad ? `${item.unidad}` : ""}</span>
+      {conStock && !tieneAcciones && (
+        <span className={`col-start-2 row-start-2 justify-self-end ${alta} lg:order-4 lg:text-center`}>
           <StockNumero item={item} />
         </span>
       )}
 
       {/* Acciones de stock (Venta y "…"), la fecha (sólo desde lg) y el lápiz. */}
       {conStock && (
-        <div className={`col-start-2 row-start-2 flex items-center justify-end gap-1.5 ${alta} lg:gap-2`}>
+        <div className={`col-start-2 row-start-2 flex items-center justify-end gap-1.5 ${alta} lg:order-5 lg:gap-2`}>
           {tieneAcciones && <AccionesStock item={item} onAbrir={setDialogo} />}
         </div>
       )}
-      <p className="hidden whitespace-nowrap text-center text-[13px] text-[#4A5861] lg:block">
+      <p className="hidden whitespace-nowrap text-center text-[13px] text-[#4A5861] lg:order-6 lg:block">
         <FechaActualizacion updatedAt={item.updated_at} />
       </p>
-      <div className={`col-start-3 flex justify-end ${tieneAcciones ? "row-start-2" : "row-span-2 row-start-1"} ${alta} lg:justify-center`}>
+      <div className={`col-start-3 flex justify-end ${tieneAcciones ? "row-start-2" : "row-span-2 row-start-1"} ${alta} lg:order-7 lg:justify-center`}>
         {modoConsulta ? (
           <button type="button" onClick={onCopiar} className={botonDe("suave", "px-3")}>
             <IconCopy className="h-4 w-4" />

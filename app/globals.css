@@ -84,19 +84,39 @@ button:disabled {
 }
 /* Red de seguridad: los botones, links y resúmenes con borde gris claro (o de marca/rojo con opacidad) pasan al borde
    de control, que se ve (3:1 contra el fondo). Los hex fijos de botones.ts ya lo cumplen. */
-button[class*="border-gray-"],
-a[class*="border-gray-"],
-summary[class*="border-gray-"],
-label[class*="border-gray-"] {
+/* (Sólo cuentan las clases "border-…" a secas, como palabra entera: un `hover:border-marca` NO es el borde de reposo — antes, por eso,
+   las tarjetas de "Nuevo" quedaban con el borde oscuro. Y `data-borde-sutil` deja a una pieza con su borde claro de siempre.) */
+button[class~="border-gray-100"]:not([data-borde-sutil]),
+button[class~="border-gray-200"]:not([data-borde-sutil]),
+button[class~="border-gray-300"]:not([data-borde-sutil]),
+button[class~="border-gray-400"]:not([data-borde-sutil]),
+a[class~="border-gray-100"]:not([data-borde-sutil]),
+a[class~="border-gray-200"]:not([data-borde-sutil]),
+a[class~="border-gray-300"]:not([data-borde-sutil]),
+a[class~="border-gray-400"]:not([data-borde-sutil]),
+summary[class~="border-gray-100"]:not([data-borde-sutil]),
+summary[class~="border-gray-200"]:not([data-borde-sutil]),
+summary[class~="border-gray-300"]:not([data-borde-sutil]),
+summary[class~="border-gray-400"]:not([data-borde-sutil]),
+label[class~="border-gray-100"]:not([data-borde-sutil]),
+label[class~="border-gray-200"]:not([data-borde-sutil]),
+label[class~="border-gray-300"]:not([data-borde-sutil]),
+label[class~="border-gray-400"]:not([data-borde-sutil]) {
   border-color: var(--borde-control);
 }
-button[class*="border-red-"],
-a[class*="border-red-"] {
+button[class~="border-red-200"],
+button[class~="border-red-300"],
+button[class~="border-red-500"],
+a[class~="border-red-200"],
+a[class~="border-red-300"],
+a[class~="border-red-500"] {
   border-color: #b42318;
 }
-button[class*="border-marca"],
-a[class*="border-marca"],
-summary[class*="border-marca"] {
+button[class~="border-marca"],
+a[class~="border-marca"],
+summary[class~="border-marca"],
+button[class*="border-marca/"],
+a[class*="border-marca/"] {
   border-color: #244b5a;
 }
 :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
