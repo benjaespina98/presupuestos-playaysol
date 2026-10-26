@@ -200,3 +200,13 @@ describe("PedidoGuardado", () => {
     expect(PedidoGuardado.safeParse({ ...base, estado: "perdido" }).success).toBe(false);
   });
 });
+
+describe("LineaGuardada · pedidos viejos", () => {
+  it("una línea con el nombre del proveedor en null no hace desaparecer el pedido: queda como «Sin proveedor»", () => {
+    const { proveedor: _omitido, ...resto } = linea({});
+    void _omitido;
+    const r = LineaGuardada.safeParse({ ...resto, proveedor: null, proveedor_id: null });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.proveedor).toBe("Sin proveedor");
+  });
+});

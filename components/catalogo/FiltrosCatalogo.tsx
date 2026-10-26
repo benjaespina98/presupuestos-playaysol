@@ -111,7 +111,10 @@ export function FiltrosCatalogo({
         { id: "inactivos", etiqueta: "Mostrar desactivados", valor: incluirInactivos, onCambio: onIncluirInactivos },
         { id: "consulta", etiqueta: "Modo consulta rápida", valor: modoConsulta, onCambio: onModoConsulta },
       ]}
-      acciones={[{ etiqueta: "Planilla de costos", texto: "Planilla", href: PLANILLA_COSTOS_URL, icono: <IconTable className="h-4 w-4" /> }]}
+      acciones={[
+        { etiqueta: "Actualizar precios", href: "/dashboard/catalogo/actualizar-precios?que=ventas" },
+        { etiqueta: "Planilla de costos", texto: "Planilla", href: PLANILLA_COSTOS_URL, icono: <IconTable className="h-4 w-4" /> },
+      ]}
       agregar={modoConsulta ? undefined : { etiqueta: "Agregar ítem", onClick: onAgregar }}
       resultados={resultados}
       contador={contador}

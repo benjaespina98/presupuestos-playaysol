@@ -223,7 +223,7 @@ describe("EditarItemModal · stock", () => {
   it("las unidades no se editan acá: no hay campo de unidades, ni con stock", () => {
     render(<EditarItemModal item={item({ stock: 2 })} onClose={vi.fn()} onGuardado={vi.fn()} />);
     expect(screen.queryByLabelText("Unidades en stock")).not.toBeInTheDocument();
-    expect(screen.getByText(/Ingreso, Venta o Ajustar conteo/)).toBeInTheDocument();
+    expect(screen.getByText(/«Llegó mercadería», «Venta» o «Corregir stock»/)).toBeInTheDocument();
   });
 
   it("tildar 'Llevar stock' en un ítem que no lo llevaba lo arranca en 0", async () => {

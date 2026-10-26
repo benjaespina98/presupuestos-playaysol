@@ -24,7 +24,7 @@ export const EditarItemSchema = z.object({
   unidad: z.union([z.enum(UNIDADES), z.literal("")]),
   activo: z.boolean(),
   /** Si el ítem se guarda en el local. Las unidades NO se editan acá: se mueven con
-   *  Ingreso, Venta o Ajustar conteo (libro de movimientos, lib/stock.ts). */
+   *  «Llegó mercadería», «Venta» o «Corregir stock» (libro de movimientos, lib/stock.ts). */
   llevaStock: z.boolean(),
 });
 export type EditarItemForm = z.infer<typeof EditarItemSchema>;

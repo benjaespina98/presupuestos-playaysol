@@ -36,7 +36,7 @@ const OPCIONES_UNIDAD = [
  * Acá viven las acciones sobre un ítem existente: guardar los cambios y
  * desactivarlo o reactivarlo (el interruptor "Activo": lo oculta sin perderlo).
  * Los ítems no se borran. Las unidades de stock NO se editan acá: se mueven con
- * Ingreso, Venta o Ajustar conteo desde la lista. Agregar un ítem nuevo es CrearItemModal.
+ * «Llegó mercadería», «Venta» o «Corregir stock» desde la lista. Agregar un ítem nuevo es CrearItemModal.
  */
 export function EditarItemModal({
   item,
@@ -138,7 +138,7 @@ export function EditarItemModal({
                 </p>
               )}
               <p className="text-[13px] leading-snug text-[#4A5861]">
-                Las unidades se mueven con Ingreso, Venta o Ajustar conteo, desde la lista del catálogo. Para dejar de llevar stock, el conteo tiene que estar en 0.
+                Las unidades se mueven con «Llegó mercadería», «Venta» o «Corregir stock», desde la lista del catálogo. Para dejar de llevar stock, el conteo tiene que estar en 0.
               </p>
             </div>
           )}

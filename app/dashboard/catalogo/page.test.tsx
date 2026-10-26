@@ -65,7 +65,7 @@ async function elegirCategoria(user: ReturnType<typeof userEvent.setup>, nombre:
   await user.click(within(lista).getByRole("radio", { name: nombre }));
 }
 
-/** Abre el menú "⋯" de un ítem y elige una acción (Ingreso, Ajustar conteo o Historial). */
+/** Abre el menú "⋯" de un ítem y elige una acción (Llegó mercadería, Corregir stock o Ver movimientos). */
 async function accion(user: ReturnType<typeof userEvent.setup>, nombre: string, etiqueta: string) {
   await user.click(screen.getAllByRole("button", { name: `Más acciones de ${nombre}` })[0]);
   await user.click(await screen.findByRole("menuitem", { name: etiqueta }));
@@ -622,17 +622,17 @@ describe("CatalogoPage · stock", () => {
     error: null,
   });
 
-  it("un ítem que lleva stock muestra Ingreso, Venta, Ajustar conteo e Historial; uno que no, nada de eso", async () => {
+  it("un ítem que lleva stock muestra Llegó mercadería, Venta, Corregir stock y Ver movimientos; uno que no, nada de eso", async () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    // La acción principal (Venta) está a la vista; Ingreso, Ajustar conteo e Historial, en el menú "⋯".
+    // La acción principal (Venta) está a la vista; Llegó mercadería, Corregir stock y Ver movimientos, en el menú "⋯".
     expect(screen.getAllByRole("button", { name: "Venta de Caribe 550" }).length).toBeGreaterThan(0);
     const user = userEvent.setup();
     await user.click(screen.getAllByRole("button", { name: "Más acciones de Caribe 550" })[0]);
-    expect(screen.getByRole("menuitem", { name: "Ingreso" })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: "Ajustar conteo" })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: "Historial" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Llegó mercadería" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Corregir stock" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Ver movimientos" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Más acciones de Hierro/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Venta de Hierro/ })).not.toBeInTheDocument();
   });
@@ -643,7 +643,7 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await accion(user, "Caribe 550", "Ingreso");
+    await accion(user, "Caribe 550", "Llegó mercadería");
     await user.type(screen.getByLabelText("Cantidad"), "3");
     await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
 
@@ -695,7 +695,7 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await accion(user, "Caribe 550", "Ingreso");
+    await accion(user, "Caribe 550", "Llegó mercadería");
     await user.type(screen.getByLabelText("Cantidad"), "1");
     await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
     expect(await screen.findByText(/No se pudo conectar/)).toBeInTheDocument();
@@ -710,7 +710,7 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await accion(user, "Caribe 550", "Ingreso");
+    await accion(user, "Caribe 550", "Llegó mercadería");
     await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/Escribí la cantidad/);
     await user.type(screen.getByLabelText("Cantidad"), "1.5");
@@ -719,13 +719,13 @@ describe("CatalogoPage · stock", () => {
     expect(registrarMovimiento).not.toHaveBeenCalled();
   });
 
-  it("Ajustar conteo manda el conteo (no la diferencia) y exige motivo", async () => {
+  it("Corregir stock manda el conteo (no la diferencia) y exige motivo", async () => {
     ajustarConteo.mockResolvedValue(resultado({ tipo: "ajuste", cantidad: 3, stock_resultante: 5 }));
     const user = userEvent.setup();
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await accion(user, "Caribe 550", "Ajustar conteo");
+    await accion(user, "Caribe 550", "Corregir stock");
     await user.clear(screen.getByLabelText("Unidades que contaste"));
     await user.type(screen.getByLabelText("Unidades que contaste"), "5");
     await user.click(screen.getByRole("button", { name: "Guardar conteo" }));
@@ -747,7 +747,7 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await accion(user, "Caribe 550", "Ajustar conteo");
+    await accion(user, "Caribe 550", "Corregir stock");
     await user.type(screen.getByLabelText("Motivo"), "Verificación");
     await user.click(screen.getByRole("button", { name: "Guardar conteo" }));
 
@@ -768,8 +768,8 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await accion(user, "Caribe 550", "Historial");
-    const dialogo = await screen.findByRole("dialog", { name: "Historial de stock" });
+    await accion(user, "Caribe 550", "Ver movimientos");
+    const dialogo = await screen.findByRole("dialog", { name: "Movimientos de stock" });
     expect(within(dialogo).getByText("Contra-asiento")).toBeInTheDocument();
     expect(within(dialogo).getAllByText("Anulado").length).toBeGreaterThan(0);
     expect(within(dialogo).getByText(/Referencia: Remito 7/)).toBeInTheDocument();
@@ -793,7 +793,7 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await accion(user, "Caribe 550", "Ingreso");
+    await accion(user, "Caribe 550", "Llegó mercadería");
     await user.type(screen.getByLabelText("Cantidad"), "2");
     await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
 

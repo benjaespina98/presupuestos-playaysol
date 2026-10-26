@@ -394,6 +394,6 @@ describe("stock", () => {
     );
     const { actualizarItemCatalogo } = await import("./catalogo");
     const r = await actualizarItemCatalogo("1", { descripcion: "x", precio: 1, categoria: null, unidad: null, activo: true, stock: null });
-    expect(r.error).toMatch(/Ajustar conteo/);
+    expect(r.error).toMatch(/Corregir stock/);
   });
 });

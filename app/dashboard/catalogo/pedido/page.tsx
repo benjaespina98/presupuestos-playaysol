@@ -286,7 +286,7 @@ function PedidoContenido() {
           <section
             data-print-hide=""
             aria-label="Datos de la obra"
-            className="mb-5 space-y-4 rounded-lg border border-gray-200 bg-[#FFFFFF] p-5 shadow-sm"
+            className="mb-4 space-y-4 rounded-lg border border-gray-200 bg-[#FFFFFF] p-4 shadow-sm sm:mb-5 sm:p-5"
           >
             <div className="grid gap-4 sm:grid-cols-2">
               <Campo etiqueta="Cliente / obra" id="obra">
@@ -308,7 +308,7 @@ function PedidoContenido() {
               />
             </Campo>
 
-            <div className="grid gap-4 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-4 sm:gap-x-4">
               <Campo etiqueta="Tamaño de pileta" id="tamano">
                 <SelectorSimple id="tamano" titulo="Tamaño de pileta" valor={params.tamano} opciones={TAMANOS.map((t) => ({ value: t, label: t }))} onCambio={(v) => cambiar({ tamano: v })} />
               </Campo>
@@ -335,7 +335,7 @@ function PedidoContenido() {
                   className={CLASE_CAMPO}
                 />
               </Campo>
-              <div role="group" aria-label="Borde (terminación)">
+              <div role="group" aria-label="Borde (terminación)" className="col-span-2 sm:col-span-1">
                 <p className="mb-1.5 text-sm font-medium text-gray-700">Borde (terminación)</p>
                 <div className="flex gap-2">
                   {BORDES.map((b) => (
@@ -419,7 +419,6 @@ function PedidoContenido() {
                 >
                   <MenuExportar onExportar={onExportar} onCsv={descargarCsv} variosProveedores={pedido.grupos.length > 1} ocupado={ocupado} />
                 </div>
-                <Accion onClick={() => window.print()}>Imprimir</Accion>
                 {hayAjustes && (
                   <button
                     type="button"
@@ -506,7 +505,7 @@ function PedidoContenido() {
                 ))}
               </div>
 
-              <div data-print-hide="" className="mt-4">
+              <div data-print-hide="" className="mt-4 lg:hidden">
                 <button type="button" onClick={() => setAgregando(true)} className={botonDe("secundario", "px-4")}>
                   + Agregar otro material al pedido
                 </button>

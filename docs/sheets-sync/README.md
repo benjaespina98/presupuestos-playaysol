@@ -45,6 +45,13 @@ columna con el encabezado **Stock** de la hoja "Precios y margen":
 > 🔁 Si ya tenías el script pegado, hay que **volver a pegar el contenido de
 > [`Sincronizar.gs`](./Sincronizar.gs)** en Apps Script (reemplaza todo) para que sincronice el stock.
 
+## Cambiar muchos precios de una vez
+En **Precios → Actualizar precios** y **Compras → Materiales → Actualizar precios** hay una pantalla para cargar
+varios precios juntos (costos de materiales o precios de venta): se escribe el precio nuevo en cada fila, o se sube/baja
+todo lo que se ve con un porcentaje, y se guarda en bloque. Sólo se toca el precio (y la fecha de actualización del
+material), nada más de la fila; en la planilla llega en la próxima actualización como cualquier otro cambio. Lo cubre
+`tests/local/precios.spec.ts` (pantalla → base → endpoint → script real con planilla falsa).
+
 ## Lo que se agrega en la web llega a la planilla
 - **Material nuevo** (pestaña Materiales): aparece como una fila nueva en la hoja **Artículos**.
 - **Proveedor nuevo**: aparece como una fila nueva en la hoja **Proveedores**.

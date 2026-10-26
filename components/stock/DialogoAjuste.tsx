@@ -14,7 +14,7 @@ import type { ResultadoStock } from "@/lib/domain/stock/movimientos";
 import { CLASE_BOTON_PRIMARIO, CLASE_BOTON_SECUNDARIO, CLASE_INPUT, MarcoDialogo } from "./MarcoDialogo";
 
 /**
- * "Ajustar conteo": la persona cuenta las unidades que hay y escribe ese número.
+ * "Corregir stock": la persona cuenta las unidades que hay y escribe ese número.
  * Manda el CONTEO, no la diferencia: la diferencia la calcula la base con el ítem
  * bloqueado, así que si el stock cambió mientras contaba, igual queda en lo que contó.
  * Lo que se muestra acá ("cambia en +2") es una estimación con lo que se ve en pantalla.
@@ -70,7 +70,7 @@ export function DialogoAjuste({
 
   return (
     <MarcoDialogo
-      titulo="Ajustar conteo"
+      titulo="Corregir stock"
       subtitulo={`${nombre} · el sistema dice ${stockActual}`}
       ocupado={enviando}
       onCerrar={onCerrar}
