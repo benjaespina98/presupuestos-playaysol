@@ -370,12 +370,12 @@ function FilaItem({
           abajo el precio, "Venta", "…" y el lápiz. Sin acciones: el nombre y el precio a la izquierda y el lápiz a la derecha.
           Desde lg, la grilla de columnas (el `order` devuelve cada celda a su columna). */}
       <div className={`col-start-1 row-start-1 flex min-w-0 items-center gap-2 ${tieneAcciones ? "col-span-3" : "col-span-2"} ${alta} lg:order-1 lg:contents`}>
-        <div className="min-w-0 lg:order-1">
+        <div className="min-w-0 flex-1 lg:order-1">
           <ItemDescripcion item={item} />
         </div>
         {conStock && tieneAcciones && (
-          <span className="shrink-0 lg:order-4 lg:text-center">
-            <StockNumero item={item} />
+          <span className="ml-auto shrink-0 lg:order-4 lg:text-center">
+            <StockNumero item={item} conRotulo />
           </span>
         )}
       </div>

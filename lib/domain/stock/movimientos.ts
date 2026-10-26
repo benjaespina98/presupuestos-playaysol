@@ -161,13 +161,13 @@ export function mensajeErrorStock(error: { code?: string | null; message?: strin
     case "ST005":
       return "Esa operación ya se había registrado con otros datos. Cerrá el diálogo y volvé a empezar.";
     case "ST006":
-      return "Una anulación o un stock inicial no se anula: para corregir el stock usá «Ajustar conteo».";
+      return "Una anulación o un stock inicial no se anula: para corregir el stock usá «Corregir stock».";
     case "ST007":
       return "Ese movimiento ya fue anulado.";
     case "ST010":
-      return "El stock no se cambia directamente: usá Ingreso, Venta o Ajustar conteo.";
+      return "El stock no se cambia directamente: usá «Llegó mercadería», «Venta» o «Corregir stock».";
     case "ST011":
-      return "Un ítem nuevo no puede crearse con stock: cargá las unidades con un Ingreso.";
+      return "Un ítem nuevo no puede crearse con stock: cargá las unidades con «Llegó mercadería».";
     case "42501":
       return "No tenés permiso para hacer esto o se venció tu sesión. Volvé a iniciar sesión.";
     case "PGRST202":

@@ -82,7 +82,7 @@ export function HistorialStock({
 
   return (
     <MarcoDialogo
-      titulo="Historial de stock"
+      titulo="Movimientos de stock"
       subtitulo={nombre}
       ancho="sm:max-w-2xl"
       onCerrar={onCerrar}

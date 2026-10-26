@@ -44,7 +44,7 @@ ignorada por git).
 | `catalogo-filtros` | Hoja / panel de filtros (categoría, stock, orden, interruptores) | |
 | `catalogo-menu-stock`, `catalogo-menu-orden` | Menús de stock y de orden (escritorio) | |
 | `catalogo-agregar-item`, `catalogo-editar-item` | Hoja de alta y de edición de un ítem | |
-| `catalogo-menu-fila` | Menú "…" de la fila (Ingreso, Ajustar conteo, Historial) | |
+| `catalogo-menu-fila` | Menú "…" de la fila (Ingreso, Corregir stock, Historial) | |
 | `catalogo-venta`, `catalogo-ingreso`, `catalogo-ajuste`, `catalogo-historial-stock` | Diálogos de stock | |
 | (estados) | Vacío por filtro de stock, error, cargando, modo consulta rápida, aviso de stock negativo, "Se guardó…" (aviso) | |
 

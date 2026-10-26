@@ -147,3 +147,55 @@ export async function guardarMaterial(
   }
 }
 
+
+// ── Actualización masiva de precios ──────────────────────────────────────────
+
+export interface CambioPrecioMaterial {
+  id: string;
+  /** Qué campo cambia: el precio en pesos, o el USD de referencia de los que se cotizan en dólares. */
+  campo: "precio" | "usd_ref";
+  valor: number;
+}
+
+export interface ResultadoActualizacionPrecios {
+  /** Los ids que se guardaron (con el valor que quedó). */
+  guardados: string[];
+  /** Los que fallaron, con el motivo. */
+  fallidos: { id: string; error: string }[];
+}
+
+/** Cuántas filas se mandan a la vez: las suficientes para que 60 precios tarden segundos, sin saturar la base. */
+const EN_PARALELO = 5;
+
+/**
+ * Cambia SÓLO el precio (o el USD de referencia) de varios materiales, sin tocar el resto de cada fila (nombre,
+ * cantidades, notas...): si otra persona editó otra cosa mientras tanto, no se pisa. Refresca la fecha del precio.
+ * Nunca rechaza la promesa; cada fila informa su propio resultado.
+ */
+export async function actualizarPreciosMateriales(cambios: readonly CambioPrecioMaterial[]): Promise<ResultadoActualizacionPrecios> {
+  const resultado: ResultadoActualizacionPrecios = { guardados: [], fallidos: [] };
+  let userId: string | undefined;
+  try {
+    const supabase = createClient();
+    userId = (await supabase.auth.getUser()).data.user?.id;
+    for (let i = 0; i < cambios.length; i += EN_PARALELO) {
+      await Promise.all(
+        cambios.slice(i, i + EN_PARALELO).map(async (c) => {
+          const { data, error } = await supabase
+            .from("materiales")
+            .update({ [c.campo]: c.valor, precio_actualizado: hoyISO(), updated_by: userId })
+            .eq("id", c.id)
+            .select("id");
+          if (error) resultado.fallidos.push({ id: c.id, error: mensaje(error, "") });
+          else if (!data || data.length === 0) resultado.fallidos.push({ id: c.id, error: "El material ya no existe." });
+          else resultado.guardados.push(c.id);
+        })
+      );
+    }
+  } catch (err) {
+    console.error("No se pudieron actualizar los precios de los materiales", err);
+    const hechos = new Set([...resultado.guardados, ...resultado.fallidos.map((f) => f.id)]);
+    for (const c of cambios) if (!hechos.has(c.id)) resultado.fallidos.push({ id: c.id, error: ERROR_DE_RED });
+  }
+  return resultado;
+}

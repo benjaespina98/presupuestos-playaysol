@@ -17,17 +17,17 @@ export type DialogoStock = "ingreso" | "venta" | "ajuste" | "historial" | null;
  *
  *  - `StockNumero`: el número de unidades (rojo si está en 0, con marca de aviso si es negativo). Los que no
  *    llevan stock (hierros, luces, cercos, hormigón…) dicen "A pedido".
- *  - `AccionesStock`: "Venta" (la acción del día a día) y el menú "…" con Ingreso, Ajustar conteo e Historial.
+ *  - `AccionesStock`: "Venta" (la acción del día a día) y el menú "…" con Llegó mercadería, Corregir stock y Ver movimientos.
  *  - `DialogosStock`: el diálogo que esté abierto. El número nunca se edita directo.
  */
-export function StockNumero({ item }: { item: ItemCatalogo }) {
+export function StockNumero({ item, conRotulo = false }: { item: ItemCatalogo; /** En el celular no hay encabezado de columna: la pastilla dice "Stock 3". */ conRotulo?: boolean }) {
   if (!llevaStock(item)) return <span className="whitespace-nowrap text-[13px] text-[#4A5861]">A pedido</span>;
   const negativo = stockNegativo(item);
   const sinUnidades = item.stock <= 0;
   return (
     <span
       title={negativo ? `stock negativo: ${item.stock}` : textoStock(item.stock)}
-      className={`inline-flex min-w-[2rem] items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[13px] font-semibold tabular-nums ring-1 ring-inset ${
+      className={`inline-flex min-w-[2rem] items-center justify-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[13px] font-semibold tabular-nums ring-1 ring-inset ${
         sinUnidades ? "bg-[#FEF3F2] text-[#B42318] ring-[#FDA29B]" : "bg-[#ECFDF3] text-[#05603A] ring-[#75E0A7]"
       }`}
     >
@@ -37,6 +37,7 @@ export function StockNumero({ item }: { item: ItemCatalogo }) {
           <span className="sr-only">Stock negativo</span>
         </>
       )}
+      {conRotulo && <span aria-hidden="true" className="font-medium lg:hidden">Stock</span>}
       {negativo ? `−${Math.abs(item.stock)}` : item.stock}
       {!negativo && <span className="sr-only"> en stock</span>}
     </span>
@@ -54,9 +55,9 @@ export function AccionesStock({ item, onAbrir }: { item: ItemCatalogo; onAbrir: 
       <MenuAcciones
         etiqueta={`Más acciones de ${nombre}`}
         acciones={[
-          { etiqueta: "Ingreso", onClick: () => onAbrir("ingreso") },
-          { etiqueta: "Ajustar conteo", onClick: () => onAbrir("ajuste") },
-          { etiqueta: "Historial", onClick: () => onAbrir("historial") },
+          { etiqueta: "Llegó mercadería", onClick: () => onAbrir("ingreso") },
+          { etiqueta: "Corregir stock", onClick: () => onAbrir("ajuste") },
+          { etiqueta: "Ver movimientos", onClick: () => onAbrir("historial") },
         ]}
       />
     </>

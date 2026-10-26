@@ -5,7 +5,7 @@ import { boton } from "@/components/ui/botones";
 import { Hoja } from "@/components/ui/Hoja";
 
 /**
- * El marco común de los diálogos de stock (Ingreso, Venta, Ajustar conteo, Historial): es la hoja
+ * El marco común de los diálogos de stock (Ingreso, Venta, Corregir stock, Historial): es la hoja
  * compartida del portal (components/ui/Hoja). En el celular sube desde abajo con el encabezado y el
  * pie fijos; desde sm es un cuadro centrado. Mientras `ocupado` no se cierra (no se pierde una
  * operación a medias). `pie` son las acciones, que quedan siempre a la vista.

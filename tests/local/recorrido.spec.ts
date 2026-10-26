@@ -131,7 +131,7 @@ const PASOS: Paso[] = [
     ruta: "/dashboard/catalogo",
     preparar: async (p) => {
       await tocar(p, /^Más acciones de/);
-      await p.getByRole("menuitem", { name: "Ingreso" }).click();
+      await p.getByRole("menuitem", { name: "Llegó mercadería" }).click();
     },
   },
   {
@@ -139,7 +139,7 @@ const PASOS: Paso[] = [
     ruta: "/dashboard/catalogo",
     preparar: async (p) => {
       await tocar(p, /^Más acciones de/);
-      await p.getByRole("menuitem", { name: "Ajustar conteo" }).click();
+      await p.getByRole("menuitem", { name: "Corregir stock" }).click();
     },
   },
   {
@@ -147,7 +147,7 @@ const PASOS: Paso[] = [
     ruta: "/dashboard/catalogo",
     preparar: async (p) => {
       await tocar(p, /^Más acciones de/);
-      await p.getByRole("menuitem", { name: "Historial" }).click();
+      await p.getByRole("menuitem", { name: "Ver movimientos" }).click();
     },
   },
   { nombre: "catalogo-materiales", ruta: "/dashboard/catalogo/materiales" },
