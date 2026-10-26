@@ -141,6 +141,7 @@ export default function MaterialesPage() {
           { id: "a-confirmar", etiqueta: `Sólo "A confirmar" (${sinPrecio})`, valor: soloSinPrecio, onCambio: (v) => cambiar({ soloSinPrecio: v }) },
           { id: "inactivos", etiqueta: "Mostrar desactivados", valor: incluirInactivos, onCambio: (v) => cambiar({ incluirInactivos: v }) },
         ]}
+        acciones={[{ etiqueta: "Actualizar precios", href: "/dashboard/catalogo/actualizar-precios?que=materiales" }]}
         agregar={{
           etiqueta: "Agregar material",
           onClick: () => {

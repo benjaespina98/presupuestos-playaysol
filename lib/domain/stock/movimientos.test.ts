@@ -127,10 +127,10 @@ describe("mensajeErrorStock", () => {
     ["ST002", /ya no existe/],
     ["ST003", /no lleva stock/],
     ["ST005", /otros datos/],
-    ["ST006", /Ajustar conteo/],
+    ["ST006", /Corregir stock/],
     ["ST007", /ya fue anulado/],
     ["ST010", /no se cambia directamente/],
-    ["ST011", /Ingreso/],
+    ["ST011", /Llegó mercadería/],
     ["42501", /sesión/],
     ["PGRST202", /actualización de la base/],
   ])("traduce %s", (code, mensaje) => {

@@ -185,7 +185,7 @@ export function CrearItemModal({
               hint="Para lo que se guarda en el local, como las piscinas de fibra."
             />
             {llevaStock && (
-              <p className="text-[13px] leading-snug text-[#4A5861]">Arranca en 0 unidades. Cargá lo que hay con «Ingreso» desde la lista del catálogo.</p>
+              <p className="text-[13px] leading-snug text-[#4A5861]">Arranca en 0 unidades. Cargá lo que hay con «Llegó mercadería» desde la lista del catálogo.</p>
             )}
           </div>
           <ZonaActivo>

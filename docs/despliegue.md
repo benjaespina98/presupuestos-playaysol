@@ -139,10 +139,10 @@ Esperá a que Vercel termine el despliegue (panel de Vercel → Deployments → 
 
 Con tu usuario, en `presupuestos-playaysol.vercel.app`:
 
-1. Entrá. **Catálogo:** una piscina de fibra muestra su stock y los botones Ingreso, Venta, Ajustar conteo e Historial;
+1. Entrá. **Catálogo:** una piscina de fibra muestra su stock y los botones Ingreso, Venta, Corregir stock e Historial;
    un ítem de hormigón dice "A pedido" y no tiene botones.
 2. **Historial** de una piscina con unidades: aparece "Stock inicial" con la cantidad que tenía.
-3. **Ajustar conteo** con el **mismo** número que ya tiene: tiene que decir que no hubo cambios (no crea movimiento).
+3. **Corregir stock** con el **mismo** número que ya tiene: tiene que decir que no hubo cambios (no crea movimiento).
 4. Si querés probar escritura real: un **Ingreso de 1** en una piscina y después, desde su Historial, **Anular** ese ingreso.
    (Queda en el libro; es parte de la prueba.)
 5. **Historial de presupuestos:** abrí uno viejo; se ve igual que antes. No anules uno real.

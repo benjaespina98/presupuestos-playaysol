@@ -192,7 +192,7 @@ export interface CambiosItemCatalogo {
 /** Los rechazos del stock (la base lo protege de escritura directa) se explican en castellano. */
 function mensajeErrorItem(error: { code?: string; message?: string }): string {
   if (error.code === "ST010") {
-    return "Para dejar de llevar stock, el conteo tiene que estar en 0: hacé primero un «Ajustar conteo». Las unidades no se editan acá.";
+    return "Para dejar de llevar stock, el conteo tiene que estar en 0: hacé primero un «Corregir stock». Las unidades no se editan acá.";
   }
   if (error.code === "ST011") return mensajeErrorStock(error);
   return error.message ?? "Error desconocido.";
@@ -314,4 +314,33 @@ export async function crearItemCatalogo(
     console.error("No se pudo crear el ítem de catálogo", err);
     return { item: null, error: ERROR_DE_RED };
   }
+}
+
+/**
+ * Cambia SÓLO el precio de venta de varios ítems del catálogo (sin tocar descripción, categoría ni stock).
+ * Nunca rechaza la promesa; cada fila informa su propio resultado.
+ */
+export async function actualizarPreciosItems(
+  cambios: readonly { id: string; precio: number }[]
+): Promise<{ guardados: string[]; fallidos: { id: string; error: string }[] }> {
+  const resultado = { guardados: [] as string[], fallidos: [] as { id: string; error: string }[] };
+  try {
+    const supabase = createClient();
+    const userId = (await supabase.auth.getUser()).data.user?.id;
+    for (let i = 0; i < cambios.length; i += 5) {
+      await Promise.all(
+        cambios.slice(i, i + 5).map(async (c) => {
+          const { data, error } = await supabase.from("catalogo_items").update({ precio: c.precio, updated_by: userId }).eq("id", c.id).select("id");
+          if (error) resultado.fallidos.push({ id: c.id, error: error.message ?? "Error desconocido." });
+          else if (!data || data.length === 0) resultado.fallidos.push({ id: c.id, error: SIN_FILA_AFECTADA });
+          else resultado.guardados.push(c.id);
+        })
+      );
+    }
+  } catch (err) {
+    console.error("No se pudieron actualizar los precios del catálogo", err);
+    const hechos = new Set([...resultado.guardados, ...resultado.fallidos.map((f) => f.id)]);
+    for (const c of cambios) if (!hechos.has(c.id)) resultado.fallidos.push({ id: c.id, error: ERROR_DE_RED });
+  }
+  return resultado;
 }

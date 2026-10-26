@@ -33,7 +33,11 @@ export const LineaGuardada = z.object({
   subtotal: z.number(),
   proveedor_id: z.string().nullable(),
   /** El nombre del proveedor en ese momento ("Sin proveedor" si no tenía). */
-  proveedor: z.string(),
+  proveedor: z
+    .string()
+    .nullable()
+    // Un pedido viejo puede traer el nombre en null: no debe desaparecer de la lista por eso.
+    .transform((v) => v ?? "Sin proveedor"),
   contacto: z.string().nullable(),
   telefono: z.string().nullable(),
 });

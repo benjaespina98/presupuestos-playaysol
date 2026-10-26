@@ -18,7 +18,7 @@ const COMPRAS = [
  */
 export function CatalogoTabs() {
   const pathname = usePathname();
-  if (pathname === "/dashboard/catalogo") return null;
+  if (pathname === "/dashboard/catalogo" || pathname.startsWith("/dashboard/catalogo/actualizar-precios")) return null;
 
   return (
     <nav aria-label="Secciones de compras">
