@@ -124,7 +124,9 @@ function filtrosActivos({ secciones = [], interruptores = [], orden }: Pick<Prop
 }
 
 export function BarraHerramientas(props: PropsBarraHerramientas) {
-  const { contador, contadorDerecha } = props;
+  const { contador, contadorDerecha, acciones: accionesProps = [] } = props;
+  // Los atajos internos (como "Actualizar precios") se ven siempre: en el celular, a la derecha del contador.
+  const atajosCelular = accionesProps.filter((a) => a.href.startsWith("/"));
   const escritorio = useEsEscritorio();
   const ref = useRef<HTMLDivElement>(null);
 
@@ -163,9 +165,14 @@ export function BarraHerramientas(props: PropsBarraHerramientas) {
 
       {escritorio === false && <ChipsActivos activos={activos} />}
 
-      {(contador || contadorDerecha) && (
+      {(contador || contadorDerecha || atajosCelular.length > 0) && (
         <p className="flex flex-wrap items-baseline justify-between gap-x-4 py-1.5 text-[13px] text-[#4A5861]" aria-live="polite">
           <span>{contador}</span>
+          {atajosCelular.map((a) => (
+            <Link key={a.href} href={a.href} className="-my-2 inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-semibold text-[#244B5A] underline underline-offset-2 sm:hidden">
+              {a.etiqueta}
+            </Link>
+          ))}
           {contadorDerecha && <span className="hidden sm:inline">{contadorDerecha}</span>}
         </p>
       )}
