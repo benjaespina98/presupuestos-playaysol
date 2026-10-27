@@ -13,6 +13,8 @@ import { SECCIONES, seccionDeItem } from "@/lib/domain/catalogo/secciones";
 import {
   aplicarPorcentaje,
   cambiosPendientes,
+  emparejarLista,
+  leerListaPegada,
   interpretarPorcentaje,
   textoVariacion,
   variacionPorcentual,
@@ -67,6 +69,8 @@ function ActualizarPrecios() {
   const [seccion, setSeccion] = useState("");
   const [tipeado, setTipeado] = useState<Record<string, string>>({});
   const [porcentaje, setPorcentaje] = useState("");
+  const [pegado, setPegado] = useState("");
+  const [sinPareja, setSinPareja] = useState<string[]>([]);
   const [confirmando, setConfirmando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -157,6 +161,8 @@ function ActualizarPrecios() {
     setConfirmando(false);
     setFallos([]);
     setBusqueda("");
+    setPegado("");
+    setSinPareja([]);
     router.replace(`/dashboard/catalogo/actualizar-precios?que=${nuevo}`);
   }
 
@@ -172,6 +178,27 @@ function ActualizarPrecios() {
     });
     setConfirmando(false);
     setAviso(`Se calculó ${textoVariacion(pct)} sobre ${hayPrecios.length} ${hayPrecios.length === 1 ? "precio" : "precios"}. Todavía no se guardó nada.`);
+  }
+
+  /** Lee la lista pegada y completa el precio de cada fila que reconoce; lo que no reconoce se lista aparte. */
+  function cargarListaPegada() {
+    const lineas = leerListaPegada(pegado);
+    const { asignados, sinPareja: sin } = emparejarLista(lineas, todas ?? []);
+    const n = Object.keys(asignados).length;
+    setTipeado((prev) => ({ ...prev, ...asignados }));
+    setSinPareja(sin.map((s) => (s.motivo === "no existe" ? `${s.nombre} (no está en la lista)` : `${s.nombre} (coincide con varias filas)`)));
+    setConfirmando(false);
+    setAviso(
+      n > 0
+        ? `Se completaron ${n} ${n === 1 ? "precio" : "precios"} de la lista pegada. Revisalos abajo: todavía no se guardó nada.`
+        : "No se encontró ningún producto de la lista pegada."
+    );
+    if (n > 0) {
+      setBusqueda("");
+      setProveedorId("");
+      setRubro("");
+      setSeccion("");
+    }
   }
 
   async function guardar() {
@@ -312,6 +339,38 @@ function ActualizarPrecios() {
             Calcular en {hayPrecios.length} {hayPrecios.length === 1 ? "precio" : "precios"}
           </button>
         </div>
+
+        <details className="mt-4 border-t border-gray-100 pt-3">
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-[#244B5A]">Pegar una lista de precios</summary>
+          <p className="mb-2 text-[13px] leading-snug text-[#3E4A52]">
+            Una línea por producto, con el precio al final (por ejemplo <b>Cemento portland (bolsa 50 kg) 10.780</b>). Se emparejan solos por nombre; lo que
+            no se reconoce queda listado para que lo cargues a mano. Nada se guarda hasta que toques <b>Guardar cambios</b>.
+          </p>
+          <label htmlFor="ap-pegado" className="sr-only">
+            Lista de precios
+          </label>
+          <textarea
+            id="ap-pegado"
+            rows={5}
+            value={pegado}
+            onChange={(e) => setPegado(e.target.value)}
+            placeholder={"Racionalista 400 — 6.230.000\nRacionalista 450 — 6.830.000"}
+            className={CLASE_CAMPO}
+          />
+          <button type="button" onClick={cargarListaPegada} disabled={pegado.trim() === "" || todas === null} className={botonDe("secundario", "mt-2 px-4")}>
+            Cargar la lista
+          </button>
+          {sinPareja.length > 0 && (
+            <div role="status" className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <p className="font-semibold">No se pudieron emparejar {sinPareja.length}:</p>
+              <ul className="list-disc pl-5">
+                {sinPareja.map((x) => (
+                  <li key={x}>{x}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </details>
       </section>
 
       {error && (
