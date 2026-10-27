@@ -77,3 +77,66 @@ export function cambiosPendientes(
   }
   return { cambios, invalidas };
 }
+
+// ── Pegar una lista de precios ───────────────────────────────────────────────
+
+export interface LineaDeLista {
+  nombre: string;
+  texto: string;
+}
+
+/** Minúsculas, sin tildes ni signos: "Bomba BAP 0.50HP" y "bomba bap 0,50 hp" se parecen. */
+export function normalizarNombre(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/**
+ * Lee lo que se pegó: una línea por producto, con el precio al final ("Racionalista 400 — 6.230.000", "Cal 4620",
+ * una fila copiada de una planilla con tabulaciones, "Bomba | US$ 166,36"). Devuelve el nombre y el precio tal cual
+ * lo escribieron; las líneas sin un precio al final se ignoran.
+ */
+export function leerListaPegada(texto: string): LineaDeLista[] {
+  const salida: LineaDeLista[] = [];
+  for (const cruda of texto.split(/\r?\n/)) {
+    const linea = cruda.trim();
+    if (!linea) continue;
+    const m = /^(.*?)[\s\-–—:|=\t]*(?:US\$|u\$s|usd|\$)?\s*(-?[\d][\d.,]*)\s*$/i.exec(linea);
+    if (!m) continue;
+    const nombre = m[1].replace(/[\s\-–—:|=\t]+$/g, "").trim();
+    if (nombre) salida.push({ nombre, texto: m[2] });
+  }
+  return salida;
+}
+
+export interface Emparejamiento {
+  /** id de la fila → precio tipeado. */
+  asignados: Record<string, string>;
+  /** Las líneas que no se pudieron emparejar con una sola fila, con el motivo. */
+  sinPareja: { nombre: string; motivo: "no existe" | "varias coinciden" }[];
+}
+
+/**
+ * Empareja cada línea pegada con UNA fila de la lista: primero por nombre igual (sin tildes ni signos) y, si no, por
+ * nombre contenido en el otro, siempre que haya una sola candidata. Ante la duda no adivina: la deja sin pareja.
+ */
+export function emparejarLista(lineas: readonly LineaDeLista[], filas: readonly { id: string; nombre: string }[]): Emparejamiento {
+  // Se comparan sin espacios: "0,50 HP" y "0.50HP" son lo mismo.
+  const clave = (x: string) => normalizarNombre(x).replace(/ /g, "");
+  const normalizadas = filas.map((f) => ({ id: f.id, n: clave(f.nombre) }));
+  const asignados: Record<string, string> = {};
+  const sinPareja: Emparejamiento["sinPareja"] = [];
+  for (const l of lineas) {
+    const n = clave(l.nombre);
+    if (!n) continue;
+    let candidatas = normalizadas.filter((f) => f.n === n);
+    if (candidatas.length === 0) candidatas = normalizadas.filter((f) => f.n.includes(n) || (f.n.length >= 6 && n.includes(f.n)));
+    if (candidatas.length === 1) asignados[candidatas[0].id] = l.texto;
+    else sinPareja.push({ nombre: l.nombre, motivo: candidatas.length === 0 ? "no existe" : "varias coinciden" });
+  }
+  return { asignados, sinPareja };
+}

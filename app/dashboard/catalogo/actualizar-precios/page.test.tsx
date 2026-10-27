@@ -95,4 +95,17 @@ describe("Actualizar precios", () => {
     expect(await screen.findByText(/Arena: El material ya no existe/)).toBeInTheDocument();
     expect(screen.getByLabelText("Precio nuevo de Arena")).toHaveValue("2500");
   });
+  it("una lista pegada completa los precios que reconoce y avisa los que no", async () => {
+    const user = userEvent.setup();
+    render(<Pagina />);
+    await screen.findByLabelText("Precio nuevo de Arena");
+    await user.click(screen.getByText("Pegar una lista de precios"));
+    await user.click(screen.getByLabelText("Lista de precios"));
+    await user.paste("Cemento 25 kg — 1.250\nArena 2300\nZuipy 200 1500000");
+    await user.click(screen.getByRole("button", { name: "Cargar la lista" }));
+    expect(screen.getByLabelText("Precio nuevo de Cemento 25 kg")).toHaveValue("1.250");
+    expect(screen.getByLabelText("Precio nuevo de Arena")).toHaveValue("2300");
+    expect(screen.getByText(/Zuipy 200 \(no está en la lista\)/)).toBeInTheDocument();
+    expect(abast.actualizarPreciosMateriales).not.toHaveBeenCalled();
+  });
 });
