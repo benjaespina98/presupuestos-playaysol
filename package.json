@@ -26,7 +26,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "7.85.0",
-    "zod": "4.4.3"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",

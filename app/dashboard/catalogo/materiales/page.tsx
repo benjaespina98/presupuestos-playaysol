@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { listarMateriales, listarProveedores } from "@/lib/abastecimiento";
 import {
   RUBROS_MATERIAL,
@@ -19,10 +19,15 @@ import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
 import { BarraHerramientas } from "@/components/ui/BarraHerramientas";
 import { Toast } from "@/components/ui/BarraListado";
 import { BotonLapiz, alTocarFila } from "@/components/ui/BotonLapiz";
+import { Aviso } from "@/components/ui/Aviso";
+import { ListaCargando, ListaVacia } from "@/components/ui/EstadoLista";
+import { botonDe } from "@/components/ui/botones";
+import { COLUMNA_NUMERO, LISTA, LISTA_ENCABEZADO, LISTA_FILA, LISTA_GRUPO, LISTA_SEPARADORES, TEXTO_SECUNDARIO } from "@/components/ui/lista";
+import { Pastilla } from "@/components/ui/Pastilla";
 import { MaterialModal } from "@/components/abastecimiento/MaterialModal";
 
-/** Las columnas de la tabla desde `lg`: Material · Proveedor · Categoría · Precio · Unidad · Actualizado · Editar. */
-const COLUMNAS = "lg:grid-cols-[minmax(0,1fr)_11rem_9rem_8rem_5rem_6.5rem_3.5rem]";
+/** Las columnas de la tabla desde `lg`: Material · Proveedor · Rubro · Precio · Unidad · Actualizado · Editar. */
+const COLUMNAS = "lg:grid-cols-[minmax(0,1fr)_11rem_9rem_8rem_4rem_6.5rem_3.5rem]";
 
 interface Filtros {
   busqueda: string;
@@ -41,12 +46,19 @@ export default function MaterialesPage() {
   const [error, setError] = useState<string | null>(null);
   // La búsqueda, los filtros y el orden se conservan al abrir otra pantalla y volver.
   const [filtros, setFiltros] = useEstadoPersistente<Filtros>("materiales:filtros", SIN_FILTROS);
-  const { busqueda, rubro, proveedorId, soloSinPrecio, incluirInactivos } = filtros;
+  const { rubro, proveedorId, soloSinPrecio, incluirInactivos } = filtros;
+  const busqueda = useDeferredValue(filtros.busqueda);
   const orden = filtros.orden ?? "defecto";
   const cambiar = (parcial: Partial<Filtros>) => setFiltros({ ...filtros, ...parcial });
   const [editando, setEditando] = useState<Material | null>(null);
   const [creando, setCreando] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
+
+  // Estable, para que abrir un aviso o cerrar una hoja no vuelva a dibujar todas las filas.
+  const abrirEdicion = useCallback((m: Material) => {
+    setMensaje(null);
+    setEditando(m);
+  }, []);
 
   useEffect(() => {
     let cancelado = false;
@@ -100,14 +112,16 @@ export default function MaterialesPage() {
     const porRubro = new Map<string, Material[]>();
     for (const m of visibles ?? []) {
       const clave = m.rubro ?? "Sin rubro";
-      porRubro.set(clave, [...(porRubro.get(clave) ?? []), m]);
+      const bloque = porRubro.get(clave);
+      if (bloque) bloque.push(m);
+      else porRubro.set(clave, [m]);
     }
     return [...porRubro.entries()].sort(([a], [b]) => (a === "Sin rubro" ? 1 : b === "Sin rubro" ? -1 : a.localeCompare(b, "es")));
   }, [visibles, orden]);
 
   const rubrosVisibles = [...RUBROS_MATERIAL, "Sin rubro"].filter((r) => (conteos.porRubro[r] ?? 0) > 0 || r === rubro);
-  const hayFiltros = !!(busqueda || rubro || proveedorId || soloSinPrecio || incluirInactivos || orden !== "defecto");
-    const cerrarToast = useCallback(() => setMensaje(null), []);
+  const hayFiltros = !!(filtros.busqueda || rubro || proveedorId || soloSinPrecio || incluirInactivos || orden !== "defecto");
+  const cerrarToast = useCallback(() => setMensaje(null), []);
 
   const opcionesProveedor = [{ id: "", etiqueta: "Todos los proveedores" }, ...proveedores.map((p) => ({ id: p.id, etiqueta: p.nombre }))];
 
@@ -119,7 +133,7 @@ export default function MaterialesPage() {
       />
 
       <BarraHerramientas
-        buscador={{ valor: busqueda, onCambio: (v) => cambiar({ busqueda: v }), placeholder: "Buscar", etiqueta: "Buscar materiales" }}
+        buscador={{ valor: filtros.busqueda, onCambio: (v) => cambiar({ busqueda: v }), placeholder: "Buscar", etiqueta: "Buscar materiales" }}
         secciones={[
           {
             id: "rubro",
@@ -157,60 +171,49 @@ export default function MaterialesPage() {
         onLimpiar={() => setFiltros(SIN_FILTROS)}
       />
 
-      {error && (
-        <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-[#B42318]">
-          No se pudieron cargar los materiales: {error}
-        </p>
-      )}
-      {!error && materiales === null && <p className="py-6 text-center text-sm text-[#4A5861]">Cargando materiales…</p>}
+      {error && <Aviso tono="error">No se pudieron cargar los materiales: {error}</Aviso>}
+      {!error && materiales === null && <ListaCargando />}
 
       {!error && visibles && visibles.length === 0 && (
-        <div className="rounded-lg border border-dashed border-[#7D8892] px-4 py-10 text-center text-sm text-[#3E4A52]">
-          {hayFiltros ? (
-            <>
-              Ningún material coincide con el filtro.{" "}
-              <button type="button" onClick={() => setFiltros(SIN_FILTROS)} className="inline-flex min-h-11 items-center font-semibold text-[#244B5A] underline underline-offset-2">
+        <ListaVacia
+          accion={
+            hayFiltros ? (
+              <button type="button" onClick={() => setFiltros(SIN_FILTROS)} className={botonDe("secundario", "px-4")}>
                 Limpiar filtros
               </button>
-            </>
-          ) : (
-            "Todavía no hay materiales cargados."
-          )}
-        </div>
+            ) : undefined
+          }
+        >
+          {hayFiltros ? "Ningún material coincide con el filtro." : "Todavía no hay materiales cargados."}
+        </ListaVacia>
       )}
 
       {!error && visibles && visibles.length > 0 && (
         <>
-          <div className="rounded-lg border border-[#D9DFE3] bg-[#FFFFFF] lg:rounded-none">
-            <div
-              aria-hidden="true"
-              className={`hidden h-9 border-b border-[#D9DFE3] bg-[#F1F4F6] px-4 text-[13px] font-semibold uppercase tracking-wide text-[#4A5861] lg:sticky lg:top-[var(--catalogo-barra,0px)] lg:z-10 lg:grid lg:items-center lg:gap-x-4 ${COLUMNAS}`}
-            >
+          <div className={LISTA}>
+            <div aria-hidden="true" className={`${LISTA_ENCABEZADO} ${COLUMNAS}`}>
               <span>Material</span>
               <span>Proveedor</span>
-              <span>Categoría</span>
-              <span className="text-center">Precio</span>
-              <span className="text-center">Unidad</span>
+              <span>Rubro</span>
+              <span className="text-right">Precio</span>
+              <span>Unidad</span>
               <span className="text-center">Actualizado</span>
               <span className="text-center">Editar</span>
             </div>
             {grupos.map(([nombre, items]) => (
               <section key={nombre} aria-label={nombre || "Materiales"} className="border-t border-gray-100 first:border-t-0 lg:border-t-0">
                 {nombre && (
-                  <h3 className="sticky top-[var(--catalogo-barra,0px)] z-[5] flex h-9 items-center gap-1.5 border-y border-[#D9DFE3] bg-[#F4F8F9] px-4 text-[13px] font-bold uppercase tracking-wide text-[#244B5A] first:border-t-0 lg:hidden">
+                  <h3 className={`${LISTA_GRUPO} lg:hidden`}>
                     {nombre} <span className="font-normal text-[#4A5861]">({items.length})</span>
                   </h3>
                 )}
-                <ul className="divide-y divide-[#EEF1F3]">
+                <ul className={LISTA_SEPARADORES}>
                   {items.map((m) => (
                     <FilaMaterial
                       key={m.id}
                       material={m}
                       proveedor={m.proveedor_id ? (nombreProveedor.get(m.proveedor_id) ?? null) : null}
-                      onEditar={() => {
-                        setMensaje(null);
-                        setEditando(m);
-                      }}
+                      onEditar={abrirEdicion}
                     />
                   ))}
                 </ul>
@@ -257,38 +260,30 @@ export default function MaterialesPage() {
  * el camino para el teclado). En el celular: nombre y proveedor a la izquierda, precio con su unidad y el lápiz
  * a la derecha; desde `lg`, una fila de la tabla con todas las columnas.
  */
-function FilaMaterial({ material: m, proveedor, onEditar }: { material: Material; proveedor: string | null; onEditar: () => void }) {
+const FilaMaterial = memo(function FilaMaterial({ material: m, proveedor, onEditar }: { material: Material; proveedor: string | null; onEditar: (m: Material) => void }) {
   const relativa = m.precio_actualizado ? formatFechaRelativaCorta(m.precio_actualizado) : "";
-  const aConfirmar = (
-    <span className="inline-flex items-center gap-1 whitespace-nowrap text-[13px] font-medium text-amber-800">
-      <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-amber-600" />
-      A confirmar
-    </span>
-  );
   return (
     <li
-      onClick={alTocarFila(onEditar)}
-      className={`flex min-h-[3.25rem] cursor-pointer items-center gap-3 px-4 py-1 text-[15px] leading-5 transition-colors hover:bg-[#F4F8F9] active:bg-[#EAF0F2] lg:grid lg:min-h-[3rem] lg:gap-x-4 lg:py-0 ${COLUMNAS} ${m.activo ? "" : "opacity-70"}`}
+      onClick={alTocarFila(() => onEditar(m))}
+      className={`${LISTA_FILA} ${COLUMNAS} ${m.activo ? "" : "opacity-70"}`}
     >
       <span className="min-w-0 flex-1 lg:flex-none">
         <span className="flex items-center gap-2">
-          <span className="line-clamp-3 break-words lg:truncate text-sm font-medium text-gray-900">{m.nombre}</span>
-          {!m.activo && <span className="shrink-0 rounded-full bg-[#E3ECEF] px-2 py-0.5 text-[13px] font-medium text-[#3E4A52]">Desactivado</span>}
+          <span className="line-clamp-3 break-words lg:truncate font-medium text-gray-900">{m.nombre}</span>
+          {!m.activo && <Pastilla className="shrink-0">Desactivado</Pastilla>}
         </span>
-        <span className="block truncate text-[13px] text-[#4A5861] lg:hidden">{proveedor ?? "Sin proveedor"}</span>
+        <span className={`block truncate ${TEXTO_SECUNDARIO} lg:hidden`}>{proveedor ?? "Sin proveedor"}</span>
       </span>
 
-      <span className="hidden min-w-0 truncate text-sm text-gray-700 lg:block" title={proveedor ?? undefined}>
+      <span className="hidden min-w-0 truncate text-gray-700 lg:block" title={proveedor ?? undefined}>
         {proveedor ?? <span className="text-[#4A5861]">Sin proveedor</span>}
       </span>
 
-      <span className="hidden min-w-0 lg:block">
-        {m.rubro && <span className="inline-flex rounded-md bg-[#EEF2F6] px-2 py-0.5 text-[13px] font-medium text-[#244B5A]">{m.rubro}</span>}
-      </span>
+      <span className="hidden min-w-0 truncate text-gray-700 lg:block">{m.rubro ?? ""}</span>
 
-      <span className="shrink-0 text-right text-sm tabular-nums lg:text-center">
+      <span className={`shrink-0 ${COLUMNA_NUMERO}`}>
         {m.precio === null ? (
-          aConfirmar
+          <Pastilla tono="aviso">A confirmar</Pastilla>
         ) : (
           <span className="whitespace-nowrap font-semibold text-gray-900">
             {formatARS(m.precio)}
@@ -297,15 +292,15 @@ function FilaMaterial({ material: m, proveedor, onEditar }: { material: Material
         )}
       </span>
 
-      <span className="hidden text-center text-sm text-[#3E4A52] lg:block">{m.unidad ?? ""}</span>
+      <span className={`hidden ${TEXTO_SECUNDARIO} lg:block`}>{m.unidad ?? ""}</span>
 
       <span className="hidden whitespace-nowrap text-center text-[13px] text-[#4A5861] lg:block" title={m.precio_actualizado ? formatFechaCompleta(m.precio_actualizado) : undefined}>
         {relativa}
       </span>
 
       <span className="flex shrink-0 justify-end lg:justify-center">
-        <BotonLapiz nombre={m.nombre} onClick={onEditar} />
+        <BotonLapiz nombre={m.nombre} onClick={() => onEditar(m)} />
       </span>
     </li>
   );
-}
+});

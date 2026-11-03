@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase-server";
-import { LOGO_URL } from "@/lib/brand";
 import { Wordmark } from "@/components/Wordmark";
 import MenuUsuario from "./menu-usuario";
 import { ArreglosTeclado } from "./arreglos-teclado";
@@ -22,14 +21,8 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="relative pys-min-h-pantalla bg-gray-50">
-      <div
-        aria-hidden="true"
-        data-print-hide=""
-        className="pointer-events-none fixed inset-0 z-0 bg-center bg-no-repeat opacity-[0.04]"
-        style={{ backgroundImage: `url(${LOGO_URL})`, backgroundSize: "480px" }}
-      />
-      <div className="relative z-10">
+    <div className="pys-min-h-pantalla bg-gray-50">
+      <div>
         {/* Celular: el logo y el menú de usuario arriba (52 px) y, debajo, las cuatro secciones en una fila de 48 px
             que reparte el ancho. Desde md, todo en una sola fila. */}
         <header data-print-hide="" className="border-b border-[#DEE4E6] bg-[#FFFFFF]">

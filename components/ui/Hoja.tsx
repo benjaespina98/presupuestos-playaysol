@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useId, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent as EventoTeclado, type ReactNode } from "react";
 import { botonDe } from "./botones";
 
 /**
@@ -15,6 +15,9 @@ import { botonDe } from "./botones";
  *
  * Si `hayCambios` es verdadero, cerrar (X, Escape, tocar afuera o Cancelar) primero avisa que hay cambios sin
  * guardar (Seguir editando o Descartar). Mientras `ocupado` (guardando) no se puede cerrar.
+ *
+ * Es un diálogo de verdad para el teclado: al abrir, el foco entra a la hoja (o al campo con `autoFocus`), Tab no se
+ * va al fondo, Escape cierra sólo la hoja de más arriba (una hoja puede abrir otra) y al cerrar el foco vuelve a donde estaba.
  */
 
 const ANCHOS = { sm: "sm:max-w-sm", md: "sm:max-w-md", lg: "sm:max-w-lg", xl: "sm:max-w-2xl" } as const;
@@ -26,6 +29,11 @@ interface ContextoHoja {
 }
 const Contexto = createContext<ContextoHoja | null>(null);
 export const useHoja = () => useContext(Contexto);
+
+/** Las hojas abiertas, de abajo hacia arriba: Escape es sólo de la última. */
+const hojasAbiertas: symbol[] = [];
+
+const ENFOCABLES = 'a[href], button:not(:disabled), input:not(:disabled):not([type="hidden"]), select:not(:disabled), textarea:not(:disabled), summary, [tabindex]:not([tabindex="-1"])';
 
 /**
  * La parte visible de la pantalla SÓLO mientras el teclado está abierto (iOS no achica el viewport de la página con el teclado).
@@ -96,6 +104,8 @@ export function Hoja({
   const id = useId();
   const [descartando, setDescartando] = useState(false);
   const area = useAreaVisible();
+  const panel = useRef<HTMLDivElement>(null);
+  const propia = useRef(Symbol("hoja"));
 
   const cerrar = useCallback(() => {
     if (ocupado) return;
@@ -104,12 +114,49 @@ export function Hoja({
   }, [ocupado, hayCambios, onCerrar]);
 
   useEffect(() => {
+    const token = propia.current;
+    hojasAbiertas.push(token);
+    return () => {
+      hojasAbiertas.splice(hojasAbiertas.indexOf(token), 1);
+    };
+  }, []);
+
+  useEffect(() => {
     function alTeclear(e: KeyboardEvent) {
-      if (e.key === "Escape") cerrar();
+      if (e.key === "Escape" && hojasAbiertas[hojasAbiertas.length - 1] === propia.current) cerrar();
     }
     document.addEventListener("keydown", alTeclear);
     return () => document.removeEventListener("keydown", alTeclear);
   }, [cerrar]);
+
+  // El foco entra a la hoja al abrir (salvo que un campo ya lo haya tomado con autoFocus) y vuelve al cerrar.
+  useEffect(() => {
+    const previo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (!panel.current?.contains(document.activeElement)) panel.current?.focus({ preventScroll: true });
+    return () => {
+      if (previo?.isConnected) previo.focus({ preventScroll: true });
+    };
+  }, []);
+
+  function encerrarTab(e: EventoTeclado<HTMLDivElement>) {
+    const caja = panel.current;
+    // Las teclas de una hoja o una lista abierta desde ésta también pasan por acá: se ocupan ellas.
+    if (e.key !== "Tab" || !caja || (e.target as HTMLElement).closest('[role="dialog"], [role="alertdialog"]') !== caja) return;
+    const enfocables = [...caja.querySelectorAll<HTMLElement>(ENFOCABLES)].filter((el) => el.offsetParent !== null);
+    if (enfocables.length === 0) {
+      e.preventDefault();
+      return;
+    }
+    const primero = enfocables[0];
+    const ultimo = enfocables[enfocables.length - 1];
+    if (e.shiftKey && (document.activeElement === primero || document.activeElement === caja)) {
+      e.preventDefault();
+      ultimo.focus();
+    } else if (!e.shiftKey && document.activeElement === ultimo) {
+      e.preventDefault();
+      primero.focus();
+    }
+  }
 
   // El fondo no hace scroll mientras la hoja está abierta.
   useEffect(() => {
@@ -128,10 +175,13 @@ export function Hoja({
         onClick={cerrar}
       >
         <div
+          ref={panel}
           role={rol}
           aria-modal="true"
           aria-labelledby={`${id}-titulo`}
-          className={`flex w-full flex-col overflow-hidden rounded-t-2xl bg-[#FFFFFF] shadow-2xl sm:max-h-[90%] sm:rounded-2xl ${
+          tabIndex={-1}
+          onKeyDown={encerrarTab}
+          className={`flex w-full flex-col overflow-hidden rounded-t-2xl bg-[#FFFFFF] shadow-2xl outline-none sm:max-h-[90%] sm:rounded-2xl ${
             alto === "completo" ? "h-[92%] sm:h-auto" : "max-h-[92%]"
           } ${ANCHOS[ancho]}`}
           onClick={(e) => e.stopPropagation()}
@@ -193,9 +243,14 @@ export function PieAcciones({
   etiquetaGuardando = "Guardando...",
   etiquetaCancelar = "Cancelar",
   soloConCambios = false,
+  onGuardar,
+  deshabilitado = false,
 }: {
   /** El id del <form> del cuerpo: el botón Guardar está fuera del form, así que lo referencia. */
-  formId: string;
+  formId?: string;
+  /** Sin formulario: lo que hace el botón principal. */
+  onGuardar?: () => void;
+  deshabilitado?: boolean;
   guardando?: boolean;
   etiqueta: string;
   etiquetaGuardando?: string;
@@ -210,9 +265,10 @@ export function PieAcciones({
         {etiquetaCancelar}
       </button>
       <button
-        type="submit"
-        form={formId}
-        disabled={guardando || sinCambios}
+        type={onGuardar ? "button" : "submit"}
+        form={onGuardar ? undefined : formId}
+        onClick={onGuardar}
+        disabled={guardando || sinCambios || deshabilitado}
         title={sinCambios ? "No hay cambios para guardar" : undefined}
         className={botonDe("primario", "min-h-12 text-base sm:min-w-44")}
       >

@@ -33,8 +33,38 @@
   /* Nada visible por debajo de 13 px: "text-xs" pasa de 12 a 13 px en todo el portal. */
   --text-xs: 0.8125rem;
   --text-xs--line-height: 1.2rem;
-  /* Los grises claros de texto (gray-400) quedaban en 2,5:1 sobre blanco: ahora 4,7:1. */
+  /* Una sola paleta en todo el portal: las clases de Tailwind (text-gray-600, bg-red-50...) dan los mismos tonos que
+     los valores fijos de los controles (components/ui/botones.ts). Los grises son los de la marca, apenas azulados.
+     gray-400 queda en 4,7:1 sobre blanco (el de Tailwind daba 2,5:1). */
+  --color-gray-50: #f7f9fa;
+  --color-gray-100: #eef1f3;
+  --color-gray-200: #d9dfe3;
+  --color-gray-300: #bcc6cc;
   --color-gray-400: #6b7680;
+  --color-gray-500: #4a5861;
+  --color-gray-600: #4a5861;
+  --color-gray-700: #3e4a52;
+  --color-gray-800: #2a363d;
+  --color-gray-900: #1f2a30;
+  --color-red-50: #fef3f2;
+  --color-red-100: #fee4e2;
+  --color-red-200: #fda29b;
+  --color-red-300: #fda29b;
+  --color-red-500: #d92d20;
+  --color-red-600: #b42318;
+  --color-red-700: #b42318;
+  --color-red-800: #912018;
+  --color-green-50: #ecfdf3;
+  --color-green-600: #067647;
+  --color-green-700: #05603a;
+  --color-blue-50: #e3f0f4;
+  --color-blue-700: #0e5f73;
+  --color-amber-50: #fffaeb;
+  --color-amber-300: #fec84b;
+  --color-amber-600: #b54708;
+  --color-amber-700: #93370d;
+  --color-amber-800: #7a2e0e;
+  --color-amber-900: #7a2e0e;
 }
 
 /* Tokens de color de los controles (ver components/ui/botones.ts). Valores fijos, sin opacidad ni color-mix. */

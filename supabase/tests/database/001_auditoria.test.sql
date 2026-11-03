@@ -14,11 +14,11 @@ select set_config('request.jwt.claims', '{"role":"anon"}', true);
 
 select throws_ok('select * from public.auditoria', '42501', null, 'anon no puede leer auditoria');
 select throws_ok('insert into public.auditoria (tabla, registro_id, accion) values (''x'', gen_random_uuid(), ''INSERT'')', '42501', null, 'anon no puede escribir en auditoria');
-select is_empty('select * from public.presupuestos', 'anon no ve ningún presupuesto');
-select is_empty('select * from public.pedidos', 'anon no ve ningún pedido');
-select is_empty('select * from public.catalogo_items', 'anon no ve el catálogo');
-select is_empty('select * from public.proveedores', 'anon no ve proveedores');
-select is_empty('select * from public.materiales', 'anon no ve materiales');
+select throws_ok('select * from public.presupuestos', '42501', null, 'anon no ve ningún presupuesto');
+select throws_ok('select * from public.pedidos', '42501', null, 'anon no ve ningún pedido');
+select throws_ok('select * from public.catalogo_items', '42501', null, 'anon no ve el catálogo');
+select throws_ok('select * from public.proveedores', '42501', null, 'anon no ve proveedores');
+select throws_ok('select * from public.materiales', '42501', null, 'anon no ve materiales');
 select throws_ok(
   'insert into public.presupuestos (tipo, cliente_nombre, datos) values (''cercos'', ''Intruso'', ''{}'')',
   '42501', null, 'anon no puede crear presupuestos');

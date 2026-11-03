@@ -14,6 +14,8 @@ a todas las rutas.
 | `Content-Security-Policy: frame-ancestors 'none'` | **enforzado** | Anti-clickjacking: nadie puede meter el portal en un `<iframe>`. Es lo ÚNICO que enforza la CSP. |
 | `Content-Security-Policy-Report-Only: default-src 'self'; ...` | **sólo reporta** | La política completa, para validarla en uso real antes de enforzarla. |
 
+El motor de PDF necesita `'wasm-unsafe-eval'` en `script-src` y `data:` en `connect-src` (visto en el recorrido de exportar; sin eso, enforzar la CSP rompería los PDF).
+
 El dominio de Supabase (`connect-src` e `img-src`) sale de
 `NEXT_PUBLIC_SUPABASE_URL`; no está escrito en el código.
 

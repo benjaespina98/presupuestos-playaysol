@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { useZodForm } from "@/lib/forms/useZodForm";
 import { MoneyField, TextField, SelectField, CheckboxField } from "@/components/form";
 import { Hoja, PieAcciones } from "@/components/ui/Hoja";
+import { Aviso } from "@/components/ui/Aviso";
 import { Seccion, ZonaActivo } from "@/components/ui/SeccionForm";
 import { HistorialStock } from "@/components/stock/HistorialStock";
 import { actualizarItemCatalogo } from "@/lib/catalogo";
@@ -74,13 +75,13 @@ export function EditarItemModal({
       setErrorGuardado(error);
       return;
     }
-    onGuardado({ ...item, stock: stockActual, ...cambios });
+    onGuardado({ ...item, stock: stockActual, ...cambios, updated_at: new Date().toISOString() });
   }
 
   return (
     <Hoja
       titulo="Editar ítem"
-      subtitulo={`${nombre} · ${TITULOS_TIPO[item.tipo]}`}
+      subtitulo={TITULOS_TIPO[item.tipo]}
       ocupado={isSubmitting}
       hayCambios={isDirty}
       ancho="lg"
@@ -88,16 +89,14 @@ export function EditarItemModal({
       onCerrar={onClose}
       aviso={
         errorGuardado ? (
-          <p role="alert" className="rounded-lg border border-[#FDA29B] bg-[#FEF3F2] px-3 py-2 text-[15px] font-medium text-[#B42318]">
-            No se guardó: {errorGuardado} Lo que cargaste sigue acá.
-          </p>
+          <Aviso tono="error">No se guardó: {errorGuardado} Lo que cargaste sigue acá.</Aviso>
         ) : undefined
       }
       pie={<PieAcciones formId={formId} guardando={isSubmitting} soloConCambios etiqueta="Guardar cambios" />}
     >
       <form id={formId} onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
         <Seccion titulo="Datos">
-          <TextField register={register} errors={errors} name="descripcion" label="Descripción" multiline rows={3} autoFocus />
+          <TextField register={register} errors={errors} name="descripcion" label="Descripción" multiline rows={2} />
           <SelectField register={register} errors={errors} name="categoria" label="Categoría" options={OPCIONES_CATEGORIA} />
         </Seccion>
 
@@ -133,12 +132,12 @@ export function EditarItemModal({
                     onClick={() => setVerHistorial(true)}
                     className="inline-flex min-h-11 items-center rounded-md px-2 font-semibold text-[#244B5A] underline underline-offset-2 hover:bg-[#EAF0F2] active:bg-[#D5E0E4]"
                   >
-                    Ver historial
+                    Ver movimientos
                   </button>
                 </p>
               )}
               <p className="text-[13px] leading-snug text-[#4A5861]">
-                Las unidades se mueven con «Llegó mercadería», «Venta» o «Corregir stock», desde la lista del catálogo. Para dejar de llevar stock, el conteo tiene que estar en 0.
+                Las unidades se mueven desde la lista de Precios. Para dejar de llevar stock, el conteo tiene que estar en 0.
               </p>
             </div>
           )}

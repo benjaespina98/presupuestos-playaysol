@@ -32,14 +32,14 @@ const DATOS = {
 };
 
 describe("listarPedidos", () => {
-  it("los trae ordenados del más nuevo al más viejo y descarta una fila que no valida", async () => {
+  it("respeta el orden de la base (del más nuevo al más viejo) y descarta una fila que no valida", async () => {
     createClient.mockReturnValue({
       from: () => ({
-        select: () =>
+        select: () => ({ order: () =>
           Promise.resolve({
-            data: [{ ...FILA, id: "a", numero: 1 }, { ...FILA, id: "c", numero: 3 }, { id: "rota" }, { ...FILA, id: "b", numero: 2 }],
+            data: [{ ...FILA, id: "c", numero: 3 }, { ...FILA, id: "b", numero: 2 }, { id: "rota" }, { ...FILA, id: "a", numero: 1 }],
             error: null,
-          }),
+          }) }),
       }),
     });
     const { listarPedidos } = await import("./pedidos");
@@ -52,7 +52,7 @@ describe("listarPedidos", () => {
 
   it("si la tabla no existe (migración pendiente) lo dice con claridad", async () => {
     createClient.mockReturnValue({
-      from: () => ({ select: () => Promise.resolve({ data: null, error: { code: "PGRST205", message: "Could not find the table 'public.pedidos'" } }) }),
+      from: () => ({ select: () => ({ order: () => Promise.resolve({ data: null, error: { code: "PGRST205", message: "Could not find the table 'public.pedidos'" } }) }) }),
     });
     const { listarPedidos, ERROR_TABLA_PEDIDOS } = await import("./pedidos");
 
@@ -64,7 +64,7 @@ describe("listarPedidos", () => {
   });
 
   it("nunca rechaza la promesa: un fallo de red viaja en el resultado", async () => {
-    createClient.mockReturnValue({ from: () => ({ select: () => Promise.reject(new TypeError("Failed to fetch")) }) });
+    createClient.mockReturnValue({ from: () => ({ select: () => ({ order: () => Promise.reject(new TypeError("Failed to fetch")) }) }) });
     const { listarPedidos } = await import("./pedidos");
     expect((await listarPedidos()).error).toMatch(/no se pudo conectar/i);
   });

@@ -270,8 +270,12 @@ export function mensajeDeGrupo(g: GrupoPedido): string {
   return [titulo, ...lineas].join("\n");
 }
 
+/**
+ * Un texto que empieza con = + - @ (o tabulador) Excel lo ejecuta como fórmula al abrir el archivo: lleva un apóstrofe
+ * adelante, el mismo criterio que la planilla (`celdaParaEscribir_` en docs/sheets-sync/Sincronizar.gs). Los números no.
+ */
 const celdaCsv = (v: string | number) => {
-  const s = String(v);
+  const s = typeof v === "string" && /^[=+\-@\t\r]/.test(v) ? `'${v}` : String(v);
   return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 

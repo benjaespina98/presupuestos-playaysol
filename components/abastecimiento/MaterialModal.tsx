@@ -17,6 +17,7 @@ import {
 } from "@/lib/domain/abastecimiento/material";
 import type { Proveedor } from "@/lib/domain/abastecimiento/proveedor";
 import { Hoja, PieAcciones } from "@/components/ui/Hoja";
+import { Aviso } from "@/components/ui/Aviso";
 import { Seccion, SeccionPlegable, ZonaActivo, InfoPopover } from "@/components/ui/SeccionForm";
 import type { OpcionSelector } from "@/components/ui/SelectorHoja";
 import { formatFechaRelativa } from "@/lib/format/fecha";
@@ -24,14 +25,14 @@ import { formatFechaRelativa } from "@/lib/format/fecha";
 /** `cantidades` viaja como array en el orden de TAMANOS: un nombre de campo
  *  como "7x3.50" tiene un punto, y React Hook Form lo leería como una ruta. */
 export const MaterialFormSchema = z.object({
-  nombre: z.string().trim().min(1, "El nombre es obligatorio"),
+  nombre: z.string().trim().min(1, "El nombre es obligatorio").max(300, "Máximo 300 caracteres"),
   proveedor_id: z.string(),
   unidad: z.string(),
   precio: z.number().nonnegative("El precio no puede ser negativo").nullable(),
   rubro: z.string(),
   aplica: z.string(),
   usd_ref: z.number().nonnegative("No puede ser negativo").nullable(),
-  notas: z.string(),
+  notas: z.string().max(2000, "Máximo 2000 caracteres"),
   cantidades: z.array(z.number().nonnegative("No puede ser negativo").nullable()).length(TAMANOS.length),
   activo: z.boolean(),
 });
@@ -217,9 +218,7 @@ export function MaterialModal({
       onCerrar={onClose}
       aviso={
         errorGuardado ? (
-          <p role="alert" className="rounded-lg border border-[#FDA29B] bg-[#FEF3F2] px-3 py-2 text-[15px] font-medium text-[#B42318]">
-            No se guardó: {errorGuardado} Lo que cargaste sigue acá.
-          </p>
+          <Aviso tono="error">No se guardó: {errorGuardado} Lo que cargaste sigue acá.</Aviso>
         ) : undefined
       }
       pie={
@@ -234,7 +233,7 @@ export function MaterialModal({
     >
       <form id={formId} onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
         <Seccion titulo="Datos">
-          <TextField register={register} errors={errors} name="nombre" label="Nombre" required autoFocus />
+          <TextField register={register} errors={errors} name="nombre" label="Nombre" required autoFocus={material === null} />
           <SelectField register={register} errors={errors} name="proveedor_id" label="Proveedor" options={opcionesProveedor} />
           <SelectField register={register} errors={errors} name="rubro" label="Rubro" options={opciones(RUBROS_MATERIAL, material?.rubro, "Sin rubro")} />
         </Seccion>

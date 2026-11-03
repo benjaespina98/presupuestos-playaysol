@@ -114,7 +114,7 @@ describe("Pedidos", () => {
     mocks.listarPedidos.mockResolvedValue({ items: [], error: null });
     render(<PedidosPage />);
     expect(await screen.findByText(/Todavía no hay pedidos guardados/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Armá el primero" })).toHaveAttribute("href", "/dashboard/catalogo/pedido");
+    expect(screen.getByRole("link", { name: "Armar el primero" })).toHaveAttribute("href", "/dashboard/catalogo/pedido");
   });
 
   it("si todavía no se corrió la migración muestra el aviso claro", async () => {
@@ -197,12 +197,12 @@ describe("Pedidos", () => {
       expect(within(dialogo).queryByRole("menuitem", { name: /uno por proveedor/ })).not.toBeInTheDocument();
     });
 
-    it("'Volver a armar' lleva al armado con los datos de este pedido", async () => {
+    it("'Armar uno igual' lleva al armado con los datos de este pedido", async () => {
       const user = userEvent.setup();
       await cargar();
       const dialogo = await abrir(user);
 
-      expect(within(dialogo).getByRole("link", { name: "Volver a armar con estos datos" })).toHaveAttribute(
+      expect(within(dialogo).getByRole("link", { name: "Armar uno igual" })).toHaveAttribute(
         "href",
         "/dashboard/catalogo/pedido?desde=b"
       );

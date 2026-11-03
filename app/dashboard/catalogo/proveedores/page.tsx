@@ -9,6 +9,11 @@ import { PanelPortal } from "@/components/PanelPortal";
 import { BarraHerramientas } from "@/components/ui/BarraHerramientas";
 import { Toast } from "@/components/ui/BarraListado";
 import { BotonLapiz, alTocarFila } from "@/components/ui/BotonLapiz";
+import { Aviso } from "@/components/ui/Aviso";
+import { botonDe } from "@/components/ui/botones";
+import { ListaCargando, ListaVacia } from "@/components/ui/EstadoLista";
+import { LISTA, LISTA_ENCABEZADO, LISTA_FILA, LISTA_SEPARADORES, TEXTO_SECUNDARIO } from "@/components/ui/lista";
+import { Pastilla } from "@/components/ui/Pastilla";
 import { useEstadoPersistente } from "@/lib/useEstadoPersistente";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
 import { ProveedorModal } from "@/components/abastecimiento/ProveedorModal";
@@ -104,7 +109,7 @@ export default function ProveedoresPage() {
   const totalActivos = useMemo(() => (proveedores ? proveedores.filter((p) => incluirInactivos || p.activo).length : 0), [proveedores, incluirInactivos]);
 
   const hayFiltros = !!(busqueda || rubro || telefono || incluirInactivos || orden !== "defecto");
-    const cerrarToast = useCallback(() => setMensaje(null), []);
+  const cerrarToast = useCallback(() => setMensaje(null), []);
 
   return (
     <PanelPortal compacto amplio>
@@ -149,33 +154,37 @@ export default function ProveedoresPage() {
         onLimpiar={() => setFiltros(SIN_FILTROS)}
       />
 
-      {error && (
-        <p role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-[#B42318]">
-          {error}
-        </p>
-      )}
-      {!error && proveedores === null && <p className="py-6 text-center text-sm text-[#4A5861]">Cargando proveedores…</p>}
+      {error && <Aviso tono="error">{error}</Aviso>}
+      {!error && proveedores === null && <ListaCargando />}
 
       {!error && visibles && visibles.length === 0 && (
-        <div className="rounded-lg border border-dashed border-[#7D8892] px-4 py-10 text-center text-sm text-[#3E4A52]">
+        <ListaVacia
+          accion={
+            hayFiltros ? (
+              <button type="button" onClick={() => setFiltros(SIN_FILTROS)} className={botonDe("secundario", "px-4")}>
+                Limpiar filtros
+              </button>
+            ) : undefined
+          }
+        >
           {hayFiltros ? "Ningún proveedor coincide con el filtro." : "Todavía no hay proveedores cargados."}
-        </div>
+        </ListaVacia>
       )}
 
       {!error && visibles && visibles.length > 0 && (
         <>
-          <div className="rounded-lg border border-[#D9DFE3] bg-[#FFFFFF] lg:rounded-none">
+          <div className={LISTA}>
             <div
               aria-hidden="true"
-              className={`hidden h-9 border-b border-[#D9DFE3] bg-[#F1F4F6] px-4 text-[13px] font-semibold uppercase tracking-wide text-[#4A5861] lg:sticky lg:top-[var(--catalogo-barra,0px)] lg:z-10 lg:grid lg:items-center lg:gap-x-4 ${COLUMNAS}`}
+              className={`${LISTA_ENCABEZADO} ${COLUMNAS}`}
             >
               <span>Proveedor</span>
               <span>Contacto</span>
               <span>Teléfono</span>
-              <span className="text-center">Materiales</span>
+              <span className="text-right">Materiales</span>
               <span className="text-center">Editar</span>
             </div>
-            <ul className="divide-y divide-[#EEF1F3]">
+            <ul className={LISTA_SEPARADORES}>
               {visibles.map((p) => (
                 <FilaProveedor
                   key={p.id}
@@ -233,23 +242,19 @@ function FilaProveedor({ proveedor: p, materiales, onEditar }: { proveedor: Prov
   return (
     <li
       onClick={alTocarFila(onEditar)}
-      className={`flex min-h-[3.25rem] cursor-pointer items-center gap-3 px-4 py-1 text-[15px] leading-5 transition-colors hover:bg-[#F4F8F9] active:bg-[#EAF0F2] lg:grid lg:min-h-[3rem] lg:gap-x-4 lg:py-0 ${COLUMNAS} ${p.activo ? "" : "opacity-70"}`}
+      className={`${LISTA_FILA} ${COLUMNAS} ${p.activo ? "" : "opacity-70"}`}
     >
       <div className="min-w-0 flex-1 lg:contents">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="line-clamp-2 break-words lg:truncate text-sm font-medium text-gray-900">{p.nombre}</span>
-          {p.rubro && <span className="hidden shrink-0 rounded-md bg-[#EEF2F6] px-2 py-0.5 text-[13px] font-medium text-[#244B5A] lg:inline">{p.rubro}</span>}
-          {!p.activo && <span className="shrink-0 rounded-full bg-[#E3ECEF] px-2 py-0.5 text-[13px] font-medium text-[#3E4A52]">Desactivado</span>}
+          <span className="line-clamp-2 break-words lg:truncate font-medium text-gray-900">{p.nombre}</span>
+          {!p.activo && <Pastilla className="shrink-0">Desactivado</Pastilla>}
         </div>
         <p className="hidden min-w-0 truncate text-[13px] text-[#4A5861] lg:block lg:text-sm lg:text-gray-700" title={p.contacto ?? undefined}>
           {p.contacto ?? <span>{p.rubro ?? ""}</span>}
         </p>
         <div className="min-w-0 text-sm lg:space-y-0.5">
           {falta ? (
-            <span className="inline-flex items-center gap-1 whitespace-nowrap text-[13px] font-medium text-amber-800">
-              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-amber-600" />
-              Falta teléfono
-            </span>
+            <Pastilla tono="aviso">Falta teléfono</Pastilla>
           ) : (
             <span className="flex min-w-0 items-center gap-2">
               <a
@@ -263,7 +268,7 @@ function FilaProveedor({ proveedor: p, materiales, onEditar }: { proveedor: Prov
           )}
         </div>
       </div>
-      <p className="hidden whitespace-nowrap text-right text-[13px] text-[#4A5861] sm:block lg:text-center lg:text-sm">
+      <p className={`hidden whitespace-nowrap text-right tabular-nums ${TEXTO_SECUNDARIO} sm:block`}>
         {materiales === 0 ? "Sin materiales" : `${materiales} ${materiales === 1 ? "material" : "materiales"}`}
       </p>
       <span className="flex shrink-0 justify-end lg:justify-center">

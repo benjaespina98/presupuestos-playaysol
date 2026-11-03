@@ -120,7 +120,7 @@ export function DialogoAjuste({
       />
 
       {error && (
-        <p role="alert" className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p role="alert" className="mt-3 rounded-lg border border-[#FDA29B] bg-[#FEF3F2] px-3 py-2 text-sm text-[#912018]">
           {error}
         </p>
       )}
