@@ -35,6 +35,7 @@ cuál corrió. Desde ahora hay **migraciones versionadas** en `supabase/migratio
 | `20261021000300_desactivacion.sql` | Desactivar (no borrar) catálogo, proveedores y materiales, con quién y cuándo; sin DELETE. |
 | `20261022000000_auditoria_ignora_stock.sql` | La auditoría deja de registrar el campo `stock` de `catalogo_items` (ahora es un caché; lo audita el libro). |
 | `20261022000100_stock_movimientos.sql` | Libro de movimientos de stock, funciones atómicas, aperturas, caché protegido. Ver "Stock con movimientos". |
+| `20261103000000_endurecimiento.sql` | Sin permisos para `anon`, autoría que fija el servidor, topes de valores, fotos sólo imágenes hasta 10 MB. Ver `docs/seguridad.md`. |
 
 `supabase/seed.sql` carga el catálogo de precios inicial en la base **local**
 (se corre solo con `supabase db reset`; nunca en producción).

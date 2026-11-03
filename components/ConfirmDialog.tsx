@@ -37,8 +37,8 @@ export function ConfirmDialog({
       ocupado={loading}
       onCerrar={onCancel}
       pie={
-        <div className="flex gap-2">
-          <button type="button" disabled={loading} onClick={onCancel} className={botonDe("secundario", "flex-1")}>
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:justify-end">
+          <button type="button" disabled={loading} onClick={onCancel} className={botonDe("secundario", "min-h-12 text-base sm:flex-1")}>
             {cancelLabel}
           </button>
           <button
@@ -48,8 +48,8 @@ export function ConfirmDialog({
             onClick={onConfirm}
             className={
               danger
-                ? botonDe("peligroLleno", "flex-1")
-                : botonDe("primario", "flex-1")
+                ? botonDe("peligroLleno", "min-h-12 text-base sm:flex-1")
+                : botonDe("primario", "min-h-12 text-base sm:flex-1")
             }
           >
             {loading ? "Un momento..." : confirmLabel}

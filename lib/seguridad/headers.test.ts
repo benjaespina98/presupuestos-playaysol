@@ -20,7 +20,7 @@ describe("origenDe", () => {
 describe("construirCspReportOnly", () => {
   it("toma el dominio de Supabase de la variable, en connect-src e img-src", () => {
     const csp = construirCspReportOnly({ supabaseUrl: SUPABASE });
-    expect(csp).toContain(`connect-src 'self' ${SUPABASE}`);
+    expect(csp).toContain(`connect-src 'self' data: ${SUPABASE}`);
     expect(csp).toContain(`img-src 'self' blob: data: ${SUPABASE}`);
   });
 

@@ -288,6 +288,12 @@ describe("mensajeWhatsApp", () => {
 describe("csvPedido", () => {
   const proveedores = [proveedor({ id: "p1", nombre: "Corralón; Uno", telefono: "+54 9 111 111" })];
 
+  it("un nombre que empieza con = + - @ no se ejecuta como fórmula al abrirlo en Excel", () => {
+    const csv = csvPedido(armarPedido([material({ id: "a", nombre: '=HYPERLINK("http://malo")', cantidades: { "8x4": 2 } })], proveedores, params()));
+    expect(csv).toContain("'=HYPERLINK");
+    expect(csv).not.toMatch(/;"?=HYPERLINK/);
+  });
+
   it("empieza con BOM, separa con ';', usa coma decimal y NO lleva precios, costo ni teléfonos", () => {
     const csv = csvPedido(
       armarPedido([material({ id: "a", nombre: 'Cemento "25 kg"', unidad: "bolsa", precio: 6461.17, cantidades: { "8x4": 2 } })], proveedores, params())

@@ -3,6 +3,7 @@ import type { TipoCalculadora } from "@/lib/presupuestos";
 import { esTextoCompartido } from "@/lib/domain/catalogo/categorias";
 import { ItemCatalogo } from "@/lib/domain/catalogo/item";
 import { mensajeErrorStock } from "@/lib/domain/stock/movimientos";
+import { mensajeFilaInvalida } from "@/lib/logs";
 
 // Actualiza (o crea, si no existía — caso losetas, que no tiene seed inicial)
 // el precio/descripción permanente de un ítem de catálogo para TODOS los
@@ -165,7 +166,7 @@ export async function listarItemsCatalogo(): Promise<ResultadoListarCatalogo> {
     for (const fila of filas) {
       const resultado = ItemCatalogo.safeParse(fila);
       if (resultado.success) items.push(resultado.data);
-      else console.error("Fila de catalogo_items con forma inesperada, se omite", fila, resultado.error);
+      else console.error(mensajeFilaInvalida("Fila de catalogo_items con forma inesperada, se omite", fila, resultado.error));
     }
     return { items, error: null };
   } catch (err) {

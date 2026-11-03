@@ -20,11 +20,17 @@ import {
   variacionPorcentual,
 } from "@/lib/domain/precios/actualizacion";
 import { formatARS } from "@/lib/format/ars";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { PanelPortal } from "@/components/PanelPortal";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
 import { Toast } from "@/components/ui/BarraListado";
 import { SelectorSimple } from "@/components/ui/SelectorSimple";
+import { Aviso } from "@/components/ui/Aviso";
 import { botonDe } from "@/components/ui/botones";
+import { ListaCargando, ListaVacia } from "@/components/ui/EstadoLista";
+import { CLASE_CAMPO, CLASE_ETIQUETA } from "@/components/ui/lista";
+import { Pastilla } from "@/components/ui/Pastilla";
+import { Segmentado } from "@/components/ui/Segmentado";
 
 type Que = "materiales" | "ventas";
 
@@ -42,12 +48,9 @@ interface Fila {
   enUsd: boolean;
 }
 
-const CLASE_CAMPO =
-  "min-h-12 w-full rounded-lg border bg-[#FFFFFF] px-3 py-2 text-base text-gray-900 shadow-sm placeholder:text-[#6B7680] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20";
-
 export default function ActualizarPreciosPage() {
   return (
-    <Suspense fallback={<p className="px-4 py-8 text-sm text-[#4A5861]">Cargando…</p>}>
+    <Suspense fallback={<div className="mx-auto max-w-7xl px-4 py-4"><ListaCargando /></div>}>
       <ActualizarPrecios />
     </Suspense>
   );
@@ -75,6 +78,7 @@ function ActualizarPrecios() {
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [fallos, setFallos] = useState<string[]>([]);
+  const [cambiandoA, setCambiandoA] = useState<Que | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -156,7 +160,12 @@ function ActualizarPrecios() {
 
   function cambiarQue(nuevo: Que) {
     if (nuevo === que) return;
-    if (cambios.length > 0 && !window.confirm("Hay precios sin guardar: si cambiás de lista se descartan. ¿Cambiar igual?")) return;
+    if (cambios.length > 0) setCambiandoA(nuevo);
+    else irALista(nuevo);
+  }
+
+  function irALista(nuevo: Que) {
+    setCambiandoA(null);
     setTipeado({});
     setConfirmando(false);
     setFallos([]);
@@ -252,42 +261,29 @@ function ActualizarPrecios() {
       <EncabezadoPagina titulo="Actualizar precios" descripcion="Cargá varios precios de una vez y guardalos juntos." />
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
-        <Link
-          href={que === "materiales" ? "/dashboard/catalogo/materiales" : "/dashboard/catalogo"}
-          className="inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-semibold text-[#244B5A] hover:bg-[#EAF0F2]"
-        >
+        <Link href={que === "materiales" ? "/dashboard/catalogo/materiales" : "/dashboard/catalogo"} className={botonDe("texto", "-ml-2 px-2")}>
           ← Volver a {que === "materiales" ? "Materiales" : "Precios"}
         </Link>
-        <div role="group" aria-label="Qué precios actualizar" className="flex gap-2">
-          {(
-            [
-              ["materiales", "Costos de materiales"],
-              ["ventas", "Precios de venta"],
-            ] as const
-          ).map(([id, texto]) => (
-            <button
-              key={id}
-              type="button"
-              aria-pressed={que === id}
-              onClick={() => cambiarQue(id)}
-              className={`min-h-11 rounded-lg border px-3 text-sm font-medium transition-colors ${
-                que === id ? "border-[#244B5A] bg-[#244B5A] text-[#FFFFFF] shadow-sm" : "border-gray-200 bg-[#FFFFFF] text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              {texto}
-            </button>
-          ))}
+        <div className="w-full sm:ml-auto sm:w-auto">
+          <Segmentado
+            etiqueta="Qué precios actualizar"
+            opciones={[
+              { id: "materiales", texto: "Costos de materiales" },
+              { id: "ventas", texto: "Precios de venta" },
+            ]}
+            valor={que}
+            onCambio={cambiarQue}
+          />
         </div>
       </div>
 
-      <section aria-label="Cómo cargar" className="mb-4 rounded-lg border border-gray-200 bg-[#FFFFFF] p-4 shadow-sm">
-        <p className="mb-3 text-[13px] leading-snug text-[#3E4A52]">
-          Escribí el <b>precio nuevo</b> en cada fila que cambió (las que dejás vacías no se tocan), o subí o bajá todo lo que se ve con un porcentaje.
-          Nada se guarda hasta que toques <b>Guardar cambios</b>.
+      <section aria-label="Cómo cargar" className="mb-4 rounded-lg border border-[#D9DFE3] bg-[#FFFFFF] p-4">
+        <p className="mb-3 text-[13px] leading-snug text-[#4A5861]">
+          Escribí el precio nuevo en las filas que cambiaron, o subí o bajá todo lo que se ve con un porcentaje. Nada se guarda hasta que toques Guardar cambios.
         </p>
-        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,14rem)_minmax(0,14rem)_auto] sm:items-end">
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,14rem)_minmax(0,14rem)] sm:items-end">
           <div>
-            <label htmlFor="ap-buscar" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="ap-buscar" className={CLASE_ETIQUETA}>
               Buscar
             </label>
             <input id="ap-buscar" type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Nombre" className={CLASE_CAMPO} />
@@ -295,13 +291,13 @@ function ActualizarPrecios() {
           {que === "materiales" ? (
             <>
               <div>
-                <label htmlFor="ap-proveedor" className="mb-1 block text-sm font-medium text-gray-700">
+                <label htmlFor="ap-proveedor" className={CLASE_ETIQUETA}>
                   Proveedor
                 </label>
                 <SelectorSimple id="ap-proveedor" titulo="Proveedor" valor={proveedorId} opciones={opcionesProveedor} onCambio={setProveedorId} />
               </div>
               <div>
-                <label htmlFor="ap-rubro" className="mb-1 block text-sm font-medium text-gray-700">
+                <label htmlFor="ap-rubro" className={CLASE_ETIQUETA}>
                   Rubro
                 </label>
                 <SelectorSimple id="ap-rubro" titulo="Rubro" valor={rubro} opciones={opcionesRubro} onCambio={setRubro} />
@@ -309,18 +305,17 @@ function ActualizarPrecios() {
             </>
           ) : (
             <div className="sm:col-span-2">
-              <label htmlFor="ap-seccion" className="mb-1 block text-sm font-medium text-gray-700">
+              <label htmlFor="ap-seccion" className={CLASE_ETIQUETA}>
                 Categoría
               </label>
               <SelectorSimple id="ap-seccion" titulo="Categoría" valor={seccion} opciones={opcionesSeccion} onCambio={setSeccion} />
             </div>
           )}
-          <span className="hidden sm:block" />
         </div>
 
         <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-gray-100 pt-4">
           <div className="min-w-0 flex-1 sm:flex-none">
-            <label htmlFor="ap-pct" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="ap-pct" className={CLASE_ETIQUETA}>
               Subir o bajar todo (%)
             </label>
             <input
@@ -361,38 +356,32 @@ function ActualizarPrecios() {
             Cargar la lista
           </button>
           {sinPareja.length > 0 && (
-            <div role="status" className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-              <p className="font-semibold">No se pudieron emparejar {sinPareja.length}:</p>
+            <Aviso tono="aviso" titulo={`No se pudieron emparejar ${sinPareja.length}:`} className="mt-3">
               <ul className="list-disc pl-5">
                 {sinPareja.map((x) => (
                   <li key={x}>{x}</li>
                 ))}
               </ul>
-            </div>
+            </Aviso>
           )}
         </details>
       </section>
 
-      {error && (
-        <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-[#B42318]">
-          No se pudo cargar la lista: {error}
-        </p>
-      )}
-      {cargando && <p className="py-6 text-center text-sm text-[#4A5861]">Cargando…</p>}
+      {error && <Aviso tono="error">No se pudo cargar la lista: {error}</Aviso>}
+      {cargando && <ListaCargando />}
 
       {fallos.length > 0 && (
-        <div role="alert" className="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-[#B42318]">
-          <p className="font-semibold">No se pudieron guardar {fallos.length} {fallos.length === 1 ? "precio" : "precios"} (siguen cargados para reintentar):</p>
+        <Aviso tono="error" titulo={`No se pudieron guardar ${fallos.length} ${fallos.length === 1 ? "precio" : "precios"} (siguen cargados para reintentar):`} className="mb-3">
           <ul className="mt-1 list-disc pl-5">
             {fallos.map((f) => (
               <li key={f}>{f}</li>
             ))}
           </ul>
-        </div>
+        </Aviso>
       )}
 
       {!error && todas && visibles.length === 0 && (
-        <p className="rounded-lg border border-dashed border-[#7D8892] px-4 py-10 text-center text-sm text-[#3E4A52]">Ninguna fila coincide con el filtro.</p>
+        <ListaVacia>Ninguna fila coincide con el filtro.</ListaVacia>
       )}
 
       {!error && visibles.length > 0 && (
@@ -408,7 +397,7 @@ function ActualizarPrecios() {
           </div>
           {grupos.map(([nombre, filas]) => (
             <section key={nombre} aria-label={nombre}>
-              <h3 className="flex h-9 items-center gap-1.5 border-y border-[#D9DFE3] bg-[#F4F8F9] px-4 text-[13px] font-bold uppercase tracking-wide text-[#244B5A] first:border-t-0">
+              <h3 className="flex h-9 items-center gap-1.5 border-b border-[#D9DFE3] bg-[#F4F8F9] px-4 text-[13px] font-bold uppercase tracking-wide text-[#244B5A]">
                 {nombre} <span className="font-normal text-[#4A5861]">({filas.length})</span>
               </h3>
               <ul className="divide-y divide-[#EEF1F3]">
@@ -430,7 +419,7 @@ function ActualizarPrecios() {
                       </div>
                       <p className="whitespace-nowrap text-sm tabular-nums text-gray-700 md:text-right">
                         <span className="text-[13px] text-[#4A5861] md:hidden">Actual </span>
-                        {actual ?? <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[13px] font-medium text-amber-800">{que === "materiales" ? "A confirmar" : "A cotizar"}</span>}
+                        {actual ?? <Pastilla tono="aviso">{que === "materiales" ? "A confirmar" : "A cotizar"}</Pastilla>}
                       </p>
                       <div className="col-start-2 row-start-2 flex items-center gap-2 md:col-auto md:row-auto">
                         <input
@@ -503,6 +492,17 @@ function ActualizarPrecios() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={cambiandoA !== null}
+        title="¿Cambiar de lista?"
+        message="Hay precios sin guardar: si cambiás de lista se descartan."
+        confirmLabel="Descartar y cambiar"
+        cancelLabel="Seguir acá"
+        danger
+        onConfirm={() => cambiandoA && irALista(cambiandoA)}
+        onCancel={() => setCambiandoA(null)}
+      />
 
       <Toast mensaje={aviso} onCerrar={cerrarAviso} />
     </PanelPortal>

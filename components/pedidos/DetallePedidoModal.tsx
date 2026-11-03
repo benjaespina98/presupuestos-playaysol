@@ -16,25 +16,32 @@ import {
 import type { FormatoPedido, ModoPedido } from "@/lib/documentos/pedidos/exportar";
 import { entregarPedido } from "@/lib/documentos/pedidos/entregar";
 import { formatARSExacto } from "@/lib/format/ars";
-import { ModalShell } from "@/components/abastecimiento/modal-partes";
+import { Aviso } from "@/components/ui/Aviso";
+import { Hoja } from "@/components/ui/Hoja";
+import { Pastilla, type TonoPastilla } from "@/components/ui/Pastilla";
+import { botonDe } from "@/components/ui/botones";
+import { CLASE_ETIQUETA } from "@/components/ui/lista";
 import { MenuExportar } from "./MenuExportar";
 import { AccionesProveedor } from "./AccionesProveedor";
 import { SelectorSimple } from "@/components/ui/SelectorSimple";
 
 const cantidad = (n: number) => new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(n);
 
-/** El color de cada estado: de un vistazo se ve en qué está cada pedido. */
-export const CLASE_ESTADO: Record<EstadoPedido, string> = {
-  borrador: "bg-gray-100 text-gray-700",
-  enviado: "bg-blue-50 text-blue-700",
-  recibido: "bg-green-50 text-green-700",
-  cancelado: "bg-red-50 text-red-700",
+/** El tono de cada estado: de un vistazo se ve en qué está cada pedido. */
+export const TONO_ESTADO: Record<EstadoPedido, TonoPastilla> = {
+  borrador: "neutro",
+  enviado: "info",
+  recibido: "ok",
+  cancelado: "error",
 };
 
 /**
  * Un pedido guardado, abierto: sus líneas por proveedor, su estado y las
  * mismas exportaciones que al armarlo. El documento sale de lo que quedó
  * guardado (no del catálogo de hoy): el pedido de ayer dice lo que se pidió ayer.
+ *
+ * Arriba lo que se usa siempre (estado y exportar), en el medio el pedido, y anular al final, separado. Los mensajes
+ * van en el pie fijo: con un pedido largo, un aviso dentro del cuerpo quedaría fuera de la vista.
  */
 export function DetallePedidoModal({
   pedido,
@@ -105,31 +112,41 @@ export function DetallePedidoModal({
   }
 
   return (
-    <ModalShell
+    <Hoja
       titulo={`Pedido ${doc.numero}`}
       subtitulo={`${doc.fecha} · ${doc.obra || "Sin obra"}`}
-      ancho="max-w-2xl"
+      ancho="xl"
+      alto="completo"
       ocupado={ocupado}
-      onClose={onClose}
+      onCerrar={onClose}
+      aviso={mensaje ? <Aviso tono={mensaje.tipo === "ok" ? "ok" : "error"}>{mensaje.texto}</Aviso> : undefined}
+      pie={
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:justify-between">
+          <Link href={`/dashboard/catalogo/pedido?desde=${pedido.id}`} className={botonDe("secundario", "min-h-12 text-base")}>
+            Armar uno igual
+          </Link>
+          <button type="button" onClick={onClose} disabled={ocupado} className={botonDe("primario", "min-h-12 text-base sm:min-w-32")}>
+            Cerrar
+          </button>
+        </div>
+      }
     >
-      {anulado && (
-        <AvisoAnulado anulado={{ motivo: pedido.anulado_motivo ?? null, fecha: pedido.anulado_at ?? null }} que="pedido" />
-      )}
+      {anulado && <AvisoAnulado anulado={{ motivo: pedido.anulado_motivo ?? null, fecha: pedido.anulado_at ?? null }} que="pedido" />}
+
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <label htmlFor="estado-pedido" className="mb-1 block text-[13px] font-medium uppercase tracking-wide text-gray-600">
+        <div className="min-w-44 flex-1 sm:flex-none">
+          <label htmlFor="estado-pedido" className={CLASE_ETIQUETA}>
             Estado
           </label>
-          <div className="min-w-44">
-            <SelectorSimple
-              id="estado-pedido"
-              titulo="Estado"
-              valor={pedido.estado}
-              opciones={ESTADOS_PEDIDO.map((e) => ({ value: e, label: ETIQUETA_ESTADO[e] }))}
-              disabled={ocupado || anulado}
-              onCambio={(v) => cambiarEstado(v as EstadoPedido)}
-            />
-          </div>
+          <SelectorSimple
+            id="estado-pedido"
+            titulo="Estado"
+            valor={pedido.estado}
+            opciones={ESTADOS_PEDIDO.map((e) => ({ value: e, label: ETIQUETA_ESTADO[e] }))}
+            disabled={ocupado || anulado}
+            className="min-h-12"
+            onCambio={(v) => cambiarEstado(v as EstadoPedido)}
+          />
         </div>
         <MenuExportar onExportar={exportar} variosProveedores={doc.proveedores.length > 1} ocupado={ocupado} />
       </div>
@@ -145,12 +162,12 @@ export function DetallePedidoModal({
         </div>
       </dl>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {doc.proveedores.map((s) => (
-          <section key={s.nombre + s.telefono} aria-label={`Pedido a ${s.nombre}`} className="overflow-hidden rounded-lg border border-gray-200">
-            <header className="flex flex-wrap items-baseline justify-between gap-x-3 bg-[#F4F8F9] px-3 py-2">
+          <section key={s.nombre + s.telefono} aria-label={`Pedido a ${s.nombre}`} className="overflow-hidden rounded-lg border border-[#D9DFE3]">
+            <header className="flex flex-wrap items-baseline justify-between gap-x-3 border-b border-[#D9DFE3] bg-[#F4F8F9] px-3 py-2">
               <h3 className="text-sm font-bold text-[#244B5A]">{s.nombre}</h3>
-              <p className="text-xs text-gray-500">{[s.contacto, s.telefono].filter(Boolean).join(" · ")}</p>
+              <p className="text-[13px] text-gray-500">{[s.contacto, s.telefono].filter(Boolean).join(" · ")}</p>
             </header>
             {/* Celular: el artículo y su subtotal arriba, y debajo "cantidad × precio" (sin tabla que haya que deslizar). */}
             <ul className="divide-y divide-gray-100 text-sm">
@@ -166,7 +183,7 @@ export function DetallePedidoModal({
                     </span>
                     <span className="sm:col-start-3 sm:row-start-1 sm:text-right sm:text-sm">
                       <span className="sm:hidden"> × </span>
-                      {l.precio === null ? <span className="text-xs text-amber-700">A confirmar</span> : formatARSExacto(l.precio)}
+                      {l.precio === null ? <Pastilla tono="aviso">A confirmar</Pastilla> : formatARSExacto(l.precio)}
                     </span>
                   </p>
                 </li>
@@ -185,50 +202,20 @@ export function DetallePedidoModal({
         <span className="tabular-nums">{formatARSExacto(doc.total)}</span>
       </p>
       {doc.sinPrecio > 0 && (
-        <p className="mt-1 text-xs text-amber-700">
+        <p className="mt-1 text-[13px] text-amber-800">
           No incluye {doc.sinPrecio} {doc.sinPrecio === 1 ? "artículo" : "artículos"} con precio a confirmar.
         </p>
       )}
       {doc.observaciones && (
-        <p className="mt-3 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
+        <p className="mt-3 rounded-lg bg-[#F4F8F9] px-3 py-2 text-sm text-gray-700">
           <span className="font-medium text-[#244B5A]">Observaciones: </span>
           {doc.observaciones}
         </p>
       )}
 
-      {mensaje && (
-        <p
-          role={mensaje.tipo === "error" ? "alert" : "status"}
-          className={`mt-3 rounded-md px-3 py-2 text-sm ${mensaje.tipo === "ok" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}
-        >
-          {mensaje.texto}
-        </p>
-      )}
-
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-        <Link
-          href={`/dashboard/catalogo/pedido?desde=${pedido.id}`}
-          className="inline-flex min-h-11 items-center rounded-lg border border-gray-200 px-4 text-sm font-medium text-[#244B5A] hover:bg-gray-50"
-        >
-          Volver a armar con estos datos
-        </Link>
-        <button
-          type="button"
-          onClick={onClose}
-          className="min-h-11 rounded-lg px-4 text-sm font-medium text-gray-600 hover:bg-gray-100"
-        >
-          Cerrar
-        </button>
-      </div>
-
       {!anulado && (
-        <div className="mt-5 border-t border-gray-200 pt-4">
-          <button
-            type="button"
-            onClick={() => setAnulando(true)}
-            disabled={ocupado}
-            className="min-h-11 w-full rounded-md border border-red-200 px-4 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-          >
+        <div className="mt-5 flex justify-end border-t border-[#D9DFE3] pt-3">
+          <button type="button" onClick={() => setAnulando(true)} disabled={ocupado} className={botonDe("textoPeligro")}>
             Anular pedido
           </button>
           <AnularDialog
@@ -240,6 +227,6 @@ export function DetallePedidoModal({
           />
         </div>
       )}
-    </ModalShell>
+    </Hoja>
   );
 }

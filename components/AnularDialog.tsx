@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { MOTIVO_MAX, validarMotivo } from "@/lib/anulacion";
 import { botonDe } from "@/components/ui/botones";
 import { Hoja } from "@/components/ui/Hoja";
+import { Aviso } from "@/components/ui/Aviso";
 
 /**
  * Confirmación de "Anular" con motivo obligatorio. Mismo lenguaje visual que
@@ -68,15 +69,15 @@ function Contenido({
       ocupado={enviando}
       onCerrar={onCancel}
       pie={
-        <div className="flex gap-2">
-          <button type="button" disabled={enviando} onClick={onCancel} className={botonDe("secundario", "flex-1")}>
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:justify-end">
+          <button type="button" disabled={enviando} onClick={onCancel} className={botonDe("secundario", "min-h-12 text-base sm:flex-1")}>
             No, conservarlo
           </button>
           <button
             type="button"
             disabled={enviando}
             onClick={confirmar}
-            className={botonDe("peligroLleno", "flex-1")}
+            className={botonDe("peligroLleno", "min-h-12 text-base sm:flex-1")}
           >
             {enviando ? "Un momento..." : "Anular"}
           </button>
@@ -108,9 +109,9 @@ function Contenido({
         {motivo.length}/{MOTIVO_MAX}
       </p>
       {error && (
-        <p id={`${idCampo}-error`} role="alert" className="mt-1 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </p>
+        <div id={`${idCampo}-error`} className="mt-1">
+          <Aviso tono="error">{error}</Aviso>
+        </div>
       )}
     </Hoja>
   );

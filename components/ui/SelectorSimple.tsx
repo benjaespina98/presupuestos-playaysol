@@ -16,7 +16,7 @@ export function SelectorSimple({
   opciones,
   onCambio,
   disabled = false,
-  className = "",
+  className = "min-h-11",
 }: {
   id: string;
   /** El nombre del campo (el de su label): título de la lista. */
@@ -25,7 +25,7 @@ export function SelectorSimple({
   opciones: OpcionSelector[];
   onCambio: (valor: string) => void;
   disabled?: boolean;
-  /** Para colorear el botón (por ejemplo, el estado de un pedido). */
+  /** El alto (44 px; 48 dentro de una hoja) u otros ajustes del botón. */
   className?: string;
 }) {
   const [abierto, setAbierto] = useState(false);
@@ -47,7 +47,7 @@ export function SelectorSimple({
         disabled={disabled}
         onClick={() => setAbierto(true)}
         style={{ borderColor: "var(--borde-control)" }}
-        className={`flex min-h-12 w-full items-center justify-between gap-2 rounded-lg border bg-[#FFFFFF] px-3 py-2 text-left text-base text-gray-900 hover:border-[#244B5A] disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-600 ${className}`}
+        className={`flex w-full items-center justify-between gap-2 rounded-lg border bg-[#FFFFFF] px-3 py-2 text-left text-base text-gray-900 sm:text-sm hover:border-[#244B5A] disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-600 ${className}`}
       >
         <span className="min-w-0 break-words">{actual?.label ?? valor}</span>
         <svg className="h-5 w-5 shrink-0 text-[#244B5A]" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

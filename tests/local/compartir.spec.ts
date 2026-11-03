@@ -163,7 +163,7 @@ test("imprimir: la hoja que sale por la impresora no muestra precios, costos, te
   await page.goto("/dashboard/catalogo/pedido");
   await expect(page.getByRole("region", { name: "Resumen del pedido" })).toBeVisible();
   await page.getByLabel("Cliente / obra").fill("Familia Gómez 3534 55 66 77");
-  await page.getByLabel("Pide (quién hace el pedido)").fill("Benja");
+  await page.getByLabel("Quién lo pide").fill("Benja");
   await page.getByLabel(/Notas internas/).fill(NOTA_INTERNA);
 
   // En pantalla, la app muestra los precios (son internos).

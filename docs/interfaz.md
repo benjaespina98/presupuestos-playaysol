@@ -7,10 +7,24 @@ Dónde está cada pieza, para no reinventarla en la próxima pantalla.
 | Colores de marca | `app/globals.css` (`@theme`) | `marca` (#244B5A), `marca-oscuro`, `acento` (#FFC629), `celeste` (#16819A). Se usan como `bg-marca`, `text-marca`, `ring-celeste/40`. |
 | Interacción global | `app/globals.css` | Cursor de mano, foco visible (`:focus-visible`), estado "hundido" al apretar, combos con flecha propia, 16 px en campos de texto en el celular (evita el zoom de iOS), `prefers-reduced-motion`. |
 | Botones | `components/ui/botones.ts` | `botonDe("primario" \| "secundario" \| "suave" \| "peligro", extra)`. Todos de 44 px de alto como mínimo. |
-| Hoja | `components/ui/Hoja.tsx` | Todo formulario o diálogo. Celular: hoja inferior con encabezado y pie fijos y sólo el cuerpo con scroll; escritorio: modal centrado. Avisa si se cierra con cambios sin guardar (`hayCambios`). `PieAcciones` es el pie estándar (Cancelar y Guardar). |
+| Hoja | `components/ui/Hoja.tsx` | Todo formulario o diálogo. Celular: hoja inferior con encabezado y pie fijos y sólo el cuerpo con scroll; escritorio: modal centrado. Avisa si se cierra con cambios sin guardar (`hayCambios`). Foco dentro de la hoja, Tab encerrado, Escape cierra sólo la de arriba y el foco vuelve al cerrar. `PieAcciones` es el pie estándar (Cancelar y Guardar). |
 | Menú de acciones | `components/ui/MenuAcciones.tsx` | El botón "⋯" con un menú (se dibuja en el `<body>`, no lo recorta ningún `overflow`). |
 | Buscador | `components/ui/FiltrosPlegables.tsx` | `Buscador`: el campo de búsqueda con su botón de limpiar (lo usa la barra de herramientas). |
 | Estado que se conserva | `lib/useEstadoPersistente.ts` | Como `useState`, pero guardado en `sessionStorage`: la búsqueda y los filtros siguen ahí al abrir un detalle y volver. |
+
+## Piezas de las listas y los avisos
+
+| Pieza | Archivo | Para qué |
+|---|---|---|
+| Clases de lista | `components/ui/lista.ts` | Encabezado, grupo, fila, columna de importes, texto secundario y campos sueltos: las listas se leen igual en todas las pantallas. |
+| Aviso | `components/ui/Aviso.tsx` | Error, advertencia, confirmación o dato, siempre con la misma forma e ícono. |
+| Pastilla | `components/ui/Pastilla.tsx` | Un estado corto dentro de una fila: "Enviado", "A confirmar", "Desactivado", "Anulado". |
+| Lista vacía / cargando | `components/ui/EstadoLista.tsx` | Qué pasa y qué hacer si no hay filas; el esqueleto mientras cargan. |
+| Segmentado | `components/ui/Segmentado.tsx` | Elegir una de pocas opciones a la vista. |
+
+Los colores de Tailwind (`text-gray-600`, `bg-red-50`...) están redefinidos en `app/globals.css` para dar los mismos tonos que
+los valores fijos de los controles: hay una sola paleta. **Los importes van alineados a la derecha.** Cada dato tiene una sola forma
+(un estado, una pastilla) y una sola etiqueta ("Rubro" en filtro, formulario y columna).
 
 ## Reglas que se siguen
 

@@ -28,7 +28,9 @@ function esTablaFaltante(error: { code?: string; message?: string }): boolean {
 }
 
 function mensaje(error: { code?: string; message?: string }): string {
-  return esTablaFaltante(error) ? ERROR_TABLA_PEDIDOS : error.message ?? "Error desconocido.";
+  if (esTablaFaltante(error)) return ERROR_TABLA_PEDIDOS;
+  if (error.code === "23514" && !/anulad/i.test(error.message ?? "")) return "Algún dato es demasiado largo o está fuera de rango. Revisalo e intentá de nuevo."; // check_violation
+  return error.message ?? "Error desconocido.";
 }
 
 export type ResultadoListarPedidos =
@@ -38,7 +40,8 @@ export type ResultadoListarPedidos =
 export async function listarPedidos(): Promise<ResultadoListarPedidos> {
   try {
     const supabase = createClient();
-    const { data, error } = await supabase.from("pedidos").select("*");
+    // El orden lo da la base: con más filas que el tope de la API (1000), las que quedan afuera son las más viejas.
+    const { data, error } = await supabase.from("pedidos").select("*").order("numero", { ascending: false });
     if (error) return { items: null, error: mensaje(error) };
 
     const items: PedidoGuardado[] = [];
@@ -47,12 +50,24 @@ export async function listarPedidos(): Promise<ResultadoListarPedidos> {
       if (r.success) items.push(r.data);
       else console.error(mensajeFilaInvalida("Fila de pedidos con forma inesperada, se omite", fila, r.error));
     }
-    // Los más nuevos primero.
-    items.sort((a, b) => b.numero - a.numero);
     return { items, error: null };
   } catch (err) {
     console.error("No se pudieron leer los pedidos", err);
     return { items: null, error: ERROR_DE_RED };
+  }
+}
+
+/** Un pedido por su id (para volver a armarlo), sin traer toda la lista. null si no existe o no se pudo leer. */
+export async function obtenerPedido(id: string): Promise<PedidoGuardado | null> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase.from("pedidos").select("*").eq("id", id).maybeSingle();
+    if (error || !data) return null;
+    const r = PedidoGuardado.safeParse(data);
+    return r.success ? r.data : null;
+  } catch (err) {
+    console.error("No se pudo leer el pedido", err);
+    return null;
   }
 }
 
