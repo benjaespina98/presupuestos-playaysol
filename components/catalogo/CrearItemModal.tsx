@@ -8,6 +8,7 @@ import { CATEGORIAS, UNIDADES } from "@/lib/domain/catalogo/categorias";
 import type { ItemCatalogo } from "@/lib/domain/catalogo/item";
 import { MODELOS_INDUSPLAST } from "@/lib/domain/catalogo/listas";
 import { Hoja, PieAcciones } from "@/components/ui/Hoja";
+import { Aviso } from "@/components/ui/Aviso";
 import { ZonaActivo } from "@/components/ui/SeccionForm";
 import { NuevoItemSchema, nuevoItemFormVacio, aNuevoItem, datosDeAlta, type NuevoItemForm } from "./nuevo-item.schema";
 import { TITULOS_TIPO } from "./titulos-tipo";
@@ -107,9 +108,7 @@ export function CrearItemModal({
       onCerrar={onClose}
       aviso={
         errorGuardado ? (
-          <p role="alert" className="rounded-lg border border-[#FDA29B] bg-[#FEF3F2] px-3 py-2 text-[15px] font-medium text-[#B42318]">
-            No se guardó: {errorGuardado} Lo que cargaste sigue acá.
-          </p>
+          <Aviso tono="error">No se guardó: {errorGuardado} Lo que cargaste sigue acá.</Aviso>
         ) : undefined
       }
       pie={<PieAcciones formId={formId} guardando={isSubmitting} etiqueta="Agregar al catálogo" etiquetaGuardando="Agregando..." />}
@@ -185,7 +184,7 @@ export function CrearItemModal({
               hint="Para lo que se guarda en el local, como las piscinas de fibra."
             />
             {llevaStock && (
-              <p className="text-[13px] leading-snug text-[#4A5861]">Arranca en 0 unidades. Cargá lo que hay con «Llegó mercadería» desde la lista del catálogo.</p>
+              <p className="text-[13px] leading-snug text-[#4A5861]">Arranca en 0 unidades. Cargá lo que hay con «Llegó mercadería» desde la lista de Precios.</p>
             )}
           </div>
           <ZonaActivo>

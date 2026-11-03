@@ -50,13 +50,14 @@ export function construirCspReportOnly({ supabaseUrl, esDesarrollo = false }: Op
 
   const directivas: Record<string, string[]> = {
     "default-src": ["'self'"],
-    "script-src": ["'self'", "'unsafe-inline'", ...(esDesarrollo ? ["'unsafe-eval'"] : [])],
+    // 'wasm-unsafe-eval': el motor de los PDF (react-pdf) compila WebAssembly. No habilita eval de JavaScript.
+    "script-src": ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'", ...(esDesarrollo ? ["'unsafe-eval'"] : [])],
     "style-src": ["'self'", "'unsafe-inline'"],
     // blob:/data: para las fotos recién elegidas y los planos que se dibujan en canvas.
     "img-src": conSupabase(["'self'", "blob:", "data:"]),
     "font-src": ["'self'", "data:"],
-    // Supabase (REST/Auth/Storage) y la descarga de fotos para armar el Word/PDF.
-    "connect-src": conSupabase(["'self'"]),
+    // Supabase (REST/Auth/Storage) y la descarga de fotos para armar el Word/PDF; data: es el WebAssembly del motor de PDF.
+    "connect-src": conSupabase(["'self'", "data:"]),
     // @react-pdf/renderer y la compresión de imágenes pueden usar workers desde blob:.
     "worker-src": ["'self'", "blob:"],
     "object-src": ["'none'"],

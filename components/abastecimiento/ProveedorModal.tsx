@@ -7,19 +7,20 @@ import { TextField, CheckboxField } from "@/components/form";
 import { guardarProveedor } from "@/lib/abastecimiento";
 import type { DatosProveedor, Proveedor } from "@/lib/domain/abastecimiento/proveedor";
 import { Hoja, PieAcciones } from "@/components/ui/Hoja";
+import { Aviso } from "@/components/ui/Aviso";
 import { Seccion, SeccionPlegable, ZonaActivo } from "@/components/ui/SeccionForm";
 import { formatFechaRelativa } from "@/lib/format/fecha";
 
 /** Los opcionales viajan como string (un <input> no puede valer null); `aDatos`
  *  los vuelve null cuando quedan vacíos. */
 export const ProveedorFormSchema = z.object({
-  nombre: z.string().trim().min(1, "El nombre es obligatorio"),
+  nombre: z.string().trim().min(1, "El nombre es obligatorio").max(200, "Máximo 200 caracteres"),
   rubro: z.string(),
   contacto: z.string(),
   telefono: z.string(),
   forma_pago: z.string(),
   plazo: z.string(),
-  notas: z.string(),
+  notas: z.string().max(2000, "Máximo 2000 caracteres"),
   activo: z.boolean(),
 });
 export type ProveedorForm = z.infer<typeof ProveedorFormSchema>;
@@ -106,9 +107,7 @@ export function ProveedorModal({
       onCerrar={onClose}
       aviso={
         errorGuardado ? (
-          <p role="alert" className="rounded-lg border border-[#FDA29B] bg-[#FEF3F2] px-3 py-2 text-[15px] font-medium text-[#B42318]">
-            No se guardó: {errorGuardado} Lo que cargaste sigue acá.
-          </p>
+          <Aviso tono="error">No se guardó: {errorGuardado} Lo que cargaste sigue acá.</Aviso>
         ) : undefined
       }
       pie={
@@ -123,7 +122,7 @@ export function ProveedorModal({
     >
       <form id={formId} onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
         <Seccion titulo="Datos">
-          <TextField register={register} errors={errors} name="nombre" label="Nombre" required autoFocus />
+          <TextField register={register} errors={errors} name="nombre" label="Nombre" required autoFocus={proveedor === null} />
           <TextField register={register} errors={errors} name="rubro" label="Rubro" placeholder="Ej: Corralón" />
         </Seccion>
 

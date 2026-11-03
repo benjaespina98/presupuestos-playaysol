@@ -29,7 +29,7 @@ import {
 } from "@/lib/domain/abastecimiento/pedidoDocumento";
 import type { FormatoPedido, ModoPedido } from "@/lib/documentos/pedidos/exportar";
 import { entregarPedido } from "@/lib/documentos/pedidos/entregar";
-import { guardarPedido, listarPedidos } from "@/lib/pedidos";
+import { guardarPedido, obtenerPedido } from "@/lib/pedidos";
 import { formatARSExacto } from "@/lib/format/ars";
 import { copiarAlPortapapeles } from "@/lib/clipboard";
 import { PanelPortal } from "@/components/PanelPortal";
@@ -39,13 +39,18 @@ import { MenuExportar } from "@/components/pedidos/MenuExportar";
 import { AgregarMaterial } from "@/components/pedidos/AgregarMaterial";
 import { MaterialModal } from "@/components/abastecimiento/MaterialModal";
 import { BotonLapiz } from "@/components/ui/BotonLapiz";
+import { Aviso } from "@/components/ui/Aviso";
 import { botonDe } from "@/components/ui/botones";
+import { ListaCargando, ListaVacia } from "@/components/ui/EstadoLista";
+import { CLASE_CAMPO, CLASE_ETIQUETA, COLUMNA_NUMERO } from "@/components/ui/lista";
+import { Pastilla } from "@/components/ui/Pastilla";
+import { Segmentado } from "@/components/ui/Segmentado";
 import { SelectorSimple } from "@/components/ui/SelectorSimple";
 
-const CLASE_CAMPO =
-  "min-h-12 w-full rounded-lg border bg-[#FFFFFF] px-3 py-2.5 text-base text-gray-900 shadow-sm placeholder:text-[#6B7680] focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20";
-
-const BORDES: BordePedido[] = ["Losetas", "Deck"];
+const BORDES: readonly { id: BordePedido; texto: string }[] = [
+  { id: "Losetas", texto: "Losetas" },
+  { id: "Deck", texto: "Deck" },
+];
 
 /** Un número que escribió una persona; vacío o inválido = 0 (mínimo 0). */
 function numero(texto: string): number {
@@ -72,7 +77,7 @@ function nombreArchivo(obra: string, tamano: string): string {
  */
 export default function PedidoPage() {
   return (
-    <Suspense fallback={<div className="mx-auto max-w-5xl px-4 py-8 text-sm text-gray-500">Cargando…</div>}>
+    <Suspense fallback={<div className="mx-auto max-w-7xl px-4 py-4"><ListaCargando /></div>}>
       <PedidoContenido />
     </Suspense>
   );
@@ -103,10 +108,8 @@ function PedidoContenido() {
   useEffect(() => {
     if (!desde) return;
     let cancelado = false;
-    listarPedidos().then((r) => {
-      if (cancelado || !r.items) return;
-      const p = r.items.find((x) => x.id === desde);
-      if (!p) return;
+    obtenerPedido(desde).then((p) => {
+      if (cancelado || !p) return;
       setObra(p.obra);
       setPide(p.solicitante);
       setNotas(p.notas ?? "");
@@ -238,7 +241,10 @@ function PedidoContenido() {
 
   async function copiar(clave: string, texto: string) {
     const ok = await copiarAlPortapapeles(texto);
-    if (!ok) return;
+    if (!ok) {
+      setMensaje({ tipo: "error", texto: "No se pudo copiar: el navegador no dio permiso." });
+      return;
+    }
     setCopiado(clave);
     setTimeout(() => setCopiado((actual) => (actual === clave ? null : actual)), 2000);
   }
@@ -261,23 +267,27 @@ function PedidoContenido() {
     <PanelPortal compacto amplio>
       <EncabezadoPagina
         titulo="Armar pedido"
-        descripcion="Elegí el tamaño de la pileta y las opciones de la obra: te armo qué pedir, cuánto y a quién."
+        descripcion="Según el tamaño de la pileta y las opciones de la obra: qué pedir, cuánto y a quién."
       />
 
-      {error && (
-        <p role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </p>
+      {error && <Aviso tono="error" className="mt-3">{error}</Aviso>}
+      {!error && materiales === null && (
+        <div className="mt-3">
+          <ListaCargando />
+        </div>
       )}
-      {!error && materiales === null && <p className="text-sm text-gray-500">Cargando…</p>}
 
       {!error && materiales !== null && materiales.length === 0 && (
-        <div className="rounded-lg border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500">
-          Todavía no hay materiales cargados.{" "}
-          <Link href="/dashboard/catalogo/materiales" className="font-medium text-[#244B5A] hover:underline">
-            Cargalos en Materiales
-          </Link>
-          .
+        <div className="mt-3">
+          <ListaVacia
+            accion={
+              <Link href="/dashboard/catalogo/materiales" className={botonDe("primario", "px-4")}>
+                Cargar materiales
+              </Link>
+            }
+          >
+            Todavía no hay materiales cargados.
+          </ListaVacia>
         </div>
       )}
 
@@ -286,30 +296,30 @@ function PedidoContenido() {
           <section
             data-print-hide=""
             aria-label="Datos de la obra"
-            className="mb-4 space-y-4 rounded-lg border border-gray-200 bg-[#FFFFFF] p-4 shadow-sm sm:mb-5 sm:p-5"
+            className="my-3 space-y-4 rounded-lg border border-[#D9DFE3] bg-[#FFFFFF] p-4"
           >
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-x-4 gap-y-4 md:grid-cols-3">
               <Campo etiqueta="Cliente / obra" id="obra">
-                <input id="obra" type="text" value={obra} onChange={(e) => setObra(e.target.value)} placeholder="Ej: Familia Pérez" className={CLASE_CAMPO} />
+                <input id="obra" type="text" maxLength={500} value={obra} onChange={(e) => setObra(e.target.value)} placeholder="Ej: Familia Pérez" className={CLASE_CAMPO} />
               </Campo>
-              <Campo etiqueta="Pide (quién hace el pedido)" id="pide">
-                <input id="pide" type="text" value={pide} onChange={(e) => setPide(e.target.value)} className={CLASE_CAMPO} />
+              <Campo etiqueta="Quién lo pide" id="pide">
+                <input id="pide" type="text" maxLength={200} value={pide} onChange={(e) => setPide(e.target.value)} className={CLASE_CAMPO} />
+              </Campo>
+              <Campo etiqueta="Notas internas (no salen en el pedido)" id="notas">
+                <textarea
+                  id="notas"
+                  rows={1}
+                  maxLength={2000}
+                  value={notas}
+                  onChange={(e) => setNotas(e.target.value)}
+                  placeholder="Ej: Entregar en obra antes del viernes"
+                  className={CLASE_CAMPO}
+                />
               </Campo>
             </div>
 
-            <Campo etiqueta="Notas internas (no salen en el pedido)" id="notas">
-              <textarea
-                id="notas"
-                rows={2}
-                value={notas}
-                onChange={(e) => setNotas(e.target.value)}
-                placeholder="Ej: Entregar en obra antes del viernes"
-                className={CLASE_CAMPO}
-              />
-            </Campo>
-
-            <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-4 sm:gap-x-4">
-              <Campo etiqueta="Tamaño de pileta" id="tamano">
+            <div className="grid grid-cols-2 items-start gap-x-3 gap-y-4 sm:grid-cols-4 sm:gap-x-4">
+              <Campo etiqueta="Tamaño de pileta" id="tamano" className="col-span-2 sm:col-span-1">
                 <SelectorSimple id="tamano" titulo="Tamaño de pileta" valor={params.tamano} opciones={TAMANOS.map((t) => ({ value: t, label: t }))} onCambio={(v) => cambiar({ tamano: v })} />
               </Campo>
               <Campo etiqueta="Cantidad de obras" id="obras">
@@ -324,7 +334,7 @@ function PedidoContenido() {
                   className={CLASE_CAMPO}
                 />
               </Campo>
-              <Campo etiqueta="Cantidad de luces (por pileta)" id="luces">
+              <Campo etiqueta="Luces por pileta" id="luces">
                 <input
                   id="luces"
                   type="number"
@@ -336,24 +346,8 @@ function PedidoContenido() {
                 />
               </Campo>
               <div role="group" aria-label="Borde (terminación)" className="col-span-2 sm:col-span-1">
-                <p className="mb-1.5 text-sm font-medium text-gray-700">Borde (terminación)</p>
-                <div className="flex gap-2">
-                  {BORDES.map((b) => (
-                    <button
-                      key={b}
-                      type="button"
-                      aria-pressed={params.borde === b}
-                      onClick={() => cambiar({ borde: b })}
-                      className={`min-h-11 flex-1 rounded-lg border px-3 text-sm font-medium transition-colors ${
-                        params.borde === b
-                          ? "border-[#244B5A] bg-[#244B5A] text-[#FFFFFF] shadow-sm"
-                          : "border-gray-200 bg-[#FFFFFF] text-gray-700 hover:bg-gray-50"
-                      }`}
-                    >
-                      {b}
-                    </button>
-                  ))}
-                </div>
+                <p className={CLASE_ETIQUETA}>Borde (terminación)</p>
+                <Segmentado etiqueta="Borde" opciones={BORDES} valor={params.borde} onCambio={(borde) => cambiar({ borde })} lleno />
               </div>
             </div>
 
@@ -374,42 +368,37 @@ function PedidoContenido() {
             <p>Pide: {sinTelefonos(pide) || "—"} · Pileta {params.tamano} · Borde: {params.borde}</p>
           </section>
 
-          <section aria-label="Resumen del pedido" className="mb-5 grid gap-3 sm:grid-cols-3">
-            <Resumen etiqueta="Artículos a pedir" valor={String(pedido.articulos)} />
-            <Resumen etiqueta="Proveedores a contactar" valor={String(pedido.proveedores)} />
-            <Resumen
-              interno
-              etiqueta="Costo estimado"
-              valor={formatARSExacto(pedido.costo)}
-              nota={pedido.sinPrecio > 0 ? `Sin contar ${pedido.sinPrecio} ${pedido.sinPrecio === 1 ? "artículo" : "artículos"} con precio a confirmar` : undefined}
-            />
-          </section>
-
           {pedido.articulos === 0 ? (
-            <div className="rounded-lg border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500">
-              No hay cantidades cargadas para la pileta {params.tamano}. Se cargan en{" "}
-              <Link href="/dashboard/catalogo/materiales" className="font-medium text-[#244B5A] hover:underline">
-                Materiales
-              </Link>
-              .
-            </div>
+            <ListaVacia
+              accion={
+                <Link href="/dashboard/catalogo/materiales" className={botonDe("secundario", "px-4")}>
+                  Ir a Materiales
+                </Link>
+              }
+            >
+              No hay cantidades cargadas para la pileta {params.tamano}.
+            </ListaVacia>
           ) : (
             <>
-              {/* Barra fija: al bajar por una tabla larga, el costo y los botones de exportar siguen a mano. */}
-              <div
+              {/* Barra fija, con el resumen y lo que se hace con el pedido: al bajar por una lista larga sigue a mano. */}
+              <section
                 data-print-hide=""
-                className="-mx-4 mb-4 grid grid-cols-2 gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2.5 sm:flex sm:flex-wrap sm:items-center sm:gap-x-4 lg:sticky lg:top-0 lg:z-20"
+                aria-label="Resumen del pedido"
+                className="-mx-4 mb-3 grid grid-cols-2 gap-2 border-y border-[#D9DFE3] bg-gray-50 px-4 py-2.5 sm:flex sm:flex-wrap sm:items-center sm:gap-x-3 lg:sticky lg:top-0 lg:z-20"
               >
-                <p className="col-span-2 text-sm tabular-nums text-gray-600 sm:mr-auto">
-                  <b className="text-gray-900">{pedido.articulos}</b> artículos · <b className="text-gray-900">{pedido.proveedores}</b> proveedores ·{" "}
-                  <b className="text-gray-900">{formatARSExacto(pedido.costo)}</b>
-                </p>
-                <Accion principal alto onClick={onGuardar} deshabilitado={ocupado || !!vigente || bloqueadoPorDesactivados}>
-                  {vigente ? `Guardado · ${numeroFormateado(vigente.numero)}` : "Guardar pedido"}
-                </Accion>
-                <Accion onClick={() => setAgregando(true)}>Agregar material</Accion>
+                <div className="col-span-2 sm:mr-auto">
+                  <p className="text-sm tabular-nums text-gray-600">
+                    <b className="text-gray-900">{pedido.articulos}</b> {pedido.articulos === 1 ? "artículo" : "artículos"} · <b className="text-gray-900">{pedido.proveedores}</b>{" "}
+                    {pedido.proveedores === 1 ? "proveedor" : "proveedores"} · Costo estimado <b className="text-gray-900">{formatARSExacto(pedido.costo)}</b>
+                  </p>
+                  {pedido.sinPrecio > 0 && (
+                    <p className="text-[13px] text-amber-800">
+                      Sin contar {pedido.sinPrecio} {pedido.sinPrecio === 1 ? "artículo" : "artículos"} con precio a confirmar
+                    </p>
+                  )}
+                </div>
                 <Accion onClick={() => copiar("todo", mensajeWhatsApp(pedido, params, encabezado))}>
-                  {copiado === "todo" ? "¡Copiado!" : "Copiar mensaje para WhatsApp"}
+                  {copiado === "todo" ? "¡Copiado!" : "Copiar para WhatsApp"}
                 </Accion>
                 <div
                   aria-disabled={bloqueadoPorDesactivados || undefined}
@@ -419,77 +408,76 @@ function PedidoContenido() {
                 >
                   <MenuExportar onExportar={onExportar} onCsv={descargarCsv} variosProveedores={pedido.grupos.length > 1} ocupado={ocupado} />
                 </div>
-                {hayAjustes && (
-                  <button
-                    type="button"
-                    onClick={() => setAjustes({})}
-                    className="col-span-2 min-h-11 rounded-lg px-3 text-sm font-medium text-[#244B5A] hover:bg-[#EAF0F2]"
-                  >
-                    Restablecer cantidades
-                  </button>
-                )}
-              </div>
+                <Accion principal alto onClick={onGuardar} deshabilitado={ocupado || !!vigente || bloqueadoPorDesactivados}>
+                  {vigente ? `Guardado · ${numeroFormateado(vigente.numero)}` : "Guardar pedido"}
+                </Accion>
+              </section>
 
               {desactivados.materialesFuera.length > 0 && (
-                <p role="status" data-print-hide="" className="mb-3 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                  <b>
-                    {desactivados.materialesFuera.length === 1
-                      ? "1 material desactivado quedó afuera del pedido:"
-                      : `${desactivados.materialesFuera.length} materiales desactivados quedaron afuera del pedido:`}
-                  </b>{" "}
-                  {desactivados.materialesFuera.map((m) => m.nombre).join(", ")}. Si lo necesitás, reactivalo en Materiales.
-                </p>
+                <div data-print-hide="" className="mb-3">
+                  <Aviso
+                    tono="aviso"
+                    titulo={
+                      desactivados.materialesFuera.length === 1
+                        ? "1 material desactivado quedó afuera del pedido:"
+                        : `${desactivados.materialesFuera.length} materiales desactivados quedaron afuera del pedido:`
+                    }
+                  >
+                    {desactivados.materialesFuera.map((m) => m.nombre).join(", ")}. Si lo necesitás, reactivalo en Materiales.
+                  </Aviso>
+                </div>
               )}
               {desactivados.proveedoresDesactivados.length > 0 && (
-                <div role="alert" data-print-hide="" className="mb-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                  <p className="font-semibold">
-                    ⚠ Este pedido incluye {desactivados.proveedoresDesactivados.length === 1 ? "un proveedor desactivado" : "proveedores desactivados"}:{" "}
-                    {desactivados.proveedoresDesactivados.map((d) => d.proveedor.nombre).join(", ")}.
-                  </p>
-                  <p className="mt-0.5">
-                    Dejaron de ofrecerse, pero estos materiales todavía son suyos. Reasigná los materiales a otro proveedor, o confirmá para pedir igual.
-                  </p>
-                  <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-2 font-medium">
-                    <input
-                      type="checkbox"
-                      checked={!bloqueadoPorDesactivados}
-                      onChange={(e) => setConfirmadoPara(e.target.checked ? claveDesactivados : null)}
-                      className="h-5 w-5"
-                    />
-                    Pedir igual a proveedores desactivados
-                  </label>
+                <div data-print-hide="" className="mb-3">
+                  <Aviso
+                    tono="aviso"
+                    urgente
+                    titulo={`Este pedido incluye ${desactivados.proveedoresDesactivados.length === 1 ? "un proveedor desactivado" : "proveedores desactivados"}: ${desactivados.proveedoresDesactivados.map((d) => d.proveedor.nombre).join(", ")}.`}
+                  >
+                    <p className="mt-0.5">Reasigná sus materiales a otro proveedor, o confirmá para pedir igual.</p>
+                    <label className="mt-1 flex min-h-11 cursor-pointer items-center gap-2 font-medium">
+                      <input
+                        type="checkbox"
+                        checked={!bloqueadoPorDesactivados}
+                        onChange={(e) => setConfirmadoPara(e.target.checked ? claveDesactivados : null)}
+                        className="h-5 w-5"
+                      />
+                      Pedir igual a proveedores desactivados
+                    </label>
+                  </Aviso>
                 </div>
               )}
 
               {mensaje && (
-                <p
-                  role={mensaje.tipo === "error" ? "alert" : "status"}
-                  data-print-hide=""
-                  className={`mb-4 rounded-md px-4 py-3 text-sm ${
-                    mensaje.tipo === "ok"
-                      ? "bg-green-50 text-green-700"
-                      : mensaje.tipo === "aviso"
-                        ? "bg-amber-50 text-amber-800"
-                        : "bg-red-50 text-red-700"
-                  }`}
-                >
-                  {mensaje.texto}
-                  {mensaje.tipo === "ok" && vigente && (
-                    <>
-                      {" "}
-                      <Link href="/dashboard/catalogo/pedidos" className="font-medium underline">
-                        Ver en Pedidos
-                      </Link>
-                    </>
-                  )}
-                </p>
+                <div data-print-hide="" className="mb-3">
+                  <Aviso tono={mensaje.tipo}>
+                    {mensaje.texto}
+                    {mensaje.tipo === "ok" && vigente && (
+                      <>
+                        {" "}
+                        <Link href="/dashboard/catalogo/pedidos" className="font-medium underline">
+                          Ver en Pedidos
+                        </Link>
+                      </>
+                    )}
+                  </Aviso>
+                </div>
               )}
 
               {/* Las cantidades de arriba salen de Materiales (por tamaño de pileta). Acá se pueden retocar para ESTE pedido. */}
-              <p data-print-hide="" className="mb-3 rounded-lg bg-[#EEF2F4] px-4 py-2.5 text-[13px] leading-snug text-[#3E4A52]">
-                <b className="font-semibold text-[#1A3844]">Podés cambiar cualquier cantidad acá.</b> Es sólo para este pedido: las cantidades de Materiales no se tocan.
-                Lo que cambies queda marcado en ámbar y podés volver al valor de siempre con &ldquo;Restablecer cantidades&rdquo;.
-              </p>
+              <div data-print-hide="" className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                <p className="text-[13px] leading-snug text-[#4A5861]">Las cantidades que cambies valen sólo para este pedido y quedan marcadas en ámbar.</p>
+                <div className="flex gap-2">
+                  {hayAjustes && (
+                    <button type="button" onClick={() => setAjustes({})} className={botonDe("texto")}>
+                      Restablecer cantidades
+                    </button>
+                  )}
+                  <button type="button" onClick={() => setAgregando(true)} className={botonDe("secundario", "px-4")}>
+                    Agregar material
+                  </button>
+                </div>
+              </div>
 
               <div className="space-y-4">
                 {pedido.grupos.map((g) => (
@@ -505,14 +493,8 @@ function PedidoContenido() {
                 ))}
               </div>
 
-              <div data-print-hide="" className="mt-4 lg:hidden">
-                <button type="button" onClick={() => setAgregando(true)} className={botonDe("secundario", "px-4")}>
-                  + Agregar otro material al pedido
-                </button>
-              </div>
-
               {quitados.length > 0 && (
-                <section data-print-hide="" aria-label="Materiales quitados" className="mt-4 rounded-lg border border-gray-200 bg-[#FFFFFF] p-4 shadow-sm">
+                <section data-print-hide="" aria-label="Materiales quitados" className="mt-4 rounded-lg border border-[#D9DFE3] bg-[#FFFFFF] p-4">
                   <h2 className="mb-2 text-sm font-semibold text-gray-900">Quitados del pedido</h2>
                   <ul className="space-y-1">
                     {quitados.map((m) => (
@@ -522,7 +504,7 @@ function PedidoContenido() {
                           type="button"
                           onClick={() => ajustar(m.id, null)}
                           aria-label={`Volver a poner ${m.nombre}`}
-                          className="min-h-11 rounded-md px-3 font-medium text-[#244B5A] hover:bg-[#EAF0F2]"
+                          className={botonDe("texto")}
                         >
                           Volver a poner
                         </button>
@@ -565,23 +547,13 @@ function PedidoContenido() {
   );
 }
 
-function Campo({ etiqueta, id, children }: { etiqueta: string; id: string; children: React.ReactNode }) {
+function Campo({ etiqueta, id, className, children }: { etiqueta: string; id: string; className?: string; children: React.ReactNode }) {
   return (
-    <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-gray-700">
+    <div className={className}>
+      <label htmlFor={id} className={CLASE_ETIQUETA}>
         {etiqueta}
       </label>
       {children}
-    </div>
-  );
-}
-
-function Resumen({ etiqueta, valor, nota, interno = false }: { etiqueta: string; valor: string; nota?: string; interno?: boolean }) {
-  return (
-    <div data-print-hide={interno ? "" : undefined} className="rounded-lg border border-gray-200 bg-[#FFFFFF] p-4 shadow-sm">
-      <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{etiqueta}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums text-[#244B5A]">{valor}</p>
-      {nota && <p className="mt-1 text-xs text-amber-700">{nota}</p>}
     </div>
   );
 }
@@ -631,11 +603,11 @@ function GrupoTabla({
   onEditarMaterial: (m: Material) => void;
 }) {
   return (
-    <section aria-label={`Pedido a ${grupo.nombre}`} className="overflow-hidden rounded-lg border border-gray-200 bg-[#FFFFFF] shadow-sm">
-      <header className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-gray-200 bg-[#F4F8F9] px-4 py-2.5">
+    <section aria-label={`Pedido a ${grupo.nombre}`} className="overflow-hidden rounded-lg border border-[#D9DFE3] bg-[#FFFFFF]">
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-[#D9DFE3] bg-[#F4F8F9] px-4 py-1">
         <div className="mr-auto min-w-0">
           <h2 className="text-sm font-bold text-[#244B5A]">{grupo.nombre}</h2>
-          {grupo.telefono && <p data-print-hide="" className="text-xs text-gray-500">{grupo.telefono}</p>}
+          {grupo.telefono && <p data-print-hide="" className="text-[13px] text-gray-500">{grupo.telefono}</p>}
         </div>
         <p className="text-sm tabular-nums text-gray-700">
           {grupo.lineas.length} {grupo.lineas.length === 1 ? "artículo" : "artículos"}{" "}
@@ -646,7 +618,7 @@ function GrupoTabla({
           data-print-hide=""
           onClick={onCopiar}
           aria-label={`Copiar el pedido a ${grupo.nombre}`}
-          className="min-h-11 rounded-md px-3 text-sm font-medium text-[#244B5A] hover:bg-[#EAF0F2]"
+          className={botonDe("texto")}
         >
           {copiado ? "¡Copiado!" : "Copiar"}
         </button>
@@ -656,7 +628,7 @@ function GrupoTabla({
           y subtotal abajo) y desde lg las columnas quedan alineadas entre todos los proveedores. */}
       <div
         aria-hidden="true"
-        className={`hidden border-b border-gray-100 px-4 py-2 text-xs font-medium uppercase tracking-wide text-gray-500 lg:grid lg:items-center lg:gap-x-4 ${COLUMNAS}`}
+        className={`hidden h-9 border-b border-[#EEF1F3] px-4 text-[13px] font-semibold uppercase tracking-wide text-[#4A5861] lg:grid lg:items-center lg:gap-x-4 ${COLUMNAS}`}
       >
         <span>Artículo</span>
         <span>Cantidad</span>
@@ -670,7 +642,7 @@ function GrupoTabla({
           return (
             <li
               key={l.material.id}
-              className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-2.5 lg:gap-x-4 lg:py-2.5 ${COLUMNAS}`}
+              className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-2 text-sm lg:gap-x-4 lg:py-1 ${COLUMNAS}`}
             >
               <p className="col-span-2 col-start-1 row-start-1 min-w-0 break-words text-gray-900 lg:col-span-1 lg:col-auto lg:row-auto">{l.material.nombre}</p>
 
@@ -696,13 +668,13 @@ function GrupoTabla({
                     }
                     onAjustar(l.material.id, n === l.calculada ? null : { cantidad: n });
                   }}
-                  className={`min-h-12 w-24 rounded-lg border px-2 py-1.5 text-base tabular-nums focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 ${
+                  className={`min-h-11 w-24 rounded-lg border px-2 py-1 text-base tabular-nums focus:outline-none focus:ring-2 focus:ring-[#244B5A]/20 sm:text-sm ${
                     ajustada ? "bg-amber-50" : "bg-[#FFFFFF]"
                   }`}
                 />
                 <span className="text-[#4A5861]">{l.material.unidad ?? ""}</span>
                 {ajustada && (
-                  <span data-print-hide="" className="text-xs text-amber-700">
+                  <span data-print-hide="" className="text-[13px] text-amber-800">
                     {l.calculada > 0 ? `calculado: ${coma(l.calculada)}` : "agregado a mano"}
                   </span>
                 )}
@@ -711,13 +683,13 @@ function GrupoTabla({
               <p className="col-start-1 row-start-3 whitespace-nowrap print:invisible text-[13px] tabular-nums text-gray-600 lg:col-auto lg:row-auto lg:text-right lg:text-sm lg:text-gray-700">
                 <span className="lg:hidden">Precio unit. </span>
                 {l.precio === null ? (
-                  <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">A confirmar</span>
+                  <Pastilla tono="aviso">A confirmar</Pastilla>
                 ) : (
                   formatARSExacto(l.precio)
                 )}
               </p>
 
-              <p className="col-start-2 row-start-2 whitespace-nowrap print:invisible text-right font-medium tabular-nums text-gray-900 lg:col-auto lg:row-auto">
+              <p className={`col-start-2 row-start-2 print:invisible font-semibold text-gray-900 lg:col-auto lg:row-auto ${COLUMNA_NUMERO}`}>
                 {l.precio === null ? "—" : formatARSExacto(l.subtotal)}
               </p>
 
@@ -727,7 +699,7 @@ function GrupoTabla({
                   type="button"
                   onClick={() => onAjustar(l.material.id, { excluido: true })}
                   aria-label={`Quitar ${l.material.nombre} del pedido`}
-                  className="min-h-11 rounded-lg px-3 text-sm font-medium text-[#B42318] hover:bg-[#FEF3F2] active:bg-[#FEE4E2]"
+                  className={botonDe("textoPeligro")}
                 >
                   Quitar
                 </button>

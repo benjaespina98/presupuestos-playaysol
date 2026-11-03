@@ -11,14 +11,14 @@ const mocks = vi.hoisted(() => ({
   listarProveedores: vi.fn(),
   copiarAlPortapapeles: vi.fn(),
   guardarPedido: vi.fn(),
-  listarPedidos: vi.fn(),
+  obtenerPedido: vi.fn(),
   exportarPedido: vi.fn(),
   compartirOdescargarArchivo: vi.fn(),
   desde: { valor: null as string | null },
 }));
 vi.mock("@/lib/abastecimiento", () => ({ listarMateriales: mocks.listarMateriales, listarProveedores: mocks.listarProveedores }));
 vi.mock("@/lib/clipboard", () => ({ copiarAlPortapapeles: mocks.copiarAlPortapapeles }));
-vi.mock("@/lib/pedidos", () => ({ guardarPedido: mocks.guardarPedido, listarPedidos: mocks.listarPedidos }));
+vi.mock("@/lib/pedidos", () => ({ guardarPedido: mocks.guardarPedido, obtenerPedido: mocks.obtenerPedido }));
 vi.mock("@/lib/documentos/pedidos/exportar", () => ({ exportarPedido: mocks.exportarPedido }));
 vi.mock("@/lib/documentos/compartir", () => ({
   compartirOdescargarArchivo: mocks.compartirOdescargarArchivo,
@@ -62,7 +62,12 @@ function guardadoDe(d: { costo: number; obra?: string; parametros?: unknown }) {
 const abrirExportar = async (user: ReturnType<typeof userEvent.setup>) =>
   user.click(screen.getByLabelText("Exportar"));
 
-const resumen = (etiqueta: string) => within(screen.getByRole("region", { name: "Resumen del pedido" })).getByText(etiqueta).parentElement!;
+/** El resumen es una línea: "4 artículos · 2 proveedores · Costo estimado $ 2.050". */
+const resumen = (etiqueta: "Artículos a pedir" | "Proveedores a contactar" | "Costo estimado") => {
+  const zona = screen.getByRole("region", { name: "Resumen del pedido" });
+  const [articulos, proveedores] = zona.querySelectorAll("b");
+  return etiqueta === "Artículos a pedir" ? articulos : etiqueta === "Proveedores a contactar" ? proveedores : zona;
+};
 
 async function cargar() {
   render(<PedidoPage />);
@@ -77,7 +82,7 @@ describe("Armar pedido", () => {
     mocks.copiarAlPortapapeles.mockResolvedValue(true);
     mocks.desde.valor = null;
     mocks.guardarPedido.mockImplementation(async (d: { costo: number }) => ({ pedido: guardadoDe(d), error: null }));
-    mocks.listarPedidos.mockResolvedValue({ items: [], error: null });
+    mocks.obtenerPedido.mockResolvedValue(null);
     mocks.exportarPedido.mockResolvedValue({ blob: new Blob(["x"]), nombre: "Pedido_PED-0007.pdf", mime: "application/pdf" });
     mocks.compartirOdescargarArchivo.mockResolvedValue(undefined);
   });
@@ -167,7 +172,7 @@ describe("Armar pedido", () => {
     await cargar();
     expect(screen.queryByText("Luminaria")).not.toBeInTheDocument();
 
-    const luces = screen.getByLabelText("Cantidad de luces (por pileta)");
+    const luces = screen.getByLabelText("Luces por pileta");
     await user.clear(luces);
     await user.type(luces, "3");
 
@@ -251,9 +256,9 @@ describe("Armar pedido", () => {
     const user = userEvent.setup();
     await cargar();
     await user.type(screen.getByLabelText("Cliente / obra"), "Familia Pérez");
-    await user.type(screen.getByLabelText("Pide (quién hace el pedido)"), "Benja");
+    await user.type(screen.getByLabelText("Quién lo pide"), "Benja");
 
-    await user.click(screen.getByRole("button", { name: "Copiar mensaje para WhatsApp" }));
+    await user.click(screen.getByRole("button", { name: "Copiar para WhatsApp" }));
 
     await waitFor(() => expect(mocks.copiarAlPortapapeles).toHaveBeenCalled());
     const texto = mocks.copiarAlPortapapeles.mock.calls[0][0] as string;
@@ -282,7 +287,7 @@ describe("Armar pedido", () => {
     await user.type(campo, "12");
     await user.tab();
 
-    await user.click(screen.getByRole("button", { name: "Copiar mensaje para WhatsApp" }));
+    await user.click(screen.getByRole("button", { name: "Copiar para WhatsApp" }));
 
     await waitFor(() => expect(mocks.copiarAlPortapapeles).toHaveBeenCalled());
     expect(mocks.copiarAlPortapapeles.mock.calls[0][0]).toContain("- Hierro: 12");
@@ -315,15 +320,15 @@ describe("Armar pedido", () => {
     await user.selectOptions(screen.getByLabelText("Tamaño de pileta"), "10x4");
 
     expect(screen.getByText(/No hay cantidades cargadas para la pileta 10x4/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Materiales" })).toHaveAttribute("href", "/dashboard/catalogo/materiales");
-    expect(screen.queryByRole("button", { name: "Copiar mensaje para WhatsApp" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ir a Materiales" })).toHaveAttribute("href", "/dashboard/catalogo/materiales");
+    expect(screen.queryByRole("button", { name: "Copiar para WhatsApp" })).not.toBeInTheDocument();
   });
 
   it("sin materiales cargados avisa y manda a cargarlos", async () => {
     mocks.listarMateriales.mockResolvedValue({ items: [], error: null });
     render(<PedidoPage />);
     expect(await screen.findByText(/Todavía no hay materiales cargados/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Cargalos en Materiales" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Cargar materiales" })).toBeInTheDocument();
   });
 
   it("si todavía no se corrió la migración muestra el aviso claro", async () => {
@@ -377,7 +382,7 @@ describe("Armar pedido", () => {
       const user = userEvent.setup();
       await cargar();
       await user.type(screen.getByLabelText("Cliente / obra"), "Familia Pérez");
-      await user.type(screen.getByLabelText("Pide (quién hace el pedido)"), "Benja");
+      await user.type(screen.getByLabelText("Quién lo pide"), "Benja");
       await user.type(screen.getByLabelText(/Notas internas/), "Entregar temprano");
 
       await user.click(screen.getByRole("button", { name: "Guardar pedido" }));
@@ -520,20 +525,15 @@ describe("Armar pedido", () => {
   describe("volver a armar desde un pedido guardado (?desde=)", () => {
     it("carga la obra, quien pide y las condiciones, y avisa que las cantidades se recalcularon", async () => {
       mocks.desde.valor = "ped-9";
-      mocks.listarPedidos.mockResolvedValue({
-        items: [
-          {
-            ...guardadoDe({ costo: 1, obra: "Familia Gómez" }),
-            id: "ped-9", numero: 9, solicitante: "Fer", notas: "Con deck",
-            parametros: { tamano: "5x3", obras: 1, borde: "Deck", luces: 0, luzCamaAgua: false, banoQuimico: false },
-          },
-        ],
-        error: null,
+      mocks.obtenerPedido.mockResolvedValue({
+        ...guardadoDe({ costo: 1, obra: "Familia Gómez" }),
+        id: "ped-9", numero: 9, solicitante: "Fer", notas: "Con deck",
+        parametros: { tamano: "5x3", obras: 1, borde: "Deck", luces: 0, luzCamaAgua: false, banoQuimico: false },
       });
       await cargar();
 
       await waitFor(() => expect(screen.getByLabelText("Cliente / obra")).toHaveValue("Familia Gómez"));
-      expect(screen.getByLabelText("Pide (quién hace el pedido)")).toHaveValue("Fer");
+      expect(screen.getByLabelText("Quién lo pide")).toHaveValue("Fer");
       expect(screen.getByLabelText("Tamaño de pileta")).toHaveValue("5x3");
       expect(screen.getByLabelText(/Notas internas/)).toHaveValue("Con deck");
       expect(screen.getByRole("button", { name: "Deck" })).toHaveAttribute("aria-pressed", "true");

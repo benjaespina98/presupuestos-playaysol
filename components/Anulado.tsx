@@ -1,6 +1,8 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
+import { Aviso } from "@/components/ui/Aviso";
+import { Pastilla } from "@/components/ui/Pastilla";
 
 /**
  * Cómo se ve un registro anulado, y cómo le avisan a las pantallas de edición
@@ -32,11 +34,9 @@ export function useAnulado(): DatosAnulacion | null {
 /** La etiqueta chica que acompaña a un registro anulado en las listas. */
 export function EtiquetaAnulado({ className = "" }: { className?: string }) {
   return (
-    <span
-      className={`inline-flex w-fit items-center rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 ${className}`}
-    >
+    <Pastilla tono="error" className={className}>
       Anulado
-    </span>
+    </Pastilla>
   );
 }
 
@@ -50,12 +50,13 @@ function fechaCorta(iso: string | null): string {
 export function AvisoAnulado({ anulado, que = "presupuesto" }: { anulado: DatosAnulacion; que?: string }) {
   const fecha = fechaCorta(anulado.fecha);
   return (
-    <div data-print-hide="" role="status" className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-      <p className="font-semibold">Este {que} está anulado{fecha ? ` (${fecha})` : ""}.</p>
-      <p className="mt-0.5">
-        Se puede ver y exportar, pero no se puede modificar ni guardar.
-        {anulado.motivo ? <> Motivo: {anulado.motivo}</> : null}
-      </p>
+    <div data-print-hide="" className="mb-4">
+      <Aviso tono="error" urgente={false} titulo={`Este ${que} está anulado${fecha ? ` (${fecha})` : ""}.`}>
+        <p className="mt-0.5">
+          Se puede ver y exportar, pero no se puede modificar ni guardar.
+          {anulado.motivo ? <> Motivo: {anulado.motivo}</> : null}
+        </p>
+      </Aviso>
     </div>
   );
 }

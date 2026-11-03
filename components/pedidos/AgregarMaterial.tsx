@@ -2,8 +2,9 @@
 
 import { useId, useMemo, useState } from "react";
 import type { Material } from "@/lib/domain/abastecimiento/material";
-import { Hoja } from "@/components/ui/Hoja";
-import { botonDe } from "@/components/ui/botones";
+import { Hoja, PieAcciones } from "@/components/ui/Hoja";
+import { Aviso } from "@/components/ui/Aviso";
+import { CLASE_CAMPO } from "@/components/ui/lista";
 import { NumberInput } from "@/components/form/NumberInput";
 
 /**
@@ -49,21 +50,10 @@ export function AgregarMaterial({
       onCerrar={onClose}
       aviso={
         error ? (
-          <p role="alert" className="rounded-lg border border-[#FDA29B] bg-[#FEF3F2] px-3 py-2 text-[15px] font-medium text-[#B42318]">
-            {error}
-          </p>
+          <Aviso tono="error">{error}</Aviso>
         ) : undefined
       }
-      pie={
-        <div className="grid grid-cols-2 gap-3 sm:flex sm:justify-end">
-          <button type="button" onClick={onClose} className={botonDe("secundario", "min-h-12 sm:min-w-32")}>
-            Cancelar
-          </button>
-          <button type="button" onClick={agregar} disabled={!elegido} className={botonDe("primario", "min-h-12 sm:min-w-44")}>
-            Agregar al pedido
-          </button>
-        </div>
-      }
+      pie={<PieAcciones etiqueta="Agregar al pedido" onGuardar={agregar} deshabilitado={!elegido} />}
     >
       {disponibles.length === 0 ? (
         <p className="py-6 text-center text-base text-[#3E4A52]">Ya están todos los materiales activos en el pedido.</p>
@@ -79,7 +69,7 @@ export function AgregarMaterial({
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Buscar por nombre o proveedor…"
-              className="min-h-12 w-full rounded-lg border bg-[#FFFFFF] px-3 text-base"
+              className={CLASE_CAMPO}
             />
           </div>
           <ul role="listbox" aria-label="Materiales que se pueden agregar" className="divide-y divide-[#EEF1F3] rounded-xl border border-[#D9DFE3]">

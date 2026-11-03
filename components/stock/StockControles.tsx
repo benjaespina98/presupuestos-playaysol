@@ -16,12 +16,12 @@ export type DialogoStock = "ingreso" | "venta" | "ajuste" | "historial" | null;
  * más alta:
  *
  *  - `StockNumero`: el número de unidades (rojo si está en 0, con marca de aviso si es negativo). Los que no
- *    llevan stock (hierros, luces, cercos, hormigón…) dicen "A pedido".
+ *    llevan stock (hierros, luces, cercos, hormigón…) no muestran nada: "A pedido" repetido en cada fila no decía nada (queda para los lectores de pantalla).
  *  - `AccionesStock`: "Venta" (la acción del día a día) y el menú "…" con Llegó mercadería, Corregir stock y Ver movimientos.
  *  - `DialogosStock`: el diálogo que esté abierto. El número nunca se edita directo.
  */
 export function StockNumero({ item, conRotulo = false }: { item: ItemCatalogo; /** En el celular no hay encabezado de columna: la pastilla dice "Stock 3". */ conRotulo?: boolean }) {
-  if (!llevaStock(item)) return <span className="whitespace-nowrap text-[13px] text-[#4A5861]">A pedido</span>;
+  if (!llevaStock(item)) return <span className="sr-only">A pedido</span>;
   const negativo = stockNegativo(item);
   const sinUnidades = item.stock <= 0;
   return (

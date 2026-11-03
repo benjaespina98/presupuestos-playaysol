@@ -30,6 +30,12 @@ export const boton = {
   /** Acción destructiva (anular, desactivar): borde y texto rojo sobre blanco. */
   peligro:
     "border border-[#B42318] bg-[#FFFFFF] text-[#B42318] hover:bg-[#FEF3F2] active:bg-[#FEE4E2] disabled:border-[#7D8892] disabled:bg-[#EEF1F3] disabled:text-[#3E4A52]",
+  /** Acción menor dentro de una fila o un encabezado ("Copiar", "Volver a poner"): sin borde ni fondo hasta pasar por encima. */
+  texto:
+    "bg-transparent text-[#244B5A] hover:bg-[#EAF0F2] active:bg-[#D5E0E4]",
+  /** Lo mismo, destructiva ("Quitar"). */
+  textoPeligro:
+    "bg-transparent text-[#B42318] hover:bg-[#FEF3F2] active:bg-[#FEE4E2]",
   /** Confirmar una acción destructiva: relleno rojo con texto blanco. */
   peligroLleno:
     "bg-[#B42318] text-[#FFFFFF] shadow-sm hover:bg-[#912018] active:bg-[#7A1A13] disabled:bg-[#D9DFE3] disabled:text-[#3E4A52] disabled:shadow-none",
@@ -39,6 +45,9 @@ export const boton = {
 export const botonDe = (variante: Exclude<keyof typeof boton, "base">, extra = "") =>
   `${boton.base} ${boton[variante]}${extra ? ` ${extra}` : ""}`;
 
-/** El botón de lápiz de las filas de una lista: 44×44, tonal (fondo suave, sin borde: el ícono ya tiene 7:1), hover, foco y estado activo. */
+/**
+ * El botón de lápiz de las filas de una lista: 44×44, siempre visible. En el celular es tonal (hay que ver que se
+ * toca); desde lg, con muchas filas una debajo de otra, el ícono solo: el fondo aparece al pasar por encima.
+ */
 export const BOTON_LAPIZ =
-  "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#EEF2F4] text-[#244B5A] transition-colors hover:bg-[#E0E8EB] active:bg-[#D5E0E4]";
+  "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#EEF2F4] text-[#244B5A] transition-colors hover:bg-[#E0E8EB] active:bg-[#D5E0E4] lg:bg-transparent";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { mensajeProveedor, type DocumentoPedido, type SeccionProveedor } from "@/lib/domain/abastecimiento/pedidoDocumento";
 import { exportarPedido, type ArchivoGenerado } from "@/lib/documentos/pedidos/exportar";
 import { compartirArchivoYTexto, descargarArchivo, esDispositivoMovil } from "@/lib/documentos/compartir";
@@ -26,21 +26,37 @@ export function AccionesProveedor({
   const [preparado, setPreparado] = useState<{ clave: string; archivo: ArchivoGenerado } | null>(null);
   const [copiado, setCopiado] = useState(false);
   const [ocupado, setOcupado] = useState(false);
+  const zona = useRef<HTMLDivElement>(null);
+  // Sin IntersectionObserver (navegadores muy viejos) se prepara de entrada.
+  const [enVista, setEnVista] = useState(() => typeof IntersectionObserver === "undefined");
   const texto = mensajeProveedor(doc, seccion);
   // El PDF preparado sólo vale para este mismo contenido.
   const archivo = preparado && preparado.clave === texto ? preparado.archivo : null;
 
+  // Sólo cuando este proveedor está por verse: un pedido con muchos generaba todos los PDF apenas se abría.
+  useEffect(() => {
+    if (!movil || enVista || !zona.current) return;
+    const observador = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) setEnVista(true);
+      },
+      { rootMargin: "200px" }
+    );
+    observador.observe(zona.current);
+    return () => observador.disconnect();
+  }, [movil, enVista]);
+
   // En iOS la hoja de compartir sólo abre si se pide directo desde el toque: por eso el PDF se genera antes.
   useEffect(() => {
     let vigente = true;
-    if (!movil) return;
+    if (!movil || !enVista) return;
     exportarPedido({ ...doc, proveedores: [seccion] }, "pdf", "por-proveedor")
       .then((a) => vigente && setPreparado({ clave: texto, archivo: a }))
       .catch((err) => console.error("No se pudo preparar el PDF del proveedor", err));
     return () => {
       vigente = false;
     };
-  }, [movil, doc, seccion, texto]);
+  }, [movil, enVista, doc, seccion, texto]);
 
   async function generar(): Promise<ArchivoGenerado> {
     return archivo ?? exportarPedido({ ...doc, proveedores: [seccion] }, "pdf", "por-proveedor");
@@ -76,16 +92,16 @@ export function AccionesProveedor({
   }
 
   return (
-    <div role="group" aria-label={`Acciones del pedido a ${seccion.nombre}`} className="flex flex-wrap gap-2 border-t border-gray-100 bg-[#FFFFFF] px-3 py-2.5" data-print-hide="">
+    <div ref={zona} role="group" aria-label={`Acciones del pedido a ${seccion.nombre}`} className="flex flex-wrap justify-end gap-2 border-t border-gray-100 bg-[#FFFFFF] px-3 py-2" data-print-hide="">
       {movil && (
-        <button type="button" onClick={compartir} disabled={!archivo || ocupado} className={botonDe("primario", "min-h-12 flex-1")}>
+        <button type="button" onClick={compartir} disabled={!archivo || ocupado} className={botonDe("primario", "min-h-12 flex-1 sm:flex-none")}>
           {archivo ? "Compartir" : "Preparando…"}
         </button>
       )}
-      <button type="button" onClick={descargar} disabled={ocupado} className={botonDe(movil ? "secundario" : "primario", "min-h-12 flex-1")}>
+      <button type="button" onClick={descargar} disabled={ocupado} className={botonDe("secundario", "min-h-12 flex-1 sm:flex-none")}>
         Descargar
       </button>
-      <button type="button" onClick={copiar} className={botonDe("secundario", "min-h-12 flex-1")}>
+      <button type="button" onClick={copiar} className={botonDe("secundario", "min-h-12 flex-1 sm:flex-none")}>
         {copiado ? "¡Copiado!" : "Copiar mensaje"}
       </button>
     </div>

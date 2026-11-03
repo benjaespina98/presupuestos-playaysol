@@ -30,6 +30,7 @@ function esTablaFaltante(error: { code?: string; message?: string } | null): boo
 function mensaje(error: { code?: string; message?: string }, duplicado: string): string {
   if (esTablaFaltante(error)) return ERROR_TABLAS_PENDIENTES;
   if (error.code === "23505") return duplicado; // unique_violation
+  if (error.code === "23514") return "Algún dato es demasiado largo o está fuera de rango. Revisalo e intentá de nuevo."; // check_violation
   return error.message ?? "Error desconocido.";
 }
 
