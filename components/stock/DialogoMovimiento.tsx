@@ -19,14 +19,17 @@ import {
   MarcoDialogo,
 } from "./MarcoDialogo";
 
+const CLASE_PASO =
+  "flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-[#7D8892] bg-[#FFFFFF] text-2xl font-semibold leading-none text-[#244B5A] transition-colors hover:bg-[#EAF0F2] active:bg-[#D5E0E4]";
+
 /**
- * Ingreso o venta de unidades de un ítem que lleva stock.
+ * Sumar (+) o restar (−) unidades de un ítem que lleva stock: en el libro, un ingreso o una venta.
  *
+ * - Arranca en 1 y se ajusta con − y +: lo normal se hace en dos toques, sin abrir el teclado.
  * - La CLAVE de idempotencia se genera una vez al abrir el diálogo y se reutiliza
  *   en los reintentos (un toque doble o un reintento tras un corte no cuentan dos
  *   veces). Si la persona CAMBIA un dato, es otra operación: clave nueva.
- * - Una venta que deja el stock por debajo de 0 se permite, pero primero pide
- *   confirmación explícita.
+ * - Restar por debajo de 0 se permite, pero primero pide confirmación explícita.
  */
 export function DialogoMovimiento({
   tipo,
@@ -45,7 +48,7 @@ export function DialogoMovimiento({
 }) {
   const idCantidad = useId();
   const idReferencia = useId();
-  const [cantidad, setCantidad] = useState("");
+  const [cantidad, setCantidad] = useState("1");
   const [referencia, setReferencia] = useState("");
   const [clave, setClave] = useState(nuevaClaveIdempotencia);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +57,7 @@ export function DialogoMovimiento({
   const enCurso = useRef(false);
 
   const esVenta = tipo === "venta";
-  const titulo = esVenta ? "Registrar venta" : "Registrar ingreso";
+  const verbo = esVenta ? "Restar" : "Sumar";
 
   function cambiar(setter: (v: string) => void, valor: string) {
     setter(valor);
@@ -87,11 +90,15 @@ export function DialogoMovimiento({
 
   const c = parsearCantidad(cantidad);
   const quedaria = c.error === null ? stockActual + (esVenta ? -c.valor : c.valor) : null;
+  const pasar = (delta: number) => {
+    const actual = c.error === null ? c.valor : 0;
+    cambiar(setCantidad, String(Math.min(CANTIDAD_MAX, Math.max(1, actual + delta))));
+  };
 
   return (
     <MarcoDialogo
-      titulo={titulo}
-      subtitulo={`${nombre} · hoy hay ${stockActual}`}
+      titulo={`${verbo} stock`}
+      subtitulo={nombre}
       ocupado={enviando}
       onCerrar={onCerrar}
       pie={
@@ -100,7 +107,7 @@ export function DialogoMovimiento({
             Cancelar
           </button>
           <button type="button" disabled={enviando} onClick={confirmar} className={`${confirmando ? CLASE_BOTON_PELIGRO : CLASE_BOTON_PRIMARIO} flex-[2]`}>
-            {enviando ? "Un momento..." : confirmando ? "Vender igual" : esVenta ? "Registrar venta" : "Registrar ingreso"}
+            {enviando ? "Un momento..." : confirmando ? "Restar igual" : c.error === null ? `${verbo} ${c.valor}` : verbo}
           </button>
         </div>
       }
@@ -108,26 +115,38 @@ export function DialogoMovimiento({
       <label htmlFor={idCantidad} className="mb-1 block text-sm font-medium text-gray-700">
         Cantidad
       </label>
-      <input
-        id={idCantidad}
-        autoFocus
-        inputMode="numeric"
-        autoComplete="off"
-        value={cantidad}
-        disabled={enviando}
-        maxLength={String(CANTIDAD_MAX).length}
-        onChange={(e) => cambiar(setCantidad, e.target.value)}
-        placeholder="Unidades"
-        className={CLASE_INPUT}
-      />
-      {quedaria !== null && (
-        <p className={`mt-1 text-sm ${quedaria < 0 ? "font-medium text-red-700" : "text-gray-500"}`}>
-          Quedaría en {quedaria < 0 ? `−${Math.abs(quedaria)}` : quedaria}
-        </p>
-      )}
+      <div className="flex items-center gap-2">
+        <button type="button" aria-label="Una unidad menos" disabled={enviando || (c.valor ?? 0) <= 1} onClick={() => pasar(-1)} className={CLASE_PASO}>
+          <span aria-hidden="true">−</span>
+        </button>
+        <input
+          id={idCantidad}
+          inputMode="numeric"
+          autoComplete="off"
+          value={cantidad}
+          disabled={enviando}
+          maxLength={String(CANTIDAD_MAX).length}
+          onChange={(e) => cambiar(setCantidad, e.target.value)}
+          className={`${CLASE_INPUT} text-center font-semibold tabular-nums`}
+        />
+        <button type="button" aria-label="Una unidad más" disabled={enviando || (c.valor ?? 0) >= CANTIDAD_MAX} onClick={() => pasar(1)} className={CLASE_PASO}>
+          <span aria-hidden="true">+</span>
+        </button>
+      </div>
+      <p className={`mt-2 text-sm tabular-nums ${quedaria !== null && quedaria < 0 ? "font-medium text-red-700" : "text-gray-700"}`}>
+        Hay {stockActual}
+        {quedaria !== null && (
+          <>
+            {" → "}quedan <b>{quedaria < 0 ? `−${Math.abs(quedaria)}` : quedaria}</b>
+          </>
+        )}
+      </p>
+      <p className="mt-1 text-[13px] leading-snug text-gray-500">
+        {esVenta ? "Se registra como venta. Para una rotura o un error de conteo, usá «Corregir stock» en el menú …" : "Se registra como ingreso de mercadería."}
+      </p>
 
       <label htmlFor={idReferencia} className="mb-1 mt-3 block text-sm font-medium text-gray-700">
-        Referencia <span className="font-normal text-gray-400">(opcional)</span>
+        Referencia <span className="font-normal text-gray-500">(opcional)</span>
       </label>
       <input
         id={idReferencia}
@@ -144,8 +163,7 @@ export function DialogoMovimiento({
         <div role="alert" className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           <p className="font-semibold">Esto deja el stock en negativo.</p>
           <p>
-            Hoy hay {stockActual} y estás vendiendo {c.valor}. Se puede hacer (por ejemplo si todavía no se cargó un ingreso), pero queda marcado para
-            revisarlo.
+            Hay {stockActual} y estás restando {c.valor}. Se puede hacer (por ejemplo si todavía no se cargó lo que llegó), pero queda marcado para revisarlo.
           </p>
         </div>
       )}
@@ -154,7 +172,6 @@ export function DialogoMovimiento({
           {error}
         </p>
       )}
-
     </MarcoDialogo>
   );
 }

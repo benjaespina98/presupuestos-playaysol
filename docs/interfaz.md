@@ -29,7 +29,7 @@ los valores fijos de los controles: hay una sola paleta. **Los importes van alin
 ## Reglas que se siguen
 
 - Toda fila que abre algo es un botón entero (no un lápiz suelto): materiales y proveedores.
-- En el catálogo de precios, una acción principal a la vista (Venta) y el resto en el menú "⋯".
+- En Precios, el stock se mueve con − y + a la vista (restar registra una venta; sumar, un ingreso); cada uno abre un diálogo con la cantidad en 1. Corregir stock y Ver movimientos van en el menú "⋯".
 - Un formulario tiene lo esencial a la vista y lo demás en "Más opciones" (cerrado por defecto).
 - "Desactivar" va separado, al final, con una explicación de una línea. Nada se borra.
 - Los tests que miran filtros guardados limpian `sessionStorage` solos (`tests/setup-jsdom.ts`).

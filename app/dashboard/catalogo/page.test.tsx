@@ -65,7 +65,7 @@ async function elegirCategoria(user: ReturnType<typeof userEvent.setup>, nombre:
   await user.click(within(lista).getByRole("radio", { name: nombre }));
 }
 
-/** Abre el menú "⋯" de un ítem y elige una acción (Llegó mercadería, Corregir stock o Ver movimientos). */
+/** Abre el menú "⋯" de un ítem y elige una acción (Corregir stock o Ver movimientos). */
 async function accion(user: ReturnType<typeof userEvent.setup>, nombre: string, etiqueta: string) {
   await user.click(screen.getAllByRole("button", { name: `Más acciones de ${nombre}` })[0]);
   await user.click(await screen.findByRole("menuitem", { name: etiqueta }));
@@ -622,19 +622,19 @@ describe("CatalogoPage · stock", () => {
     error: null,
   });
 
-  it("un ítem que lleva stock muestra Llegó mercadería, Venta, Corregir stock y Ver movimientos; uno que no, nada de eso", async () => {
+  it("un ítem que lleva stock muestra − y + a la vista, y Corregir stock y Ver movimientos en el menú; uno que no, nada de eso", async () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    // La acción principal (Venta) está a la vista; Llegó mercadería, Corregir stock y Ver movimientos, en el menú "⋯".
-    expect(screen.getAllByRole("button", { name: "Venta de Caribe 550" }).length).toBeGreaterThan(0);
+    // Restar y sumar están a la vista; Corregir stock y Ver movimientos, en el menú "⋯".
+    expect(screen.getAllByRole("button", { name: "Restar stock de Caribe 550" }).length).toBeGreaterThan(0);
     const user = userEvent.setup();
     await user.click(screen.getAllByRole("button", { name: "Más acciones de Caribe 550" })[0]);
-    expect(screen.getByRole("menuitem", { name: "Llegó mercadería" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Sumar stock de Caribe 550" }).length).toBeGreaterThan(0);
     expect(screen.getByRole("menuitem", { name: "Corregir stock" })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Ver movimientos" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Más acciones de Hierro/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Venta de Hierro/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /(Restar|Sumar) stock de Hierro/ })).not.toBeInTheDocument();
   });
 
   it("un ingreso llama a la función con una clave y el stock pasa a lo que devuelve la base", async () => {
@@ -643,9 +643,10 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await accion(user, "Caribe 550", "Llegó mercadería");
+    await user.click(screen.getAllByRole("button", { name: "Sumar stock de Caribe 550" })[0]);
+    await user.clear(screen.getByLabelText("Cantidad"));
     await user.type(screen.getByLabelText("Cantidad"), "3");
-    await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
+    await user.click(screen.getByRole("button", { name: /^Sumar( \d+)?$/ }));
 
     await waitFor(() => expect(registrarMovimiento).toHaveBeenCalledTimes(1));
     expect(registrarMovimiento.mock.calls[0][0]).toMatchObject({ itemId: "p1", tipo: "ingreso", cantidad: 3 });
@@ -654,20 +655,41 @@ describe("CatalogoPage · stock", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("sumar arranca en 1, se ajusta con los botones y dice cómo queda, sin abrir el teclado", async () => {
+    registrarMovimiento.mockResolvedValue(resultado({ stock_resultante: 4, cantidad: 2 }));
+    const user = userEvent.setup();
+    render(<CatalogoPage />);
+    await screen.findAllByText("Caribe 550");
+
+    await user.click(screen.getAllByRole("button", { name: "Sumar stock de Caribe 550" })[0]);
+    const cantidad = screen.getByLabelText("Cantidad");
+    expect(cantidad).toHaveValue("1");
+    expect(cantidad).not.toHaveFocus();
+    expect(screen.getByRole("button", { name: "Una unidad menos" })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Una unidad más" }));
+    expect(cantidad).toHaveValue("2");
+    await user.click(screen.getByRole("button", { name: "Sumar 2" }));
+
+    await waitFor(() => expect(registrarMovimiento).toHaveBeenCalledTimes(1));
+    expect(registrarMovimiento.mock.calls[0][0]).toMatchObject({ itemId: "p1", tipo: "ingreso", cantidad: 2 });
+  });
+
   it("una venta que deja el stock en negativo pide confirmación antes de registrarse", async () => {
     registrarMovimiento.mockResolvedValue(resultado({ tipo: "venta", cantidad: -5, stock_resultante: -3, stock_negativo: true }));
     const user = userEvent.setup();
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await user.click(screen.getAllByRole("button", { name: "Venta de Caribe 550" })[0]);
+    await user.click(screen.getAllByRole("button", { name: "Restar stock de Caribe 550" })[0]);
+    await user.clear(screen.getByLabelText("Cantidad"));
     await user.type(screen.getByLabelText("Cantidad"), "5");
-    await user.click(screen.getByRole("button", { name: "Registrar venta" }));
+    await user.click(screen.getByRole("button", { name: /^Restar( \d+)?$/ }));
 
     expect(registrarMovimiento).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toHaveTextContent(/stock en negativo/);
 
-    await user.click(screen.getByRole("button", { name: "Vender igual" }));
+    await user.click(screen.getByRole("button", { name: "Restar igual" }));
     await waitFor(() => expect(registrarMovimiento).toHaveBeenCalledTimes(1));
     expect(registrarMovimiento.mock.calls[0][0]).toMatchObject({ tipo: "venta", cantidad: 5 });
     // Queda una marca de aviso visible, tanto en el banner como en la fila.
@@ -681,9 +703,10 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await user.click(screen.getAllByRole("button", { name: "Venta de Caribe 550" })[0]);
+    await user.click(screen.getAllByRole("button", { name: "Restar stock de Caribe 550" })[0]);
+    await user.clear(screen.getByLabelText("Cantidad"));
     await user.type(screen.getByLabelText("Cantidad"), "1");
-    await user.click(screen.getByRole("button", { name: "Registrar venta" }));
+    await user.click(screen.getByRole("button", { name: /^Restar( \d+)?$/ }));
 
     await waitFor(() => expect(registrarMovimiento).toHaveBeenCalledTimes(1));
   });
@@ -695,12 +718,13 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await accion(user, "Caribe 550", "Llegó mercadería");
+    await user.click(screen.getAllByRole("button", { name: "Sumar stock de Caribe 550" })[0]);
+    await user.clear(screen.getByLabelText("Cantidad"));
     await user.type(screen.getByLabelText("Cantidad"), "1");
-    await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
+    await user.click(screen.getByRole("button", { name: /^Sumar( \d+)?$/ }));
     expect(await screen.findByText(/No se pudo conectar/)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
+    await user.click(screen.getByRole("button", { name: /^Sumar( \d+)?$/ }));
     await waitFor(() => expect(registrarMovimiento).toHaveBeenCalledTimes(2));
     expect(registrarMovimiento.mock.calls[1][0].idempotencyKey).toBe(registrarMovimiento.mock.calls[0][0].idempotencyKey);
   });
@@ -710,11 +734,13 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await accion(user, "Caribe 550", "Llegó mercadería");
-    await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
+    await user.click(screen.getAllByRole("button", { name: "Sumar stock de Caribe 550" })[0]);
+    await user.clear(screen.getByLabelText("Cantidad"));
+    await user.click(screen.getByRole("button", { name: /^Sumar( \d+)?$/ }));
     expect(screen.getByRole("alert")).toHaveTextContent(/Escribí la cantidad/);
+    await user.clear(screen.getByLabelText("Cantidad"));
     await user.type(screen.getByLabelText("Cantidad"), "1.5");
-    await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
+    await user.click(screen.getByRole("button", { name: /^Sumar( \d+)?$/ }));
     expect(screen.getByRole("alert")).toHaveTextContent(/número entero/);
     expect(registrarMovimiento).not.toHaveBeenCalled();
   });
@@ -793,9 +819,10 @@ describe("CatalogoPage · stock", () => {
     render(<CatalogoPage />);
     await screen.findAllByText("Caribe 550");
 
-    await accion(user, "Caribe 550", "Llegó mercadería");
+    await user.click(screen.getAllByRole("button", { name: "Sumar stock de Caribe 550" })[0]);
+    await user.clear(screen.getByLabelText("Cantidad"));
     await user.type(screen.getByLabelText("Cantidad"), "2");
-    await user.click(screen.getByRole("button", { name: "Registrar ingreso" }));
+    await user.click(screen.getByRole("button", { name: /^Sumar( \d+)?$/ }));
 
     expect(await screen.findByText("Este ítem no lleva stock.")).toBeInTheDocument();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -883,7 +910,7 @@ describe("CatalogoPage · stock", () => {
     await abrirFiltros(user);
     await user.click(screen.getByLabelText("Modo consulta rápida"));
 
-    expect(screen.queryByRole("button", { name: /Más acciones de|Venta de/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Más acciones de|(Restar|Sumar) stock de/ })).not.toBeInTheDocument();
     expect(screen.getAllByTitle("2 en stock").length).toBeGreaterThan(0);
   });
 });
