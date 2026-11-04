@@ -3,7 +3,7 @@
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { listarItemsCatalogo } from "@/lib/catalogo";
 import type { ResultadoStock } from "@/lib/domain/stock/movimientos";
-import { AccionesStock, DialogosStock, StockNumero, type DialogoStock } from "@/components/stock/StockControles";
+import { ControlStock, DialogosStock, MenuStock, StockNumero, type DialogoStock } from "@/components/stock/StockControles";
 import {
   agruparParaListado,
   contarPorSeccion,
@@ -40,10 +40,10 @@ import { CrearItemModal } from "@/components/catalogo/CrearItemModal";
 
 /**
  * Las columnas de la lista desde `lg`, IGUALES en todos los bloques (por eso los precios quedan uno debajo del
- * otro, alineados a la derecha): Producto · Precio · Unidad · Stock · acciones (Venta y "…") · Actualizado · Editar.
+ * otro, alineados a la derecha): Producto · Precio · Unidad · Stock (− número +) · menú "…" · Actualizado · Editar.
  * Sin las dos de stock cuando ningún ítem lo lleva. Son anchos fijos (rem) y el producto toma el resto.
  */
-const COLUMNAS_CON_STOCK = "lg:grid-cols-[minmax(0,1fr)_8rem_4rem_5rem_10.5rem_6.5rem_3.5rem]";
+const COLUMNAS_CON_STOCK = "lg:grid-cols-[minmax(0,1fr)_8rem_4rem_8.5rem_2.75rem_6.5rem_3.5rem]";
 const COLUMNAS_SIN_STOCK = "lg:grid-cols-[minmax(0,1fr)_9rem_4.5rem_6.5rem_3.5rem]";
 
 export default function CatalogoPage() {
@@ -159,7 +159,7 @@ export default function CatalogoPage() {
    * El número NO se calcula acá: viene de la respuesta de la función de la base.
    */
   const stockCambio = useCallback((item: ItemCatalogo, r: ResultadoStock) => {
-    const nombre = item.descripcion || item.clave;
+    const nombre = nombreCortoLista(item.clave) ?? (item.descripcion || item.clave);
     setItems((prev) => (prev ? prev.map((it) => (it.id === item.id ? { ...it, stock: r.stock_resultante } : it)) : prev));
     setErrorStock(null);
     setAvisoStock(null);
@@ -337,9 +337,8 @@ function CategoriaHeader({ titulo, cantidad }: { titulo: string; cantidad: numbe
 }
 
 /**
- * Una fila de la lista. Desde `lg` es una fila de la grilla de columnas fijas (unos 52 px); en el celular, un
- * renglón de unos 56 px: a la izquierda el nombre y debajo el precio y el stock, a la derecha "Venta", el menú
- * "…" y el lápiz. Tocar la fila entera también abre la edición.
+ * Una fila de la lista. Desde `lg`, una fila de la grilla de columnas fijas; en el celular, el nombre y el precio con el
+ * lápiz al costado y, debajo, la línea de stock. Tocar la fila entera también abre la edición.
  */
 const FilaItem = memo(function FilaItem({
   item,
@@ -363,47 +362,44 @@ const FilaItem = memo(function FilaItem({
   const [dialogo, setDialogo] = useState<DialogoStock>(null);
   const nombre = item.descripcion || item.clave;
   const editable = !modoConsulta;
-  const tieneAcciones = editable && conStock && llevaStock(item);
-  // Desde lg, cada celda vuelve a su columna de la grilla (se anulan las posiciones del celular).
-  const alta = "lg:col-auto lg:col-span-1 lg:row-auto lg:row-span-1 lg:justify-self-auto";
+  // Celular: el nombre y el precio a la izquierda, el lápiz a la derecha y, si lleva stock, una línea propia para el stock.
+  // Desde lg, cada pieza es una celda de la grilla, en el orden en que está escrita.
+  const celda = "lg:col-auto lg:row-auto lg:row-span-1";
   return (
     <li
       onClick={editable ? alTocarFila(() => onEditar(item)) : undefined}
-      className={`grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-1.5 gap-y-0.5 px-4 py-1.5 text-sm leading-5 transition-colors hover:bg-[#F4F8F9] lg:min-h-[3rem] lg:gap-x-4 lg:py-0 ${columnas} ${editable ? "cursor-pointer" : ""} ${item.activo ? "" : "opacity-70"}`}
+      className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 px-4 py-1.5 text-sm leading-5 transition-colors hover:bg-[#F4F8F9] lg:min-h-[3rem] lg:gap-x-4 lg:py-0 ${columnas} ${editable ? "cursor-pointer" : ""} ${item.activo ? "" : "opacity-70"}`}
     >
-      {/* Celular, dos renglones. Con acciones de stock: arriba el nombre y, pegado a su costado, el stock (una pastilla chica);
-          abajo el precio, "Venta", "…" y el lápiz. Sin acciones: el nombre y el precio a la izquierda y el lápiz a la derecha.
-          Desde lg, la grilla de columnas (el `order` devuelve cada celda a su columna). */}
-      <div className={`col-start-1 row-start-1 flex min-w-0 items-center gap-2 ${tieneAcciones ? "col-span-3" : "col-span-2"} ${alta} lg:order-1 lg:contents`}>
-        <div className="min-w-0 flex-1 lg:order-1">
-          <ItemDescripcion item={item} />
-        </div>
-        {conStock && tieneAcciones && (
-          <span className="ml-auto shrink-0 lg:order-4 lg:text-center">
-            <StockNumero item={item} conRotulo />
-          </span>
-        )}
+      <div className={`col-start-1 row-start-1 min-w-0 ${celda}`}>
+        <ItemDescripcion item={item} />
       </div>
-      <span className={`col-start-1 row-start-2 justify-self-start tabular-nums lg:order-2 lg:text-right ${alta}`}>
+      <span className={`col-start-1 row-start-2 tabular-nums lg:text-right ${celda}`}>
         <PrecioItem item={item} />
       </span>
-      <span className={`hidden whitespace-nowrap ${TEXTO_SECUNDARIO} lg:order-3 lg:block`}>{item.precio !== null && item.unidad ? item.unidad : ""}</span>
-      {conStock && !tieneAcciones && (
-        <span className={`col-start-2 row-start-2 justify-self-end ${alta} lg:order-4 lg:text-center`}>
-          <StockNumero item={item} />
-        </span>
-      )}
-
-      {/* Acciones de stock (Venta y "…"), la fecha (sólo desde lg) y el lápiz. */}
-      {conStock && (
-        <div className={`col-start-2 row-start-2 flex items-center justify-end gap-1.5 ${alta} lg:order-5 lg:gap-2`}>
-          {tieneAcciones && <AccionesStock item={item} onAbrir={setDialogo} />}
-        </div>
-      )}
-      <p className="hidden whitespace-nowrap text-center text-[13px] text-[#4A5861] lg:order-6 lg:block">
+      <span className={`hidden whitespace-nowrap ${TEXTO_SECUNDARIO} lg:block`}>{item.precio !== null && item.unidad ? item.unidad : ""}</span>
+      {conStock &&
+        (llevaStock(item) ? (
+          <div className="col-span-2 row-start-3 mt-1 flex items-center justify-between lg:contents">
+            <div className="flex items-center gap-3 lg:justify-center">
+              <span aria-hidden="true" className={`${TEXTO_SECUNDARIO} lg:hidden`}>
+                Stock
+              </span>
+              {editable ? <ControlStock item={item} onAbrir={setDialogo} /> : <StockNumero item={item} />}
+            </div>
+            <div className="flex justify-end lg:justify-center">{editable && <MenuStock item={item} onAbrir={setDialogo} />}</div>
+          </div>
+        ) : (
+          <>
+            <span className="contents lg:block">
+              <StockNumero item={item} />
+            </span>
+            <span aria-hidden="true" className="hidden lg:block" />
+          </>
+        ))}
+      <p className={`hidden whitespace-nowrap text-center ${TEXTO_SECUNDARIO} lg:block`}>
         <FechaActualizacion updatedAt={item.updated_at} />
       </p>
-      <div className={`col-start-3 flex justify-end ${tieneAcciones ? "row-start-2" : "row-span-2 row-start-1"} ${alta} lg:order-7 lg:justify-center`}>
+      <div className={`col-start-2 row-span-2 row-start-1 flex justify-end lg:justify-center ${celda}`}>
         {modoConsulta ? (
           <button type="button" onClick={() => onCopiar(item)} className={botonDe("suave", "px-3")}>
             <IconCopy className="h-4 w-4" />

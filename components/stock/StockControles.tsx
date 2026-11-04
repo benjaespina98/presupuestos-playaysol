@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { llevaStock, stockNegativo, textoStock, type ItemCatalogo } from "@/lib/domain/catalogo/item";
+import { nombreCortoLista } from "@/lib/domain/catalogo/listas";
 import type { ResultadoStock } from "@/lib/domain/stock/movimientos";
-import { botonDe } from "@/components/ui/botones";
 import { MenuAcciones } from "@/components/ui/MenuAcciones";
 import { DialogoAjuste } from "./DialogoAjuste";
 import { DialogoMovimiento } from "./DialogoMovimiento";
@@ -17,10 +17,11 @@ export type DialogoStock = "ingreso" | "venta" | "ajuste" | "historial" | null;
  *
  *  - `StockNumero`: el número de unidades (rojo si está en 0, con marca de aviso si es negativo). Los que no
  *    llevan stock (hierros, luces, cercos, hormigón…) no muestran nada: "A pedido" repetido en cada fila no decía nada (queda para los lectores de pantalla).
- *  - `AccionesStock`: "Venta" (la acción del día a día) y el menú "…" con Llegó mercadería, Corregir stock y Ver movimientos.
+ *  - `ControlStock`: − número +, siempre a la vista: restar y sumar son lo de todos los días.
+ *  - `MenuStock`: el menú "…" con lo menos frecuente: Corregir stock y Ver movimientos.
  *  - `DialogosStock`: el diálogo que esté abierto. El número nunca se edita directo.
  */
-export function StockNumero({ item, conRotulo = false }: { item: ItemCatalogo; /** En el celular no hay encabezado de columna: la pastilla dice "Stock 3". */ conRotulo?: boolean }) {
+export function StockNumero({ item }: { item: ItemCatalogo }) {
   if (!llevaStock(item)) return <span className="sr-only">A pedido</span>;
   const negativo = stockNegativo(item);
   const sinUnidades = item.stock <= 0;
@@ -37,30 +38,44 @@ export function StockNumero({ item, conRotulo = false }: { item: ItemCatalogo; /
           <span className="sr-only">Stock negativo</span>
         </>
       )}
-      {conRotulo && <span aria-hidden="true" className="font-medium lg:hidden">Stock</span>}
       {negativo ? `−${Math.abs(item.stock)}` : item.stock}
       {!negativo && <span className="sr-only"> en stock</span>}
     </span>
   );
 }
 
-export function AccionesStock({ item, onAbrir }: { item: ItemCatalogo; onAbrir: (d: Exclude<DialogoStock, null>) => void }) {
+const CLASE_PASO =
+  "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#7D8892] bg-[#FFFFFF] text-xl font-semibold leading-none text-[#244B5A] transition-colors hover:bg-[#EAF0F2] active:bg-[#D5E0E4]";
+
+/** Restar y sumar: cada botón abre su diálogo, con la cantidad en 1. Un toque sin querer al bajar por la lista no mueve el stock. */
+export function ControlStock({ item, onAbrir }: { item: ItemCatalogo; onAbrir: (d: Exclude<DialogoStock, null>) => void }) {
   if (!llevaStock(item)) return null;
   const nombre = item.descripcion || item.clave;
   return (
-    <>
-      <button type="button" aria-label={`Venta de ${nombre}`} onClick={() => onAbrir("venta")} className={botonDe("suave", "min-w-[4.5rem] px-3 font-semibold")}>
-        Venta
+    <span className="inline-flex items-center gap-1">
+      <button type="button" aria-label={`Restar stock de ${nombre}`} title="Restar stock" onClick={() => onAbrir("venta")} className={CLASE_PASO}>
+        <span aria-hidden="true">−</span>
       </button>
-      <MenuAcciones
-        etiqueta={`Más acciones de ${nombre}`}
-        acciones={[
-          { etiqueta: "Llegó mercadería", onClick: () => onAbrir("ingreso") },
-          { etiqueta: "Corregir stock", onClick: () => onAbrir("ajuste") },
-          { etiqueta: "Ver movimientos", onClick: () => onAbrir("historial") },
-        ]}
-      />
-    </>
+      <span className="flex min-w-10 justify-center">
+        <StockNumero item={item} />
+      </span>
+      <button type="button" aria-label={`Sumar stock de ${nombre}`} title="Sumar stock" onClick={() => onAbrir("ingreso")} className={CLASE_PASO}>
+        <span aria-hidden="true">+</span>
+      </button>
+    </span>
+  );
+}
+
+export function MenuStock({ item, onAbrir }: { item: ItemCatalogo; onAbrir: (d: Exclude<DialogoStock, null>) => void }) {
+  if (!llevaStock(item)) return null;
+  return (
+    <MenuAcciones
+      etiqueta={`Más acciones de ${item.descripcion || item.clave}`}
+      acciones={[
+        { etiqueta: "Corregir stock", onClick: () => onAbrir("ajuste") },
+        { etiqueta: "Ver movimientos", onClick: () => onAbrir("historial") },
+      ]}
+    />
   );
 }
 
@@ -77,7 +92,7 @@ export function DialogosStock({
   onResultado: (item: ItemCatalogo, resultado: ResultadoStock) => void;
 }) {
   if (!llevaStock(item) || !dialogo) return null;
-  const nombre = item.descripcion || item.clave;
+  const nombre = nombreCortoLista(item.clave) ?? (item.descripcion || item.clave);
   if (dialogo === "ingreso" || dialogo === "venta") {
     return (
       <DialogoMovimiento
@@ -123,8 +138,13 @@ export function StockControles({
   const [dialogo, setDialogo] = useState<DialogoStock>(null);
   return (
     <div className="flex items-center gap-2">
-      <StockNumero item={item} />
-      {editable && <AccionesStock item={item} onAbrir={setDialogo} />}
+      {!editable && <StockNumero item={item} />}
+      {editable && (
+        <>
+          <ControlStock item={item} onAbrir={setDialogo} />
+          <MenuStock item={item} onAbrir={setDialogo} />
+        </>
+      )}
       <DialogosStock item={item} dialogo={dialogo} onCerrar={() => setDialogo(null)} onResultado={onResultado} />
     </div>
   );

@@ -69,7 +69,7 @@ async function alternarActivo(page: Page, activo: boolean) {
   else await expect(interruptor).not.toBeChecked();
 }
 
-/** Abre el menú "⋯" de la fila y elige una acción (Llegó mercadería, Corregir stock o Ver movimientos). */
+/** Abre el menú "⋯" de la fila y elige una acción (Corregir stock o Ver movimientos). */
 async function accion(page: Page, f: Locator, piscina: string, etiqueta: string) {
   await f.getByRole("button", { name: new RegExp(`^Más acciones de .*${piscina}`) }).click();
   await page.getByRole("menuitem", { name: etiqueta, exact: true }).click();
@@ -147,11 +147,11 @@ test("stock: ingreso, venta con negativo, ajustes, anulación e historial", asyn
   await captura(page, info, "catalogo-stock");
 
   // Ingreso: el número y el historial.
-  await accion(page, f, d.piscina, "Llegó mercadería");
+  await f.getByRole("button", { name: new RegExp(`^Sumar stock de .*${d.piscina}`) }).click();
   await page.getByLabel("Cantidad").fill("3");
   await page.getByLabel(/Referencia/).fill("Remito E2E");
   await captura(page, info, "dialogo-ingreso");
-  await page.getByRole("button", { name: "Registrar ingreso" }).click();
+  await page.getByRole("button", { name: /^Sumar \d+$/ }).click();
   await expect(badge(f, STOCK_INICIAL + 3)).toBeVisible();
   await accion(page, f, d.piscina, "Ver movimientos");
   const historial = page.getByRole("dialog", { name: "Movimientos de stock" });
@@ -163,12 +163,12 @@ test("stock: ingreso, venta con negativo, ajustes, anulación e historial", asyn
 
   // Venta mayor al stock: pide confirmación, queda negativo, marca y banner.
   const antes = STOCK_INICIAL + 3;
-  await f.getByRole("button", { name: new RegExp(`^Venta de .*${d.piscina}`) }).click();
+  await f.getByRole("button", { name: new RegExp(`^Restar stock de .*${d.piscina}`) }).click();
   await page.getByLabel("Cantidad").fill(String(antes + 2));
-  await page.getByRole("button", { name: "Registrar venta" }).click();
+  await page.getByRole("button", { name: /^Restar \d+$/ }).click();
   await expect(page.getByRole("alert").filter({ hasText: "stock en negativo" })).toBeVisible();
   await captura(page, info, "venta-confirmar-negativo");
-  await page.getByRole("button", { name: "Vender igual" }).click();
+  await page.getByRole("button", { name: "Restar igual" }).click();
   await expect(page.getByText(/quedó en stock negativo \(−2\)/)).toBeVisible();
   await expect(f.getByText("Stock negativo")).toBeAttached(); // el texto va dentro de la marca (lectores de pantalla)
   await expect(f.getByTitle("stock negativo: -2")).toBeVisible();
@@ -225,16 +225,16 @@ test("stock: ítem sin stock, doble toque y dos pestañas", async ({ page, conte
   // Un ítem que no lleva stock: sin botones ni historial.
   const sin = fila(page, ITEM_SIN_STOCK.texto);
   await expect(sin.getByText("A pedido")).toBeVisible();
-  await expect(sin.getByRole("button", { name: /Más acciones de|Venta de/ })).toHaveCount(0);
+  await expect(sin.getByRole("button", { name: /Más acciones de|(Restar|Sumar) stock de/ })).toHaveCount(0);
   await captura(page, info, "item-sin-stock");
 
   // Doble toque en Registrar: un solo movimiento.
   const f = fila(page, d.piscina);
   const antes = await stockDe(f);
-  await accion(page, f, d.piscina, "Llegó mercadería");
+  await f.getByRole("button", { name: new RegExp(`^Sumar stock de .*${d.piscina}`) }).click();
   await page.getByLabel("Cantidad").fill("1");
   await page.getByLabel(/Referencia/).fill("Doble toque E2E");
-  await page.getByRole("button", { name: "Registrar ingreso" }).dblclick();
+  await page.getByRole("button", { name: /^Sumar \d+$/ }).dblclick();
   await expect(badge(f, antes + 1)).toBeVisible();
   await accion(page, f, d.piscina, "Ver movimientos");
   const h = page.getByRole("dialog", { name: "Movimientos de stock" });
@@ -250,10 +250,10 @@ test("stock: ítem sin stock, doble toque y dos pestañas", async ({ page, conte
   const fOtra = fila(otra, d.piscina);
 
   const vender = async (p: Page, ff: Locator, ref: string) => {
-    await ff.getByRole("button", { name: new RegExp(`^Venta de .*${d.piscina}`) }).click();
+    await ff.getByRole("button", { name: new RegExp(`^Restar stock de .*${d.piscina}`) }).click();
     await p.getByLabel("Cantidad").fill("1");
     await p.getByLabel(/Referencia/).fill(ref);
-    await p.getByRole("button", { name: "Registrar venta" }).click();
+    await p.getByRole("button", { name: /^Restar \d+$/ }).click();
   };
   const ambas = Promise.all([vender(page, f, "Pestaña A"), vender(otra, fOtra, "Pestaña B")]);
   await ambas;
