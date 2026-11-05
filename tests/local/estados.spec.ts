@@ -16,6 +16,7 @@ const POR_PANTALLA = 28;
 
 const PANTALLAS = [
   "/dashboard",
+  "/dashboard/nuevo",
   "/dashboard/piscinas",
   "/dashboard/catalogo",
   "/dashboard/catalogo/materiales",

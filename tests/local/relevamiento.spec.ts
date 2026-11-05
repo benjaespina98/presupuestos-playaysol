@@ -15,7 +15,8 @@ const FASE = process.env.E2E_FASE ?? "antes";
 const HOSTS_PERMITIDOS = new Set(["127.0.0.1", "localhost"]);
 
 const PANTALLAS: Array<[string, string]> = [
-  ["inicio-nuevo", "/dashboard"],
+  ["inicio", "/dashboard"],
+  ["inicio-nuevo", "/dashboard/nuevo"],
   ["calc-piscinas", "/dashboard/piscinas"],
   ["calc-cercos", "/dashboard/cercos"],
   ["calc-cobertores", "/dashboard/cobertores"],

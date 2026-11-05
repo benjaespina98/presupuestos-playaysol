@@ -23,23 +23,22 @@ export default async function DashboardLayout({
   return (
     <div className="pys-min-h-pantalla bg-gray-50">
       <div>
-        {/* Celular: el logo y el menú de usuario arriba (52 px) y, debajo, las cuatro secciones en una fila de 48 px
+        {/* Celular: el logo y el menú de usuario arriba (52 px) y, debajo, las secciones en una fila de 48 px
             que reparte el ancho. Desde md, todo en una sola fila. */}
         <header data-print-hide="" className="border-b border-[#DEE4E6] bg-[#FFFFFF]">
           <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-x-3 px-4 md:flex-nowrap md:gap-x-6">
-            <Link href="/dashboard" className="flex h-[3.25rem] items-center md:h-14">
+            <Link href="/dashboard" aria-label="Inicio" className="flex h-[3.25rem] items-center md:h-14">
               <Wordmark className="h-6 sm:h-7" />
             </Link>
-            {/* "Precios" es lo que se le cobra al cliente; "Compras" es lo que se le compra a los proveedores. */}
+            {/* El logo lleva a Inicio. "Precios" es lo que se le cobra al cliente; "Compras" es lo que se le compra a los proveedores. */}
             <nav aria-label="Secciones del portal" className="order-3 flex w-full items-stretch text-[15px] md:order-none md:ml-2 md:w-auto md:flex-1 md:gap-5">
-              <NavLink href="/dashboard" exacto>
-                Nuevo
+              <NavLink href="/dashboard/nuevo" seccion="presupuestos">
+                Presupuestos
               </NavLink>
-              <NavLink href="/dashboard/historial">Historial</NavLink>
-              <NavLink href="/dashboard/catalogo" grupo="precios">
+              <NavLink href="/dashboard/catalogo" seccion="precios">
                 Precios
               </NavLink>
-              <NavLink href="/dashboard/catalogo/materiales" grupo="compras">
+              <NavLink href="/dashboard/catalogo/materiales" seccion="compras">
                 Compras
               </NavLink>
             </nav>

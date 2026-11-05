@@ -13,6 +13,7 @@ import type { Proveedor } from "@/lib/domain/abastecimiento/proveedor";
 import { formatARS } from "@/lib/format/ars";
 import { formatFechaCompleta, formatFechaRelativaCorta } from "@/lib/format/fecha";
 import { opcionesDeOrden, ordenarPor, type ClaveOrden } from "@/lib/ordenar";
+import { useBusquedaDeUrl } from "@/lib/useBusquedaDeUrl";
 import { useEstadoPersistente } from "@/lib/useEstadoPersistente";
 import { PanelPortal } from "@/components/PanelPortal";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
@@ -47,6 +48,7 @@ export default function MaterialesPage() {
   // La búsqueda, los filtros y el orden se conservan al abrir otra pantalla y volver.
   const [filtros, setFiltros] = useEstadoPersistente<Filtros>("materiales:filtros", SIN_FILTROS);
   const { rubro, proveedorId, soloSinPrecio, incluirInactivos } = filtros;
+  useBusquedaDeUrl((b) => setFiltros({ ...SIN_FILTROS, busqueda: b }));
   const busqueda = useDeferredValue(filtros.busqueda);
   const orden = filtros.orden ?? "defecto";
   const cambiar = (parcial: Partial<Filtros>) => setFiltros({ ...filtros, ...parcial });

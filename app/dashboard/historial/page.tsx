@@ -20,6 +20,7 @@ import { contarPorFecha, dentroDeFecha, OPCIONES_FECHA, type FiltroFecha } from 
 import { etiquetaCortaDeOrden, opcionesDeOrden, ordenarPor, type ClaveOrden } from "@/lib/ordenar";
 import { useEstadoPersistente } from "@/lib/useEstadoPersistente";
 import { contarAnulados, estaAnulado } from "@/lib/anulacion";
+import { coincideBusqueda } from "@/lib/texto";
 import { PanelPortal } from "@/components/PanelPortal";
 import { IconEdit, IconCopy, IconTrash } from "@/components/icons";
 
@@ -127,7 +128,7 @@ function HistorialTabla() {
       if (!mostrarAnulados && estaAnulado(p)) return false;
       if (tipoFiltro && p.tipo !== tipoFiltro) return false;
       if (usuarioParam && p.created_by !== usuarioParam) return false;
-      if (q && !p.cliente_nombre.toLowerCase().includes(q)) return false;
+      if (q && !coincideBusqueda(p.cliente_nombre, q)) return false;
       if (!dentroDeFecha(p.created_at, fecha)) return false;
       return true;
     });
@@ -225,7 +226,7 @@ function HistorialTabla() {
           etiquetaCorta: (v) => etiquetaCortaDeOrden(v).replace("Nombre", "Cliente").replace("Actualizado", "Fecha"),
         }}
         interruptores={cantidadAnulados > 0 ? [{ id: "anulados", etiqueta: `Mostrar anulados (${cantidadAnulados})`, valor: mostrarAnulados, onCambio: setMostrarAnulados }] : []}
-        agregar={{ etiqueta: "Nuevo presupuesto", texto: "Nuevo", href: "/dashboard" }}
+        agregar={{ etiqueta: "Nuevo presupuesto", texto: "Nuevo", href: "/dashboard/nuevo" }}
         resultados={presupuestosFiltrados?.length ?? 0}
         contador={
           presupuestosFiltrados && !error
@@ -268,7 +269,7 @@ function HistorialTabla() {
           </p>
           {!hayFiltros && (
             <Link
-              href="/dashboard"
+              href="/dashboard/nuevo"
               className="mt-3 inline-block text-sm font-medium text-[#244B5A] hover:underline"
             >
               Crear el primero

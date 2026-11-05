@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listarMateriales, listarProveedores } from "@/lib/abastecimiento";
-import { filtrarProveedores, ordenarProveedores, sinTelefono, type Proveedor } from "@/lib/domain/abastecimiento/proveedor";
+import { filtrarProveedores, ordenarProveedores, sinTelefono, telefonosDe, type Proveedor } from "@/lib/domain/abastecimiento/proveedor";
 import { materialesPorProveedor, type Material } from "@/lib/domain/abastecimiento/material";
 import { opcionesDeOrden, ordenarPor, type ClaveOrden } from "@/lib/ordenar";
 import { PanelPortal } from "@/components/PanelPortal";
@@ -14,6 +14,7 @@ import { botonDe } from "@/components/ui/botones";
 import { ListaCargando, ListaVacia } from "@/components/ui/EstadoLista";
 import { LISTA, LISTA_ENCABEZADO, LISTA_FILA, LISTA_SEPARADORES, TEXTO_SECUNDARIO } from "@/components/ui/lista";
 import { Pastilla } from "@/components/ui/Pastilla";
+import { useBusquedaDeUrl } from "@/lib/useBusquedaDeUrl";
 import { useEstadoPersistente } from "@/lib/useEstadoPersistente";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
 import { ProveedorModal } from "@/components/abastecimiento/ProveedorModal";
@@ -31,14 +32,6 @@ interface Filtros {
 const SIN_FILTROS: Filtros = { busqueda: "", rubro: "", telefono: "", incluirInactivos: false, orden: "defecto" };
 const ORDENES = opcionesDeOrden(["nombre", "actualizado"]);
 
-/** "Rodrigo +54 9 3534 23-2878 / Luciano +54 9 3534 08-3660" → un teléfono por línea. */
-function telefonosDe(texto: string): string[] {
-  return texto
-    .split(/\s*\/\s*/)
-    .map((t) => t.trim())
-    .filter(Boolean);
-}
-
 export default function ProveedoresPage() {
   const [proveedores, setProveedores] = useState<Proveedor[] | null>(null);
   const [materiales, setMateriales] = useState<Material[]>([]);
@@ -46,6 +39,7 @@ export default function ProveedoresPage() {
   // La búsqueda, los filtros y el orden se conservan al abrir otra pantalla y volver.
   const [filtros, setFiltros] = useEstadoPersistente<Filtros>("proveedores:filtros2", SIN_FILTROS);
   const { busqueda, rubro, telefono, incluirInactivos } = filtros;
+  useBusquedaDeUrl((b) => setFiltros({ ...SIN_FILTROS, busqueda: b }));
   const orden = filtros.orden ?? "defecto";
   const cambiar = (parcial: Partial<Filtros>) => setFiltros({ ...filtros, ...parcial });
   const [editando, setEditando] = useState<Proveedor | null>(null);

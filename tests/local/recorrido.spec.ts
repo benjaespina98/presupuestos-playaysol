@@ -64,7 +64,8 @@ const buscar = async (page: Page, etiqueta: RegExp, texto: string) => {
 };
 
 const PASOS: Paso[] = [
-  { nombre: "inicio-nuevo", ruta: "/dashboard" },
+  { nombre: "inicio", ruta: "/dashboard" },
+  { nombre: "inicio-nuevo", ruta: "/dashboard/nuevo" },
   { nombre: "calc-piscinas", ruta: "/dashboard/piscinas" },
   { nombre: "calc-cercos", ruta: "/dashboard/cercos" },
   { nombre: "calc-cobertores", ruta: "/dashboard/cobertores" },

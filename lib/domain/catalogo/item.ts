@@ -2,7 +2,8 @@ import { z } from "zod";
 import { TipoCalculadora } from "../presupuesto/v1";
 import { CATEGORIA_POR_DEFECTO, CATEGORIAS, Categoria } from "./categorias";
 import { ETIQUETA_SECCION, SECCIONES, seccionDeItem, type SeccionId } from "./secciones";
-import { lineaDeClave, MODELOS_INDUSPLAST, modeloIndusplast, ordenMedida, type LineaPiscina } from "./listas";
+import { lineaDeClave, MODELOS_INDUSPLAST, modeloIndusplast, nombreCortoLista, ordenMedida, type LineaPiscina } from "./listas";
+import { coincideBusqueda } from "@/lib/texto";
 
 /** Qué clase de producto ver: una línea de piscinas completas, o "otros" (todo lo
  *  que no es una piscina de lista: opcionales, cercos, cobertores...). */
@@ -181,7 +182,7 @@ export interface FiltroCatalogo {
  *  siempre se aplican juntos en la pantalla de listado. Busca en descripción
  *  y clave (a veces la descripción está vacía y la clave es lo único legible). */
 export function filtrarCatalogo(items: ItemCatalogo[], filtro: FiltroCatalogo): ItemCatalogo[] {
-  const q = filtro.busqueda?.trim().toLowerCase() ?? "";
+  const q = filtro.busqueda?.trim() ?? "";
   return items.filter((item) => {
     if (!filtro.incluirInactivos && !item.activo) return false;
     if (filtro.categoria && categoriaEfectiva(item) !== filtro.categoria) return false;
@@ -191,11 +192,7 @@ export function filtrarCatalogo(items: ItemCatalogo[], filtro: FiltroCatalogo): 
     } else if (filtro.linea && lineaDeClave(item.clave) !== filtro.linea) return false;
     if (filtro.seccion && seccionDeItem(item) !== filtro.seccion) return false;
     if (filtro.stock && !coincideStock(item, filtro.stock)) return false;
-    if (q) {
-      const enDescripcion = (item.descripcion ?? "").toLowerCase().includes(q);
-      const enClave = item.clave.toLowerCase().includes(q);
-      if (!enDescripcion && !enClave) return false;
-    }
+    if (q && !coincideBusqueda([item.descripcion, item.clave, nombreCortoLista(item.clave)].join(" "), q)) return false;
     return true;
   });
 }

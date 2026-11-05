@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { coincideBusqueda } from "@/lib/texto";
 
 /**
  * Proveedor: a quién se le compra. Vive en el catálogo web (pestaña
@@ -42,6 +43,14 @@ export function sinTelefono(p: Pick<Proveedor, "telefono">): boolean {
   return t === "" || t === "—" || t === "-";
 }
 
+/** "Rodrigo +54 9 3534 23-2878 / Luciano +54 9 3534 08-3660" → un teléfono por línea. */
+export function telefonosDe(texto: string): string[] {
+  return texto
+    .split(/\s*\/\s*/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
 export interface FiltroProveedores {
   busqueda?: string;
   incluirInactivos?: boolean;
@@ -50,14 +59,11 @@ export interface FiltroProveedores {
 }
 
 export function filtrarProveedores(items: Proveedor[], filtro: FiltroProveedores): Proveedor[] {
-  const q = filtro.busqueda?.trim().toLowerCase() ?? "";
+  const q = filtro.busqueda?.trim() ?? "";
   return items.filter((p) => {
     if (!filtro.incluirInactivos && !p.activo) return false;
     if (filtro.soloSinTelefono && !sinTelefono(p)) return false;
-    if (q) {
-      const texto = [p.nombre, p.rubro, p.contacto, p.telefono, p.notas].join(" ").toLowerCase();
-      if (!texto.includes(q)) return false;
-    }
+    if (q && !coincideBusqueda([p.nombre, p.rubro, p.contacto, p.telefono, p.notas].join(" "), q)) return false;
     return true;
   });
 }

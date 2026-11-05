@@ -126,10 +126,12 @@ test("login y navegación", async ({ page }, info) => {
   expect(new URL(page.url()).hostname).toBe("127.0.0.1");
 
   for (const [nombre, url] of [
+    ["Presupuestos", /\/dashboard\/nuevo$/],
     ["Historial", /\/dashboard\/historial/],
+    ["Nuevo", /\/dashboard\/nuevo$/],
     ["Precios", /\/dashboard\/catalogo$/],
     ["Compras", /\/dashboard\/catalogo\/materiales/],
-    ["Nuevo", /\/dashboard$/],
+    ["Inicio", /\/dashboard$/],
   ] as const) {
     await page.getByRole("link", { name: nombre, exact: true }).click();
     await expect(page).toHaveURL(url);
