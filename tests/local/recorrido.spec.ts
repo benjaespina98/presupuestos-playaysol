@@ -125,14 +125,11 @@ const PASOS: Paso[] = [
   { nombre: "catalogo-agregar-item", ruta: "/dashboard/catalogo", preparar: (p) => tocar(p, /^Agregar/) },
   { nombre: "catalogo-editar-item", ruta: "/dashboard/catalogo", preparar: (p) => tocar(p, /^Editar$/) },
   { nombre: "catalogo-menu-fila", ruta: "/dashboard/catalogo", preparar: (p) => tocar(p, /^Más acciones de/) },
-  { nombre: "catalogo-venta", ruta: "/dashboard/catalogo", preparar: (p) => tocar(p, /^Venta de/) },
+  { nombre: "catalogo-venta", ruta: "/dashboard/catalogo", preparar: (p) => tocar(p, /^Restar stock de/) },
   {
     nombre: "catalogo-ingreso",
     ruta: "/dashboard/catalogo",
-    preparar: async (p) => {
-      await tocar(p, /^Más acciones de/);
-      await p.getByRole("menuitem", { name: "Llegó mercadería" }).click();
-    },
+    preparar: (p) => tocar(p, /^Sumar stock de/),
   },
   {
     nombre: "catalogo-ajuste",
