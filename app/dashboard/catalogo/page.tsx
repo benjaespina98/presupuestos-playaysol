@@ -23,6 +23,7 @@ import { formatFechaRelativaCorta, formatFechaCompleta } from "@/lib/format/fech
 import { ordenarPor, type ClaveOrden } from "@/lib/ordenar";
 import { copiarAlPortapapeles } from "@/lib/clipboard";
 import { PanelPortal } from "@/components/PanelPortal";
+import { useBusquedaDeUrl } from "@/lib/useBusquedaDeUrl";
 import { useEstadoPersistente } from "@/lib/useEstadoPersistente";
 import { IconCopy } from "@/components/icons";
 import { LOCAL_STOCK } from "@/lib/brand";
@@ -59,6 +60,7 @@ export default function CatalogoPage() {
     modoConsulta: boolean;
   }>("catalogo:filtros", { busqueda: "", seccion: "", stock: "", orden: "defecto", incluirInactivos: false, modoConsulta: false });
   const { seccion, stock, incluirInactivos, modoConsulta } = prefs;
+  useBusquedaDeUrl((b) => setPrefs({ busqueda: b, seccion: "", stock: "", orden: "defecto", incluirInactivos: false, modoConsulta }));
   // Filtrar decenas de filas en cada tecla trababa el campo en el celular: la lista sigue a la búsqueda sin frenar la escritura.
   const busqueda = useDeferredValue(prefs.busqueda);
   const orden = prefs.orden ?? "defecto";

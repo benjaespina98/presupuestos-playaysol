@@ -15,11 +15,13 @@ ignorada por git).
 | `login-error` | Ingreso con credenciales incorrectas (aviso de error) | `/login` |
 | (redirección) | Cualquier ruta protegida sin sesión lleva a `/login` | `/dashboard/*` |
 
-## 2. Nuevo (los presupuestos)
+## 2. Inicio y presupuestos
 
 | Paso | Pantalla / estado | Ruta |
 |---|---|---|
-| `inicio-nuevo` | Elegir el tipo de trabajo (5 tarjetas) | `/dashboard` |
+| `inicio` | Buscador general, accesos directos y últimos presupuestos | `/dashboard` |
+| (estados) | Resultados por grupo, sin coincidencias, alguna fuente sin leer, cargando | |
+| `inicio-nuevo` | Elegir el tipo de trabajo (5 tarjetas) | `/dashboard/nuevo` |
 | `calc-piscinas` | Piscinas: formulario + documento, barra de guardado, vista previa móvil | `/dashboard/piscinas` |
 | `calc-cercos` | Cercos | `/dashboard/cercos` |
 | `calc-cobertores` | Cobertores | `/dashboard/cobertores` |
@@ -69,8 +71,8 @@ ignorada por git).
 | Pieza | Qué se revisa |
 |---|---|
 | Encabezado | Logo, menú de usuario (Cerrar sesión adentro), sin recortes en 360 px |
-| Barra principal | Nuevo · Historial · Precios · Compras, con la sección activa visible |
-| Pestañas secundarias | Precios / Compras (Materiales, Proveedores, Armar pedido, Pedidos), nunca cortadas |
+| Barra principal | Presupuestos · Precios · Compras, con la sección activa visible; el logo lleva a Inicio |
+| Pestañas secundarias | Presupuestos (Nuevo, Historial) y Compras (Materiales, Proveedores, Armar pedido, Pedidos), nunca cortadas |
 | Barra de herramientas | Buscador, Filtros (contador), "+" (celular); filtros, orden, "Más filtros" y Agregar (escritorio) |
 | Hoja de filtros | Encabezado fijo, opciones de 48 px, pie con "Limpiar" y "Ver N resultados" |
 | Chips de filtros activos | Sólo cuando hay filtros; hacen salto de línea |

@@ -95,7 +95,7 @@ sus filtros (`secciones`), interruptores, orden, el botón de agregar y los cont
 
 ### Encabezado y pestañas (celular)
 
-El encabezado mide 52 px (logo y menú de usuario con "Cerrar sesión" adentro) y debajo van Nuevo · Historial · Precios · Compras en
+El encabezado mide 52 px (logo, que lleva a Inicio, y menú de usuario con "Cerrar sesión" adentro) y debajo van Presupuestos · Precios · Compras en
 una fila de 48 px que reparte el ancho. Las pestañas de Compras son cuatro columnas del mismo ancho de 44 px ("Armar pedido" hace
 salto de línea): nunca quedan cortadas ni hay que deslizarlas. Precios es una sola pantalla y no lleva pestañas.
 *Decisión tomada:* el encabezado no se oculta al bajar (ocupa 52 px y se va con el scroll; la barra de herramientas es lo único fijo).
