@@ -67,10 +67,8 @@ test.beforeEach(() => {
 test("login llega al dashboard", async ({ page }) => {
   await login(page);
   await expect(page).toHaveURL(/\/dashboard$/);
-  await expect(
-    page.getByRole("heading", { name: "Nuevo presupuesto" })
-  ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Historial" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Inicio" })).toBeAttached();
+  await expect(page.getByRole("link", { name: "Presupuestos" })).toBeVisible();
 });
 
 /**
@@ -87,7 +85,7 @@ test("se puede navegar entre calculadoras sin errores", async ({ page }) => {
 
   await login(page);
   for (const { tipo, encabezado } of CALCULADORAS) {
-    await page.getByRole("link", { name: "Nuevo" }).click();
+    await page.getByRole("link", { name: "Presupuestos" }).click();
     await page.click(`a[href="/dashboard/${tipo}"]`);
     await expect(page.getByRole("heading", { name: encabezado })).toBeVisible({ timeout: 15_000 });
   }

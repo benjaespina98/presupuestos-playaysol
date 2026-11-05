@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { coincideBusqueda } from "@/lib/texto";
 
 /** Tamaños de pileta para los que se estima la cantidad a pedir. Es el orden de
  *  las columnas de la planilla de costos. */
@@ -88,13 +89,13 @@ export interface FiltroMateriales {
 }
 
 export function filtrarMateriales(items: Material[], filtro: FiltroMateriales): Material[] {
-  const q = filtro.busqueda?.trim().toLowerCase() ?? "";
+  const q = filtro.busqueda?.trim() ?? "";
   return items.filter((m) => {
     if (!filtro.incluirInactivos && !m.activo) return false;
     if (filtro.rubro && m.rubro !== filtro.rubro) return false;
     if (filtro.proveedorId && m.proveedor_id !== filtro.proveedorId) return false;
     if (filtro.soloSinPrecio && m.precio !== null) return false;
-    if (q && !`${m.nombre} ${m.notas ?? ""}`.toLowerCase().includes(q)) return false;
+    if (q && !coincideBusqueda(`${m.nombre} ${m.notas ?? ""}`, q)) return false;
     return true;
   });
 }

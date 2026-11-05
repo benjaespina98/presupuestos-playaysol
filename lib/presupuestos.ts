@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase";
 import { mensajeDeErrorAnulacion, validarMotivo } from "@/lib/anulacion";
+import type { PresupuestoResumen } from "@/lib/domain/busqueda/general";
 
 export type TipoCalculadora =
   | "piscinas"
@@ -84,6 +85,25 @@ export async function listarTodosLosPresupuestos() {
     ...p,
     creador: p.created_by ? porId.get(p.created_by) ?? null : null,
   }));
+}
+
+/** Lo mínimo para buscar y abrir presupuestos desde Inicio: sin `datos`, que es lo que pesa, y sin los anulados.
+ *  Del más nuevo al más viejo. Nunca rechaza: el error viaja en el resultado, como en las otras lecturas de Inicio. */
+export async function listarPresupuestosResumen(): Promise<
+  { items: PresupuestoResumen[]; error: null } | { items: null; error: string }
+> {
+  try {
+    const { data, error } = await createClient()
+      .from("presupuestos")
+      .select("id, tipo, cliente_nombre, created_at")
+      .is("anulado_at", null)
+      .order("created_at", { ascending: false });
+    if (error) return { items: null, error: error.message };
+    return { items: data as PresupuestoResumen[], error: null };
+  } catch (err) {
+    console.error("No se pudieron leer los presupuestos", err);
+    return { items: null, error: "No se pudo conectar." };
+  }
 }
 
 // Dato identificador clave para reconocer un presupuesto en el historial sin abrirlo,
