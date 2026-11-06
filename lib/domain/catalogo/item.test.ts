@@ -10,6 +10,7 @@ import {
   coincideStock,
   llevaStock,
   resumenStock,
+  textoResumenStock,
   stockNegativo,
   textoStock,
   type FiltroStock,
@@ -394,5 +395,25 @@ describe("piscinas de lista en el listado", () => {
 
   it("cuenta por clase, con 'otros' incluido", () => {
     expect(contarPorLinea(todos, {})).toEqual({ indusplast: 4, hormigon: 3, otros: 2 });
+  });
+});
+
+describe("textoResumenStock", () => {
+  it("resume unidades, agotadas y negativas en una línea", () => {
+    expect(textoResumenStock([{ stock: 5 }, { stock: 0 }, { stock: 0 }, { stock: -2 }, { stock: null }])).toBe("5 unidades · 2 agotadas · 1 negativa");
+  });
+
+  it("el singular y lo que no hay no se nombra", () => {
+    expect(textoResumenStock([{ stock: 1 }])).toBe("1 unidad");
+    expect(textoResumenStock([{ stock: 0 }])).toBe("0 unidades · 1 agotada");
+  });
+
+  it("un negativo no resta unidades de otros modelos", () => {
+    expect(textoResumenStock([{ stock: 3 }, { stock: -5 }])).toBe("3 unidades · 1 negativa");
+  });
+
+  it("sin ningún ítem con stock, no hay resumen", () => {
+    expect(textoResumenStock([{ stock: null }, {}])).toBeNull();
+    expect(textoResumenStock([])).toBeNull();
   });
 });

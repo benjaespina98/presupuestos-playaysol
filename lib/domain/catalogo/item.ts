@@ -162,6 +162,22 @@ export function resumenStock(items: { stock?: number | null }[]): { modelos: num
   return { modelos, conUnidades, unidades };
 }
 
+/** El resumen en una línea de lo que hay en stock: "38 unidades · 3 agotadas · 1 negativa". Null si ningún ítem lleva stock. */
+export function textoResumenStock(items: { stock?: number | null }[]): string | null {
+  const conStock = items.filter(llevaStock);
+  if (conStock.length === 0) return null;
+  const unidades = conStock.reduce((suma, i) => suma + Math.max(0, i.stock), 0);
+  const agotadas = conStock.filter((i) => i.stock === 0).length;
+  const negativas = conStock.filter((i) => i.stock < 0).length;
+  return [
+    `${unidades} ${unidades === 1 ? "unidad" : "unidades"}`,
+    agotadas > 0 && `${agotadas} ${agotadas === 1 ? "agotada" : "agotadas"}`,
+    negativas > 0 && `${negativas} ${negativas === 1 ? "negativa" : "negativas"}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 export interface FiltroCatalogo {
   busqueda?: string;
   categoria?: Categoria | null;

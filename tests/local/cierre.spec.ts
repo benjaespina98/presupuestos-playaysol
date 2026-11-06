@@ -90,6 +90,12 @@ const abrirCatalogo = async (page: Page, nombre: string) => {
   await expect(page.locator("li").filter({ hasText: nombre }).first()).toBeVisible();
 };
 
+/** Sumar, restar y corregir el stock se hace en su propia pantalla. */
+const abrirStock = async (page: Page, nombre: string) => {
+  await page.goto("/dashboard/stock");
+  await expect(page.locator("li").filter({ hasText: nombre }).first()).toBeVisible();
+};
+
 test.describe.configure({ mode: "serial" });
 
 let errores: string[] = [];
@@ -130,11 +136,16 @@ test("login y navegación", async ({ page }, info) => {
     ["Historial", /\/dashboard\/historial/],
     ["Nuevo", /\/dashboard\/nuevo$/],
     ["Precios", /\/dashboard\/catalogo$/],
+    ["Stock", /\/dashboard\/stock$/],
     ["Compras", /\/dashboard\/catalogo\/materiales/],
     ["Inicio", /\/dashboard$/],
   ] as const) {
-    await page.getByRole("link", { name: nombre, exact: true }).click();
-    await expect(page).toHaveURL(url);
+    // El menú de arriba y las tarjetas de Inicio se llaman igual: se toca el del menú, que es el que siempre está.
+    const enMenu = ["Presupuestos", "Precios", "Stock", "Compras"].includes(nombre);
+    const donde = enMenu ? page.getByRole("navigation", { name: "Secciones del portal" }) : page;
+    await donde.getByRole("link", { name: nombre, exact: true }).click();
+    // La primera visita a cada pantalla la compila el servidor de desarrollo: puede tardar más que el tiempo por defecto.
+    await expect(page).toHaveURL(url, { timeout: 60_000 });
   }
   await captura(page, info, "inicio");
   expect(bloqueados, "pedidos a hosts que no son locales").toEqual([]);
@@ -143,10 +154,10 @@ test("login y navegación", async ({ page }, info) => {
 test("stock: ingreso, venta con negativo, ajustes, anulación e historial", async ({ page }, info) => {
   const d = datosDe(info);
   await entrar(page);
-  await abrirCatalogo(page, d.piscina);
+  await abrirStock(page, d.piscina);
   const f = fila(page, d.piscina);
   await expect(badge(f, STOCK_INICIAL)).toBeVisible();
-  await captura(page, info, "catalogo-stock");
+  await captura(page, info, "stock");
 
   // Ingreso: el número y el historial.
   await f.getByRole("button", { name: new RegExp(`^Sumar stock de .*${d.piscina}`) }).click();
@@ -222,13 +233,20 @@ test("stock: ingreso, venta con negativo, ajustes, anulación e historial", asyn
 test("stock: ítem sin stock, doble toque y dos pestañas", async ({ page, context }, info) => {
   const d = datosDe(info);
   await entrar(page);
-  await abrirCatalogo(page, d.piscina);
 
-  // Un ítem que no lleva stock: sin botones ni historial.
+  // Un ítem que no lleva stock: en Precios dice "A pedido", sin botones ni historial, y no está en Stock.
+  await abrirCatalogo(page, ITEM_SIN_STOCK.texto);
   const sin = fila(page, ITEM_SIN_STOCK.texto);
-  await expect(sin.getByText("A pedido")).toBeVisible();
+  await expect(sin.getByText("A pedido")).toBeAttached();
   await expect(sin.getByRole("button", { name: /Más acciones de|(Restar|Sumar) stock de/ })).toHaveCount(0);
   await captura(page, info, "item-sin-stock");
+  await abrirStock(page, d.piscina);
+  await expect(page.locator("li").filter({ hasText: ITEM_SIN_STOCK.texto })).toHaveCount(0);
+
+  // En Precios las piscinas muestran su stock, pero no se mueve ahí.
+  await abrirCatalogo(page, d.piscina);
+  await expect(fila(page, d.piscina).getByRole("button", { name: /(Restar|Sumar) stock de|Más acciones de/ })).toHaveCount(0);
+  await abrirStock(page, d.piscina);
 
   // Doble toque en Registrar: un solo movimiento.
   const f = fila(page, d.piscina);
@@ -248,7 +266,7 @@ test("stock: ítem sin stock, doble toque y dos pestañas", async ({ page, conte
   const otra = await context.newPage();
   const bloqueadosOtra: string[] = [];
   await soloLocal(otra, bloqueadosOtra);
-  await abrirCatalogo(otra, d.piscina);
+  await abrirStock(otra, d.piscina);
   const fOtra = fila(otra, d.piscina);
 
   const vender = async (p: Page, ff: Locator, ref: string) => {
