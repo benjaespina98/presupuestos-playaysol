@@ -303,7 +303,7 @@ export function agruparParaListado(items: ItemCatalogo[]): GrupoListado[] {
       grupos.push({ id: sec.id, titulo: sec.etiqueta, items: delas });
       continue;
     }
-    for (const g of agruparPorCategoria(delas)) grupos.push({ id: `otros-${g.categoria}`, titulo: `Otros · ${g.categoria}`, items: g.items });
+    for (const g of agruparPorCategoria(delas)) grupos.push({ id: `otros-${g.categoria}`, titulo: tituloDeOtros(g.categoria), items: g.items });
   }
   return grupos;
 }
@@ -350,4 +350,9 @@ export const CLAVES_PRECIO_BASE = [
 
 export function esPrecioBase(clave: string): boolean {
   return (CLAVES_PRECIO_BASE as readonly string[]).includes(clave);
+}
+
+/** El nombre del bloque de lo que no es hormigón ni Indusplast: la categoría sola, sin repetir ("Otros · Otros"). */
+function tituloDeOtros(categoria: Categoria): string {
+  return categoria === "Piscinas" ? "Otras piscinas" : categoria;
 }

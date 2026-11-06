@@ -23,7 +23,7 @@ describe("CamposSoloLectura / SoloSiNoAnulado", () => {
           <button type="button">Agregar ítem</button>
         </CamposSoloLectura>
         <SoloSiNoAnulado>
-          <button type="submit">Guardar en la nube</button>
+          <button type="submit">Guardar</button>
         </SoloSiNoAnulado>
         <button type="button">Word</button>
       </form>
@@ -36,7 +36,7 @@ describe("CamposSoloLectura / SoloSiNoAnulado", () => {
     expect(screen.getByLabelText("Tipo")).toBeEnabled();
     expect(screen.getByLabelText("Notas")).toBeEnabled();
     expect(screen.getByRole("button", { name: "Agregar ítem" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Guardar en la nube" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Guardar" })).toBeInTheDocument();
   });
 
   it("anulado: los campos quedan deshabilitados, no hay Guardar, y exportar sigue disponible", () => {
@@ -45,7 +45,7 @@ describe("CamposSoloLectura / SoloSiNoAnulado", () => {
     expect(screen.getByLabelText("Tipo")).toBeDisabled();
     expect(screen.getByLabelText("Notas")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Agregar ítem" })).toBeDisabled();
-    expect(screen.queryByRole("button", { name: "Guardar en la nube" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Guardar" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Word" })).toBeEnabled();
   });
 });
@@ -59,7 +59,7 @@ describe("una calculadora real con un presupuesto anulado", () => {
     );
     expect(screen.getByLabelText("Subtotal construcción piscina")).toBeDisabled();
     expect(screen.getByLabelText("Señor/Sra")).toBeDisabled();
-    expect(screen.queryByRole("button", { name: /Guardar en la nube/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Guardar$/ })).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Word" })[0]).toBeEnabled();
   });
 
@@ -71,6 +71,6 @@ describe("una calculadora real con un presupuesto anulado", () => {
     );
     expect(screen.getByLabelText("Subtotal construcción piscina")).toBeEnabled();
     expect(screen.getByLabelText("Señor/Sra")).toBeEnabled();
-    expect(screen.getAllByRole("button", { name: /Guardar en la nube/ }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: /Guardar/ }).length).toBeGreaterThan(0);
   });
 });

@@ -101,8 +101,8 @@ for (const tipo of TIPOS) {
     await tipo.completar(page);
     await captura(page, info, `calc-${tipo.ruta}-completo`);
 
-    // Guardar en la nube: queda en el historial.
-    await page.getByRole("button", { name: /Guardar en la nube/ }).locator("visible=true").first().click();
+    // Guardar: queda en el historial.
+    await page.getByRole("button", { name: /^Guardar$/ }).locator("visible=true").first().click();
     await expect(page.getByText(/guardado|actualizado/i).locator("visible=true").first()).toBeVisible({ timeout: 30_000 });
 
     // Exportar: el navegador recibe el archivo. Presupuestos: Word y PDF. Plano: imagen y PDF.

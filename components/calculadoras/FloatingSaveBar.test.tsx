@@ -6,7 +6,7 @@ import { FloatingSaveBar } from "./FloatingSaveBar";
 describe("FloatingSaveBar", () => {
   it("es un botón submit (depende de vivir dentro del <form> que lo usa)", () => {
     render(<FloatingSaveBar formId="f" guardando={false} />);
-    const boton = screen.getByRole("button", { name: "Guardar en la nube" });
+    const boton = screen.getByRole("button", { name: "Guardar" });
     expect(boton).toHaveAttribute("type", "submit");
     expect(boton).not.toBeDisabled();
   });

@@ -33,6 +33,7 @@ import { CamposObligatoriosHint } from "@/components/calculadoras/CamposObligato
 import { VistaPreviaMovil } from "@/components/calculadoras/VistaPreviaMovil";
 import { VarianteEncabezadoField } from "@/components/calculadoras/VarianteEncabezadoField";
 import { EditorTextosCompartidos } from "@/components/calculadoras/EditorTextosCompartidos";
+import { BotonAgregarFotos } from "@/components/calculadoras/BotonAgregarFotos";
 
 const CLAVE_PRECIO_SIN = "precioSin";
 const CLAVE_PRECIO_CON = "precioCon";
@@ -609,17 +610,9 @@ export function CercosCalculadora({
         <section className="space-y-3 rounded-lg border border-gray-200 bg-[#FFFFFF] p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-900">Fotos</h2>
           <p className="text-xs text-gray-500">Van al final del documento.</p>
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            disabled={subiendoFoto}
-            onChange={(e) => {
-              onAgregarFotos(e.target.files);
-              e.target.value = "";
-            }}
-            className="block w-full text-sm text-gray-700 file:mr-3 file:min-h-11 file:rounded-md file:border-0 file:bg-[#244B5A] file:px-4 file:text-sm file:font-medium file:text-[#FFFFFF]"
-          />
+          <div>
+            <BotonAgregarFotos onElegir={onAgregarFotos} ocupado={subiendoFoto} />
+          </div>
           {fotos.length > 0 && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {fotos.map((f) => (

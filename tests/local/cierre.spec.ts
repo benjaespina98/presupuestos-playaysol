@@ -326,7 +326,7 @@ test("presupuesto anulado: etiqueta, toggle y campos deshabilitados", async ({ p
   await page.getByRole("link", { name: "Ver", exact: true }).first().click();
   await expect(page.getByText(/está anulado/)).toBeVisible();
   await expect(page.locator("fieldset[disabled]").first()).toBeAttached();
-  await expect(page.getByRole("button", { name: /Guardar en la nube/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Guardar$/ })).toHaveCount(0);
   const campos = page.locator("fieldset[disabled] input:visible");
   expect(await campos.count()).toBeGreaterThan(0);
   for (let i = 0; i < Math.min(await campos.count(), 5); i++) await expect(campos.nth(i)).toBeDisabled();

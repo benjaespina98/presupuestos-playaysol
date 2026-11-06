@@ -15,7 +15,7 @@ import { SoloSiNoAnulado } from "@/components/Anulado";
  * grilla del formulario (que acotaría dónde puede pegarse). Delega en el mismo `handleSubmit` que el "Guardar" de siempre:
  * no agrega un segundo camino de guardado que mantener.
  */
-export function FloatingSaveBar({ guardando, label = "Guardar en la nube", formId }: { guardando: boolean; label?: string; formId: string }) {
+export function FloatingSaveBar({ guardando, label = "Guardar", formId }: { guardando: boolean; label?: string; formId: string }) {
   return (
     <SoloSiNoAnulado>
     <div

@@ -885,7 +885,7 @@ export function LosetasCalculadora({
                 className={botonDe("primario", "min-h-12 w-full gap-2 px-4")}
               >
                 <IconCloudUpload className="h-4 w-4" />
-                {guardando ? "Guardando..." : "Guardar en la nube"}
+                {guardando ? "Guardando..." : "Guardar"}
               </button>
             </SoloSiNoAnulado>
 

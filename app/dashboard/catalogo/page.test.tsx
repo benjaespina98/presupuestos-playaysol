@@ -98,7 +98,7 @@ describe("CatalogoPage · lectura", () => {
 
     await screen.findAllByText("Luces LED");
     // Cercos tiene su sección; lo que no es de ninguna cae en "Otros", por categoría.
-    expect(screen.getAllByText("Otros · Iluminación")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Iluminación")[0]).toBeInTheDocument();
     expect(screen.getAllByRole("heading", { name: "Cercos" })[0]).toBeInTheDocument();
     // La categoría no se repite al lado de cada ítem.
     expect(screen.queryByText("Iluminación · Piscinas")).not.toBeInTheDocument();
@@ -341,7 +341,7 @@ describe("CatalogoPage · edición", () => {
       expect.objectContaining({ categoria: "Iluminación" })
     );
     // El bloque del listado sigue mostrando la categoría original.
-    expect(screen.getAllByText("Otros · Iluminación")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Iluminación")[0]).toBeInTheDocument();
   });
 });
 
@@ -560,7 +560,7 @@ describe("CatalogoPage · secciones", () => {
     const user = userEvent.setup();
     render(<CatalogoPage />);
 
-    expect((await screen.findAllByText("Otros · Otros"))[0]).toBeInTheDocument();
+    expect((await screen.findAllByText("Otros"))[0]).toBeInTheDocument();
 
     await user.click(screen.getAllByRole("button", { name: "Editar" })[0]);
     await user.selectOptions(await screen.findByLabelText("Categoría"), "Piscinas");
@@ -572,7 +572,7 @@ describe("CatalogoPage · secciones", () => {
         expect.objectContaining({ categoria: "Piscinas" })
       )
     );
-    expect(screen.getAllByText("Otros · Piscinas")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Otras piscinas")[0]).toBeInTheDocument();
   });
 });
 

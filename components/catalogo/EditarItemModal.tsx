@@ -80,8 +80,8 @@ export function EditarItemModal({
 
   return (
     <Hoja
-      titulo="Editar ítem"
-      subtitulo={TITULOS_TIPO[item.tipo]}
+      titulo={nombre}
+      subtitulo={`Editar · ${TITULOS_TIPO[item.tipo]}`}
       ocupado={isSubmitting}
       hayCambios={isDirty}
       ancho="lg"
@@ -95,16 +95,16 @@ export function EditarItemModal({
       pie={<PieAcciones formId={formId} guardando={isSubmitting} soloConCambios etiqueta="Guardar cambios" />}
     >
       <form id={formId} onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-        <Seccion titulo="Datos">
-          <TextField register={register} errors={errors} name="descripcion" label="Descripción" multiline rows={2} />
-          <SelectField register={register} errors={errors} name="categoria" label="Categoría" options={OPCIONES_CATEGORIA} />
-        </Seccion>
-
         <Seccion titulo="Precio">
           <div className="grid grid-cols-2 gap-3">
             <MoneyField control={control} name="precio" label="Precio" hint="Vacío = a cotizar" />
             <SelectField register={register} errors={errors} name="unidad" label="Unidad" options={OPCIONES_UNIDAD} />
           </div>
+        </Seccion>
+
+        <Seccion titulo="Datos">
+          <TextField register={register} errors={errors} name="descripcion" label="Descripción" multiline rows={2} />
+          <SelectField register={register} errors={errors} name="categoria" label="Categoría" options={OPCIONES_CATEGORIA} />
         </Seccion>
 
         <Seccion titulo="Stock">
@@ -113,7 +113,7 @@ export function EditarItemModal({
             errors={errors}
             name="llevaStock"
             label="Llevar stock"
-            hint="Para lo que se guarda en el local, como las piscinas de fibra."
+            hint="Sólo para lo que se guarda en el local."
           />
           {llevaStock && (
             <div className="space-y-1.5 text-base">
@@ -137,14 +137,14 @@ export function EditarItemModal({
                 </p>
               )}
               <p className="text-[13px] leading-snug text-[#4A5861]">
-                Las unidades se mueven desde la lista de Precios. Para dejar de llevar stock, el conteo tiene que estar en 0.
+                Las unidades se mueven desde Stock. Para dejar de llevar stock, el conteo tiene que estar en 0.
               </p>
             </div>
           )}
         </Seccion>
 
         <ZonaActivo>
-          <CheckboxField register={register} errors={errors} name="activo" label="Activo" hint="Si lo desactivás, sale de presupuestos y pedidos nuevos; no se pierde." />
+          <CheckboxField register={register} errors={errors} name="activo" label="Activo" hint="Apagado = se oculta de presupuestos y pedidos nuevos. No se borra." />
         </ZonaActivo>
 
         {item.updated_at && formatFechaRelativa(item.updated_at) && <p className="text-[13px] text-[#4A5861]">Actualizado {formatFechaRelativa(item.updated_at)}</p>}
