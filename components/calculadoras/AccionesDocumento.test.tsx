@@ -22,7 +22,7 @@ function props(overrides: Partial<React.ComponentProps<typeof AccionesDocumento>
 describe("AccionesDocumento", () => {
   it("Guardar es un botón submit, Word/PDF son type=button", () => {
     render(<AccionesDocumento {...props()} />);
-    expect(screen.getByRole("button", { name: "Guardar en la nube" })).toHaveAttribute("type", "submit");
+    expect(screen.getByRole("button", { name: "Guardar" })).toHaveAttribute("type", "submit");
     expect(screen.getByRole("button", { name: "Word" })).toHaveAttribute("type", "button");
     expect(screen.getByRole("button", { name: "PDF" })).toHaveAttribute("type", "button");
   });

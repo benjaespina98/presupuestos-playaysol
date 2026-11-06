@@ -74,7 +74,7 @@ describe("LosetasCalculadora · material alrededor de la pileta", () => {
     const { unmount } = render(<LosetasCalculadora />);
     await cargarMedidas(user, "8", "4");
     await user.selectOptions(screen.getByLabelText("Material alrededor de la pileta"), "travertino");
-    await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
+    await user.click(screen.getAllByRole("button", { name: "Guardar" })[0]);
 
     await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
     const guardado = PresupuestoV1.parse(guardarPresupuesto.mock.calls[0][1]);
@@ -173,7 +173,7 @@ describe("LosetasCalculadora · marfil y blanco", () => {
     const { unmount } = render(<LosetasCalculadora />);
     await cargarMedidas(user, "8", "4");
     await user.selectOptions(tono(), "blanco");
-    await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
+    await user.click(screen.getAllByRole("button", { name: "Guardar" })[0]);
 
     await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
     const guardado = PresupuestoV1.parse(guardarPresupuesto.mock.calls[0][1]);
@@ -267,7 +267,7 @@ describe("LosetasCalculadora · profundidad", () => {
     await user.click(screen.getByRole("button", { name: BOTON_AGREGAR_TRAMO }));
     await user.type(screen.getByLabelText("Hasta (m)"), "3");
     await user.type(screen.getByLabelText("Profundidad (m)"), "1");
-    await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
+    await user.click(screen.getAllByRole("button", { name: "Guardar" })[0]);
 
     await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
     const guardado = PresupuestoV1.parse(guardarPresupuesto.mock.calls[0][1]);
@@ -325,7 +325,7 @@ describe("LosetasCalculadora · ubicación en el terreno", () => {
     await user.click(screen.getByLabelText("Puntos cardinales"));
     await user.selectOptions(screen.getByLabelText("El norte está hacia…"), "225");
     await user.click(screen.getByLabelText("Casa"));
-    await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
+    await user.click(screen.getAllByRole("button", { name: "Guardar" })[0]);
 
     await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
     const guardado = PresupuestoV1.parse(guardarPresupuesto.mock.calls[0][1]);

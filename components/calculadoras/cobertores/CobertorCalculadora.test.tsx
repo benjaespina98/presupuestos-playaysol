@@ -118,7 +118,7 @@ describe("CobertorCalculadora · snapshot", () => {
     render(<CobertorCalculadora catalogo={CATALOGO_ORACULO} />);
     await cargarMedidas(user, "8", "4");
     await user.type(screen.getByLabelText("Señor/Sra"), "Gómez, Ana");
-    await user.click(screen.getAllByRole("button", { name: "Guardar en la nube" })[0]);
+    await user.click(screen.getAllByRole("button", { name: "Guardar" })[0]);
 
     await waitFor(() => expect(guardarPresupuesto).toHaveBeenCalled());
     const [tipo, datos] = guardarPresupuesto.mock.calls[0];

@@ -1,5 +1,6 @@
 "use client";
 
+import { sinTituloRepetido } from "@/lib/domain/catalogo/nombre";
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { listarItemsCatalogo } from "@/lib/catalogo";
 import type { ResultadoStock } from "@/lib/domain/stock/movimientos";
@@ -293,6 +294,7 @@ export default function CatalogoPage() {
                     <FilaItem
                       key={item.id}
                       item={item}
+                      grupo={grupo.titulo}
                       columnas={columnas}
                       conStock={hayStockEnCatalogo}
                       modoConsulta={modoConsulta}
@@ -335,6 +337,7 @@ function CategoriaHeader({ titulo, cantidad }: { titulo: string; cantidad: numbe
  */
 const FilaItem = memo(function FilaItem({
   item,
+  grupo,
   columnas,
   conStock,
   modoConsulta,
@@ -343,6 +346,8 @@ const FilaItem = memo(function FilaItem({
   onCopiar,
 }: {
   item: ItemCatalogo;
+  /** El título del bloque: el nombre no lo repite. */
+  grupo: string;
   columnas: string;
   conStock: boolean;
   modoConsulta: boolean;
@@ -361,7 +366,7 @@ const FilaItem = memo(function FilaItem({
       className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 px-4 py-1.5 text-sm leading-5 transition-colors hover:bg-[#F4F8F9] lg:min-h-[3rem] lg:gap-x-4 lg:py-0 ${columnas} ${editable ? "cursor-pointer" : ""} ${item.activo ? "" : "opacity-70"}`}
     >
       <div className={`col-start-1 row-start-1 min-w-0 ${celda}`}>
-        <ItemDescripcion item={item} />
+        <ItemDescripcion item={item} grupo={grupo} />
       </div>
       <span className={`col-start-1 row-start-2 tabular-nums lg:text-right ${celda}`}>
         <PrecioItem item={item} />
@@ -399,7 +404,7 @@ const FilaItem = memo(function FilaItem({
   );
 });
 
-function ItemDescripcion({ item }: { item: ItemCatalogo }) {
+function ItemDescripcion({ item, grupo }: { item: ItemCatalogo; grupo: string }) {
   // Las piscinas de lista se leen por modelo y medida ("Caribe 550"); lo que
   // sigue a la raya larga ("contado, kit estándar instalado") va como detalle.
   const corto = nombreCortoLista(item.clave);
@@ -419,7 +424,7 @@ function ItemDescripcion({ item }: { item: ItemCatalogo }) {
   return (
     <>
       <p className="line-clamp-2 break-words lg:truncate font-medium text-gray-900" title={item.descripcion || item.clave}>
-        {item.descripcion || item.clave}
+        {sinTituloRepetido(item.descripcion || item.clave, grupo)}
         {baja}
       </p>
       {item.descripcion && <p className="hidden truncate text-[13px] text-[#4A5861] lg:block">{item.clave}</p>}

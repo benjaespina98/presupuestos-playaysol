@@ -21,7 +21,9 @@ export function Pestanas({ etiqueta, pestanas, columnas }: { etiqueta: string; p
       <ul className={`grid ${columnas} border-b border-[#D9DFE3] md:flex md:gap-1`}>
         {pestanas.map((p) => {
           // Con "/" al final: /pedido no puede dar por activa a /pedidos (ni al revés).
-          const activa = pathname === p.href || pathname.startsWith(`${p.href}/`);
+          // Si otra pestaña calza mejor (/stock/movimientos frente a /stock), gana la más específica.
+          const calza = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+          const activa = calza(p.href) && !pestanas.some((o) => o.href.length > p.href.length && calza(o.href));
           return (
             <li key={p.href} className="min-w-0">
               <Link

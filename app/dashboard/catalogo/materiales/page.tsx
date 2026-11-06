@@ -1,5 +1,6 @@
 "use client";
 
+import { sinTituloRepetido } from "@/lib/domain/catalogo/nombre";
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { listarMateriales, listarProveedores } from "@/lib/abastecimiento";
 import {
@@ -157,7 +158,7 @@ export default function MaterialesPage() {
           { id: "a-confirmar", etiqueta: `Sólo "A confirmar" (${sinPrecio})`, valor: soloSinPrecio, onCambio: (v) => cambiar({ soloSinPrecio: v }) },
           { id: "inactivos", etiqueta: "Mostrar desactivados", valor: incluirInactivos, onCambio: (v) => cambiar({ incluirInactivos: v }) },
         ]}
-        acciones={[{ etiqueta: "Actualizar precios", href: "/dashboard/catalogo/actualizar-precios?que=materiales" }]}
+        acciones={[{ etiqueta: "Cambiar varios precios", texto: "Cambiar precios", href: "/dashboard/catalogo/actualizar-precios?que=materiales" }]}
         agregar={{
           etiqueta: "Agregar material",
           onClick: () => {
@@ -271,7 +272,7 @@ const FilaMaterial = memo(function FilaMaterial({ material: m, proveedor, onEdit
     >
       <span className="min-w-0 flex-1 lg:flex-none">
         <span className="flex items-center gap-2">
-          <span className="line-clamp-3 break-words lg:truncate font-medium text-gray-900">{m.nombre}</span>
+          <span className="line-clamp-3 break-words lg:truncate font-medium text-gray-900">{sinTituloRepetido(m.nombre, m.rubro)}</span>
           {!m.activo && <Pastilla className="shrink-0">Desactivado</Pastilla>}
         </span>
         <span className={`block truncate ${TEXTO_SECUNDARIO} lg:hidden`}>{proveedor ?? "Sin proveedor"}</span>

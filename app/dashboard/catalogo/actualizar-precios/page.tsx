@@ -258,7 +258,7 @@ function ActualizarPrecios() {
 
   return (
     <PanelPortal compacto amplio>
-      <EncabezadoPagina titulo="Actualizar precios" descripcion="Cargá varios precios de una vez y guardalos juntos." />
+      <EncabezadoPagina titulo="Cambiar varios precios" descripcion="Cargá varios precios de una vez y guardalos juntos." />
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
         <Link href={que === "materiales" ? "/dashboard/catalogo/materiales" : "/dashboard/catalogo"} className={botonDe("texto", "-ml-2 px-2")}>

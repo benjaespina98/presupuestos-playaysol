@@ -64,7 +64,7 @@ export function AccionesDocumento({
           className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#244B5A] px-4 text-sm font-semibold text-[#FFFFFF] transition-colors hover:bg-marca-oscuro disabled:cursor-not-allowed disabled:opacity-50"
         >
           <IconCloudUpload className="h-4 w-4" />
-          {guardando ? "Guardando..." : "Guardar en la nube"}
+          {guardando ? "Guardando..." : "Guardar"}
         </button>
       </SoloSiNoAnulado>
       <div className="grid grid-cols-2 gap-2">
