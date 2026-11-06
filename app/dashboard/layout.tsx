@@ -38,6 +38,9 @@ export default async function DashboardLayout({
               <NavLink href="/dashboard/catalogo" seccion="precios">
                 Precios
               </NavLink>
+              <NavLink href="/dashboard/stock" seccion="stock">
+                Stock
+              </NavLink>
               <NavLink href="/dashboard/catalogo/materiales" seccion="compras">
                 Compras
               </NavLink>

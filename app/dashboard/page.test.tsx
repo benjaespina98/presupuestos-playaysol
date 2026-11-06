@@ -26,6 +26,7 @@ const ITEM = {
   stock: 3,
   updated_at: "2026-01-01T00:00:00.000Z",
 };
+const AGOTADO = { ...ITEM, id: "i2", clave: "indusplast_caribe_550", descripcion: "Caribe 550", stock: 0 };
 const PROVEEDOR = {
   id: "p1",
   nombre: "Corralón Norte",
@@ -57,42 +58,71 @@ const MATERIAL = {
 };
 const PRESUPUESTO = { id: "b1", tipo: "piscinas", cliente_nombre: "Familia García", created_at: "2026-01-15T12:00:00.000Z" };
 
+const buscador = () => screen.getByRole("textbox", { name: /Buscar precios/ });
+
 describe("Inicio", () => {
   beforeEach(() => {
     window.sessionStorage.clear();
-    mocks.listarItemsCatalogo.mockResolvedValue({ items: [ITEM], error: null });
+    mocks.listarItemsCatalogo.mockResolvedValue({ items: [ITEM, AGOTADO], error: null });
     mocks.listarMateriales.mockResolvedValue({ items: [MATERIAL], error: null });
     mocks.listarProveedores.mockResolvedValue({ items: [PROVEEDOR], error: null });
     mocks.listarPresupuestosResumen.mockResolvedValue({ items: [PRESUPUESTO], error: null });
   });
 
-  it("sin búsqueda muestra los accesos directos y los últimos presupuestos", async () => {
+  it("muestra una tarjeta por área, cada una a su pantalla", async () => {
     render(<InicioPage />);
-    expect(screen.getByRole("link", { name: "Nuevo presupuesto" })).toHaveAttribute("href", "/dashboard/nuevo");
-    expect(screen.getByRole("link", { name: "Cambiar varios precios" })).toBeInTheDocument();
-    expect(await screen.findByRole("link", { name: "Duplicar presupuesto de Familia García" })).toHaveAttribute(
+    const areas = screen.getByRole("navigation", { name: "Áreas del portal" });
+    const destino = (nombre: RegExp) => within(areas).getByRole("link", { name: nombre }).getAttribute("href");
+
+    expect(destino(/^Presupuestos$/)).toBe("/dashboard/nuevo");
+    expect(destino(/^Plano de piscina$/)).toBe("/dashboard/losetas");
+    expect(destino(/^Precios$/)).toBe("/dashboard/catalogo");
+    expect(destino(/^Stock Indusplast/)).toBe("/dashboard/stock");
+    expect(destino(/^Compras$/)).toBe("/dashboard/catalogo/materiales");
+  });
+
+  it("la tarjeta de Stock resume lo que hay, y no hay textos explicativos", async () => {
+    render(<InicioPage />);
+    expect(await screen.findByText("3 unidades · 1 agotada")).toBeInTheDocument();
+    expect(screen.queryByText(/Dibujar el plano/)).not.toBeInTheDocument();
+  });
+
+  it("no muestra datos de clientes hasta que se busca", async () => {
+    render(<InicioPage />);
+    await screen.findByText("3 unidades · 1 agotada"); // ya cargó todo
+    expect(screen.queryByText(/Familia García/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /Últimos presupuestos/ })).not.toBeInTheDocument();
+  });
+
+  it("buscar a un cliente lo muestra, con el botón de duplicar", async () => {
+    render(<InicioPage />);
+    await screen.findByText("3 unidades · 1 agotada");
+    await userEvent.type(buscador(), "garcia");
+
+    const grupo = await screen.findByRole("region", { name: "Presupuestos" });
+    expect(within(grupo).getByRole("link", { name: /^Familia García/ })).toHaveAttribute("href", "/dashboard/piscinas?id=b1");
+    expect(within(grupo).getByRole("link", { name: "Duplicar presupuesto de Familia García" })).toHaveAttribute(
       "href",
       "/dashboard/piscinas?duplicar=b1"
     );
-    expect(screen.getByRole("link", { name: /^Familia García/ })).toHaveAttribute("href", "/dashboard/piscinas?id=b1");
+    expect(screen.queryByRole("navigation", { name: "Áreas del portal" })).not.toBeInTheDocument();
   });
 
   it("busca sin importar tildes y lleva a la lista con la búsqueda hecha", async () => {
     render(<InicioPage />);
-    await screen.findByRole("link", { name: /^Familia García/ });
-    await userEvent.type(screen.getByRole("textbox", { name: /Buscar precios/ }), "solarium");
+    await screen.findByText("3 unidades · 1 agotada");
+    await userEvent.type(buscador(), "solarium");
 
     const grupo = await screen.findByRole("region", { name: "Precios de venta" });
     const fila = within(grupo).getByRole("link", { name: /Solárium seco/ });
     expect(fila).toHaveAttribute("href", "/dashboard/catalogo?buscar=Sol%C3%A1rium%20seco");
     expect(within(grupo).getByText("Stock 3")).toBeInTheDocument();
-    expect(screen.queryByRole("navigation", { name: "Accesos directos" })).not.toBeInTheDocument();
   });
 
   it("muestra el teléfono del proveedor con un botón para llamar, y sus materiales", async () => {
     render(<InicioPage />);
-    await screen.findByRole("link", { name: /^Familia García/ });
-    await userEvent.type(screen.getByRole("textbox", { name: /Buscar precios/ }), "corralon");
+    await screen.findByText("3 unidades · 1 agotada");
+    await userEvent.type(buscador(), "corralon");
 
     const proveedores = await screen.findByRole("region", { name: "Proveedores" });
     expect(within(proveedores).getByText("Ana 111")).toBeInTheDocument();
@@ -103,8 +133,8 @@ describe("Inicio", () => {
 
   it("avisa cuando no hay coincidencias", async () => {
     render(<InicioPage />);
-    await screen.findByRole("link", { name: /^Familia García/ });
-    await userEvent.type(screen.getByRole("textbox", { name: /Buscar precios/ }), "zzz");
+    await screen.findByText("3 unidades · 1 agotada");
+    await userEvent.type(buscador(), "zzz");
     expect(await screen.findByText("Nada coincide con “zzz”.")).toBeInTheDocument();
   });
 
@@ -114,8 +144,8 @@ describe("Inicio", () => {
       error: null,
     });
     render(<InicioPage />);
-    await screen.findByRole("link", { name: /^Familia García/ });
-    await userEvent.type(screen.getByRole("textbox", { name: /Buscar precios/ }), "ladrillo");
+    await screen.findByText("3 unidades · 1 agotada");
+    await userEvent.type(buscador(), "ladrillo");
 
     const grupo = await screen.findByRole("region", { name: "Materiales" });
     expect(within(grupo).getAllByRole("listitem")).toHaveLength(6);
@@ -127,7 +157,7 @@ describe("Inicio", () => {
     mocks.listarMateriales.mockResolvedValue({ items: null, error: "falló" });
     render(<InicioPage />);
     expect(await screen.findByText(/No se pudo leer: materiales/)).toBeInTheDocument();
-    await userEvent.type(screen.getByRole("textbox", { name: /Buscar precios/ }), "solarium");
+    await userEvent.type(buscador(), "solarium");
     expect(await screen.findByRole("region", { name: "Precios de venta" })).toBeInTheDocument();
   });
 });

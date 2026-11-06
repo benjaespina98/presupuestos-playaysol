@@ -19,6 +19,7 @@ const PANTALLAS = [
   "/dashboard/nuevo",
   "/dashboard/piscinas",
   "/dashboard/catalogo",
+  "/dashboard/stock",
   "/dashboard/catalogo/materiales",
   "/dashboard/catalogo/proveedores",
   "/dashboard/catalogo/pedido",

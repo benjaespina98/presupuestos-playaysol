@@ -3,7 +3,8 @@
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { listarItemsCatalogo } from "@/lib/catalogo";
 import type { ResultadoStock } from "@/lib/domain/stock/movimientos";
-import { ControlStock, DialogosStock, MenuStock, StockNumero, type DialogoStock } from "@/components/stock/StockControles";
+import { StockNumero } from "@/components/stock/StockControles";
+import { mensajeDeStock } from "@/components/stock/mensajesStock";
 import {
   agruparParaListado,
   contarPorSeccion,
@@ -41,10 +42,10 @@ import { CrearItemModal } from "@/components/catalogo/CrearItemModal";
 
 /**
  * Las columnas de la lista desde `lg`, IGUALES en todos los bloques (por eso los precios quedan uno debajo del
- * otro, alineados a la derecha): Producto · Precio · Unidad · Stock (− número +) · menú "…" · Actualizado · Editar.
+ * otro, alineados a la derecha): Producto · Precio · Unidad · Stock (sólo se ve; se mueve en Stock) · Actualizado · Editar.
  * Sin las dos de stock cuando ningún ítem lo lleva. Son anchos fijos (rem) y el producto toma el resto.
  */
-const COLUMNAS_CON_STOCK = "lg:grid-cols-[minmax(0,1fr)_8rem_4rem_8.5rem_2.75rem_6.5rem_3.5rem]";
+const COLUMNAS_CON_STOCK = "lg:grid-cols-[minmax(0,1fr)_8rem_4rem_5rem_6.5rem_3.5rem]";
 const COLUMNAS_SIN_STOCK = "lg:grid-cols-[minmax(0,1fr)_9rem_4.5rem_6.5rem_3.5rem]";
 
 export default function CatalogoPage() {
@@ -164,17 +165,9 @@ export default function CatalogoPage() {
     const nombre = nombreCortoLista(item.clave) ?? (item.descripcion || item.clave);
     setItems((prev) => (prev ? prev.map((it) => (it.id === item.id ? { ...it, stock: r.stock_resultante } : it)) : prev));
     setErrorStock(null);
-    setAvisoStock(null);
-    if (r.movimiento_id === null) {
-      setMensajeExito(`El conteo de "${nombre}" coincidía con el stock cargado: no hubo cambios.`);
-    } else if (r.repetido) {
-      setMensajeExito(`Esa operación de "${nombre}" ya estaba registrada: no se repitió.`);
-    } else if (r.stock_negativo) {
-      setMensajeExito(null);
-      setAvisoStock(`"${nombre}" quedó en stock negativo (−${Math.abs(r.stock_resultante)}). Revisá el conteo o cargá el ingreso que falta.`);
-    } else {
-      setMensajeExito(`Stock de "${nombre}": ${r.stock_resultante}.`);
-    }
+    const { exito, aviso } = mensajeDeStock(nombre, r);
+    setMensajeExito(exito);
+    setAvisoStock(aviso);
   }, []);
 
   function itemCreado(nuevo: ItemCatalogo) {
@@ -287,7 +280,6 @@ export default function CatalogoPage() {
             <span className="text-right">Precio</span>
             <span>Unidad</span>
             {hayStockEnCatalogo && <span className="text-center">Stock</span>}
-            {hayStockEnCatalogo && <span aria-hidden="true" />}
             <span className="text-center">Actualizado</span>
             <span className="text-center">Editar</span>
           </div>
@@ -307,7 +299,6 @@ export default function CatalogoPage() {
                       copiado={copiadoId === item.id}
                       onEditar={abrirEdicion}
                       onCopiar={copiarItem}
-                      onStockCambio={stockCambio}
                     />
                   ))}
                 </ul>
@@ -350,7 +341,6 @@ const FilaItem = memo(function FilaItem({
   copiado,
   onEditar,
   onCopiar,
-  onStockCambio,
 }: {
   item: ItemCatalogo;
   columnas: string;
@@ -359,9 +349,7 @@ const FilaItem = memo(function FilaItem({
   copiado: boolean;
   onEditar: (item: ItemCatalogo) => void;
   onCopiar: (item: ItemCatalogo) => void;
-  onStockCambio: (item: ItemCatalogo, resultado: ResultadoStock) => void;
 }) {
-  const [dialogo, setDialogo] = useState<DialogoStock>(null);
   const nombre = item.descripcion || item.clave;
   const editable = !modoConsulta;
   // Celular: el nombre y el precio a la izquierda, el lápiz a la derecha y, si lleva stock, una línea propia para el stock.
@@ -381,22 +369,18 @@ const FilaItem = memo(function FilaItem({
       <span className={`hidden whitespace-nowrap ${TEXTO_SECUNDARIO} lg:block`}>{item.precio !== null && item.unidad ? item.unidad : ""}</span>
       {conStock &&
         (llevaStock(item) ? (
-          <div className="col-span-2 row-start-3 mt-1 flex items-center justify-between lg:contents">
+          <div className="col-span-2 row-start-3 mt-1 flex items-center gap-3 lg:contents">
             <div className="flex items-center gap-3 lg:justify-center">
               <span aria-hidden="true" className={`${TEXTO_SECUNDARIO} lg:hidden`}>
                 Stock
               </span>
-              {editable ? <ControlStock item={item} onAbrir={setDialogo} /> : <StockNumero item={item} />}
+              <StockNumero item={item} />
             </div>
-            <div className="flex justify-end lg:justify-center">{editable && <MenuStock item={item} onAbrir={setDialogo} />}</div>
           </div>
         ) : (
-          <>
-            <span className="contents lg:block">
-              <StockNumero item={item} />
-            </span>
-            <span aria-hidden="true" className="hidden lg:block" />
-          </>
+          <span className="contents lg:block">
+            <StockNumero item={item} />
+          </span>
         ))}
       <p className={`hidden whitespace-nowrap text-center ${TEXTO_SECUNDARIO} lg:block`}>
         <FechaActualizacion updatedAt={item.updated_at} />
@@ -411,7 +395,6 @@ const FilaItem = memo(function FilaItem({
           <BotonLapiz nombre={nombre} etiqueta="Editar" onClick={() => onEditar(item)} />
         )}
       </div>
-      <DialogosStock item={item} dialogo={dialogo} onCerrar={() => setDialogo(null)} onResultado={onStockCambio} />
     </li>
   );
 });

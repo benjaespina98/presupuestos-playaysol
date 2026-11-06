@@ -30,13 +30,6 @@ const CATEGORIAS = [
       <path d="M4 21V9l3-3 3 3v12M11 21V9l3-3 3 3v12M4 15h6M11 15h6" />
     ),
   },
-  {
-    tipo: "losetas",
-    nombre: "Plano de Piscina",
-    icon: (
-      <path d="M3 3h18v18H3zM3 8h4M3 13h4M17 8h4M17 13h4M8 3v4M13 3v4M8 17v4M13 17v4" />
-    ),
-  },
 ] as const;
 
 export default function DashboardPage() {

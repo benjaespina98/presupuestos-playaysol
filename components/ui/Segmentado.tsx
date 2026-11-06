@@ -5,6 +5,7 @@ export function Segmentado<T extends string>({
   valor,
   onCambio,
   lleno = false,
+  envolver = false,
 }: {
   etiqueta: string;
   opciones: readonly { id: T; texto: string }[];
@@ -12,9 +13,11 @@ export function Segmentado<T extends string>({
   onCambio: (v: T) => void;
   /** Reparte todo el ancho disponible, también en pantallas anchas. */
   lleno?: boolean;
+  /** Con muchas opciones, hace salto de línea en vez de apretarlas (el texto nunca se corta). */
+  envolver?: boolean;
 }) {
   return (
-    <div role="group" aria-label={etiqueta} className="flex gap-2">
+    <div role="group" aria-label={etiqueta} className={`flex gap-2 ${envolver ? "flex-wrap" : ""}`}>
       {opciones.map((o) => (
         <button
           key={o.id}
