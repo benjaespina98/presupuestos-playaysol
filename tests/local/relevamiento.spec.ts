@@ -24,6 +24,7 @@ const PANTALLAS: Array<[string, string]> = [
   ["calc-losetas", "/dashboard/losetas"],
   ["historial", "/dashboard/historial"],
   ["catalogo-precios", "/dashboard/catalogo"],
+  ["stock", "/dashboard/stock"],
   ["catalogo-materiales", "/dashboard/catalogo/materiales"],
   ["catalogo-proveedores", "/dashboard/catalogo/proveedores"],
   ["catalogo-armar-pedido", "/dashboard/catalogo/pedido"],
@@ -123,12 +124,12 @@ test("relevamiento de pantallas", async ({ page }, info) => {
   fs.writeFileSync(path.join("capturas-locales", FASE, info.project.name, "_medidas.txt"), hallazgos.join("\n") || "sin hallazgos");
 
   // Un diálogo de stock y el historial, que es donde más se nota el cambio.
-  await page.goto("/dashboard/catalogo");
+  await page.goto("/dashboard/stock");
   await page.waitForLoadState("networkidle");
   const fila = page.locator("li").filter({ hasText: /Caribe 550|Caribe 650/ }).first();
   if (await fila.count()) {
     await fila.scrollIntoViewIfNeeded();
-    await captura(page, "catalogo-fila-stock", info.project.name);
+    await captura(page, "stock-fila", info.project.name);
     await fila.getByRole("button", { name: /^Sumar stock de/ }).click().catch(() => undefined);
     await captura(page, "dialogo-ingreso", info.project.name);
     await page.keyboard.press("Escape");

@@ -19,9 +19,9 @@ ignorada por git).
 
 | Paso | Pantalla / estado | Ruta |
 |---|---|---|
-| `inicio` | Buscador general, accesos directos y últimos presupuestos | `/dashboard` |
+| `inicio` | Buscador general y una tarjeta por área (Presupuestos, Plano de piscina, Precios, Stock Indusplast con su resumen, Compras). Sin datos de clientes hasta que se busca | `/dashboard` |
 | (estados) | Resultados por grupo, sin coincidencias, alguna fuente sin leer, cargando | |
-| `inicio-nuevo` | Elegir el tipo de trabajo (5 tarjetas) | `/dashboard/nuevo` |
+| `inicio-nuevo` | Elegir el tipo de trabajo (4 tarjetas: el plano de piscina tiene la suya en Inicio) | `/dashboard/nuevo` |
 | `calc-piscinas` | Piscinas: formulario + documento, barra de guardado, vista previa móvil | `/dashboard/piscinas` |
 | `calc-cercos` | Cercos | `/dashboard/cercos` |
 | `calc-cobertores` | Cobertores | `/dashboard/cobertores` |
@@ -46,9 +46,17 @@ ignorada por git).
 | `catalogo-filtros` | Hoja / panel de filtros (categoría, stock, orden, interruptores) | |
 | `catalogo-menu-stock`, `catalogo-menu-orden` | Menús de stock y de orden (escritorio) | |
 | `catalogo-agregar-item`, `catalogo-editar-item` | Hoja de alta y de edición de un ítem | |
-| `catalogo-menu-fila` | Menú "…" de la fila (Corregir stock, Ver movimientos) | |
-| `catalogo-venta`, `catalogo-ingreso`, `catalogo-ajuste`, `catalogo-historial-stock` | Diálogos de stock | |
-| (estados) | Vacío por filtro de stock, error, cargando, modo consulta rápida, aviso de stock negativo, "Se guardó…" (aviso) | |
+| (estados) | Vacío por filtro de stock, error, cargando, modo consulta rápida, "Se guardó…" (aviso). El stock se ve, pero no se mueve acá | |
+
+## 4b. Stock (piscinas Indusplast)
+
+| Paso | Pantalla / estado | Ruta |
+|---|---|---|
+| `stock` | Buscador, filtros rápidos con contador (Todas, Con stock, Agotadas, Negativas), resumen y lista por modelo con − número + | `/dashboard/stock` |
+| `stock-agotadas`, `stock-vacio` | Filtro aplicado y sin coincidencias | |
+| `stock-menu-fila` | Menú "…" de la fila (Corregir stock, Ver movimientos) | |
+| `stock-venta`, `stock-ingreso`, `stock-ajuste`, `stock-historial` | Diálogos de stock | |
+| (estados) | Cargando, error, nada con stock, aviso de stock negativo, "Stock de …" (aviso) | |
 
 ## 5. Compras
 
@@ -71,7 +79,7 @@ ignorada por git).
 | Pieza | Qué se revisa |
 |---|---|
 | Encabezado | Logo, menú de usuario (Cerrar sesión adentro), sin recortes en 360 px |
-| Barra principal | Presupuestos · Precios · Compras, con la sección activa visible; el logo lleva a Inicio |
+| Barra principal | Presupuestos · Precios · Stock · Compras, con la sección activa visible; el logo lleva a Inicio |
 | Pestañas secundarias | Presupuestos (Nuevo, Historial) y Compras (Materiales, Proveedores, Armar pedido, Pedidos), nunca cortadas |
 | Barra de herramientas | Buscador, Filtros (contador), "+" (celular); filtros, orden, "Más filtros" y Agregar (escritorio) |
 | Hoja de filtros | Encabezado fijo, opciones de 48 px, pie con "Limpiar" y "Ver N resultados" |

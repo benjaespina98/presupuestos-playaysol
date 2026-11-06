@@ -29,7 +29,7 @@ los valores fijos de los controles: hay una sola paleta. **Los importes van alin
 ## Reglas que se siguen
 
 - Toda fila que abre algo es un botón entero (no un lápiz suelto): materiales y proveedores.
-- En Precios, el stock se mueve con − y + a la vista (restar registra una venta; sumar, un ingreso); cada uno abre un diálogo con la cantidad en 1. Corregir stock y Ver movimientos van en el menú "⋯".
+- El stock se mueve en la pantalla Stock (no en Precios, que sólo lo muestra): − y + a la vista (restar registra una venta; sumar, un ingreso); cada uno abre un diálogo con la cantidad en 1. Corregir stock y Ver movimientos van en el menú "⋯".
 - Un formulario tiene lo esencial a la vista y lo demás en "Más opciones" (cerrado por defecto).
 - "Desactivar" va separado, al final, con una explicación de una línea. Nada se borra.
 - Los tests que miran filtros guardados limpian `sessionStorage` solos (`tests/setup-jsdom.ts`).
@@ -95,7 +95,7 @@ sus filtros (`secciones`), interruptores, orden, el botón de agregar y los cont
 
 ### Encabezado y pestañas (celular)
 
-El encabezado mide 52 px (logo, que lleva a Inicio, y menú de usuario con "Cerrar sesión" adentro) y debajo van Presupuestos · Precios · Compras en
+El encabezado mide 52 px (logo, que lleva a Inicio, y menú de usuario con "Cerrar sesión" adentro) y debajo van Presupuestos · Precios · Stock · Compras en
 una fila de 48 px que reparte el ancho. Las pestañas de Compras son cuatro columnas del mismo ancho de 44 px ("Armar pedido" hace
 salto de línea): nunca quedan cortadas ni hay que deslizarlas. Precios es una sola pantalla y no lleva pestañas.
 *Decisión tomada:* el encabezado no se oculta al bajar (ocupa 52 px y se va con el scroll; la barra de herramientas es lo único fijo).

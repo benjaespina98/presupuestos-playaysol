@@ -56,7 +56,7 @@ export function ControlStock({ item, onAbrir }: { item: ItemCatalogo; onAbrir: (
       <button type="button" aria-label={`Restar stock de ${nombre}`} title="Restar stock" onClick={() => onAbrir("venta")} className={CLASE_PASO}>
         <span aria-hidden="true">−</span>
       </button>
-      <span className="flex min-w-10 justify-center">
+      <span className="flex w-14 justify-center">
         <StockNumero item={item} />
       </span>
       <button type="button" aria-label={`Sumar stock de ${nombre}`} title="Sumar stock" onClick={() => onAbrir("ingreso")} className={CLASE_PASO}>

@@ -125,24 +125,27 @@ const PASOS: Paso[] = [
   },
   { nombre: "catalogo-agregar-item", ruta: "/dashboard/catalogo", preparar: (p) => tocar(p, /^Agregar/) },
   { nombre: "catalogo-editar-item", ruta: "/dashboard/catalogo", preparar: (p) => tocar(p, /^Editar$/) },
-  { nombre: "catalogo-menu-fila", ruta: "/dashboard/catalogo", preparar: (p) => tocar(p, /^Más acciones de/) },
-  { nombre: "catalogo-venta", ruta: "/dashboard/catalogo", preparar: (p) => tocar(p, /^Restar stock de/) },
+  { nombre: "stock", ruta: "/dashboard/stock" },
+  { nombre: "stock-agotadas", ruta: "/dashboard/stock", preparar: (p) => tocar(p, /^Agotadas/) },
+  { nombre: "stock-vacio", ruta: "/dashboard/stock", preparar: (p) => buscar(p, /Buscar en el stock/, "zzzzzz") },
+  { nombre: "stock-menu-fila", ruta: "/dashboard/stock", preparar: (p) => tocar(p, /^Más acciones de/) },
+  { nombre: "stock-venta", ruta: "/dashboard/stock", preparar: (p) => tocar(p, /^Restar stock de/) },
   {
-    nombre: "catalogo-ingreso",
-    ruta: "/dashboard/catalogo",
+    nombre: "stock-ingreso",
+    ruta: "/dashboard/stock",
     preparar: (p) => tocar(p, /^Sumar stock de/),
   },
   {
-    nombre: "catalogo-ajuste",
-    ruta: "/dashboard/catalogo",
+    nombre: "stock-ajuste",
+    ruta: "/dashboard/stock",
     preparar: async (p) => {
       await tocar(p, /^Más acciones de/);
       await p.getByRole("menuitem", { name: "Corregir stock" }).click();
     },
   },
   {
-    nombre: "catalogo-historial-stock",
-    ruta: "/dashboard/catalogo",
+    nombre: "stock-historial",
+    ruta: "/dashboard/stock",
     preparar: async (p) => {
       await tocar(p, /^Más acciones de/);
       await p.getByRole("menuitem", { name: "Ver movimientos" }).click();

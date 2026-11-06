@@ -13,13 +13,13 @@ import {
   type FuentesBusqueda,
   type PresupuestoResumen,
 } from "@/lib/domain/busqueda/general";
-import { llevaStock, stockNegativo, type ItemCatalogo } from "@/lib/domain/catalogo/item";
+import { llevaStock, stockNegativo, textoResumenStock, type ItemCatalogo } from "@/lib/domain/catalogo/item";
 import { formatARS } from "@/lib/format/ars";
 import { listarPresupuestosResumen } from "@/lib/presupuestos";
 import { useEstadoPersistente } from "@/lib/useEstadoPersistente";
 import { PanelPortal } from "@/components/PanelPortal";
 import { TITULOS_TIPO } from "@/components/catalogo/titulos-tipo";
-import { IconCopy, IconEdit, IconFileText, IconPlus, IconTable } from "@/components/icons";
+import { IconCopy } from "@/components/icons";
 import { Aviso } from "@/components/ui/Aviso";
 import { botonDe } from "@/components/ui/botones";
 import { ListaCargando, ListaVacia } from "@/components/ui/EstadoLista";
@@ -27,16 +27,38 @@ import { Buscador } from "@/components/ui/FiltrosPlegables";
 import { COLUMNA_NUMERO, LISTA_SEPARADORES, TEXTO_SECUNDARIO } from "@/components/ui/lista";
 import { Pastilla } from "@/components/ui/Pastilla";
 
-const ACCESOS = [
-  { href: "/dashboard/nuevo", etiqueta: "Nuevo presupuesto", icono: IconPlus },
-  { href: "/dashboard/catalogo/actualizar-precios?que=ventas", etiqueta: "Cambiar varios precios", icono: IconEdit },
-  { href: "/dashboard/catalogo/pedido", etiqueta: "Armar pedido", icono: IconFileText },
-  { href: "/dashboard/catalogo/proveedores", etiqueta: "Proveedores", icono: IconTable },
+/** Las áreas del portal, una tarjeta cada una. Sin explicaciones: el nombre alcanza. */
+const AREAS = [
+  {
+    href: "/dashboard/nuevo",
+    nombre: "Presupuestos",
+    icono: <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8" />,
+  },
+  {
+    href: "/dashboard/losetas",
+    nombre: "Plano de piscina",
+    icono: <path d="M3 3h18v18H3zM3 8h4M3 13h4M17 8h4M17 13h4M8 3v4M13 3v4M8 17v4M13 17v4" />,
+  },
+  {
+    href: "/dashboard/catalogo",
+    nombre: "Precios",
+    icono: <path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8zM7 7h.01" />,
+  },
+  {
+    href: "/dashboard/stock",
+    nombre: "Stock Indusplast",
+    conResumen: true,
+    icono: <path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7zM3.3 7l8.7 5 8.7-5M12 22V12" />,
+  },
+  {
+    href: "/dashboard/catalogo/materiales",
+    nombre: "Compras",
+    icono: <path d="M1 3h15v13H1zM16 8h4l3 3v5h-7zM5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />,
+  },
 ] as const;
 
 /** Cuántos resultados se ven de cada grupo antes de tocar "Ver los N". */
 const POR_GRUPO = 6;
-const ULTIMOS = 5;
 
 const FILA = "flex min-h-[3.25rem] min-w-0 flex-1 items-center gap-3 px-4 py-2 text-sm leading-5 transition-colors hover:bg-[#F4F8F9] active:bg-[#EAF0F2]";
 
@@ -85,6 +107,7 @@ export default function InicioPage() {
     };
   }, []);
 
+  const resumenStock = useMemo(() => (carga ? textoResumenStock(carga.fuentes.items.filter((i) => i.activo)) : null), [carga]);
   const buscando = busqueda.trim().length > 0;
 
   return (
@@ -106,50 +129,38 @@ export default function InicioPage() {
       {buscando ? (
         <Resultados carga={carga} consulta={consulta} />
       ) : (
-        <>
-          <nav aria-label="Accesos directos" className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {ACCESOS.map(({ href, etiqueta, icono: Icono }) => (
-              <Link
-                key={href}
-                href={href}
-                data-borde-sutil=""
-                className="flex min-h-[4.5rem] items-center gap-3 rounded-xl border border-gray-200 bg-[#FFFFFF] p-3.5 text-[15px] font-semibold leading-tight text-gray-900 shadow-sm transition hover:border-marca hover:shadow-md"
+        <nav aria-label="Áreas del portal" className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {AREAS.map((a) => (
+            <Link
+              key={a.href}
+              href={a.href}
+              data-borde-sutil=""
+              className="group flex min-h-24 items-center gap-4 rounded-xl border border-gray-200 bg-[#FFFFFF] p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-marca hover:shadow-md active:translate-y-0 sm:p-6"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="h-8 w-8 shrink-0 text-[#647F8A] transition group-hover:text-[#244B5A]"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
               >
-                <Icono className="h-5 w-5 shrink-0 text-[#647F8A]" />
-                {etiqueta}
-              </Link>
-            ))}
-          </nav>
-          <Ultimos carga={carga} />
-        </>
+                {a.icono}
+              </svg>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-xl font-bold text-gray-900">{a.nombre}</h2>
+                {"conResumen" in a && resumenStock && <p className={`mt-0.5 ${TEXTO_SECUNDARIO}`}>{resumenStock}</p>}
+              </div>
+              <span aria-hidden="true" className="text-2xl text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-marca">
+                ›
+              </span>
+            </Link>
+          ))}
+        </nav>
       )}
     </PanelPortal>
-  );
-}
-
-function Ultimos({ carga }: { carga: Carga | null }) {
-  const ultimos = carga?.fuentes.presupuestos.slice(0, ULTIMOS);
-
-  return (
-    <section aria-labelledby="ultimos-presupuestos" className="mt-7">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <h2 id="ultimos-presupuestos" className="text-base font-semibold text-gray-900">
-          Últimos presupuestos
-        </h2>
-        <Link href="/dashboard/historial" className={botonDe("texto", "px-2")}>
-          Ver todos
-        </Link>
-      </div>
-      {!ultimos && <ListaCargando filas={3} />}
-      {ultimos && ultimos.length === 0 && <ListaVacia>Todavía no hay presupuestos guardados.</ListaVacia>}
-      {ultimos && ultimos.length > 0 && (
-        <ul className={`overflow-hidden rounded-lg border border-[#D9DFE3] bg-[#FFFFFF] ${LISTA_SEPARADORES}`}>
-          {ultimos.map((p) => (
-            <FilaPresupuesto key={p.id} presupuesto={p} />
-          ))}
-        </ul>
-      )}
-    </section>
   );
 }
 
