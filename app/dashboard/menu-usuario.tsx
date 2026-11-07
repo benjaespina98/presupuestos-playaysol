@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 
@@ -91,6 +92,14 @@ export default function MenuUsuario({ email }: { email: string }) {
               Sesión iniciada como
               <span className="block break-all text-sm font-semibold text-[#1F2A30]">{email}</span>
             </p>
+            <Link
+              href="/dashboard/actividad"
+              role="menuitem"
+              onClick={() => cerrar()}
+              className="flex min-h-12 w-full items-center px-4 text-left text-base font-semibold text-[#1F2A30] hover:bg-[#EAF0F2] active:bg-[#D5E0E4] focus-visible:bg-[#EAF0F2] focus-visible:outline-none"
+            >
+              Actividad
+            </Link>
             <button
               type="button"
               role="menuitem"

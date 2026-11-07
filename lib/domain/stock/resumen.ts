@@ -20,7 +20,7 @@ export interface ResumenMovimientos {
 
 /** Quién figura cuando no hay nombre ni mail: sin usuario es un movimiento cargado directo en la base; con usuario, uno sin perfil. */
 export function quienHizo(m: { creadorNombre: string | null; creado_por: string | null }): string {
-  return m.creadorNombre ?? (m.creado_por ? "Usuario sin perfil" : "Carga directa (sin usuario)");
+  return m.creadorNombre ?? (m.creado_por ? "Usuario sin perfil" : "Sistema");
 }
 
 /** Las métricas de un conjunto de movimientos. Lo anulado y sus contra-asientos no cuentan como ventas ni ingresos. */
