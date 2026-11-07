@@ -1,6 +1,7 @@
 "use client";
 
 import { sinTituloRepetido } from "@/lib/domain/catalogo/nombre";
+import { condicionInstalacion } from "@/lib/domain/catalogo/instalacion";
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { listarItemsCatalogo } from "@/lib/catalogo";
 import type { ResultadoStock } from "@/lib/domain/stock/movimientos";
@@ -409,6 +410,7 @@ function ItemDescripcion({ item, grupo }: { item: ItemCatalogo; grupo: string })
   // sigue a la raya larga ("contado, kit estándar instalado") va como detalle.
   const corto = nombreCortoLista(item.clave);
   const baja = !item.activo && <Pastilla className="ml-2 align-middle">Desactivado</Pastilla>;
+  const instalacion = condicionInstalacion(item);
   if (corto) {
     const detalle = item.descripcion?.split("—")[1]?.trim();
     return (
@@ -427,7 +429,12 @@ function ItemDescripcion({ item, grupo }: { item: ItemCatalogo; grupo: string })
         {sinTituloRepetido(item.descripcion || item.clave, grupo)}
         {baja}
       </p>
-      {item.descripcion && <p className="hidden truncate text-[13px] text-[#4A5861] lg:block">{item.clave}</p>}
+      {instalacion && (
+        <Pastilla tono={instalacion === "Con instalación" ? "ok" : "info"} className="mt-0.5">
+          {instalacion}
+        </Pastilla>
+      )}
+      {item.descripcion && !instalacion && <p className="hidden truncate text-[13px] text-[#4A5861] lg:block">{item.clave}</p>}
     </>
   );
 }
