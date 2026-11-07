@@ -203,16 +203,16 @@ export function MenuSeleccion<T extends string>({
                 className={`flex min-h-12 w-full items-center gap-3 rounded-lg px-3 py-1.5 text-left hover:bg-[#EAF0F2] active:bg-[#D5E0E4] ${marcada ? "bg-[#F1F6F8]" : ""}`}
               >
                 <span className="min-w-0 flex-1">
-                  <span className={`block text-base ${marcada ? "font-semibold" : "font-medium"} ${o.tono === "aviso" ? "text-[#B42318]" : "text-[#1F2A30]"} ${vacia ? "opacity-80" : ""}`}>
+                  <span className={`block break-words text-base ${marcada ? "font-semibold" : "font-medium"} ${o.tono === "aviso" ? "text-[#B42318]" : "text-[#1F2A30]"} ${vacia ? "opacity-80" : ""}`}>
                     {o.tono === "aviso" && <span aria-hidden="true">⚠ </span>}
                     {o.etiqueta}
                   </span>
                   {o.descripcion && <span className="block text-[13px] leading-snug text-[#4A5861]">{o.descripcion}</span>}
                 </span>
                 {o.cantidad !== undefined && (
-                  <span className={`rounded-full px-2 py-0.5 text-[13px] tabular-nums ${o.tono === "aviso" ? "bg-[#FEF3F2] text-[#B42318]" : "bg-[#E3ECEF] text-[#3E4A52]"}`}>{o.cantidad}</span>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[13px] tabular-nums ${o.tono === "aviso" ? "bg-[#FEF3F2] text-[#B42318]" : "bg-[#E3ECEF] text-[#3E4A52]"}`}>{o.cantidad}</span>
                 )}
-                <span aria-hidden="true" className={`w-5 text-lg text-[#244B5A] ${marcada ? "" : "invisible"}`}>
+                <span aria-hidden="true" className={`w-5 shrink-0 text-lg text-[#244B5A] ${marcada ? "" : "invisible"}`}>
                   ✓
                 </span>
               </button>
