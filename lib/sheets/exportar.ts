@@ -3,6 +3,7 @@ import { z } from "zod";
 import { TAMANOS, type Material } from "@/lib/domain/abastecimiento/material";
 import type { Proveedor } from "@/lib/domain/abastecimiento/proveedor";
 import { CATEGORIAS } from "@/lib/domain/catalogo/categorias";
+import { condicionInstalacion } from "@/lib/domain/catalogo/instalacion";
 
 /**
  * Lo que el catálogo web le entrega a la planilla de costos (Google Sheets).
@@ -87,6 +88,14 @@ export interface Exportacion {
 
 const texto = (v: string | null | undefined): string => v ?? "";
 
+/** La descripción para la planilla, aclarando "Con/Sin instalación" cuando el nombre no lo dice (mismo criterio que Precios). */
+function descripcionConInstalacion(i: { clave: string; descripcion?: string | null }): string {
+  const d = texto(i.descripcion);
+  const cond = condicionInstalacion({ clave: i.clave, descripcion: d || null });
+  if (!d || !cond || d.toLowerCase().includes(cond.toLowerCase())) return d;
+  return `${d} (${cond.toLowerCase()})`;
+}
+
 /** "2026-06-18" → "18/06/2026" (como se escribe en la planilla). */
 export function fechaParaPlanilla(iso: string | null): string {
   const m = iso ? /^(\d{4})-(\d{2})-(\d{2})/.exec(iso) : null;
@@ -166,7 +175,7 @@ export function armarExportacion(entrada: EntradaExportacion, ahora: Date = new 
     .map((i) => [
       NOMBRE_TIPO[i.tipo] ?? i.tipo,
       i.clave,
-      texto(i.descripcion),
+      descripcionConInstalacion(i),
       texto(i.categoria),
       texto(i.unidad),
       i.precio === null ? "A cotizar" : i.precio,

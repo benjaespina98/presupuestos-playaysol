@@ -115,6 +115,22 @@ describe("CatalogoPage · lectura", () => {
     expect(screen.queryByText("$ 0")).not.toBeInTheDocument();
   });
 
+  it("cada precio de cercos y cobertores dice si es con o sin instalación", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: [
+        item({ id: "a", tipo: "cercos", clave: "precioSin", descripcion: "Precio por metro lineal sin instalación", precio: 63500, unidad: "ml" }),
+        item({ id: "b", tipo: "cercos", clave: "precioCon", descripcion: "Precio por metro lineal con instalación", precio: 79500, unidad: "ml" }),
+        item({ id: "c", tipo: "cobertores", clave: "precioMenos15", descripcion: "Precio por m² para piletas de hasta 15 m²", precio: 10903, unidad: "m²" }),
+      ],
+      error: null,
+    });
+    render(<CatalogoPage />);
+
+    await screen.findAllByText("Con instalación");
+    expect(screen.getAllByText("Sin instalación")).toHaveLength(2);
+    expect(screen.getAllByText("Con instalación")).toHaveLength(1);
+  });
+
   it("muestra hace cuánto se actualizó cada ítem", async () => {
     const hoy = new Date().toISOString();
     listarItemsCatalogo.mockResolvedValue({
