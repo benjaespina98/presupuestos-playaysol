@@ -58,6 +58,7 @@ ignorada por git).
 | `stock-venta`, `stock-ingreso`, `stock-ajuste`, `stock-historial` | Diálogos de stock | |
 | (estados) | Cargando, error, nada con stock, aviso de stock negativo, "Stock de …" (aviso) | |
 | `stock-movimientos` | Pestaña Movimientos: período (Hoy, 7 días, 30 días, Todo), tipo, métricas (vendidas, ingresadas, movimientos, sin stock ahora), más vendidas, quién movió stock, cuándo se agotó cada modelo y el registro con fecha, persona, cantidad y saldo | `/dashboard/stock/movimientos` |
+| `actividad` | Registro de todo lo que se hizo en el portal (precios, stock, presupuestos, pedidos, compras) con quién y cuándo; lo que no hizo una persona figura como Sistema. Filtros por área y por persona/sistema | `/dashboard/actividad` (menú de la cuenta) |
 
 ## 5. Compras
 
