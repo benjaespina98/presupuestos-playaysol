@@ -558,12 +558,12 @@ describe("Armar pedido", () => {
     });
     const user = userEvent.setup();
     await cargar();
-    expect(screen.queryByText("Baño químico (servicio)")).not.toBeInTheDocument();
+    expect(screen.queryByTitle("Baño químico (servicio)")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText("Baño químico"));
     fireEvent.click(screen.getByLabelText("Luz en la cama de agua"));
 
-    expect(await screen.findByText("Baño químico (servicio)")).toBeInTheDocument();
+    expect(await screen.findByTitle("Baño químico (servicio)")).toBeInTheDocument();
     expect(screen.getByText("Luz cama")).toBeInTheDocument();
     void user;
   });

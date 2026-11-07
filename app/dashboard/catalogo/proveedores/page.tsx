@@ -1,5 +1,6 @@
 "use client";
 
+import { nombreYDetalle } from "@/lib/domain/catalogo/nombre";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listarMateriales, listarProveedores } from "@/lib/abastecimiento";
 import { filtrarProveedores, ordenarProveedores, sinTelefono, telefonosDe, type Proveedor } from "@/lib/domain/abastecimiento/proveedor";
@@ -240,11 +241,11 @@ function FilaProveedor({ proveedor: p, materiales, onEditar }: { proveedor: Prov
     >
       <div className="min-w-0 flex-1 lg:contents">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="line-clamp-2 break-words lg:truncate font-medium text-gray-900">{p.nombre}</span>
+          <span className="line-clamp-2 break-words lg:truncate font-medium text-gray-900">{nombreYDetalle({ clave: "", descripcion: p.nombre }).nombre}</span>
           {!p.activo && <Pastilla className="shrink-0">Desactivado</Pastilla>}
         </div>
         <p className="hidden min-w-0 truncate text-[13px] text-[#4A5861] lg:block lg:text-sm lg:text-gray-700" title={p.contacto ?? undefined}>
-          {p.contacto ?? <span>{p.rubro ?? ""}</span>}
+          {[nombreYDetalle({ clave: "", descripcion: p.nombre }).detalle, p.contacto].filter(Boolean).join(" · ") || (p.rubro ?? "")}
         </p>
         <div className="min-w-0 text-sm lg:space-y-0.5">
           {falta ? (
