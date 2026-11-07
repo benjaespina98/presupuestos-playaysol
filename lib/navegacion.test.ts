@@ -8,6 +8,7 @@ describe("seccionDeRuta", () => {
     ["/dashboard/historial", "presupuestos"],
     ["/dashboard/piscinas", "presupuestos"],
     ["/dashboard/losetas", null],
+    ["/dashboard/actividad", null],
     ["/dashboard/stock", "stock"],
     ["/dashboard/catalogo", "precios"],
     ["/dashboard/catalogo/actualizar-precios", "precios"],
