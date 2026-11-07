@@ -18,7 +18,10 @@ export interface ResumenMovimientos {
   masVendidos: { nombre: string; unidades: number }[];
 }
 
-const SIN_NOMBRE = "Sin nombre";
+/** Quién figura cuando no hay nombre ni mail: sin usuario es un movimiento cargado directo en la base; con usuario, uno sin perfil. */
+export function quienHizo(m: { creadorNombre: string | null; creado_por: string | null }): string {
+  return m.creadorNombre ?? (m.creado_por ? "Usuario sin perfil" : "Carga directa (sin usuario)");
+}
 
 /** Las métricas de un conjunto de movimientos. Lo anulado y sus contra-asientos no cuentan como ventas ni ingresos. */
 export function resumirMovimientos(movs: readonly MovimientoConItem[]): ResumenMovimientos {
@@ -28,7 +31,7 @@ export function resumirMovimientos(movs: readonly MovimientoConItem[]): ResumenM
   const personas = new Map<string, number>();
   const modelos = new Map<string, number>();
   for (const m of movs) {
-    const quien = m.creadorNombre ?? SIN_NOMBRE;
+    const quien = quienHizo(m);
     personas.set(quien, (personas.get(quien) ?? 0) + 1);
     if (m.anulado || m.tipo === "anulacion") continue;
     if (m.tipo === "venta") {
@@ -76,7 +79,7 @@ export function agotadosAhora(movs: readonly MovimientoConItem[]): Agotamiento[]
     // El primer movimiento (yendo hacia atrás) cuyo saldo anterior era positivo: ahí se agotó. Si no hay, se agotó desde el inicio.
     const causa = lista.find((m) => m.stock_resultante <= 0 && m.stock_resultante - m.cantidad > 0);
     const fuente = causa ?? lista[lista.length - 1];
-    salida.push({ itemId, nombre: lista[0].itemNombre, fecha: fuente.creado_at, quien: fuente.creadorNombre, stockActual: actual });
+    salida.push({ itemId, nombre: lista[0].itemNombre, fecha: fuente.creado_at, quien: quienHizo(fuente), stockActual: actual });
   }
   return salida.sort((a, b) => b.fecha.localeCompare(a.fecha));
 }

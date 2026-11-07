@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { LIMITE_MOVIMIENTOS, listarMovimientosGeneral } from "@/lib/stock";
 import { ETIQUETA_TIPO, cantidadConSigno } from "@/lib/domain/stock/movimientos";
-import { agotadosAhora, delPeriodo, resumirMovimientos, type MovimientoConItem, type PeriodoMovimientos } from "@/lib/domain/stock/resumen";
+import { agotadosAhora, delPeriodo, quienHizo, resumirMovimientos, type MovimientoConItem, type PeriodoMovimientos } from "@/lib/domain/stock/resumen";
 import { useEstadoPersistente } from "@/lib/useEstadoPersistente";
 import { PanelPortal } from "@/components/PanelPortal";
 import { EncabezadoPagina } from "@/components/catalogo/EncabezadoPagina";
@@ -158,7 +158,7 @@ export default function MovimientosPage() {
                     <p className={TEXTO_SECUNDARIO}>{fechaHora(m.creado_at)}</p>
                   </div>
                   <p className={`mt-0.5 ${TEXTO_SECUNDARIO}`}>
-                    {ETIQUETA_TIPO[m.tipo]} · {m.creadorNombre ?? "Sin nombre"} · Quedó en{" "}
+                    {ETIQUETA_TIPO[m.tipo]} · {quienHizo(m)} · Quedó en{" "}
                     <span className={`font-semibold tabular-nums ${m.stock_resultante < 0 ? "text-[#B42318]" : "text-[#1F2A30]"}`}>{m.stock_resultante}</span>
                     {m.motivo ? ` · ${m.motivo}` : ""}
                     {m.referencia ? ` · ${m.referencia}` : ""}
