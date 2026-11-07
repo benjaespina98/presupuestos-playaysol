@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describirAuditoria, describirMovimiento, filtrarEventos, ordenarEventos, type FilaAuditoria } from "./evento";
+import { SIN_FILTROS, SOLO_SISTEMA, describirAuditoria, describirMovimiento, filtrarEventos, ordenarEventos, personasDe, quienDe, type FilaAuditoria, type FiltroActividad } from "./evento";
 import type { MovimientoConItem } from "@/lib/domain/stock/resumen";
 
 let n = 0;
@@ -60,13 +60,18 @@ describe("describirMovimiento y filtros", () => {
     expect(e.quien).toBe("Sistema");
   });
 
-  it("ordena del más nuevo al más viejo y filtra por área y por persona o sistema", () => {
+  it("ordena del más nuevo al más viejo y filtra por área, persona, sistema, período y texto", () => {
     const a = describirMovimiento(mov({ id: "1", creado_at: "2026-11-01T00:00:00.000Z" }));
     const b = describirMovimiento(mov({ id: "2", creado_at: "2026-11-02T00:00:00.000Z", creado_por: null, creadorNombre: null }));
     const todos = ordenarEventos([a, b]);
+    const f = (o: Partial<FiltroActividad>) => filtrarEventos(todos, { ...SIN_FILTROS, periodo: "todo", ...o }).map((e) => e.id);
     expect(todos.map((e) => e.id)).toEqual(["m2", "m1"]);
-    expect(filtrarEventos(todos, { area: "", quien: "sistema" }).map((e) => e.id)).toEqual(["m2"]);
-    expect(filtrarEventos(todos, { area: "", quien: "personas" }).map((e) => e.id)).toEqual(["m1"]);
-    expect(filtrarEventos(todos, { area: "precios", quien: "todos" })).toHaveLength(0);
+    expect(f({ quien: SOLO_SISTEMA })).toEqual(["m2"]);
+    expect(f({ quien: quienDe("Beto") })).toEqual(["m1"]);
+    expect(f({ area: "precios" })).toEqual([]);
+    expect(f({ busqueda: "caribe" })).toEqual(["m2", "m1"]);
+    expect(filtrarEventos(todos, { ...SIN_FILTROS, periodo: "hoy" }, undefined, new Date("2026-11-07T12:00:00.000Z"))).toEqual([]);
+    expect(filtrarEventos(todos, { ...SIN_FILTROS, periodo: "7" }, undefined, new Date("2026-11-07T12:00:00.000Z"))).toHaveLength(2);
+    expect(personasDe(todos)).toEqual(["Beto"]);
   });
 });

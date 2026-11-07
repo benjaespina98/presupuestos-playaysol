@@ -3,6 +3,7 @@ import { formatARS } from "@/lib/format/ars";
 import { ETIQUETA_TIPO, cantidadConSigno } from "@/lib/domain/stock/movimientos";
 import { quienHizo, type MovimientoConItem } from "@/lib/domain/stock/resumen";
 import { nombreYDetalle } from "@/lib/domain/catalogo/nombre";
+import { coincideBusqueda } from "@/lib/texto";
 
 /**
  * La actividad del portal en castellano: quién hizo qué y cuándo, juntando el registro de auditoría (precios,
@@ -192,8 +193,40 @@ export function ordenarEventos(eventos: readonly EventoActividad[]): EventoActiv
   return [...eventos].sort((a, b) => b.fecha.localeCompare(a.fecha));
 }
 
-export type FiltroQuien = "todos" | "personas" | "sistema";
+export type PeriodoActividad = "hoy" | "7" | "30" | "todo";
 
-export function filtrarEventos(eventos: readonly EventoActividad[], filtro: { area: AreaActividad | ""; quien: FiltroQuien }): EventoActividad[] {
-  return eventos.filter((e) => (!filtro.area || e.area === filtro.area) && (filtro.quien === "todos" || (filtro.quien === "sistema") === e.sistema));
+/** Quién: "" = todos, SOLO_SISTEMA = lo que no hizo una persona, `persona:<nombre>` = lo de esa persona. */
+export const SOLO_SISTEMA = "sistema";
+export const quienDe = (nombre: string) => `persona:${nombre}`;
+
+export interface FiltroActividad {
+  busqueda: string;
+  area: AreaActividad | "";
+  quien: string;
+  periodo: PeriodoActividad;
+}
+export const SIN_FILTROS: FiltroActividad = { busqueda: "", area: "", quien: "", periodo: "30" };
+
+/**
+ * Los eventos que cumplen el filtro. `ignorar` deja afuera un criterio: sirve para contar cuántos resultados daría
+ * cada opción de ese filtro con todos los demás aplicados (los contadores de los menús).
+ */
+export function filtrarEventos(eventos: readonly EventoActividad[], filtro: FiltroActividad, ignorar?: keyof FiltroActividad, ahora: Date = new Date()): EventoActividad[] {
+  const desde = new Date(ahora);
+  if (filtro.periodo === "hoy") desde.setHours(0, 0, 0, 0);
+  else if (filtro.periodo !== "todo") desde.setTime(ahora.getTime() - Number(filtro.periodo) * 24 * 60 * 60 * 1000);
+  return eventos.filter((e) => {
+    if (ignorar !== "area" && filtro.area && e.area !== filtro.area) return false;
+    if (ignorar !== "quien" && filtro.quien) {
+      if (filtro.quien === SOLO_SISTEMA ? !e.sistema : e.sistema || quienDe(e.quien) !== filtro.quien) return false;
+    }
+    if (ignorar !== "periodo" && filtro.periodo !== "todo" && new Date(e.fecha).getTime() < desde.getTime()) return false;
+    if (ignorar !== "busqueda" && filtro.busqueda && !coincideBusqueda([e.titulo, e.detalle, e.quien, ETIQUETA_AREA[e.area]].join(" "), filtro.busqueda)) return false;
+    return true;
+  });
+}
+
+/** Las personas que aparecen en la actividad (sin el Sistema), por orden alfabético. */
+export function personasDe(eventos: readonly EventoActividad[]): string[] {
+  return [...new Set(eventos.filter((e) => !e.sistema).map((e) => e.quien))].sort((a, b) => a.localeCompare(b, "es"));
 }
