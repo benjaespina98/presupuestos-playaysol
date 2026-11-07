@@ -131,6 +131,18 @@ describe("CatalogoPage · lectura", () => {
     expect(screen.getAllByText("Con instalación")).toHaveLength(1);
   });
 
+  it("el nombre es corto, lo demás va debajo como detalle y el código interno no se ve", async () => {
+    listarItemsCatalogo.mockResolvedValue({
+      items: [item({ id: "a", tipo: "cercos", clave: "lona_premium", descripcion: "Lona premium (mayor gramaje / color a elección)", precio: null })],
+      error: null,
+    });
+    render(<CatalogoPage />);
+
+    expect(await screen.findByText("Lona premium")).toBeInTheDocument();
+    expect(screen.getByText("Mayor gramaje / color a elección")).toBeInTheDocument();
+    expect(screen.queryByText("lona_premium")).not.toBeInTheDocument();
+  });
+
   it("muestra hace cuánto se actualizó cada ítem", async () => {
     const hoy = new Date().toISOString();
     listarItemsCatalogo.mockResolvedValue({
