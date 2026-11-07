@@ -234,6 +234,14 @@ describe("armarExportacion · hoja 'Catálogo web'", () => {
     expect(e.catalogo[1]).toEqual(["Cercos", "precioCon", "", "", "ml", "A cotizar", "", "Desactivado", ""]);
   });
 
+  it("aclara 'con/sin instalación' en la descripción cuando el nombre no lo dice", () => {
+    const fila = (clave: string, descripcion: string) =>
+      armarExportacion({ proveedores: [], materiales: [], items: [{ tipo: "cobertores", clave, precio: 10, descripcion }] }).catalogo[0][2];
+    expect(fila("precioMenos15", "Precio por m² para piletas de hasta 15 m²")).toBe("Precio por m² para piletas de hasta 15 m² (sin instalación)");
+    expect(fila("precioCon", "Precio por metro lineal con instalación")).toBe("Precio por metro lineal con instalación");
+    expect(fila("luces", "Luces por unidad")).toBe("Luces por unidad");
+  });
+
   it("cambiar la descripción, la categoría o la unidad cambia la versión", () => {
     const base = { tipo: "piscinas", clave: "luces", precio: 1, descripcion: "A", categoria: "Iluminación", unidad: "unidad" };
     const v = (o: object) => armarExportacion({ proveedores: [], materiales: [], items: [{ ...base, ...o }] }).version;
