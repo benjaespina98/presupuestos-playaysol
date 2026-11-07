@@ -1,5 +1,6 @@
 "use client";
 
+import { nombreYDetalle } from "@/lib/domain/catalogo/nombre";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -644,7 +645,12 @@ function GrupoTabla({
               key={l.material.id}
               className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-2 text-sm lg:gap-x-4 lg:py-1 ${COLUMNAS}`}
             >
-              <p className="col-span-2 col-start-1 row-start-1 min-w-0 break-words text-gray-900 lg:col-span-1 lg:col-auto lg:row-auto">{l.material.nombre}</p>
+              <p className="col-span-2 col-start-1 row-start-1 min-w-0 break-words text-gray-900 lg:col-span-1 lg:col-auto lg:row-auto" title={l.material.nombre}>
+                {nombreYDetalle({ clave: "", descripcion: l.material.nombre }).nombre}
+                {nombreYDetalle({ clave: "", descripcion: l.material.nombre }).detalle && (
+                  <span className="block text-[13px] text-[#4A5861]">{nombreYDetalle({ clave: "", descripcion: l.material.nombre }).detalle}</span>
+                )}
+              </p>
 
               <div className="col-start-1 row-start-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 lg:col-auto lg:row-auto">
                 {/* Se confirma al salir del campo (o con Enter): si cada tecla recalculara el pedido, borrar

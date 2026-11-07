@@ -1,5 +1,6 @@
 "use client";
 
+import { nombreYDetalle } from "@/lib/domain/catalogo/nombre";
 import { sinTituloRepetido } from "@/lib/domain/catalogo/nombre";
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { listarMateriales, listarProveedores } from "@/lib/abastecimiento";
@@ -264,6 +265,7 @@ export default function MaterialesPage() {
  * a la derecha; desde `lg`, una fila de la tabla con todas las columnas.
  */
 const FilaMaterial = memo(function FilaMaterial({ material: m, proveedor, onEditar }: { material: Material; proveedor: string | null; onEditar: (m: Material) => void }) {
+  const { nombre, detalle } = nombreYDetalle({ clave: "", descripcion: m.nombre });
   const relativa = m.precio_actualizado ? formatFechaRelativaCorta(m.precio_actualizado) : "";
   return (
     <li
@@ -272,10 +274,11 @@ const FilaMaterial = memo(function FilaMaterial({ material: m, proveedor, onEdit
     >
       <span className="min-w-0 flex-1 lg:flex-none">
         <span className="flex items-center gap-2">
-          <span className="line-clamp-3 break-words lg:truncate font-medium text-gray-900">{sinTituloRepetido(m.nombre, m.rubro)}</span>
+          <span className="line-clamp-3 break-words lg:truncate font-medium text-gray-900">{sinTituloRepetido(nombre, m.rubro)}</span>
           {!m.activo && <Pastilla className="shrink-0">Desactivado</Pastilla>}
         </span>
-        <span className={`block truncate ${TEXTO_SECUNDARIO} lg:hidden`}>{proveedor ?? "Sin proveedor"}</span>
+        <span className={`block truncate ${TEXTO_SECUNDARIO} lg:hidden`}>{[proveedor ?? "Sin proveedor", detalle].filter(Boolean).join(" · ")}</span>
+        {detalle && <span className={`hidden truncate ${TEXTO_SECUNDARIO} lg:block`}>{detalle}</span>}
       </span>
 
       <span className="hidden min-w-0 truncate text-gray-700 lg:block" title={proveedor ?? undefined}>
