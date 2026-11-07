@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase";
+import { nombreCortoLista } from "@/lib/domain/catalogo/listas";
+import type { MovimientoConItem } from "@/lib/domain/stock/resumen";
 import {
   MovimientoStock,
   ResultadoStock,
@@ -106,5 +108,51 @@ export async function listarMovimientos(itemId: string): Promise<ResultadoHistor
   } catch (err) {
     console.error("No se pudo leer el historial de stock", err instanceof Error ? err.message : "error");
     return { movimientos: null, error: mensajeErrorStock({ message: err instanceof Error ? err.message : "" }) };
+  }
+}
+
+export type ResultadoMovimientosGeneral =
+  | { movimientos: MovimientoConItem[]; truncado: boolean; error: null }
+  | { movimientos: null; truncado: false; error: string };
+
+/** Cuántos movimientos trae la pestaña Movimientos (los más nuevos). */
+export const LIMITE_MOVIMIENTOS = 1000;
+
+/** Todos los movimientos del local, del más nuevo al más viejo, con el modelo y quién los hizo. */
+export async function listarMovimientosGeneral(): Promise<ResultadoMovimientosGeneral> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("movimientos_stock")
+      .select(`${COLUMNAS}, catalogo_items(clave, descripcion)`)
+      .order("creado_at", { ascending: false })
+      .limit(LIMITE_MOVIMIENTOS);
+    if (error) return { movimientos: null, truncado: false, error: "No se pudieron leer los movimientos. Probá de nuevo." };
+
+    const filas = (data ?? []) as unknown as (Record<string, unknown> & { catalogo_items: { clave: string; descripcion: string | null } | { clave: string; descripcion: string | null }[] | null })[];
+    const base: MovimientoStock[] = [];
+    const nombres = new Map<string, string>();
+    for (const fila of filas) {
+      const r = MovimientoStock.safeParse(fila);
+      if (!r.success) {
+        console.error("Fila de movimientos_stock con forma inesperada, se omite");
+        continue;
+      }
+      base.push(r.data);
+      const it = Array.isArray(fila.catalogo_items) ? fila.catalogo_items[0] : fila.catalogo_items;
+      if (it && !nombres.has(r.data.item_id)) nombres.set(r.data.item_id, nombreCortoLista(it.clave) ?? (it.descripcion || it.clave));
+    }
+
+    const ids = [...new Set(base.map((m) => m.creado_por).filter((id): id is string => !!id))];
+    const personas = new Map<string, string>();
+    if (ids.length > 0) {
+      const { data: perfiles } = await supabase.from("perfiles").select("id, email, nombre").in("id", ids);
+      for (const p of perfiles ?? []) personas.set(p.id as string, ((p.nombre as string | null) || (p.email as string | null)) ?? "—");
+    }
+    const movimientos = marcarAnulados(base, personas).map((m) => ({ ...m, itemNombre: nombres.get(m.item_id) ?? "Modelo sin nombre" }));
+    return { movimientos, truncado: filas.length >= LIMITE_MOVIMIENTOS, error: null };
+  } catch (err) {
+    console.error("No se pudieron leer los movimientos de stock", err instanceof Error ? err.message : "error");
+    return { movimientos: null, truncado: false, error: mensajeErrorStock({ message: err instanceof Error ? err.message : "" }) };
   }
 }

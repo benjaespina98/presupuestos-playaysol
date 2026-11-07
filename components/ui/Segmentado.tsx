@@ -17,7 +17,7 @@ export function Segmentado<T extends string>({
   envolver?: boolean;
 }) {
   return (
-    <div role="group" aria-label={etiqueta} className={`flex gap-2 ${envolver ? "flex-wrap" : ""}`}>
+    <div role="group" aria-label={etiqueta} className={envolver ? "grid grid-cols-2 gap-2 sm:flex sm:flex-wrap" : "flex gap-2"}>
       {opciones.map((o) => (
         <button
           key={o.id}

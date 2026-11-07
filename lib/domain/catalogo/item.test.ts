@@ -378,7 +378,7 @@ describe("piscinas de lista en el listado", () => {
       "Indusplast · Racionalista",
       "Indusplast · Caribe",
       "Cercos",
-      "Otros · Piscinas",
+      "Otras piscinas",
     ]);
     expect(grupos[0].items.map((i) => i.clave)).toEqual(["lista_hormigon_6x3", "lista_hormigon_6_5x2.5", "lista_hormigon_7x3_50"]);
     expect(grupos[1].items.map((i) => i.clave)).toEqual(["indusplast_racionalista_400", "indusplast_racionalista_450"]);
