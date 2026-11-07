@@ -1,5 +1,6 @@
 "use client";
 
+import { nombreYDetalle } from "@/lib/domain/catalogo/nombre";
 import { useId, useState } from "react";
 import { useZodForm } from "@/lib/forms/useZodForm";
 import { MoneyField, TextField, SelectField, CheckboxField } from "@/components/form";
@@ -64,7 +65,7 @@ export function EditarItemModal({
   } = useZodForm(EditarItemSchema, { defaultValues: aFormulario(item) });
 
   const llevaStock = watch("llevaStock");
-  const nombre = item.descripcion || item.clave;
+  const nombre = nombreYDetalle(item).nombre;
 
   async function onSubmit(valores: EditarItemForm) {
     setErrorGuardado(null);
