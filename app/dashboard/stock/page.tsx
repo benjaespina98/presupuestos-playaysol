@@ -1,5 +1,6 @@
 "use client";
 
+import { nombreYDetalle } from "@/lib/domain/catalogo/nombre";
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { listarItemsCatalogo } from "@/lib/catalogo";
 import {
@@ -76,7 +77,7 @@ export default function StockPage() {
 
   /** El stock pasa a lo que dice la base (el número NO se calcula acá) y se avisa lo que corresponda. */
   const stockCambio = useCallback((item: ItemCatalogo, r: ResultadoStock) => {
-    const nombre = nombreCortoLista(item.clave) ?? (item.descripcion || item.clave);
+    const nombre = nombreCortoLista(item.clave) ?? nombreYDetalle(item).nombre;
     setItems((prev) => (prev ? prev.map((it) => (it.id === item.id ? { ...it, stock: r.stock_resultante } : it)) : prev));
     const { exito, aviso } = mensajeDeStock(nombre, r);
     setMensaje(exito);
@@ -167,7 +168,7 @@ const FilaStock = memo(function FilaStock({
   return (
     <li className="flex min-h-[3.5rem] items-center gap-2 px-4 py-1.5">
       <p className="line-clamp-2 min-w-0 flex-1 break-words text-[15px] font-medium text-gray-900">
-        {nombreCortoLista(item.clave) ?? (item.descripcion || item.clave)}
+        {nombreCortoLista(item.clave) ?? nombreYDetalle(item).nombre}
       </p>
       <ControlStock item={item} onAbrir={setDialogo} />
       <MenuStock item={item} onAbrir={setDialogo} />

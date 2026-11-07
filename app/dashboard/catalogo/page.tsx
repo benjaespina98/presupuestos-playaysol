@@ -1,6 +1,6 @@
 "use client";
 
-import { sinTituloRepetido } from "@/lib/domain/catalogo/nombre";
+import { nombreYDetalle, sinTituloRepetido } from "@/lib/domain/catalogo/nombre";
 import { condicionInstalacion } from "@/lib/domain/catalogo/instalacion";
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { listarItemsCatalogo } from "@/lib/catalogo";
@@ -119,7 +119,7 @@ export default function CatalogoPage() {
       (visibles ? agruparParaListado(visibles) : []).map((g) => ({
         ...g,
         items: ordenarPor(g.items, orden, {
-          nombre: (i) => i.descripcion || i.clave,
+          nombre: (i) => nombreYDetalle(i).nombre,
           precio: (i) => i.precio,
           stock: (i) => (llevaStock(i) ? i.stock : null),
           actualizado: (i) => i.updated_at,
@@ -145,7 +145,7 @@ export default function CatalogoPage() {
   function guardarEdicion(actualizado: ItemCatalogo) {
     setItems((prev) => (prev ? prev.map((it) => (it.id === actualizado.id ? actualizado : it)) : prev));
     setEditando(null);
-    setMensajeExito(`Se guardó "${actualizado.descripcion || actualizado.clave}".`);
+    setMensajeExito(`Se guardó "${nombreYDetalle(actualizado).nombre}".`);
   }
 
   const copiarItem = useCallback(async (item: ItemCatalogo) => {
@@ -164,7 +164,7 @@ export default function CatalogoPage() {
    * El número NO se calcula acá: viene de la respuesta de la función de la base.
    */
   const stockCambio = useCallback((item: ItemCatalogo, r: ResultadoStock) => {
-    const nombre = nombreCortoLista(item.clave) ?? (item.descripcion || item.clave);
+    const nombre = nombreCortoLista(item.clave) ?? nombreYDetalle(item).nombre;
     setItems((prev) => (prev ? prev.map((it) => (it.id === item.id ? { ...it, stock: r.stock_resultante } : it)) : prev));
     setErrorStock(null);
     const { exito, aviso } = mensajeDeStock(nombre, r);
@@ -175,7 +175,7 @@ export default function CatalogoPage() {
   function itemCreado(nuevo: ItemCatalogo) {
     setItems((prev) => (prev ? [...prev, nuevo] : [nuevo]));
     setCreando(false);
-    setMensajeExito(`Se agregó "${nuevo.descripcion || nuevo.clave}".`);
+    setMensajeExito(`Se agregó "${nombreYDetalle(nuevo).nombre}".`);
   }
 
   const cerrarToast = useCallback(() => setMensajeExito(null), []);
@@ -356,7 +356,7 @@ const FilaItem = memo(function FilaItem({
   onEditar: (item: ItemCatalogo) => void;
   onCopiar: (item: ItemCatalogo) => void;
 }) {
-  const nombre = item.descripcion || item.clave;
+  const nombre = nombreCortoLista(item.clave) ?? nombreYDetalle(item).nombre;
   const editable = !modoConsulta;
   // Celular: el nombre y el precio a la izquierda, el lápiz a la derecha y, si lleva stock, una línea propia para el stock.
   // Desde lg, cada pieza es una celda de la grilla, en el orden en que está escrita.
@@ -423,18 +423,19 @@ function ItemDescripcion({ item, grupo }: { item: ItemCatalogo; grupo: string })
       </>
     );
   }
+  const { nombre, detalle } = nombreYDetalle(item);
   return (
     <>
-      <p className="line-clamp-2 break-words lg:truncate font-medium text-gray-900" title={item.descripcion || item.clave}>
-        {sinTituloRepetido(item.descripcion || item.clave, grupo)}
+      <p className="line-clamp-2 break-words font-medium text-gray-900 lg:truncate" title={item.descripcion || item.clave}>
+        {sinTituloRepetido(nombre, grupo)}
         {baja}
       </p>
-      {instalacion && (
-        <Pastilla tono={instalacion === "Con instalación" ? "ok" : "info"} className="mt-0.5">
-          {instalacion}
-        </Pastilla>
+      {(instalacion || detalle) && (
+        <div className="mt-0.5 flex min-w-0 items-center gap-2">
+          {instalacion && <Pastilla tono={instalacion === "Con instalación" ? "ok" : "info"}>{instalacion}</Pastilla>}
+          {detalle && <p className="min-w-0 truncate text-[13px] text-[#4A5861]">{detalle}</p>}
+        </div>
       )}
-      {item.descripcion && !instalacion && <p className="hidden truncate text-[13px] text-[#4A5861] lg:block">{item.clave}</p>}
     </>
   );
 }
